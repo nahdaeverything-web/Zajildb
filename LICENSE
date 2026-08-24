@@ -1,0 +1,40 @@
+Copyright (c) 2026 nahdaeverything-web (https://github.com/nahdaeverything-web)
+
+All rights reserved.
+
+The source code of Zajil is published so that it can be read, inspected, and
+verified — in particular so that a fancier or a club can check how the
+pedigree and inbreeding calculations actually work (see ENGINE.md).
+
+Permission is granted to any individual to:
+
+  - view and study this source code; and
+  - run an unmodified copy of this application privately, for their own
+    personal, non-commercial use in managing their own loft.
+
+No other rights are granted. Without prior written permission from the
+copyright holder you may NOT:
+
+  - redistribute this software, modified or unmodified, in whole or in part;
+  - publish, host, or otherwise make it available to third parties;
+  - create or distribute derivative works;
+  - use it, or any part of it, for any commercial purpose.
+
+Note that this is a source-available licence, not an open-source licence.
+Forking on GitHub is permitted by GitHub's Terms of Service; that permission
+covers the mechanics of the GitHub platform only and grants no rights beyond
+those stated above.
+
+Data created with this application belongs entirely to the person who created
+it. The application stores data locally on the user's own device and transmits
+it nowhere.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+For any other use, including licensing enquiries, contact the copyright holder
+through the GitHub account above.

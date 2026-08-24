@@ -1,0 +1,18 @@
+{
+  "name": "zajil",
+  "version": "1.4.1",
+  "description": "Zajil — Arabic-first, offline-first pedigree & loft management for racing pigeons",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/run.js",
+    "serve": "python3 -m http.server 8123",
+    "sample": "node tools/gen-sample.js && node tools/gen-example-large.js"
+  },
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nahdaeverything-web/zajildb.git"
+  },
+  "homepage": "https://nahdaeverything-web.github.io/zajildb/",
+  "license": "SEE LICENSE IN LICENSE"
+}

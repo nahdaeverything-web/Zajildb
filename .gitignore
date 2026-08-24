@@ -1,0 +1,12 @@
+# Zajil is dependency-free and has no build step — almost nothing to ignore.
+node_modules/
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+# local scratch / personal exports — never commit real loft data
+*.local.json
+zajil-export-*.json
+zajil-bird-*.json

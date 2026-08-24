@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0e7a5f"/>
+  <g fill="#ffffff">
+    <!-- stylised homing pigeon -->
+    <path d="M118 300c40-14 92-46 130-88 20-22 44-38 74-42-8-18-4-40 12-56 14-14 34-20 52-16l-22 30 44 8c-2 20-14 38-32 46-4 34-18 66-44 92-44 44-116 66-178 58z"/>
+    <path d="M214 322c34 12 86 10 122-10l-20 48c-30 14-72 12-102-6z" opacity=".9"/>
+    <circle cx="368" cy="132" r="9" fill="#0e7a5f"/>
+  </g>
+</svg>

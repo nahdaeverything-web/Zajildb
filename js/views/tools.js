@@ -1,0 +1,291 @@
+// views/tools.js — settings, backup/export/import (Tier 1 #6), the pedigree
+// scanner hook (Tier 3 #12, strictly optional server feature), and the dev
+// panel that runs the engine test suite in-app (quality bar requirement).
+
+import {
+  state, setSetting, currentLoft, Lofts, exportAll, importAll,
+  listBackups, autoBackup, allBirds, deleteBird, restoreBird, idbGetAll,
+} from '../db.js';
+import { t, fmtDate, fmtNum, getLang, ringHTML } from '../i18n.js';
+import {
+  h, clear, field, select, toast, confirmDialog, downloadJSON,
+  birdLabelHTML, birdLabelText, undoToast,
+} from '../ui.js';
+import { ringKey } from '../engine/rings.js';
+import { rerender } from '../app.js';
+
+export function renderTools() {
+  const root = h('section', { class: 'view-tools' });
+  root.append(h('div', { class: 'view-head' }, h('h1', {}, t('tools.title'))));
+  root.append(settingsCard(), loftCard(), duplicatesCard(), examplesCard(), backupCard(), scannerCard(), devCard());
+  return root;
+}
+
+// ------------------------------------------------------------------ settings
+function settingsCard() {
+  const langSel = select([
+    { value: 'ar', label: 'العربية' },
+    { value: 'en', label: 'English' },
+  ], state.settings.lang || 'ar');
+  const numSel = select([
+    { value: 'western', label: t('set.numerals.western') },
+    { value: 'eastern', label: t('set.numerals.eastern') },
+  ], state.settings.numerals || 'western');
+  const dateSel = select([
+    { value: 'gregorian', label: t('set.dates.gregorian') },
+    { value: 'hijri', label: t('set.dates.hijri') },
+    { value: 'both', label: t('set.dates.both') },
+  ], state.settings.dates || 'both');
+  const hcIn = h('input', { type: 'checkbox', checked: !!state.settings.highContrast });
+  const depthIn = h('input', { class: 'input', type: 'number', min: 3, max: 15, dir: 'ltr', value: state.settings.coiDepth || 10 });
+
+  langSel.addEventListener('change', async () => { await setSetting('lang', langSel.value); rerender(); });
+  numSel.addEventListener('change', async () => { await setSetting('numerals', numSel.value); rerender(); });
+  dateSel.addEventListener('change', async () => { await setSetting('dates', dateSel.value); rerender(); });
+  hcIn.addEventListener('change', async () => { await setSetting('highContrast', hcIn.checked); rerender(); });
+  depthIn.addEventListener('change', async () => {
+    const v = Math.max(3, Math.min(15, +depthIn.value || 10));
+    await setSetting('coiDepth', v);
+  });
+
+  return h('div', { class: 'card' },
+    h('h2', {}, t('tools.title')),
+    h('div', { class: 'form-grid' },
+      field(t('set.language'), langSel),
+      field(t('set.numerals'), numSel, t('set.numeralsHint')),
+      field(t('set.dates'), dateSel),
+      field(t('set.coiDepth'), depthIn),
+      h('label', { class: 'check-row' }, hcIn, ' ', t('set.highContrast'))));
+}
+
+// ---------------------------------------------------------------------- loft
+function loftCard() {
+  const loft = currentLoft();
+  const nameIn = h('input', { class: 'input', type: 'text', value: (loft && loft.name) || '' });
+  const locIn = h('input', { class: 'input', type: 'text', value: (loft && loft.location) || '' });
+  const save = h('button', {
+    class: 'btn', onclick: async () => {
+      if (!loft) return;
+      loft.name = nameIn.value.trim();
+      loft.location = locIn.value.trim();
+      await Lofts.save(loft);
+      toast(t('toast.saved'));
+    },
+  }, t('act.save'));
+  return h('div', { class: 'card' },
+    h('h2', {}, t('set.loft')),
+    h('div', { class: 'form-grid' },
+      field(t('set.loftName'), nameIn),
+      field(t('set.loftLocation'), locIn)),
+    save);
+}
+
+// -------------------------------------------------------------------- backup
+function backupCard() {
+  const last = state.settings.lastExport;
+  const info = h('p', { class: 'muted' },
+    last ? t('backup.lastExport', { d: fmtDate(last, { withTime: true }) }) : t('backup.never'));
+
+  const exportBtn = h('button', {
+    class: 'btn btn-primary', onclick: async () => {
+      const payload = await exportAll();
+      downloadJSON(payload, `zajil-export-${new Date().toISOString().slice(0, 10)}.json`);
+      await setSetting('lastExport', new Date().toISOString());
+      toast(t('toast.exported'));
+      rerender();
+    },
+  }, '⬇ ' + t('backup.exportAll'));
+
+  const modeSel = select([
+    { value: 'merge', label: t('backup.importMode.merge') },
+    { value: 'replace', label: t('backup.importMode.replace') },
+  ], 'merge');
+  const fileIn = h('input', { type: 'file', accept: '.json,application/json', class: 'input' });
+  fileIn.addEventListener('change', async () => {
+    const f = fileIn.files[0];
+    if (!f) return;
+    if (modeSel.value === 'replace' && !(await confirmDialog(t('confirm.replaceAll')))) { fileIn.value = ''; return; }
+    try {
+      const payload = JSON.parse(await f.text());
+      const counts = await importAll(payload, modeSel.value);
+      toast(t('backup.imported', { birds: counts.birds, pairs: counts.pairs, races: counts.raceResults }), { timeout: 6000 });
+    } catch (err) {
+      toast('⚠ ' + (err && err.message ? err.message : 'import failed'), { timeout: 6000 });
+    }
+    fileIn.value = '';
+  });
+
+  const backupsList = h('div', {});
+  listBackups().then((backups) => {
+    if (!backups.length) return;
+    backupsList.append(h('h3', {}, t('backup.restoreAuto')));
+    const sel = select(backups.sort((a, b) => (b.id < a.id ? -1 : 1)).map((b) => ({
+      value: b.id, label: fmtDate(b.id, { withTime: true }),
+    })), backups[backups.length - 1] && backups[backups.length - 1].id);
+    const btn = h('button', {
+      class: 'btn', onclick: async () => {
+        const b = backups.find((x) => x.id === sel.value);
+        if (!b || !(await confirmDialog(t('confirm.replaceAll')))) return;
+        await importAll(b.payload, 'replace');
+        toast(t('toast.undone'));
+      },
+    }, t('act.import'));
+    backupsList.append(h('div', { class: 'row-inline' }, sel, btn));
+  });
+
+  return h('div', { class: 'card' },
+    h('h2', {}, t('backup.title')),
+    info,
+    h('p', { class: 'muted small' }, t('backup.auto', { h: 12, n: 7 })),
+    h('div', { class: 'row-inline' }, exportBtn),
+    h('h3', {}, t('backup.import')),
+    h('div', { class: 'row-inline' }, modeSel, fileIn),
+    backupsList);
+}
+
+// ------------------------------------------------------ duplicate finder
+/**
+ * Birds sharing a normalised ring number. Real lofts do re-ring birds, so
+ * duplicates are a warning not an error — but accidental clones need finding.
+ * Link counts tell the user which copy is safe to delete.
+ */
+function duplicatesCard() {
+  const body = h('div', {});
+
+  async function refresh() {
+    clear(body);
+    // media counts too: deleteBird removes a bird's photos/documents, so a
+    // copy holding the only scans must not be advertised as unlinked
+    const mediaCount = new Map();
+    for (const m of await idbGetAll('media')) {
+      mediaCount.set(m.birdId, (mediaCount.get(m.birdId) || 0) + 1);
+    }
+    const groups = new Map();
+    for (const b of allBirds()) {
+      for (const r of b.rings || []) {
+        const k = ringKey(r);
+        if (!k) continue;
+        if (!groups.has(k)) groups.set(k, { raw: r.raw, birds: [] });
+        if (!groups.get(k).birds.includes(b)) groups.get(k).birds.push(b);
+      }
+    }
+    const dupes = [...groups.values()].filter((g) => g.birds.length > 1);
+    if (!dupes.length) {
+      body.append(h('p', { class: 'muted' }, t('dup.none')));
+      return;
+    }
+    body.append(h('p', { class: 'warn' }, t('dup.found', { n: dupes.length })));
+    for (const g of dupes) {
+      const group = h('div', { class: 'dup-group' },
+        h('div', { html: ringHTML(g.raw) }));
+      for (const b of g.birds) {
+        const links =
+          allBirds().filter((x) => x.sireId === b.id || x.damId === b.id).length +
+          [...state.pairs.values()].filter((p) => p.sireId === b.id || p.damId === b.id).length +
+          [...state.raceResults.values()].filter((r) => r.birdId === b.id).length +
+          [...state.healthEvents.values()].filter((e) => e.birdId === b.id).length +
+          (mediaCount.get(b.id) || 0);
+        group.append(h('div', { class: 'row-inline' },
+          h('a', { href: '#/bird/' + b.id, html: birdLabelHTML(b) }),
+          h('span', { class: 'muted small' },
+            links ? t('dup.keepThis', { n: links }) : t('dup.noLinks')),
+          h('button', {
+            class: 'btn btn-small btn-danger',
+            onclick: async () => {
+              const label = birdLabelText(b);
+              if (!await confirmDialog(t('confirm.deleteBird', { name: label }))) return;
+              const snap = await deleteBird(b.id);
+              refresh();
+              undoToast(t('toast.deleted'), async () => { await restoreBird(snap); refresh(); });
+            },
+          }, t('act.delete'))));
+      }
+      body.append(group);
+    }
+  }
+  refresh();
+  return h('div', { class: 'card' }, h('h2', {}, t('dup.title')), body);
+}
+
+// ------------------------------------------------------- example datasets
+function examplesCard() {
+  const btn = (label, file) => h('button', {
+    class: 'btn', onclick: async () => {
+      const { loadExample } = await import('./birds.js');
+      await loadExample(file);
+      rerender();
+    },
+  }, '📚 ' + label);
+  return h('div', { class: 'card' },
+    h('h2', {}, t('bird.loadExample')),
+    h('p', { class: 'muted small' }, t('bird.exampleHint')),
+    h('div', { class: 'row-inline' },
+      btn(t('bird.exampleSmall'), './sample-data.json'),
+      btn(t('bird.exampleLarge'), './example-loft-large.json')));
+}
+
+// ------------------------------------------------ scanner hook (Tier 3 #12)
+function scannerCard() {
+  const urlIn = h('input', {
+    class: 'input', type: 'url', dir: 'ltr',
+    placeholder: 'https://…', value: state.settings.scanServerUrl || '',
+  });
+  urlIn.addEventListener('change', () => setSetting('scanServerUrl', urlIn.value.trim()));
+  return h('div', { class: 'card' },
+    h('h2', {}, t('scan.title')),
+    h('p', { class: 'muted' }, t('scan.hint')),
+    field(t('scan.serverUrl'), urlIn),
+    state.settings.scanServerUrl ? null : h('p', { class: 'muted small' }, t('scan.notConfigured')));
+}
+
+// ------------------------------------------------------- dev panel + tests
+function devCard() {
+  const out = h('pre', { class: 'test-output', dir: 'ltr' });
+  const runBtn = h('button', {
+    class: 'btn', onclick: async () => {
+      out.textContent = t('common.loading');
+      try {
+        // Fresh import each run isn't possible (module cache), but tests are
+        // pure and re-runnable: harness stores them once.
+        await import('../../tests/engine.test.js');
+        const { runAll } = await import('../../tests/harness.js');
+        const { passed, failed, results } = await runAll();
+        out.textContent = results.map((r) => `${r.ok ? '✓' : '✗'} ${r.name}${r.ok ? '' : ' — ' + r.error}`).join('\n') +
+          `\n\n${t('dev.passed', { p: passed, f: failed })}`;
+        out.classList.toggle('test-fail', failed > 0);
+      } catch (err) {
+        out.textContent = '✗ ' + err.message;
+        out.classList.add('test-fail');
+      }
+    },
+  }, '▶ ' + t('dev.run'));
+
+  const rtBtn = h('button', {
+    class: 'btn', onclick: async () => {
+      out.textContent = t('common.loading');
+      try {
+        const before = await exportAll();
+        // Serialise → parse → compare the data portion (what a real
+        // export/import round-trip preserves).
+        const parsed = JSON.parse(JSON.stringify(before));
+        const norm = (p) => JSON.stringify({
+          birds: p.birds, pairs: p.pairs, raceResults: p.raceResults,
+          healthEvents: p.healthEvents, lofts: p.lofts,
+          media: (p.media || []).map((m) => ({ id: m.id, birdId: m.birdId, dataURL: m.dataURL })),
+        });
+        if (norm(before) !== norm(parsed)) throw new Error('serialisation not stable');
+        out.textContent = '✓ ' + t('dev.roundtripOK') +
+          `\n  birds=${before.birds.length} pairs=${before.pairs.length} races=${before.raceResults.length} media=${before.media.length}`;
+        out.classList.remove('test-fail');
+      } catch (err) {
+        out.textContent = '✗ ' + t('dev.roundtripFail', { msg: err.message });
+        out.classList.add('test-fail');
+      }
+    },
+  }, '⇄ ' + t('dev.roundtrip'));
+
+  return h('div', { class: 'card' },
+    h('h2', {}, t('dev.title')),
+    h('div', { class: 'row-inline' }, runBtn, rtBtn),
+    out);
+}

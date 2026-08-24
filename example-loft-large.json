@@ -1,0 +1,1992 @@
+{
+ "format": "zajil-export",
+ "version": 1,
+ "kind": "example-large",
+ "exportedAt": "2026-08-01T09:00:00.000Z",
+ "lofts": [
+  {
+   "id": "loft-irbid-demo",
+   "name": "لوفت إربد التعليمي",
+   "location": "إربد، الأردن",
+   "statuses": [
+    "breeder",
+    "race team",
+    "young bird",
+    "stock",
+    "sold",
+    "lost",
+    "dead"
+   ],
+   "createdAt": "2019-01-01T00:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  }
+ ],
+ "birds": [
+  {
+   "id": "x-remco",
+   "rings": [
+    {
+     "country": "BE",
+     "union": "",
+     "year": 2016,
+     "serial": "6012345",
+     "raw": "BE-2016-6012345",
+     "type": "national"
+    }
+   ],
+   "name": "Remco",
+   "sex": "cock",
+   "hatchDate": "2016-03-04",
+   "colour": "أزرق",
+   "strain": "فاندنابيل",
+   "eyeSign": "برتقالية",
+   "status": "stock",
+   "sireId": null,
+   "damId": null,
+   "external": true,
+   "breeder": "استيراد — بلجيكا",
+   "owner": "",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "x-anka",
+   "rings": [
+    {
+     "country": "BE",
+     "union": "",
+     "year": 2016,
+     "serial": "6012388",
+     "raw": "BE-2016-6012388",
+     "type": "national"
+    }
+   ],
+   "name": "Anka",
+   "sex": "hen",
+   "hatchDate": "2016-04-18",
+   "colour": "أزرق مخطط",
+   "strain": "فاندنابيل",
+   "eyeSign": "",
+   "status": "stock",
+   "sireId": null,
+   "damId": null,
+   "external": true,
+   "breeder": "استيراد — بلجيكا",
+   "owner": "",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "x-julius",
+   "rings": [
+    {
+     "country": "NL",
+     "union": "",
+     "year": 2017,
+     "serial": "1180022",
+     "raw": "NL-2017-1180022",
+     "type": "national"
+    }
+   ],
+   "name": "Julius",
+   "sex": "cock",
+   "hatchDate": "2017-02-22",
+   "colour": "أشقر",
+   "strain": "يانسن",
+   "eyeSign": "لؤلؤية",
+   "status": "stock",
+   "sireId": null,
+   "damId": null,
+   "external": true,
+   "breeder": "استيراد — هولندا",
+   "owner": "",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "x-witpen",
+   "rings": [
+    {
+     "country": "NL",
+     "union": "",
+     "year": 2017,
+     "serial": "1180067",
+     "raw": "NL-2017-1180067",
+     "type": "national"
+    }
+   ],
+   "name": "Witpen",
+   "sex": "hen",
+   "hatchDate": "2017-03-30",
+   "colour": "أزرق أبيض الجناح",
+   "strain": "يانسن",
+   "eyeSign": "",
+   "status": "stock",
+   "sireId": null,
+   "damId": null,
+   "external": true,
+   "breeder": "استيراد — هولندا",
+   "owner": "",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "x-kasper",
+   "rings": [
+    {
+     "country": "BE",
+     "union": "",
+     "year": 2016,
+     "serial": "6055501",
+     "raw": "BE-2016-6055501",
+     "type": "national"
+    }
+   ],
+   "name": "Kasper",
+   "sex": "cock",
+   "hatchDate": "2016-05-11",
+   "colour": "رمادي",
+   "strain": "فان لون",
+   "eyeSign": "",
+   "status": "stock",
+   "sireId": null,
+   "damId": null,
+   "external": true,
+   "breeder": "استيراد — بلجيكا",
+   "owner": "",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "x-mieke",
+   "rings": [
+    {
+     "country": "BE",
+     "union": "",
+     "year": 2017,
+     "serial": "6099210",
+     "raw": "BE-2017-6099210",
+     "type": "national"
+    }
+   ],
+   "name": "Mieke",
+   "sex": "hen",
+   "hatchDate": "2017-04-02",
+   "colour": "رمادي فاتح",
+   "strain": "فان لون",
+   "eyeSign": "",
+   "status": "stock",
+   "sireId": null,
+   "damId": null,
+   "external": true,
+   "breeder": "استيراد — بلجيكا",
+   "owner": "",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "x-tarek",
+   "rings": [
+    {
+     "country": "SY",
+     "union": "",
+     "year": 2018,
+     "serial": "33001",
+     "raw": "SY-2018-33001",
+     "type": "national"
+    }
+   ],
+   "name": "طارق",
+   "sex": "cock",
+   "hatchDate": "2018-01-19",
+   "colour": "أحمر",
+   "strain": "شامي",
+   "eyeSign": "",
+   "status": "stock",
+   "sireId": null,
+   "damId": null,
+   "external": true,
+   "breeder": "أبو محمد — حلب",
+   "owner": "",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "x-najla",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2018,
+     "serial": "04120",
+     "raw": "JO-2018-04120",
+     "type": "national"
+    }
+   ],
+   "name": "نجلاء",
+   "sex": "hen",
+   "hatchDate": "2018-02-27",
+   "colour": "أبيض",
+   "strain": "شامي",
+   "eyeSign": "",
+   "status": "stock",
+   "sireId": null,
+   "damId": null,
+   "external": true,
+   "breeder": "",
+   "owner": "",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g1-amir",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2019,
+     "serial": "06001",
+     "raw": "JO-2019-06001",
+     "type": "national"
+    }
+   ],
+   "name": "الأمير",
+   "sex": "cock",
+   "hatchDate": "2019-03-12",
+   "colour": "أزرق",
+   "strain": "فاندنابيل",
+   "eyeSign": "برتقالية",
+   "status": "breeder",
+   "sireId": "x-remco",
+   "damId": "x-anka",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g1-zumurruda",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2019,
+     "serial": "06002",
+     "raw": "JO-2019-06002",
+     "type": "national"
+    }
+   ],
+   "name": "زمرّدة",
+   "sex": "hen",
+   "hatchDate": "2019-04-29",
+   "colour": "أزرق مخطط",
+   "strain": "فاندنابيل",
+   "eyeSign": "لؤلؤية",
+   "status": "breeder",
+   "sireId": "x-remco",
+   "damId": "x-anka",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g1-sultan",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2019,
+     "serial": "06010",
+     "raw": "JO-2019-06010",
+     "type": "national"
+    }
+   ],
+   "name": "سلطان",
+   "sex": "cock",
+   "hatchDate": "2019-05-08",
+   "colour": "أشقر",
+   "strain": "يانسن",
+   "eyeSign": "لؤلؤية",
+   "status": "breeder",
+   "sireId": "x-julius",
+   "damId": "x-witpen",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g1-yasmin",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2020,
+     "serial": "07011",
+     "raw": "JO-2020-07011",
+     "type": "national"
+    }
+   ],
+   "name": "ياسمين",
+   "sex": "hen",
+   "hatchDate": "2020-03-21",
+   "colour": "أشقر",
+   "strain": "يانسن",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "x-julius",
+   "damId": "x-witpen",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g1-faris",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2020,
+     "serial": "07020",
+     "raw": "JO-2020-07020",
+     "type": "national"
+    }
+   ],
+   "name": "الفارس",
+   "sex": "cock",
+   "hatchDate": "2020-04-02",
+   "colour": "رمادي",
+   "strain": "فان لون",
+   "eyeSign": "برتقالية",
+   "status": "breeder",
+   "sireId": "x-kasper",
+   "damId": "x-mieke",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g1-lama",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2020,
+     "serial": "07021",
+     "raw": "JO-2020-07021",
+     "type": "national"
+    }
+   ],
+   "name": "لمى",
+   "sex": "hen",
+   "hatchDate": "2020-04-02",
+   "colour": "رمادي",
+   "strain": "فان لون",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "x-kasper",
+   "damId": "x-mieke",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g1-shahm",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2020,
+     "serial": "07030",
+     "raw": "JO-2020-07030",
+     "type": "national"
+    }
+   ],
+   "name": "شهم",
+   "sex": "cock",
+   "hatchDate": "2020-05-15",
+   "colour": "أحمر",
+   "strain": "شامي",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "x-tarek",
+   "damId": "x-najla",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g1-ghazal",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2020,
+     "serial": "07031",
+     "raw": "JO-2020-07031",
+     "type": "national"
+    }
+   ],
+   "name": "غزال",
+   "sex": "hen",
+   "hatchDate": "2020-06-01",
+   "colour": "أبيض",
+   "strain": "شامي",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "x-tarek",
+   "damId": "x-najla",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g2-muhannad",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2021,
+     "serial": "08001",
+     "raw": "JO-2021-08001",
+     "type": "national"
+    }
+   ],
+   "name": "مهنّد",
+   "sex": "cock",
+   "hatchDate": "2021-03-18",
+   "colour": "أزرق",
+   "strain": "فاندنابيل × يانسن",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "g1-amir",
+   "damId": "g1-yasmin",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g2-dana",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2021,
+     "serial": "08002",
+     "raw": "JO-2021-08002",
+     "type": "national"
+    }
+   ],
+   "name": "دانة",
+   "sex": "hen",
+   "hatchDate": "2021-04-06",
+   "colour": "أشقر",
+   "strain": "يانسن × فاندنابيل",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "g1-sultan",
+   "damId": "g1-zumurruda",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g2-saqr",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2021,
+     "serial": "08010",
+     "raw": "JO-2021-08010",
+     "type": "national"
+    }
+   ],
+   "name": "صقر الجبل",
+   "sex": "cock",
+   "hatchDate": "2021-05-02",
+   "colour": "رمادي",
+   "strain": "فان لون × شامي",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "g1-faris",
+   "damId": "g1-ghazal",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g2-nasma",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2022,
+     "serial": "09011",
+     "raw": "JO-2022-09011",
+     "type": "national"
+    }
+   ],
+   "name": "نسمة",
+   "sex": "hen",
+   "hatchDate": "2022-03-27",
+   "colour": "أحمر رصاصي",
+   "strain": "شامي × فان لون",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "g1-shahm",
+   "damId": "g1-lama",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g2-burhan",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2022,
+     "serial": "09020",
+     "raw": "JO-2022-09020",
+     "type": "national"
+    }
+   ],
+   "name": "برهان",
+   "sex": "cock",
+   "hatchDate": "2022-04-14",
+   "colour": "أزرق",
+   "strain": "فاندنابيل × فان لون",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "g1-amir",
+   "damId": "g1-lama",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g2-rima",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2022,
+     "serial": "09021",
+     "raw": "JO-2022-09021",
+     "type": "national"
+    }
+   ],
+   "name": "ريما",
+   "sex": "hen",
+   "hatchDate": "2022-04-14",
+   "colour": "رمادي",
+   "strain": "فان لون × فاندنابيل",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "g1-faris",
+   "damId": "g1-zumurruda",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g3-sheikh",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2023,
+     "serial": "10001",
+     "raw": "JO-2023-10001",
+     "type": "national"
+    },
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2023,
+     "serial": "00120",
+     "raw": "FCI-JO-2023-00120",
+     "type": "FCI"
+    }
+   ],
+   "name": "الشيخ",
+   "sex": "cock",
+   "hatchDate": "2023-03-09",
+   "colour": "أزرق",
+   "strain": "فاندنابيل × يانسن",
+   "eyeSign": "برتقالية غامقة",
+   "status": "breeder",
+   "sireId": "g2-muhannad",
+   "damId": "g2-dana",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [
+    {
+     "id": "n-sheikh",
+     "at": "2023-06-01T08:00:00.000Z",
+     "text": "تزاوج أولاد عم مزدوج: أبواه مهنّد ودانة يعودان لنفس الجدّين من الطرفين — COI المتوقع ١٢٫٥٪. راقب الخصوبة في الأجيال القادمة."
+    }
+   ],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g3-khayal",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2023,
+     "serial": "10002",
+     "raw": "JO-2023-10002",
+     "type": "national"
+    }
+   ],
+   "name": "خيال",
+   "sex": "hen",
+   "hatchDate": "2023-03-22",
+   "colour": "رمادي",
+   "strain": "فان لون × شامي",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "g2-saqr",
+   "damId": "g2-nasma",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g3-marwan",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2023,
+     "serial": "10010",
+     "raw": "JO-2023-10010",
+     "type": "national"
+    }
+   ],
+   "name": "مروان",
+   "sex": "cock",
+   "hatchDate": "2023-04-11",
+   "colour": "أزرق مخطط",
+   "strain": "مختلط",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "g2-burhan",
+   "damId": "g2-nasma",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g3-noor",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2023,
+     "serial": "10011",
+     "raw": "JO-2023-10011",
+     "type": "national"
+    }
+   ],
+   "name": "نور",
+   "sex": "hen",
+   "hatchDate": "2023-04-28",
+   "colour": "أشقر",
+   "strain": "مختلط",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "g2-muhannad",
+   "damId": "g2-rima",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g3-jasur",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2023,
+     "serial": "10020",
+     "raw": "JO-2023-10020",
+     "type": "national"
+    },
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2023,
+     "serial": "00121",
+     "raw": "FCI-JO-2023-00121",
+     "type": "FCI"
+    }
+   ],
+   "name": "جسور",
+   "sex": "cock",
+   "hatchDate": "2023-05-14",
+   "colour": "رمادي",
+   "strain": "مختلط",
+   "eyeSign": "",
+   "status": "race team",
+   "sireId": "g2-saqr",
+   "damId": "g2-dana",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g3-asif",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2023,
+     "serial": "10030",
+     "raw": "JO-2023-10030",
+     "type": "national"
+    }
+   ],
+   "name": "عاصف",
+   "sex": "cock",
+   "hatchDate": "2023-06-02",
+   "colour": "أحمر",
+   "strain": "شامي",
+   "eyeSign": "",
+   "status": "stock",
+   "sireId": "g1-shahm",
+   "damId": "g2-nasma",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [
+    {
+     "id": "n-asif",
+     "at": "2023-07-01T08:00:00.000Z",
+     "text": "تحذير: أبوه شهم هو أيضًا جدّ أمه نسمة — أب × ابنة، COI ٢٥٪. سُجّل للدراسة ولا يُستخدم للتربية."
+    }
+   ],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g4-malik",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2024,
+     "serial": "11001",
+     "raw": "JO-2024-11001",
+     "type": "national"
+    },
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2024,
+     "serial": "00455",
+     "raw": "FCI-JO-2024-00455",
+     "type": "FCI"
+    }
+   ],
+   "name": "الملك",
+   "sex": "cock",
+   "hatchDate": "2024-03-15",
+   "colour": "أزرق",
+   "strain": "مختلط",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "g3-sheikh",
+   "damId": "g3-khayal",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g4-sadim",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2024,
+     "serial": "11002",
+     "raw": "JO-2024-11002",
+     "type": "national"
+    }
+   ],
+   "name": "سديم",
+   "sex": "hen",
+   "hatchDate": "2024-04-02",
+   "colour": "رمادي",
+   "strain": "مختلط",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "g3-marwan",
+   "damId": "g3-noor",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g4-wisam",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2024,
+     "serial": "11010",
+     "raw": "JO-2024-11010",
+     "type": "national"
+    },
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2024,
+     "serial": "00456",
+     "raw": "FCI-JO-2024-00456",
+     "type": "FCI"
+    }
+   ],
+   "name": "وسام",
+   "sex": "cock",
+   "hatchDate": "2024-04-20",
+   "colour": "رمادي فاتح",
+   "strain": "مختلط",
+   "eyeSign": "",
+   "status": "race team",
+   "sireId": "g3-jasur",
+   "damId": "g2-rima",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g4-lulu",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2025,
+     "serial": "12001",
+     "raw": "JO-2025-12001",
+     "type": "national"
+    }
+   ],
+   "name": "لؤلؤ",
+   "sex": "hen",
+   "hatchDate": "2025-03-08",
+   "colour": "أشقر",
+   "strain": "مختلط",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "g3-sheikh",
+   "damId": "g3-noor",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g4-shihab",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2025,
+     "serial": "12010",
+     "raw": "JO-2025-12010",
+     "type": "national"
+    },
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2025,
+     "serial": "00781",
+     "raw": "FCI-JO-2025-00781",
+     "type": "FCI"
+    }
+   ],
+   "name": "شهاب",
+   "sex": "cock",
+   "hatchDate": "2025-03-24",
+   "colour": "أزرق",
+   "strain": "مختلط",
+   "eyeSign": "",
+   "status": "race team",
+   "sireId": "g3-marwan",
+   "damId": "g3-khayal",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g4-bushra",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2025,
+     "serial": "12011",
+     "raw": "JO-2025-12011",
+     "type": "national"
+    }
+   ],
+   "name": "بشرى",
+   "sex": "hen",
+   "hatchDate": "2025-04-11",
+   "colour": "أحمر",
+   "strain": "مختلط",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "g3-asif",
+   "damId": "g2-dana",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g5-faris26",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2026,
+     "serial": "13001",
+     "raw": "JO-2026-13001",
+     "type": "national"
+    },
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2026,
+     "serial": "01120",
+     "raw": "FCI-JO-2026-01120",
+     "type": "FCI"
+    }
+   ],
+   "name": "فارس ٢٦",
+   "sex": "cock",
+   "hatchDate": "2026-03-14",
+   "colour": "أزرق",
+   "strain": "مختلط",
+   "eyeSign": "",
+   "status": "young bird",
+   "sireId": "g4-malik",
+   "damId": "g4-sadim",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g5-najma26",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2026,
+     "serial": "13002",
+     "raw": "JO-2026-13002",
+     "type": "national"
+    }
+   ],
+   "name": "نجمة ٢٦",
+   "sex": "hen",
+   "hatchDate": "2026-03-15",
+   "colour": "أزرق مخطط",
+   "strain": "مختلط",
+   "eyeSign": "",
+   "status": "young bird",
+   "sireId": "g4-malik",
+   "damId": "g4-sadim",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g5-sahm26",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2026,
+     "serial": "13010",
+     "raw": "JO-2026-13010",
+     "type": "national"
+    }
+   ],
+   "name": "سهم ٢٦",
+   "sex": "cock",
+   "hatchDate": "2026-04-02",
+   "colour": "رمادي",
+   "strain": "مختلط",
+   "eyeSign": "",
+   "status": "young bird",
+   "sireId": "g4-wisam",
+   "damId": "g4-lulu",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  },
+  {
+   "id": "g5-ghaima26",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2026,
+     "serial": "13011",
+     "raw": "JO-2026-13011",
+     "type": "national"
+    }
+   ],
+   "name": "غيمة ٢٦",
+   "sex": "hen",
+   "hatchDate": "2026-04-19",
+   "colour": "أحمر",
+   "strain": "مختلط",
+   "eyeSign": "",
+   "status": "young bird",
+   "sireId": "g4-shihab",
+   "damId": "g4-bushra",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت إربد التعليمي",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "loft-irbid-demo"
+  }
+ ],
+ "pairs": [
+  {
+   "id": "lp-malik-sadim-26",
+   "sireId": "g4-malik",
+   "damId": "g4-sadim",
+   "season": "2026",
+   "nestBox": "1",
+   "status": "active",
+   "startDate": "2026-01-25",
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "rounds": [
+    {
+     "id": "lp1r1",
+     "number": 1,
+     "eggs": [
+      {
+       "id": "lp1r1e1",
+       "laidDate": "2026-02-21",
+       "state": "hatched",
+       "hatchDate": "2026-03-14",
+       "chickId": "g5-faris26",
+       "ringed": true,
+       "weaned": true,
+       "weanDate": "2026-04-09"
+      },
+      {
+       "id": "lp1r1e2",
+       "laidDate": "2026-02-23",
+       "state": "hatched",
+       "hatchDate": "2026-03-15",
+       "chickId": "g5-najma26",
+       "ringed": true,
+       "weaned": true,
+       "weanDate": "2026-04-09"
+      }
+     ]
+    },
+    {
+     "id": "lp1r2",
+     "number": 2,
+     "eggs": [
+      {
+       "id": "lp1r2e1",
+       "laidDate": "2026-08-14",
+       "state": "laid"
+      },
+      {
+       "id": "lp1r2e2",
+       "laidDate": "2026-08-16",
+       "state": "laid"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lp-wisam-lulu-26",
+   "sireId": "g4-wisam",
+   "damId": "g4-lulu",
+   "season": "2026",
+   "nestBox": "4",
+   "status": "active",
+   "startDate": "2026-02-10",
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "rounds": [
+    {
+     "id": "lp2r1",
+     "number": 1,
+     "eggs": [
+      {
+       "id": "lp2r1e1",
+       "laidDate": "2026-03-11",
+       "state": "hatched",
+       "hatchDate": "2026-04-02",
+       "chickId": "g5-sahm26",
+       "ringed": true,
+       "weaned": true,
+       "weanDate": "2026-04-28"
+      },
+      {
+       "id": "lp2r1e2",
+       "laidDate": "2026-03-13",
+       "state": "failed"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lp-shihab-bushra-26",
+   "sireId": "g4-shihab",
+   "damId": "g4-bushra",
+   "season": "2026",
+   "nestBox": "6",
+   "status": "active",
+   "startDate": "2026-03-01",
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "rounds": [
+    {
+     "id": "lp3r1",
+     "number": 1,
+     "eggs": [
+      {
+       "id": "lp3r1e1",
+       "laidDate": "2026-03-28",
+       "state": "hatched",
+       "hatchDate": "2026-04-19",
+       "chickId": "g5-ghaima26",
+       "ringed": true,
+       "weaned": true,
+       "weanDate": "2026-05-15"
+      },
+      {
+       "id": "lp3r1e2",
+       "laidDate": "2026-03-30",
+       "state": "hatched",
+       "hatchDate": "2026-04-20",
+       "chickId": null,
+       "ringed": false,
+       "weaned": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lp-sheikh-khayal-24",
+   "sireId": "g3-sheikh",
+   "damId": "g3-khayal",
+   "season": "2024",
+   "nestBox": "1",
+   "status": "separated",
+   "startDate": "2024-01-20",
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "rounds": [
+    {
+     "id": "lp4r1",
+     "number": 1,
+     "eggs": [
+      {
+       "id": "lp4r1e1",
+       "laidDate": "2024-02-22",
+       "state": "hatched",
+       "hatchDate": "2024-03-15",
+       "chickId": "g4-malik",
+       "ringed": true,
+       "weaned": true,
+       "weanDate": "2024-04-10"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lp-marwan-noor-24",
+   "sireId": "g3-marwan",
+   "damId": "g3-noor",
+   "season": "2024",
+   "nestBox": "3",
+   "status": "separated",
+   "startDate": "2024-01-20",
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "rounds": [
+    {
+     "id": "lp5r1",
+     "number": 1,
+     "eggs": [
+      {
+       "id": "lp5r1e1",
+       "laidDate": "2024-03-10",
+       "state": "hatched",
+       "hatchDate": "2024-04-02",
+       "chickId": "g4-sadim",
+       "ringed": true,
+       "weaned": true,
+       "weanDate": "2024-04-29"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "raceResults": [
+  {
+   "id": "lr-1",
+   "birdId": "g3-jasur",
+   "date": "2025-03-29",
+   "raceType": "club",
+   "organisation": "نادي إربد للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق الأزرق",
+   "releasePoint": {
+    "name": "الأزرق",
+    "lat": 31.8333,
+    "lon": 36.8167
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2025-03-29T07:00:00",
+   "arrivalTime": "2025-03-29T08:44:00",
+   "distanceKm": 121.3,
+   "velocity": 1167,
+   "position": 5,
+   "fanciersEntered": 16,
+   "birdsEntered": 118,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-2",
+   "birdId": "g3-jasur",
+   "date": "2025-04-19",
+   "raceType": "club",
+   "organisation": "نادي إربد للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق الجفر",
+   "releasePoint": {
+    "name": "الجفر",
+    "lat": 30.3427,
+    "lon": 36.147
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2025-04-19T06:30:00",
+   "arrivalTime": "2025-04-19T10:12:00",
+   "distanceKm": 247.7,
+   "velocity": 1116,
+   "position": 2,
+   "fanciersEntered": 16,
+   "birdsEntered": 118,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-3",
+   "birdId": "g3-jasur",
+   "date": "2025-05-24",
+   "raceType": "national",
+   "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
+   "country": "JO",
+   "raceName": "السباق الوطني — العقبة",
+   "releasePoint": {
+    "name": "العقبة",
+    "lat": 29.5321,
+    "lon": 35.0063
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2025-05-24T05:45:00",
+   "arrivalTime": "2025-05-24T12:08:00",
+   "distanceKm": 345.7,
+   "velocity": 903,
+   "position": 6,
+   "fanciersEntered": 46,
+   "birdsEntered": 412,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-4",
+   "birdId": "g4-wisam",
+   "date": "2025-03-29",
+   "raceType": "club",
+   "organisation": "نادي إربد للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق الأزرق",
+   "releasePoint": {
+    "name": "الأزرق",
+    "lat": 31.8333,
+    "lon": 36.8167
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2025-03-29T07:00:00",
+   "arrivalTime": "2025-03-29T08:51:00",
+   "distanceKm": 121.3,
+   "velocity": 1093,
+   "position": 9,
+   "fanciersEntered": 16,
+   "birdsEntered": 118,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-5",
+   "birdId": "g4-wisam",
+   "date": "2025-05-03",
+   "raceType": "federation",
+   "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
+   "country": "JO",
+   "raceName": "بطولة الاتحاد — معان",
+   "releasePoint": {
+    "name": "معان",
+    "lat": 30.1962,
+    "lon": 35.734
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2025-05-03T06:15:00",
+   "arrivalTime": "2025-05-03T11:03:00",
+   "distanceKm": 262.6,
+   "velocity": 912,
+   "position": 1,
+   "fanciersEntered": 24,
+   "birdsEntered": 187,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-6",
+   "birdId": "g4-wisam",
+   "date": "2025-05-24",
+   "raceType": "national",
+   "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
+   "country": "JO",
+   "raceName": "السباق الوطني — العقبة",
+   "releasePoint": {
+    "name": "العقبة",
+    "lat": 29.5321,
+    "lon": 35.0063
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2025-05-24T05:45:00",
+   "arrivalTime": "2025-05-24T12:30:00",
+   "distanceKm": 345.7,
+   "velocity": 854,
+   "position": 14,
+   "fanciersEntered": 46,
+   "birdsEntered": 412,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-7",
+   "birdId": "g3-marwan",
+   "date": "2025-04-19",
+   "raceType": "club",
+   "organisation": "نادي إربد للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق الجفر",
+   "releasePoint": {
+    "name": "الجفر",
+    "lat": 30.3427,
+    "lon": 36.147
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2025-04-19T06:30:00",
+   "arrivalTime": "2025-04-19T10:58:00",
+   "distanceKm": 247.7,
+   "velocity": 924,
+   "position": 24,
+   "fanciersEntered": 16,
+   "birdsEntered": 118,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-8",
+   "birdId": "g4-shihab",
+   "date": "2026-03-28",
+   "raceType": "club",
+   "organisation": "نادي إربد للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق الأزرق",
+   "releasePoint": {
+    "name": "الأزرق",
+    "lat": 31.8333,
+    "lon": 36.8167
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2026-03-28T07:00:00",
+   "arrivalTime": "2026-03-28T08:39:00",
+   "distanceKm": 121.3,
+   "velocity": 1226,
+   "position": 1,
+   "fanciersEntered": 16,
+   "birdsEntered": 118,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-9",
+   "birdId": "g4-shihab",
+   "date": "2026-04-25",
+   "raceType": "federation",
+   "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
+   "country": "JO",
+   "raceName": "بطولة الاتحاد — القويرة",
+   "releasePoint": {
+    "name": "القويرة",
+    "lat": 29.803,
+    "lon": 35.312
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2026-04-25T06:00:00",
+   "arrivalTime": "2026-04-25T12:02:00",
+   "distanceKm": 310.3,
+   "velocity": 857,
+   "position": 3,
+   "fanciersEntered": 24,
+   "birdsEntered": 187,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-10",
+   "birdId": "g4-shihab",
+   "date": "2026-05-23",
+   "raceType": "national",
+   "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
+   "country": "JO",
+   "raceName": "السباق الوطني — العقبة",
+   "releasePoint": {
+    "name": "العقبة",
+    "lat": 29.5321,
+    "lon": 35.0063
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2026-05-23T05:40:00",
+   "arrivalTime": "2026-05-23T12:15:00",
+   "distanceKm": 345.7,
+   "velocity": 875,
+   "position": 8,
+   "fanciersEntered": 46,
+   "birdsEntered": 412,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-11",
+   "birdId": "g4-wisam",
+   "date": "2026-04-25",
+   "raceType": "federation",
+   "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
+   "country": "JO",
+   "raceName": "بطولة الاتحاد — القويرة",
+   "releasePoint": {
+    "name": "القويرة",
+    "lat": 29.803,
+    "lon": 35.312
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2026-04-25T06:00:00",
+   "arrivalTime": "2026-04-25T12:26:00",
+   "distanceKm": 310.3,
+   "velocity": 804,
+   "position": 11,
+   "fanciersEntered": 24,
+   "birdsEntered": 187,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-12",
+   "birdId": "g5-faris26",
+   "date": "2026-06-13",
+   "raceType": "club",
+   "organisation": "نادي إربد للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق الأزرق",
+   "releasePoint": {
+    "name": "الأزرق",
+    "lat": 31.8333,
+    "lon": 36.8167
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2026-06-13T06:45:00",
+   "arrivalTime": "2026-06-13T08:30:00",
+   "distanceKm": 121.3,
+   "velocity": 1156,
+   "position": 4,
+   "fanciersEntered": 16,
+   "birdsEntered": 118,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-13",
+   "birdId": "g5-faris26",
+   "date": "2026-07-04",
+   "raceType": "club",
+   "organisation": "نادي إربد للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق الجفر",
+   "releasePoint": {
+    "name": "الجفر",
+    "lat": 30.3427,
+    "lon": 36.147
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2026-07-04T06:20:00",
+   "arrivalTime": "2026-07-04T10:06:00",
+   "distanceKm": 247.7,
+   "velocity": 1096,
+   "position": 2,
+   "fanciersEntered": 16,
+   "birdsEntered": 118,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-14",
+   "birdId": "g5-sahm26",
+   "date": "2026-06-13",
+   "raceType": "club",
+   "organisation": "نادي إربد للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق الأزرق",
+   "releasePoint": {
+    "name": "الأزرق",
+    "lat": 31.8333,
+    "lon": 36.8167
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2026-06-13T06:45:00",
+   "arrivalTime": "2026-06-13T08:58:00",
+   "distanceKm": 121.3,
+   "velocity": 912,
+   "position": 17,
+   "fanciersEntered": 16,
+   "birdsEntered": 118,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-15",
+   "birdId": "g5-najma26",
+   "date": "2026-06-13",
+   "raceType": "club",
+   "organisation": "نادي إربد للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق الأزرق",
+   "releasePoint": {
+    "name": "الأزرق",
+    "lat": 31.8333,
+    "lon": 36.8167
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2026-06-13T06:45:00",
+   "arrivalTime": "2026-06-13T09:12:00",
+   "distanceKm": 121.3,
+   "velocity": 825,
+   "position": 31,
+   "fanciersEntered": 16,
+   "birdsEntered": 118,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-16",
+   "birdId": "g5-ghaima26",
+   "date": "2026-06-06",
+   "raceType": "training",
+   "organisation": "نادي إربد للحمام الزاجل",
+   "country": "JO",
+   "raceName": "تدريب الأزرق",
+   "releasePoint": {
+    "name": "الأزرق",
+    "lat": 31.8333,
+    "lon": 36.8167
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2026-06-06T07:30:00",
+   "arrivalTime": "2026-06-06T09:02:00",
+   "distanceKm": 121.3,
+   "velocity": 1319,
+   "position": null,
+   "fanciersEntered": 1,
+   "birdsEntered": 24,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lr-17",
+   "birdId": "g5-faris26",
+   "date": "2026-06-06",
+   "raceType": "training",
+   "organisation": "نادي إربد للحمام الزاجل",
+   "country": "JO",
+   "raceName": "تدريب الأزرق",
+   "releasePoint": {
+    "name": "الأزرق",
+    "lat": 31.8333,
+    "lon": 36.8167
+   },
+   "loftPoint": {
+    "lat": 32.5556,
+    "lon": 35.85
+   },
+   "releaseTime": "2026-06-06T07:30:00",
+   "arrivalTime": "2026-06-06T08:47:00",
+   "distanceKm": 121.3,
+   "velocity": 1576,
+   "position": null,
+   "fanciersEntered": 1,
+   "birdsEntered": 24,
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  }
+ ],
+ "healthEvents": [
+  {
+   "id": "lh-1",
+   "eventType": "vaccination",
+   "wholeLoft": true,
+   "birdId": null,
+   "date": "2026-01-15",
+   "medication": "لقاح باراميكسو PMV — Colombovac",
+   "notes": "كامل اللوفت قبل موسم التزاوج",
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lh-2",
+   "eventType": "treatment",
+   "wholeLoft": true,
+   "birdId": null,
+   "date": "2026-03-02",
+   "medication": "رونيدازول — وقاية من الترايكوموناس",
+   "notes": "كورس ٥ أيام في ماء الشرب",
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lh-3",
+   "eventType": "vaccination",
+   "wholeLoft": true,
+   "birdId": null,
+   "date": "2026-05-10",
+   "medication": "لقاح الجدري",
+   "notes": "للفراخ قبل موسم السباق",
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lh-4",
+   "eventType": "illness",
+   "wholeLoft": false,
+   "birdId": "g5-najma26",
+   "date": "2026-06-20",
+   "medication": "",
+   "notes": "خمول بعد سباق الأزرق — عزل ٤ أيام، تعافت",
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lh-5",
+   "eventType": "treatment",
+   "wholeLoft": false,
+   "birdId": "g5-najma26",
+   "date": "2026-06-21",
+   "medication": "أمبروليوم — كوكسيديا",
+   "notes": "",
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lh-6",
+   "eventType": "check",
+   "wholeLoft": false,
+   "birdId": "g4-shihab",
+   "date": "2026-03-20",
+   "medication": "",
+   "notes": "فحص ما قبل السباق — ريش وعضلات ممتازة",
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "lh-7",
+   "eventType": "treatment",
+   "wholeLoft": true,
+   "birdId": null,
+   "date": "2025-09-14",
+   "medication": "علاج الديدان — فينبيندازول",
+   "notes": "بعد موسم السباق",
+   "loftId": "loft-irbid-demo",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  }
+ ],
+ "media": []
+}

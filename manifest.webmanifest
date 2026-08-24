@@ -1,0 +1,18 @@
+{
+  "name": "زاجل — Zajil",
+  "short_name": "زاجل",
+  "description": "إدارة اللوفت وأنساب الحمام الزاجل — يعمل دون اتصال. Racing pigeon pedigree & loft management — offline-first.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f4ef",
+  "theme_color": "#0e7a5f",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
