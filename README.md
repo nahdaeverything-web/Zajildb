@@ -3,7 +3,7 @@
 **Arabic-first, offline-first pedigree & loft management for racing pigeons.**
 Built for fanciers in Jordan and the Gulf; usable by anyone.
 
-**[Try it live →](https://nahdaeverything-web.github.io/zajildb/)** · installs to
+**[Try it live →](https://nahdaeverything-web.github.io/Zajildb/)** · installs to
 your home screen and keeps working with no connection.
 
 زاجل تطبيق لإدارة اللوفت وأنساب الحمام الزاجل: عربي أولًا، يعمل دون اتصال
@@ -35,8 +35,8 @@ your home screen and keeps working with no connection.
 Static files, no build step, no dependencies.
 
 ```bash
-git clone https://github.com/nahdaeverything-web/zajildb.git
-cd zajildb
+git clone https://github.com/nahdaeverything-web/Zajildb.git
+cd Zajildb
 python3 -m http.server 8123        # or any static host
 # open http://localhost:8123
 ```
