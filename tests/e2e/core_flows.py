@@ -87,7 +87,9 @@ with sync_playwright() as p:
 
     # 8. breeding + stats + races render with data
     page.goto(BASE + '#/breeding'); page.wait_for_timeout(700)
-    check('breeding shows 2026 pairs', page.locator('.pair-card').count() == 2)
+    # sample-data.json has THREE 2026 pairs since v1.3 added the mid-cycle
+    # teaching pair; this assertion was stale, not a regression
+    check('breeding shows 2026 pairs', page.locator('.pair-card').count() == 3)
     page.goto(BASE + '#/races'); page.wait_for_timeout(700)
     check('race log rows', page.locator('tbody tr').count() == 12)
     page.goto(BASE + '#/stats'); page.wait_for_timeout(1200)

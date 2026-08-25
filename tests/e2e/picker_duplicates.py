@@ -49,7 +49,10 @@ with sync_playwright() as p:
     page.evaluate("""async () => {
         const db = await import('./js/db.js');
         const src = db.getBird('g1-lama');
-        await db.saveBird(db.newBird({ name: src.name + ' (نسخة)', sex: 'hen', rings: JSON.parse(JSON.stringify(src.rings)) }));
+        // deliberately seeding a duplicate ring to exercise the finder, so the
+        // warning is acknowledged explicitly — saveBird refuses it otherwise,
+        // which is the write boundary working as intended
+        await db.saveBird(db.newBird({ name: src.name + ' (نسخة)', sex: 'hen', rings: JSON.parse(JSON.stringify(src.rings)) }), { allowWarnings: true });
     }""")
     page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/tools'); page.reload(); page.wait_for_timeout(1200)
     check('duplicate finder lists the clone', page.locator('.dup-group').count() == 1,
