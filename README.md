@@ -143,7 +143,8 @@ tools/gen-example-large.js — regenerates the 38-bird teaching loft
 ```
 
 Working on this project? Start with **[HANDOFF.md](HANDOFF.md)** — full state,
-architecture, invariants, open questions, and a seed prompt for a new session.
+architecture, invariants, market position, open questions, and a seed prompt for
+a new session. Known issues live in **[BACKLOG.md](BACKLOG.md)**.
 
 ## Deliberately not here (v3+)
 

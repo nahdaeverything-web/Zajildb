@@ -35,13 +35,16 @@ If a proposed feature doesn't serve one of those three, it is out of scope.
 
 | | |
 |---|---|
-| App version (service worker) | `zajil-v1.4.1` |
+| App version (service worker) | `zajil-v1.6.0` |
 | JS source | ~3,770 lines (`js/`) |
 | CSS | 363 lines (one file) |
 | Automated tests | **33 passing, 0 failing** (`node tests/run.js`) |
+| Browser checks | **72 passing** across 8 ad-hoc Playwright suites (not committed — see Roadmap) |
 | Browser E2E checks run to date | 63 across 4 suites, all passing (ad-hoc Playwright, not committed) |
 | Example datasets | 20-bird loft + 38-bird / 6-generation teaching loft |
-| Version control | git (`main`) — see the repo history |
+| Version control | git (`main`), pushed to **github.com/nahdaeverything-web/Zajildb** (public) |
+| Hosted | **not yet** — GitHub Pages not switched on (see Open decisions) |
+| Known issues | 33 open, catalogued in [BACKLOG.md](BACKLOG.md) |
 
 ---
 
@@ -124,6 +127,26 @@ Stable UUIDs everywhere. **Never keyed on ring number** — birds carry
 | `media` | photos (body/eye/wing) + scanned documents as Blobs, keyed to birds |
 | `settings`, `backups` | prefs; automatic internal snapshots |
 
+**Ownership (`external`) — read this before touching bird entry.** A bird you
+never owned (an ancestor from a seller's pedigree) is still a full Bird record,
+because relatedness maths depends on it. It is distinguished by
+`external: true` **plus** `status: 'reference'`:
+
+- The bird form asks ownership **up front** («في لوفتي» vs «خارجي — للنسب فقط»);
+  choosing external hides the status field and stores `REFERENCE_STATUS`.
+- External birds are excluded from loft statistics, filterable in the register
+  («الملكية» filter), and shown with a chip.
+- `REFERENCE_STATUS` is deliberately kept OUT of `DEFAULT_STATUSES` so it can't
+  be picked for a real bird; `loftStatuses({includeReference:true})` appends it
+  without rewriting an existing loft's stored list.
+- Ownership is carried by "Save & add another", so back-filling a run of
+  ancestors doesn't silently enrol them into the loft.
+
+This matches the only mature convention found in the market (Pigeon Planner's
+`show` flag — orthogonal to status, auto-set on parent entry, reversible).
+**Known gap:** there is no way to *promote* an external bird into the loft when
+you later buy it. Pigeon Planner has this; we don't.
+
 **Club-mode hook (important):** every record carries `loftId` **and**
 `updatedAt` from day one. Club features are *not* built, but the schema
 already allows one admin over many member lofts, ring issuance tracking, and
@@ -173,7 +196,7 @@ test**.
 1. ✅ Bird register — chunked rendering, Arabic + normalised-ring search, filters
 2. ✅ Pedigree tree 3/4/5 generations, RTL-correct (verified geometrically)
 3. ✅ COI + relationship finder, warnings surfaced **at pair creation**
-4. ✅ Breeding season manager — pairs → nest boxes → rounds → eggs → hatch → ring → wean, chick auto-linked to parents
+4. ✅ Breeding season manager — pairs → nest boxes → rounds → eggs → hatch → ring → wean, chick auto-linked to parents. Also: pair provenance (acquired from/on), a settable pairing date, editable egg dates, clutch date inheritance, and **link an already-recorded bird to an egg** (validated; refuses cycles/sex contradictions) with unlink — for a pair bought with young already ringed.
 5. ✅ Print-ready certificates, both languages, independent of UI language
 6. ✅ Full JSON export/import with photos, round-trip tested
 
@@ -230,6 +253,54 @@ Regenerate with the `tools/gen-*.js` scripts — never hand-edit the JSON.
 
 ---
 
+## 9b. Market position (researched, sourced)
+
+A verified competitive study was run against ~20 pigeon products and several
+general animal-pedigree suites. Claims were only kept if an agent fetched a
+source supporting them, then survived an adversarial refutation pass (218 of
+242 Benzing-related claims were refuted — the guard did real work, so treat
+coverage as thinner than the raw count suggests). PigeonDB blocks crawlers, so
+its entries come from structured metadata and forum reports, not its docs.
+
+**Benzing is mostly hardware.** M1/M2/M3 clocks, SPEED antennas, chip rings,
+ClubSystem — none of it replicable by a PWA. It *does* sell a pedigree product,
+**Pedigree.Live** (~€51+/yr), but on the pedigree axis it is weaker than Zajil:
+**3–4 generations** (more "promised for future releases"), no documented
+inbreeding calculation, **cloud-only and account-gated** with no offline mode,
+and no Arabic. Its sibling **MyPigeons.live** is race/club management (23
+languages incl. Arabic) — a different category entirely.
+
+**Conclusion: "Benzing replica" is the wrong north star.** Their pedigree app
+is behind what already exists here; their moat is hardware. The useful framing
+is *as trusted and professional-feeling as Benzing, in the category Benzing
+serves badly.*
+
+**Where Zajil already leads, per the sources:**
+
+| Capability | Market reality |
+|---|---|
+| Computes COI at all | only 3 pigeon products (PigeonDB, Loft Manager Online, Brieftaubenscout) |
+| **Per-ancestor COI breakdown** | **no product documents one** |
+| AVK / ancestor loss | only ZooEasy and Brieftaubenscout — both desktop, paid, European |
+| Arabic UI | only Benzing MyPigeons (race software, no pedigree genetics) and ELC Loft (Arabic-native, 4 generations, no COI) |
+| Offline / no account | rare; the cloud products all require sign-in |
+
+Arabic + 5 generations + real genetics + offline appears to be an unoccupied
+corner. That is the thing to defend.
+
+**Conventions worth copying (not yet built):**
+- **Promote an external ancestor into the loft** when you buy it (Pigeon Planner).
+- **Fostering / placed eggs** — an egg reared by a different pair, tracking
+  biological vs rearing parents (AviRings, Hawkeye). Adjacent to the bought-eggs
+  case and currently unmodelled.
+- **Purchase provenance at bird level** — a "purchased" flag plus a breeder
+  pick-list (PLO), a purchase/sale tab (Compustam). Zajil has this on pairs and
+  loosely on birds (`acquiredFrom`/`acquiredDate`).
+- **Import a seller's pedigree wholesale** rather than re-keying ancestors —
+  either vendor-to-vendor (PLO), from a shared public pool (AviRings,
+  pigeon.plus), or via OCR of the paper pedigree (PigeonDB, WingLoft,
+  MyPigeon Records). Zajil's Tier-3 scanner is the same idea.
+
 ## 10. Known limitations & gotchas
 
 1. **LAN = no offline/install.** Plain HTTP isn't a secure context. Needs real HTTPS (Cloudflare tunnel — `cloudflared` is installed; or free static hosting; or a trusted local cert).
@@ -268,10 +339,49 @@ Regenerate with the `tools/gen-*.js` scripts — never hand-edit the JSON.
 - Whether to run the dev server as a persistent service on the workstation.
 
 ### Roadmap
-1. **Commit the Playwright E2E suite.** ~80 browser checks currently live only as ad-hoc scripts; they have caught several real bugs and should be repeatable in CI.
-2. Tier 3 #14 **public loft page** — small, and it serves the “shareable to buyers” pillar.
-3. Tier 3 #12 **scanner** — biggest effort; needs an Arabic-handwriting vision model server. Must stay strictly optional.
-4. Club mode — the business case (a federation is the paying customer). Schema is ready; UI is not.
+1. **Switch on GitHub Pages** → `https://nahdaeverything-web.github.io/Zajildb/`
+   (Settings → Pages → Deploy from branch → `main` → `/root`). Verified working
+   under a Pages-style subpath, offline included. This is what finally gives a
+   phone the installed, offline experience the product is designed around.
+2. **Design & typography pass** — the next planned piece of work. See §15.
+3. **Work the [BACKLOG.md](BACKLOG.md)** — 33 verified findings. Highest value
+   first: ring-chick bypasses validation; UTC date defaults record *yesterday*
+   between midnight and 03:00 in Jordan; the FCI column shows ✓ for birds with
+   no FCI ring; Statistics freezes for seconds on a few hundred birds.
+4. **Commit the Playwright suites.** 72 browser checks live only as ad-hoc
+   scripts; they have caught several real regressions and should be repeatable.
+5. **Promote-to-loft** for external birds, and **fostering / placed eggs** — the
+   two conventions the market research says we're missing (§9b).
+6. Tier 3 #14 **public loft page** — small, serves the “shareable to buyers” pillar.
+7. Tier 3 #12 **scanner** — biggest effort; needs an Arabic-handwriting vision
+   model server. Must stay strictly optional.
+8. Club mode — the business case (a federation is the paying customer). Schema
+   is ready; UI is not.
+
+## 15. Design & typography — the next piece of work
+
+Not started. The brief: make it feel as professional as a paid product, and
+unmistakably Arabic-first rather than a translated Latin UI.
+
+Research partly completed before the run hit a limit; re-run it properly before
+committing to choices. What surfaced, to be re-verified:
+
+- **Candidate Arabic UI typefaces:** IBM Plex Sans Arabic, Cairo, Tajawal,
+  Almarai, Noto Sans Arabic, and commercial options (29LT Bukra/Azel, GE SS,
+  Dubai). Today the app ships **no webfont at all** — `css/app.css` uses a
+  system stack (`system-ui … "Noto Sans Arabic", "Noto Naskh Arabic", Tahoma`),
+  which is why it can look generic.
+- **Reference material:** Apple's *Design for Arabic* (WWDC22), the W3C Arabic
+  Layout Requirements (alreq), the UAE Design System, and Saudi DGA's design
+  system.
+- **Known Arabic-specific issues to address:** Arabic needs more line-height
+  and usually a slightly larger optical size than Latin at the same nominal
+  px; Latin/Arabic pairing must be deliberate (ring numbers are already
+  monospace Western and LTR-isolated — keep that); numerals policy is already
+  handled (Western/Eastern preference, rings always Western).
+- **Constraint:** any webfont must be self-hosted, because the app must install
+  and run fully offline — no Google Fonts CDN at runtime, and the files must be
+  added to the `sw.js` SHELL precache list.
 
 ---
 
@@ -281,6 +391,9 @@ Regenerate with the `tools/gen-*.js` scripts — never hand-edit the JSON.
 - **v1.1** — data audit pass (0 structural errors). Fixed: `[hidden]` override bug (parent-picker dropdown could never close; same latent bug in the health dialog). Added readable **sex chips** (♂ ذكر / ♀ أنثى) in lists, pickers, detail, plus tree tinting and a legend. Added **add-sibling** flow (siblings derive from shared parents; creates placeholder parents when none exist). Added in-app example-data loader.
 - **v1.2** — 8 code-verified UX fixes: inline creation of missing ancestors from the sire/dam pickers; **rings-first form** with a pre-seeded row; **save-&-add-another** carrying strain/colour/status/breeder/owner + ring prefix; **editable egg dates** that propagate a corrected hatch date to the chick's record; one-tap hatch date from the ring year; Enter no longer submits a half-entered bird; Latin keyboard hints on ring inputs; datalist autocomplete for strain/colour/breeder; save uses history-*replace* so the phone back gesture returns to the list.
 - **v1.3** — added the 38-bird / 6-generation teaching loft (`example-loft-large.json`) + 5 asserting tests; both examples offered in the empty state and Tools; precached for offline.
+- **v1.4** — pre-publish audit before going public (18 findings): removed a real name from the shipped sample data and real breeders' names from demo pedigrees, stripped private notes/paths from this file, moved commits to a noreply address, added the LICENSE, and fixed two service-worker bugs that only bite on GitHub Pages (per-origin cache deletion would have wiped sibling projects' offline caches; `addAll` read through the HTTP cache and could bake a stale deploy into a new version cache). Repo pushed public.
+- **v1.5** — the ownership model (§5), register ownership filter, link-an-existing-bird to an egg, pair provenance and backdating. Plus a UI sweep across 11 routes × 3 viewports that found the real cause of the reported “page jumps to the top” bug: **the page scrolled behind open dialogs**. Dialogs now pin the page and restore position exactly; tall dialogs scroll themselves; Tab is trapped; race tabs remember scroll position.
+- **v1.6** — deep bug hunt (39 confirmed, 32 refuted). Fixed the four data-loss defects: the parent picker silently detaching a link on an abandoned search; snapshot restore deleting every photo; a foreign replace-import bricking the loft; and object URLs pinning every photo Blob for the life of the tab. Also fixed ownership being dropped by “Save & add another”. The remaining 33 findings are in [BACKLOG.md](BACKLOG.md).
 
 ---
 
@@ -297,5 +410,10 @@ Regenerate with the `tools/gen-*.js` scripts — never hand-edit the JSON.
 > 33 node tests pass (`node tests/run.js`) and must stay passing — the four
 > COI fixtures are contractual. RTL is structural via CSS logical properties.
 > Serve with `python3 -m http.server 8123` from the repo root.
+>
+> Current state: v1.6.0, pushed to `github.com/nahdaeverything-web/Zajildb`
+> (public, all-rights-reserved licence). GitHub Pages is NOT switched on yet.
+> 33 known issues are catalogued in `BACKLOG.md` — all verified, none blocking.
+> The next planned piece of work is the **design & typography pass** (§15).
 >
 > What I want to work on next: **<describe your task here>**
