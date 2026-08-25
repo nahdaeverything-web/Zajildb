@@ -395,11 +395,12 @@ export async function dataURLToBlob(dataURL) {
 }
 
 /** Full export: everything, media as data URLs. Round-trip tested. */
-export async function exportAll() {
-  const media = await idbGetAll('media');
+export async function exportAll({ includeMedia = true } = {}) {
   const mediaOut = [];
-  for (const m of media) {
-    mediaOut.push({ ...m, blob: undefined, dataURL: await blobToDataURL(m.blob) });
+  if (includeMedia) {
+    for (const m of await idbGetAll('media')) {
+      mediaOut.push({ ...m, blob: undefined, dataURL: await blobToDataURL(m.blob) });
+    }
   }
   return {
     format: 'zajil-export',
@@ -421,6 +422,42 @@ export async function exportAll() {
 export async function importAll(payload, mode = 'merge') {
   if (!payload || payload.format !== 'zajil-export') throw new Error('bad-format');
   const counts = { birds: 0, pairs: 0, raceResults: 0, healthEvents: 0, lofts: 0, media: 0, skipped: 0 };
+
+  // ── decode and validate EVERYTHING before touching the database ──
+  // A replace-import used to clear all six stores and only then decode the
+  // media blobs, so one malformed data URL — or a quota error part-way
+  // through — destroyed the loft with nothing to put back. Decoding first
+  // means a bad payload fails while the existing data is still intact.
+  for (const key of ['lofts', 'birds', 'pairs', 'raceResults', 'healthEvents', 'media']) {
+    if (payload[key] !== undefined && !Array.isArray(payload[key])) {
+      throw new Error(`bad-format: ${key} is not a list`);
+    }
+  }
+  for (const b of payload.birds || []) {
+    if (!b || typeof b.id !== 'string' || !b.id) throw new Error('bad-format: a bird has no id');
+  }
+  const decodedMedia = [];
+  for (const m of payload.media || []) {
+    if (!m || typeof m.id !== 'string') throw new Error('bad-format: a media entry has no id');
+    let blob;
+    try {
+      blob = await dataURLToBlob(m.dataURL);
+    } catch (err) {
+      throw new Error(`bad-media: ${m.name || m.id} could not be decoded`);
+    }
+    if (!blob || typeof blob.size !== 'number') throw new Error(`bad-media: ${m.name || m.id}`);
+    decodedMedia.push({ id: m.id, birdId: m.birdId, kind: m.kind, subtype: m.subtype,
+                        name: m.name, blob, addedAt: m.addedAt });
+  }
+
+  // ── a rollback point, taken before anything is cleared ──
+  if (mode === 'replace') {
+    try {
+      const snapshot = await exportAll({ includeMedia: false });
+      snapshot.kind = 'auto-backup';
+      await idbPut('backups', { id: `pre-import-${nowISO()}`, payload: snapshot });
+    } catch { /* a snapshot is a safety net, not a reason to block the import */ }
+  }
   // Automatic snapshots deliberately carry no media (blobs would make them
   // huge), so wiping the media store on restore would destroy every photo and
   // scanned pedigree the payload cannot put back. Keep media in that case.
@@ -447,11 +484,10 @@ export async function importAll(payload, mode = 'merge') {
   for (const p of payload.pairs || []) await put('pairs', 'pairs', p);
   for (const r of payload.raceResults || []) await put('raceResults', 'raceResults', r);
   for (const h of payload.healthEvents || []) await put('healthEvents', 'healthEvents', h);
-  for (const m of payload.media || []) {
+  for (const m of decodedMedia) {
     const existing = await idbGet('media', m.id);
     if (mode === 'merge' && existing) { counts.skipped++; continue; }
-    const blob = await dataURLToBlob(m.dataURL);
-    await idbPut('media', { id: m.id, birdId: m.birdId, kind: m.kind, subtype: m.subtype, name: m.name, blob, addedAt: m.addedAt });
+    await idbPut('media', m);
     counts.media++;
   }
   // An export from another device carries its own loft ids, so the stored
@@ -507,9 +543,10 @@ export async function exportBirdWithAncestry(birdId, { includeRaces = true, incl
 
 const BACKUP_KEEP = 7;
 export async function autoBackup() {
-  const payload = await exportAll();
-  // Media can be huge; interval backups keep data only. Full exports include media.
-  payload.media = [];
+  // Media can be huge; interval snapshots keep data only. Full exports include
+  // media. Asking exportAll not to read the blobs at all avoids base64-encoding
+  // every photo twice a day only to throw the result away.
+  const payload = await exportAll({ includeMedia: false });
   payload.kind = 'auto-backup';
   const id = nowISO();
   await idbPut('backups', { id, payload });
