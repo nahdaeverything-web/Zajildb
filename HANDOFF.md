@@ -35,11 +35,11 @@ If a proposed feature doesn't serve one of those three, it is out of scope.
 
 | | |
 |---|---|
-| App version (service worker) | `zajil-v1.6.0` |
+| App version (service worker) | `zajil-v1.7.0` |
 | JS source | ~3,770 lines (`js/`) |
 | CSS | 363 lines (one file) |
-| Automated tests | **33 passing, 0 failing** (`node tests/run.js`) |
-| Browser checks | **72 passing** across 8 ad-hoc Playwright suites (not committed — see Roadmap) |
+| Automated tests | **75 passing, 0 failing** (`node tests/run.js`) |
+| Browser checks | **~150 passing** across 15 committed suites — `python3 tests/e2e/run_all.py` |
 | Browser E2E checks run to date | 63 across 4 suites, all passing (ad-hoc Playwright, not committed) |
 | Example datasets | 20-bird loft + 38-bird / 6-generation teaching loft |
 | Version control | git (`main`), pushed to **github.com/nahdaeverything-web/Zajildb** (public) |
@@ -314,6 +314,28 @@ corner. That is the thing to defend.
 
 ---
 
+## 10b. The five primitives (v1.7)
+
+The medium backlog findings were symptoms of five missing shared primitives.
+These are now installed, every caller routed through them, and **guard tests
+fail the build if a future view goes around them** (`tests/guards.test.js`).
+
+| Primitive | Where | Rule it enforces |
+|---|---|---|
+| **Local dates** | `js/dates.js` — `todayISO()`, `parseLocalDate()` | A calendar date is a label, not an instant. No UTC slicing anywhere else. |
+| **Write boundary** | `db.js` `saveBird()` / `checkBird()`, `engine/validate.js` `classifySave()` | Validation happens at the write, not in each view. Strict by default: unconfirmed warnings block too. `{force:true}` is imports only. |
+| **Change events** | `db.js` `emitChange`, `app.js` `wireAutoRefresh()` | Every write goes through db.js and emits. The router refreshes — deferred while a dialog is open, skipped on form routes, coalesced, scroll-preserving. |
+| **Referential integrity** | `js/engine/integrity.js` `checkIntegrity()` | Dangling references are detectable. `deleteBird` cascades and snapshots everything for a complete undo. |
+| **One record factory** | `db.js` `newBird()` | `external === (status === REFERENCE_STATUS)`, derived after the spread so no caller can contradict it. |
+
+**Maintenance:** `CROSS_REFERENCES` in `integrity.js` must be extended whenever
+a store or cross-record field is added. Nothing detects a reference it does not
+know about. This is the one piece of upkeep the design does not eliminate.
+
+See `docs/WRITEPATH-v1.7.md` for the full call-site map and
+`docs/V1.7-NOTES.md` for known inconsistencies and where the structure will
+fight a server-backed data layer.
+
 ## 11. Conventions a new session must not break
 
 - **Never key records on ring number.** UUIDs only.
@@ -326,6 +348,10 @@ corner. That is the thing to defend.
 - **Validation severity:** cycles, sex contradictions, parent-younger-than-child are **errors that block the save** and must name the offending link. Duplicate rings are **warnings** requiring confirmation.
 - **Touch targets ≥44px**, one-handed phone layout, high-contrast mode must keep working.
 - **No dependencies, no build step.** Anything that needs npm install or a bundler is a scope change to discuss first.
+- **Never bypass a primitive.** Dates via `js/dates.js`; writes via `db.js`
+  (never raw `idbPut`); validation via `saveBird`/`checkBird` (never
+  `validateBird` in a view); bird records via `newBird()`. `tests/guards.test.js`
+  enforces all four.
 - **`[hidden]` must always win** — `css/app.css` has a global `[hidden]{display:none!important}` because class-based `display` rules once resurrected hidden elements (this was a real bug: the parent-picker dropdown could never close).
 
 ---
