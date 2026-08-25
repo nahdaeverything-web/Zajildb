@@ -3,6 +3,8 @@
 // logical properties + document dir; THIS module owns strings, numerals,
 // and dates. Ring numbers always render Western digits, LTR-isolated.
 
+import { parseLocalDate } from './dates.js';
+
 export const LANGS = ['ar', 'en'];
 
 const dict = {
@@ -442,7 +444,10 @@ export function fmtPercent(x, dp = 2) {
 
 /** Gregorian display in the active locale. Storage is always ISO Gregorian. */
 function fmtGregorian(iso, withTime) {
-  const d = new Date(iso);
+  // parseLocalDate keeps a bare "YYYY-MM-DD" on its own calendar day; using
+  // `new Date(iso)` would parse it as UTC midnight and render a day early
+  // west of Greenwich.
+  const d = parseLocalDate(iso);
   if (isNaN(d)) return iso || '—';
   const opts = withTime
     ? { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
@@ -452,7 +457,7 @@ function fmtGregorian(iso, withTime) {
 }
 
 function fmtHijri(iso) {
-  const d = new Date(iso);
+  const d = parseLocalDate(iso);
   if (isNaN(d)) return '';
   try {
     const locale = (lang === 'ar' ? 'ar-SA' : 'en') +

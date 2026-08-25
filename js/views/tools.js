@@ -12,6 +12,7 @@ import {
   birdLabelHTML, birdLabelText, undoToast,
 } from '../ui.js';
 import { ringKey } from '../engine/rings.js';
+import { todayISO } from '../dates.js';
 import { rerender } from '../app.js';
 
 export function renderTools() {
@@ -89,7 +90,7 @@ function backupCard() {
   const exportBtn = h('button', {
     class: 'btn btn-primary', onclick: async () => {
       const payload = await exportAll();
-      downloadJSON(payload, `zajil-export-${new Date().toISOString().slice(0, 10)}.json`);
+      downloadJSON(payload, `zajil-export-${todayISO()}.json`);
       await setSetting('lastExport', new Date().toISOString());
       toast(t('toast.exported'));
       rerender();

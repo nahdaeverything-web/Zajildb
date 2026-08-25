@@ -7,6 +7,8 @@ import {
   confirmDialog, modal,
 } from '../ui.js';
 
+import { todayISO } from '../dates.js';
+
 const EVENT_TYPES = ['vaccination', 'treatment', 'illness', 'check'];
 
 export function renderHealth() {
@@ -63,7 +65,7 @@ function eventDialog(refresh) {
   ], 'bird');
   const birdP = birdPicker({ allowClear: false });
   const birdField = field(t('race.bird'), birdP);
-  const dateIn = h('input', { class: 'input', type: 'date', value: new Date().toISOString().slice(0, 10) });
+  const dateIn = h('input', { class: 'input', type: 'date', value: todayISO() });
   const medIn = h('input', { class: 'input', type: 'text' });
   const notesIn = h('textarea', { class: 'input', rows: 2 });
   scopeSel.addEventListener('change', () => { birdField.hidden = scopeSel.value === 'loft'; });

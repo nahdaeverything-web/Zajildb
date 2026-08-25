@@ -15,6 +15,7 @@ import {
 import { validatePairSexes, validateBird } from '../engine/validate.js';
 import { relationshipSummary } from './pedigree.js';
 import { navigate } from '../app.js';
+import { todayISO } from '../dates.js';
 
 const vs = { season: String(new Date().getFullYear()) };
 
@@ -64,7 +65,7 @@ function newPairDialog(refresh) {
   const nestIn = h('input', { class: 'input', type: 'text' });
   const seasonIn = h('input', { class: 'input', type: 'number', value: vs.season, dir: 'ltr' });
   // a bought pair was paired before you owned it — the date must be settable
-  const startIn = h('input', { class: 'input', type: 'date', value: new Date().toISOString().slice(0, 10) });
+  const startIn = h('input', { class: 'input', type: 'date', value: todayISO() });
   const acqFromIn = h('input', { class: 'input', type: 'text' });
   const acqDateIn = h('input', { class: 'input', type: 'date' });
   const errBox = h('div', { class: 'problems' });
@@ -98,7 +99,7 @@ function newPairDialog(refresh) {
             season: seasonIn.value || vs.season,
             nestBox: nestIn.value.trim(),
             status: 'active',
-            startDate: startIn.value || nowISO().slice(0, 10),
+            startDate: startIn.value || todayISO(),
             acquiredFrom: acqFromIn.value.trim(),
             acquiredDate: acqDateIn.value,
             rounds: [],
@@ -173,7 +174,7 @@ function roundBlock(pair, round, refresh) {
         const prev = round.eggs[round.eggs.length - 1];
         round.eggs.push({
           id: uuid(),
-          laidDate: (prev && prev.laidDate) || nowISO().slice(0, 10),
+          laidDate: (prev && prev.laidDate) || todayISO(),
           state: 'laid',
         });
         await Pairs.save(pair); refresh();
@@ -210,7 +211,7 @@ function eggRow(pair, round, egg, refresh) {
       h('button', {
         class: 'btn btn-small', onclick: async () => {
           egg.state = 'hatched';
-          egg.hatchDate = nowISO().slice(0, 10);
+          egg.hatchDate = todayISO();
           await Pairs.save(pair); refresh();
         },
       }, t('br.markHatched')),
@@ -246,7 +247,7 @@ function eggRow(pair, round, egg, refresh) {
       if (!egg.weaned) {
         row.append(h('button', {
           class: 'btn btn-small', onclick: async () => {
-            egg.weaned = true; egg.weanDate = nowISO().slice(0, 10);
+            egg.weaned = true; egg.weanDate = todayISO();
             await Pairs.save(pair); refresh();
           },
         }, t('br.wean')));
