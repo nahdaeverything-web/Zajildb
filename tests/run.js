@@ -1,6 +1,7 @@
 // tests/run.js — node test runner: `node tests/run.js`
 import './dates.test.js';
 import './engine.test.js';
+import './writeboundary.test.js';
 import './sample.test.js';
 import './example-large.test.js';
 import { runAll } from './harness.js';

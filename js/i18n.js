@@ -382,6 +382,7 @@ const dict = {
   'confirm.deleteGeneric': { ar: 'تأكيد الحذف؟', en: 'Delete this record?' },
   'confirm.replaceAll': { ar: 'سيُستبدل كل شيء في قاعدة البيانات بمحتوى الملف. متابعة؟', en: 'Everything in the database will be replaced by the file contents. Continue?' },
   'toast.saved': { ar: 'تم الحفظ', en: 'Saved' },
+  'toast.saveFailed': { ar: 'تعذّر الحفظ — راجع البيانات', en: 'Could not save — check the record' },
   'toast.deleted': { ar: 'تم الحذف', en: 'Deleted' },
   'toast.undone': { ar: 'تم التراجع', en: 'Undone' },
   'toast.exported': { ar: 'تم التصدير', en: 'Exported' },

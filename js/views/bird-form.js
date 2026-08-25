@@ -2,12 +2,11 @@
 // errors (cycles, sex contradictions, impossible ages) BLOCK the save and
 // name the offending link; warnings (duplicate rings…) need confirmation.
 
-import { getBird, allBirds, newBird, saveBird, addMedia, nowISO, uuid } from '../db.js';
+import { getBird, allBirds, newBird, saveBird, checkBird, addMedia, nowISO, uuid } from '../db.js';
 import { loftStatuses, REFERENCE_STATUS } from '../db.js';
 import { t, statusLabel } from '../i18n.js';
 import { h, field, select, birdPicker, toast, modal } from '../ui.js';
 import { parseRing, RING_TYPES } from '../engine/rings.js';
-import { validateBird } from '../engine/validate.js';
 import { navigateReplace } from '../app.js';
 
 export function renderBirdForm(birdId, query = null, carryOver = null) {
@@ -171,8 +170,8 @@ export function renderBirdForm(birdId, query = null, carryOver = null) {
     return t(p.key, params);
   }
 
-  async function doSave(bird, andNew = false) {
-    await saveBird(bird);
+  async function doSave(bird, andNew = false, opts = {}) {
+    await saveBird(bird, opts);
     for (const m of pendingMedia) {
       await addMedia(bird.id, m.kind, m.subtype, m.file.name, m.file);
     }
@@ -210,7 +209,7 @@ export function renderBirdForm(birdId, query = null, carryOver = null) {
     const andNew = saveAndNew;
     saveAndNew = false;
     const bird = collect();
-    const { errors, warnings } = validateBird(bird, getBird, allBirds());
+    const { errors, warnings } = checkBird(bird);
     problems.innerHTML = '';
     if (errors.length) {
       problems.append(h('div', { class: 'problem-errors' },
@@ -224,7 +223,7 @@ export function renderBirdForm(birdId, query = null, carryOver = null) {
         h('ul', {}, warnings.map((p) => h('li', {}, problemText(p)))), {
           actions: [
             { label: t('act.cancel') },
-            { label: t('act.saveAnyway'), kind: 'primary', onClick: () => { doSave(bird, andNew); } },
+            { label: t('act.saveAnyway'), kind: 'primary', onClick: () => { doSave(bird, andNew, { allowWarnings: true }); } },
           ],
         });
       return;

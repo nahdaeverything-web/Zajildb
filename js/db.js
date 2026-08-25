@@ -6,6 +6,8 @@
 // `updatedAt` (device clock, ISO). If sync is added later it must be
 // per-field last-write-wins keyed on these — never whole-record overwrite.
 
+import { classifySave } from './engine/validate.js';
+
 const DB_NAME = 'zajil';
 const DB_VERSION = 1;
 
@@ -178,7 +180,40 @@ export function newBird(partial = {}) {
   });
 }
 
-export async function saveBird(bird) {
+/**
+ * Thrown by saveBird when a record fails validation. Carries the i18n keys so
+ * a view can render them; never a pre-rendered string.
+ */
+export class ValidationError extends Error {
+  constructor(errors, warnings) {
+    super('zajil/validation-failed');
+    this.name = 'ValidationError';
+    this.errors = errors;
+    this.warnings = warnings;
+  }
+}
+
+/**
+ * Pre-flight check, bound to the live flock. Views use this to show errors and
+ * to ask the user to confirm warnings BEFORE writing. It is the same single
+ * implementation saveBird enforces — not a second copy of the rules.
+ */
+export function checkBird(bird, opts = {}) {
+  return classifySave(bird, getBird, allBirds(), opts);
+}
+
+/**
+ * THE write boundary for birds. Validation happens here, so no view can write
+ * an invalid record by forgetting to check — that is how "ring chick" used to
+ * create duplicate rings and impossible parent links.
+ *
+ * Strict by default. Pass { allowWarnings: true } once the user has confirmed
+ * them, or { force: true } from importAll / dataset loaders only.
+ * @throws {ValidationError}
+ */
+export async function saveBird(bird, { allowWarnings = false, force = false } = {}) {
+  const verdict = classifySave(bird, getBird, allBirds(), { allowWarnings, force });
+  if (!verdict.ok) throw new ValidationError(verdict.errors, verdict.warnings);
   stamp(bird);
   await idbPut('birds', bird);
   state.birds.set(bird.id, bird);
@@ -211,6 +246,7 @@ export async function deleteBird(id) {
 }
 
 export async function restoreBird({ bird, media, affectedOriginals }) {
+  // an undo restores exactly what was there; it is not a new edit to re-judge
   await idbPut('birds', bird);
   state.birds.set(bird.id, bird);
   for (const orig of affectedOriginals || []) {
