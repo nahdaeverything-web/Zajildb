@@ -9,7 +9,7 @@ import {
 import { t, fmtDate, fmtNum, fmtPercent, statusLabel, escapeHTML, ringHTML } from '../i18n.js';
 import {
   h, clear, birdLabelHTML, birdLabelText, sexIcon, sexChipHTML, primaryRing,
-  toast, undoToast, confirmDialog, modal, downloadJSON, fmtCOIBadge,
+  toast, undoToast, confirmDialog, modal, downloadJSON, fmtCOIBadge, onViewTeardown,
 } from '../ui.js';
 import { inbreeding, ancestorLoss } from '../engine/coi.js';
 import { descendantDepths } from '../engine/pedigree.js';
@@ -210,9 +210,13 @@ export function renderBirdDetail(id) {
   const gallery = h('div', { class: 'gallery' });
   mediaBox.append(gallery);
   mediaForBird(id).then((items) => {
+    // the user may have navigated away while this was resolving — creating URLs
+    // for a detached gallery would leak them with no way to reach them again
+    if (!gallery.isConnected) return;
     if (!items.length) { gallery.append(h('p', { class: 'muted' }, t('common.none'))); return; }
     for (const m of items) {
       const url = URL.createObjectURL(m.blob);
+      onViewTeardown(() => URL.revokeObjectURL(url));
       const fig = h('figure', { class: 'media-item' });
       if (m.kind === 'photo' || (m.blob.type || '').startsWith('image/')) {
         fig.append(h('img', { src: url, alt: m.name || '', loading: 'lazy' }));

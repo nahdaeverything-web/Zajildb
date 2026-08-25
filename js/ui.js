@@ -21,6 +21,18 @@ export function h(tag, attrs = {}, ...children) {
 
 export function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); return node; }
 
+// --- view teardown -----------------------------------------------------------
+// Views can hold resources the DOM alone doesn't release: object URLs pin their
+// Blob for the life of the tab, observers and document listeners keep running.
+// The router runs these before swapping views.
+const _teardowns = [];
+export function onViewTeardown(fn) { _teardowns.push(fn); }
+export function runViewTeardowns() {
+  while (_teardowns.length) {
+    try { _teardowns.pop()(); } catch { /* teardown must never block navigation */ }
+  }
+}
+
 // -------------------------------------------------------------------- naming
 
 export function primaryRing(bird) {
@@ -86,9 +98,43 @@ export function undoToast(msg, onUndo) {
 
 // -------------------------------------------------------------------- modals
 
+// --- background scroll lock -------------------------------------------------
+// Without this the page scrolls BEHIND an open dialog: on a touch device the
+// swipe bleeds through to the page, and closing the dialog leaves the user
+// somewhere else entirely — usually back at the top. Reference-counted
+// because a confirm dialog can open on top of another modal.
+let _modalDepth = 0;
+let _savedScrollY = 0;
+
+function lockBodyScroll() {
+  if (_modalDepth++ > 0) return;
+  _savedScrollY = window.scrollY;
+  const body = document.body;
+  body.style.position = 'fixed';
+  body.style.insetBlockStart = `-${_savedScrollY}px`;
+  body.style.insetInlineStart = '0';
+  body.style.inlineSize = '100%';
+  body.classList.add('modal-open');
+}
+
+function unlockBodyScroll() {
+  if (--_modalDepth > 0) return;
+  _modalDepth = 0;
+  const body = document.body;
+  body.style.position = '';
+  body.style.insetBlockStart = '';
+  body.style.insetInlineStart = '';
+  body.style.inlineSize = '';
+  body.classList.remove('modal-open');
+  window.scrollTo(0, _savedScrollY);
+}
+
 export function modal(title, contentNode, { actions = [], wide = false } = {}) {
   const overlay = h('div', { class: 'modal-overlay' });
-  const box = h('div', { class: 'modal' + (wide ? ' modal-wide' : ''), role: 'dialog', 'aria-modal': 'true' },
+  const box = h('div', {
+    class: 'modal' + (wide ? ' modal-wide' : ''),
+    role: 'dialog', 'aria-modal': 'true', 'aria-label': title, tabindex: '-1',
+  },
     h('div', { class: 'modal-head' },
       h('h2', {}, title),
       h('button', { class: 'btn btn-icon', 'aria-label': t('act.close'), onclick: close }, '✕')),
@@ -99,12 +145,34 @@ export function modal(title, contentNode, { actions = [], wide = false } = {}) {
         onclick: () => { const r = a.onClick ? a.onClick() : true; if (r !== false) close(); },
       }, a.label))) : null,
   );
-  function close() { overlay.remove(); document.removeEventListener('keydown', esc); }
-  function esc(e) { if (e.key === 'Escape') close(); }
+  let closed = false;
+  function close() {
+    if (closed) return;          // guard: close() can fire from several paths
+    closed = true;
+    overlay.remove();
+    document.removeEventListener('keydown', esc);
+    unlockBodyScroll();
+  }
+  function esc(e) {
+    if (e.key === 'Escape') { close(); return; }
+    if (e.key !== 'Tab') return;
+    // trap Tab inside the dialog
+    const items = [...box.querySelectorAll('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+      .filter((el) => !el.disabled && el.offsetParent !== null);
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   document.addEventListener('keydown', esc);
   overlay.append(box);
   document.body.append(overlay);
+  lockBodyScroll();
+  // Focus the dialog itself, not its first field: focusing a bird picker would
+  // immediately pop its dropdown open. This is also the correct a11y pattern —
+  // it announces the dialog without triggering any field's behaviour.
+  box.focus({ preventScroll: true });
   return { close, box };
 }
 
@@ -136,6 +204,10 @@ export function birdPicker({ value = null, filter = null, placeholder = null, on
   const list = h('div', { class: 'picker-list', hidden: true });
   const clearBtn = allowClear ? h('button', { class: 'btn btn-small', type: 'button' }, t('bird.clearParent')) : null;
   root.value = value;
+  // The last CONFIRMED selection. Typing a search clears root.value so the
+  // create-guard works, but abandoning the search must not silently detach a
+  // parent — only the explicit clear button may do that.
+  let committed = value;
 
   function labelFor(id) {
     const b = allBirds().find((x) => x.id === id);
@@ -163,6 +235,7 @@ export function birdPicker({ value = null, filter = null, placeholder = null, on
 
   function pick(b) {
     root.value = b.id;
+    committed = b.id;
     input.value = birdLabelText(b);
     list.hidden = true;
     onPick && onPick(b.id);
@@ -251,6 +324,20 @@ export function birdPicker({ value = null, filter = null, placeholder = null, on
     if (had) onPick && onPick(null);
     renderList();
   });
+  // Abandoning an unfinished search reverts to the committed selection, so a
+  // field can never LOOK filled while holding null (which used to wipe the
+  // parent link on save, with no warning and no undo).
+  input.addEventListener('blur', () => {
+    setTimeout(() => {
+      if (root.contains(document.activeElement)) return;  // a picker item is being clicked
+      list.hidden = true;
+      if (root.value === committed) return;
+      root.value = committed;
+      input.value = committed ? labelFor(committed) : '';
+      onPick && onPick(committed);
+    }, 180);
+  });
+
   input.addEventListener('focus', () => {
     // a filled field holds an existing bird's label — select it so typing
     // replaces rather than appends, and so the list reads as a re-search
@@ -259,7 +346,7 @@ export function birdPicker({ value = null, filter = null, placeholder = null, on
   });
   document.addEventListener('click', (e) => { if (!root.contains(e.target)) list.hidden = true; });
   if (clearBtn) clearBtn.addEventListener('click', () => {
-    root.value = null; input.value = '';
+    root.value = null; committed = null; input.value = '';
     onPick && onPick(null);
   });
 

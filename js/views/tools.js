@@ -119,13 +119,15 @@ function backupCard() {
   listBackups().then((backups) => {
     if (!backups.length) return;
     backupsList.append(h('h3', {}, t('backup.restoreAuto')));
-    const sel = select(backups.sort((a, b) => (b.id < a.id ? -1 : 1)).map((b) => ({
+    const sorted = [...backups].sort((a, b) => (a.id < b.id ? 1 : -1)); // newest first
+    const sel = select(sorted.map((b) => ({
       value: b.id, label: fmtDate(b.id, { withTime: true }),
-    })), backups[backups.length - 1] && backups[backups.length - 1].id);
+    })), sorted[0] && sorted[0].id);
     const btn = h('button', {
       class: 'btn', onclick: async () => {
         const b = backups.find((x) => x.id === sel.value);
-        if (!b || !(await confirmDialog(t('confirm.replaceAll')))) return;
+        if (!b) return;
+        if (!(await confirmDialog(t('backup.confirmSnapshot', { d: fmtDate(b.id, { withTime: true }) })))) return;
         await importAll(b.payload, 'replace');
         toast(t('toast.undone'));
       },

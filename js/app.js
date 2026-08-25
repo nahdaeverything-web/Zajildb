@@ -3,7 +3,7 @@
 
 import { initDB, state, setSetting, onChange, autoBackup } from './db.js';
 import { configure, t, getLang, fmtDate } from './i18n.js';
-import { h, clear, toast } from './ui.js';
+import { h, clear, toast, runViewTeardowns } from './ui.js';
 import { renderBirds } from './views/birds.js';
 import { renderBirdDetail } from './views/bird-detail.js';
 import { renderBirdForm } from './views/bird-form.js';
@@ -102,6 +102,7 @@ async function route() {
   if (!main) return;
   markActiveNav();
   renderBackupBanner();
+  runViewTeardowns();   // release object URLs/observers held by the outgoing view
   clear(main);
   document.body.classList.toggle('print-route', hash.startsWith('#/cert/'));
   for (const [re, handler] of routes) {

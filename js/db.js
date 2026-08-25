@@ -103,6 +103,11 @@ export function getBird(id) { return state.birds.get(id) || null; }
 export function allBirds() { return [...state.birds.values()]; }
 
 const DEFAULT_STATUSES = ['breeder', 'race team', 'young bird', 'stock', 'sold', 'lost', 'dead'];
+// A never-owned ancestor has no loft status — it exists only to carry pedigree.
+// Kept out of DEFAULT_STATUSES so it can't be picked by accident for a real
+// bird, and appended for existing lofts so their stored list never needs a
+// destructive migration.
+export const REFERENCE_STATUS = 'reference';
 
 export async function initDB() {
   await openDB();
@@ -129,9 +134,11 @@ export async function initDB() {
 }
 
 export function currentLoft() { return state.lofts.get(state.currentLoftId) || null; }
-export function loftStatuses() {
+export function loftStatuses({ includeReference = false } = {}) {
   const l = currentLoft();
-  return (l && Array.isArray(l.statuses) && l.statuses.length) ? l.statuses : DEFAULT_STATUSES;
+  const base = (l && Array.isArray(l.statuses) && l.statuses.length) ? l.statuses : DEFAULT_STATUSES;
+  if (!includeReference) return base.filter((s) => s !== REFERENCE_STATUS);
+  return base.includes(REFERENCE_STATUS) ? base : [...base, REFERENCE_STATUS];
 }
 
 export async function setSetting(key, value) {
@@ -303,8 +310,14 @@ export async function exportAll() {
 export async function importAll(payload, mode = 'merge') {
   if (!payload || payload.format !== 'zajil-export') throw new Error('bad-format');
   const counts = { birds: 0, pairs: 0, raceResults: 0, healthEvents: 0, lofts: 0, media: 0, skipped: 0 };
+  // Automatic snapshots deliberately carry no media (blobs would make them
+  // huge), so wiping the media store on restore would destroy every photo and
+  // scanned pedigree the payload cannot put back. Keep media in that case.
+  const carriesMedia = payload.kind !== 'auto-backup';
   if (mode === 'replace') {
-    for (const s of ['birds', 'pairs', 'raceResults', 'healthEvents', 'lofts', 'media']) await idbClear(s);
+    const stores = ['birds', 'pairs', 'raceResults', 'healthEvents', 'lofts'];
+    if (carriesMedia) stores.push('media');
+    for (const s of stores) await idbClear(s);
     state.birds.clear(); state.pairs.clear(); state.raceResults.clear();
     state.healthEvents.clear(); state.lofts.clear();
   }
@@ -330,8 +343,11 @@ export async function importAll(payload, mode = 'merge') {
     await idbPut('media', { id: m.id, birdId: m.birdId, kind: m.kind, subtype: m.subtype, name: m.name, blob, addedAt: m.addedAt });
     counts.media++;
   }
-  if (!state.currentLoftId && state.lofts.size) {
-    state.currentLoftId = [...state.lofts.keys()][0];
+  // An export from another device carries its own loft ids, so the stored
+  // currentLoftId can end up pointing at a loft that no longer exists — which
+  // silently breaks the loft settings card and every new record's loftId.
+  if (!state.lofts.has(state.currentLoftId)) {
+    state.currentLoftId = state.lofts.size ? [...state.lofts.keys()][0] : null;
     await setSetting('currentLoftId', state.currentLoftId);
   }
   emitChange({ type: 'import' });

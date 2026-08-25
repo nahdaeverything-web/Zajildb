@@ -19,10 +19,20 @@ export function renderRaces() {
     h('button', { class: 'seg-btn' + (vs.tab === 'log' ? ' active' : ''), onclick: () => { vs.tab = 'log'; swap(); } }, t('race.title')),
     h('button', { class: 'seg-btn' + (vs.tab === 'fci' ? ' active' : ''), onclick: () => { vs.tab = 'fci'; swap(); } }, t('fci.title')));
   const body = h('div', {});
+  // remember where the user was in each tab, so switching away and back
+  // doesn't lose their place in a long table
+  const scrollMemory = { log: 0, fci: 0 };
+  let activeTab = vs.tab;
   function swap() {
+    scrollMemory[activeTab] = window.scrollY;
+    activeTab = vs.tab;
     root.querySelectorAll('.seg-btn').forEach((b, i) => b.classList.toggle('active', ['log', 'fci'][i] === vs.tab));
     clear(body);
     body.append(vs.tab === 'log' ? logTab(swap) : fciTab());
+    requestAnimationFrame(() => {
+      const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      window.scrollTo(0, Math.min(scrollMemory[vs.tab] || 0, max));
+    });
   }
   root.append(
     h('div', { class: 'view-head' },

@@ -252,6 +252,8 @@ textarea.input { min-block-size: auto; }
 .egg-date { min-block-size: 34px; inline-size: auto; padding: .1rem .3rem; font-size: .85rem; }
 .egg-date-label { display: inline-flex; align-items: center; gap: .3rem; color: var(--muted); }
 .hatch-hint { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; margin-block-start: .25rem; }
+.ownership-section { border-inline-start: 4px solid var(--accent); }
+.view-form.is-external .form-section-first { border-inline-start-color: var(--accent); }
 .form-section-first { margin-block-start: 0; padding: .7rem .8rem; background: var(--surface); border: 1px solid var(--line); border-inline-start: 4px solid var(--brand); border-radius: var(--radius); margin-block-end: 1rem; }
 
 /* --------------------------------------------------------------- breeding */
@@ -295,7 +297,10 @@ textarea.input { min-block-size: auto; }
 .modal-overlay {
   position: fixed; inset: 0; z-index: 50; background: rgba(20, 24, 22, .5);
   display: flex; align-items: center; justify-content: center; padding: 1rem;
+  overflow-y: auto;                 /* a tall dialog scrolls itself, not the page */
+  overscroll-behavior: contain;     /* and its scroll never chains to the page */
 }
+body.modal-open { overflow: hidden; }
 .modal {
   background: var(--surface); border-radius: var(--radius); max-block-size: 92vh;
   inline-size: min(30rem, 100%); overflow-y: auto; display: flex; flex-direction: column;

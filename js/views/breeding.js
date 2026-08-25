@@ -12,7 +12,7 @@ import {
   h, clear, birdLabelHTML, birdLabelText, birdPicker, field, toast,
   undoToast, confirmDialog, modal,
 } from '../ui.js';
-import { validatePairSexes } from '../engine/validate.js';
+import { validatePairSexes, validateBird } from '../engine/validate.js';
 import { relationshipSummary } from './pedigree.js';
 import { navigate } from '../app.js';
 
@@ -63,6 +63,10 @@ function newPairDialog(refresh) {
   const damP = birdPicker({ filter: (b) => b.sex !== 'cock', placeholder: t('bird.dam'), onPick: (v) => { damId = v; check(); }, allowClear: false, allowCreate: { sex: 'hen' } });
   const nestIn = h('input', { class: 'input', type: 'text' });
   const seasonIn = h('input', { class: 'input', type: 'number', value: vs.season, dir: 'ltr' });
+  // a bought pair was paired before you owned it — the date must be settable
+  const startIn = h('input', { class: 'input', type: 'date', value: new Date().toISOString().slice(0, 10) });
+  const acqFromIn = h('input', { class: 'input', type: 'text' });
+  const acqDateIn = h('input', { class: 'input', type: 'date' });
   const errBox = h('div', { class: 'problems' });
 
   modal(t('br.newPair'), h('div', {},
@@ -70,7 +74,11 @@ function newPairDialog(refresh) {
       field(t('bird.sire'), sireP),
       field(t('bird.dam'), damP),
       field(t('br.nestBox'), nestIn),
-      field(t('br.season'), seasonIn)),
+      field(t('br.season'), seasonIn),
+      field(t('br.startDate'), startIn),
+      field(t('br.acquiredFrom'), acqFromIn),
+      field(t('br.acquiredDate'), acqDateIn)),
+    h('p', { class: 'muted small' }, t('br.boughtHint')),
     relOut, errBox), {
     wide: true,
     actions: [
@@ -89,7 +97,10 @@ function newPairDialog(refresh) {
             id: uuid(), sireId, damId,
             season: seasonIn.value || vs.season,
             nestBox: nestIn.value.trim(),
-            status: 'active', startDate: nowISO().slice(0, 10),
+            status: 'active',
+            startDate: startIn.value || nowISO().slice(0, 10),
+            acquiredFrom: acqFromIn.value.trim(),
+            acquiredDate: acqDateIn.value,
             rounds: [],
           }).then(() => { toast(t('toast.saved')); refresh(); });
         },
@@ -110,6 +121,7 @@ function pairCard(pair, refresh) {
         ` &nbsp;×&nbsp; ♀ <a href="#/bird/${pair.damId}">${birdLabelHTML(dam)}</a>` }),
       h('div', { class: 'pair-meta' },
         pair.nestBox ? h('span', { class: 'chip' }, t('br.nestBox') + ' ', h('bdi', {}, pair.nestBox)) : null,
+        pair.acquiredFrom ? h('span', { class: 'chip' }, t('br.bought') + ': ', h('bdi', {}, pair.acquiredFrom)) : null,
         h('span', { class: 'chip ' + (pair.status === 'active' ? 'chip-ok' : '') },
           pair.status === 'active' ? t('br.active') : t('br.separated')),
         h('button', {
@@ -156,7 +168,14 @@ function roundBlock(pair, round, refresh) {
     h('button', {
       class: 'btn btn-small', onclick: async () => {
         round.eggs = round.eggs || [];
-        round.eggs.push({ id: uuid(), laidDate: nowISO().slice(0, 10), state: 'laid' });
+        // a second egg of a clutch is laid within a day or two of the first —
+        // and for a bought clutch the first egg's date is already backdated
+        const prev = round.eggs[round.eggs.length - 1];
+        round.eggs.push({
+          id: uuid(),
+          laidDate: (prev && prev.laidDate) || nowISO().slice(0, 10),
+          state: 'laid',
+        });
         await Pairs.save(pair); refresh();
       },
     }, '+ ' + t('br.addEgg')));
@@ -206,12 +225,24 @@ function eggRow(pair, round, egg, refresh) {
   if (egg.state === 'hatched') {
     row.append(h('label', { class: 'egg-date-label small' }, t('br.hatch') + ':', dateInput('hatchDate')));
     if (!egg.chickId) {
-      row.append(h('button', {
-        class: 'btn btn-small btn-primary', onclick: () => ringChickDialog(pair, egg, refresh),
-      }, t('br.ringChick')));
+      row.append(
+        h('button', {
+          class: 'btn btn-small btn-primary', onclick: () => ringChickDialog(pair, egg, refresh),
+        }, t('br.ringChick')),
+        h('button', {
+          class: 'btn btn-small', onclick: () => linkExistingDialog(pair, egg, refresh),
+        }, t('br.linkExisting')));
     } else {
       const chick = getBird(egg.chickId);
-      row.append(h('a', { href: '#/bird/' + egg.chickId, html: '🐦 ' + birdLabelHTML(chick) }));
+      row.append(h('a', { href: '#/bird/' + egg.chickId, html: '🐦 ' + birdLabelHTML(chick) }),
+        h('button', {
+          class: 'btn btn-small', title: t('br.unlink'),
+          onclick: async () => {
+            // unlink only detaches the egg; the bird record and its parents stay
+            egg.chickId = null; egg.ringed = false; egg.weaned = false; egg.weanDate = '';
+            await Pairs.save(pair); refresh();
+          },
+        }, '⛓'));
       if (!egg.weaned) {
         row.append(h('button', {
           class: 'btn btn-small', onclick: async () => {
@@ -226,6 +257,54 @@ function eggRow(pair, round, egg, refresh) {
     }
   }
   return row;
+}
+
+/**
+ * Attach an ALREADY-RECORDED bird to a hatched egg — the case where you bought
+ * a pair whose young were ringed by the seller, or imported a shared bird.
+ * Setting the egg's chick rewrites that bird's parents, so it goes through the
+ * same validation as the bird form: cycles and sex contradictions are refused.
+ */
+function linkExistingDialog(pair, egg, refresh) {
+  const picker = birdPicker({
+    filter: (b) => b.id !== pair.sireId && b.id !== pair.damId,
+    allowClear: false,
+  });
+  const errBox = h('div', { class: 'problems' });
+  modal(t('br.linkExisting'), h('div', {},
+    h('p', { class: 'muted' }, t('br.linkExistingHint')),
+    field(t('bird.one'), picker),
+    errBox), {
+    actions: [
+      { label: t('act.cancel') },
+      {
+        label: t('act.confirm'), kind: 'primary',
+        onClick: () => {
+          errBox.innerHTML = '';
+          const bird = picker.value ? getBird(picker.value) : null;
+          if (!bird) return false;
+          const candidate = { ...bird, sireId: pair.sireId, damId: pair.damId };
+          const { errors } = validateBird(candidate, getBird, allBirds());
+          if (errors.length) {
+            errBox.append(h('ul', { class: 'problem-errors' },
+              errors.map((e) => h('li', {}, t('br.linkBlocked', { reason: t(e.key, e.params) })))));
+            return false; // keep the dialog open so the user can pick another
+          }
+          (async () => {
+            await saveBird(candidate);
+            egg.chickId = bird.id;
+            egg.ringed = (bird.rings || []).length > 0;
+            if (egg.hatchDate && !bird.hatchDate) {
+              await saveBird({ ...candidate, hatchDate: egg.hatchDate });
+            }
+            await Pairs.save(pair);
+            toast(t('br.linked'));
+            refresh();
+          })();
+        },
+      },
+    ],
+  });
 }
 
 function ringChickDialog(pair, egg, refresh) {

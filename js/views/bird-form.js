@@ -3,7 +3,7 @@
 // name the offending link; warnings (duplicate rings…) need confirmation.
 
 import { getBird, allBirds, newBird, saveBird, addMedia, nowISO, uuid } from '../db.js';
-import { loftStatuses } from '../db.js';
+import { loftStatuses, REFERENCE_STATUS } from '../db.js';
 import { t, statusLabel } from '../i18n.js';
 import { h, field, select, birdPicker, toast, modal } from '../ui.js';
 import { parseRing, RING_TYPES } from '../engine/rings.js';
@@ -31,12 +31,27 @@ export function renderBirdForm(birdId, query = null, carryOver = null) {
   const colourIn = h('input', { class: 'input', type: 'text', value: draft.colour || '', list: 'dl-colours' });
   const strainIn = h('input', { class: 'input', type: 'text', value: draft.strain || '', list: 'dl-strains' });
   const eyeIn = h('input', { class: 'input', type: 'text', value: draft.eyeSign || '' });
-  const statusSel = select(loftStatuses().map((s) => ({ value: s, label: statusLabel(s) })), draft.status);
+  const statusSel = select(loftStatuses().map((s) => ({ value: s, label: statusLabel(s) })),
+    draft.status === REFERENCE_STATUS ? 'stock' : draft.status);
   const breederIn = h('input', { class: 'input', type: 'text', value: draft.breeder || '', list: 'dl-breeders' });
   const ownerIn = h('input', { class: 'input', type: 'text', value: draft.owner || '' });
   const acqFromIn = h('input', { class: 'input', type: 'text', value: draft.acquiredFrom || '' });
   const acqDateIn = h('input', { class: 'input', type: 'date', value: draft.acquiredDate || '' });
-  const externalIn = h('input', { type: 'checkbox', checked: !!draft.external });
+  // Ownership is asked up front, not buried in a checkbox at the bottom: a
+  // bird entered from a seller's pedigree must not silently join your loft.
+  const ownSel = select([
+    { value: 'owned', label: t('bird.owned') },
+    { value: 'external', label: t('bird.referenceOnly') },
+  ], draft.external ? 'external' : 'owned');
+  const ownHint = h('span', { class: 'field-hint' });
+  const statusField = field(t('bird.status'), statusSel);
+  function syncOwnership() {
+    const ext = ownSel.value === 'external';
+    ownHint.textContent = ext ? t('bird.referenceHint') : t('bird.ownedHint');
+    statusField.hidden = ext;           // a never-owned ancestor has no loft status
+    root.classList.toggle('is-external', ext);
+  }
+  ownSel.addEventListener('change', syncOwnership);
 
   // --- rings editor
   const ringsWrap = h('div', { class: 'rings-editor' });
@@ -128,12 +143,12 @@ export function renderBirdForm(birdId, query = null, carryOver = null) {
       colour: colourIn.value.trim(),
       strain: strainIn.value.trim(),
       eyeSign: eyeIn.value.trim(),
-      status: statusSel.value,
       breeder: breederIn.value.trim(),
       owner: ownerIn.value.trim(),
       acquiredFrom: acqFromIn.value.trim(),
       acquiredDate: acqDateIn.value,
-      external: externalIn.checked,
+      external: ownSel.value === 'external',
+      status: ownSel.value === 'external' ? REFERENCE_STATUS : statusSel.value,
       sireId: sirePicker.value,
       damId: damPicker.value,
       rings,
@@ -170,6 +185,10 @@ export function renderBirdForm(birdId, query = null, carryOver = null) {
         carry: {
           strain: bird.strain, colour: bird.colour, status: bird.status,
           breeder: bird.breeder, owner: bird.owner,
+          // ownership must carry too: back-filling a seller's pedigree means
+          // entering a run of external ancestors, and losing the flag would
+          // silently enrol every one of them into the loft
+          external: bird.external,
         },
         ringPrefix: r0 && r0.country && r0.year ? `${r0.country}-${r0.year}-` : '',
         ringType: r0 ? r0.type : 'national',
@@ -235,11 +254,13 @@ export function renderBirdForm(birdId, query = null, carryOver = null) {
     h('div', { class: 'form-section form-section-first' },
       h('h2', {}, t('bird.rings')),
       ringsWrap, addRing),
+    h('div', { class: 'form-section ownership-section' },
+      field(t('bird.ownership'), ownSel), ownHint),
     h('div', { class: 'form-grid' },
       field(t('bird.name'), nameIn),
       field(t('bird.sex'), sexSel),
       field(t('bird.hatchDate'), h('div', {}, hatchIn, hatchHint)),
-      field(t('bird.status'), statusSel),
+      statusField,
       field(t('bird.colour'), colourIn),
       field(t('bird.strain'), strainIn),
       field(t('bird.eyeSign'), eyeIn),
@@ -256,8 +277,6 @@ export function renderBirdForm(birdId, query = null, carryOver = null) {
       h('div', { class: 'form-grid' },
         field(t('bird.sire'), sirePicker),
         field(t('bird.dam'), damPicker))),
-    h('div', { class: 'form-section' },
-      h('label', { class: 'check-row' }, externalIn, ' ', t('bird.external'))),
     h('div', { class: 'form-section' },
       h('h2', {}, t('bird.photos') + ' / ' + t('bird.documents')),
       h('div', { class: 'form-grid' },
@@ -277,5 +296,6 @@ export function renderBirdForm(birdId, query = null, carryOver = null) {
     h('div', { class: 'view-head' },
       h('h1', {}, isNew ? t('act.newBird') : t('act.edit'))),
     form);
+  syncOwnership();
   return root;
 }

@@ -21,7 +21,7 @@ export async function loadExample(file = './sample-data.json') {
 }
 
 // View state survives navigation within a session.
-const vs = { q: '', status: '', sex: '', sort: 'newest' };
+const vs = { q: '', status: '', sex: '', own: '', sort: 'newest' };
 
 function searchText(b) {
   return [
@@ -33,6 +33,8 @@ function searchText(b) {
 
 function filtered() {
   let birds = allBirds();
+  if (vs.own === 'owned') birds = birds.filter((b) => !b.external);
+  else if (vs.own === 'external') birds = birds.filter((b) => b.external);
   if (vs.status) birds = birds.filter((b) => b.status === vs.status);
   if (vs.sex) birds = birds.filter((b) => b.sex === vs.sex);
   const q = vs.q.trim().toLowerCase();
@@ -64,6 +66,10 @@ export function renderBirds() {
   const sexSel = h('select', { class: 'input input-compact' },
     h('option', { value: '' }, t('bird.sex') + ': ' + t('common.all')),
     ['cock', 'hen', 'unknown'].map((s) => h('option', { value: s, selected: vs.sex === s }, t('sex.' + s))));
+  const ownSel = h('select', { class: 'input input-compact' },
+    h('option', { value: '' }, t('filter.ownership') + ': ' + t('common.all')),
+    h('option', { value: 'owned', selected: vs.own === 'owned' }, t('filter.ownedOnly')),
+    h('option', { value: 'external', selected: vs.own === 'external' }, t('filter.externalOnly')));
   const sortSel = h('select', { class: 'input input-compact' },
     [['newest', '↓ ' + t('common.date')], ['name', t('bird.name')], ['hatch', t('bird.hatchDate')], ['ring', t('bird.ring')]]
       .map(([v, l]) => h('option', { value: v, selected: vs.sort === v }, l)));
@@ -102,7 +108,9 @@ export function renderBirds() {
     rows = filtered();
     shown = 0;
     clear(list);
-    count.textContent = t('common.results', { n: rows.length });
+    const ext = rows.filter((b) => b.external).length;
+    count.textContent = t('common.results', { n: rows.length }) +
+      (ext && !vs.own ? ` — ${t('filter.externalOnly')}: ${fmtNum(ext)}` : '');
     if (!state.birds.size) {
       list.append(h('div', { class: 'empty-state' },
         h('p', {}, t('bird.noBirds')),
@@ -126,6 +134,7 @@ export function renderBirds() {
   });
   statusSel.addEventListener('change', () => { vs.status = statusSel.value; refresh(); });
   sexSel.addEventListener('change', () => { vs.sex = sexSel.value; refresh(); });
+  ownSel.addEventListener('change', () => { vs.own = ownSel.value; refresh(); });
   sortSel.addEventListener('change', () => { vs.sort = sortSel.value; refresh(); });
 
   const io = new IntersectionObserver((entries) => {
@@ -137,7 +146,7 @@ export function renderBirds() {
     h('div', { class: 'view-head' },
       h('h1', {}, t('nav.birds')),
       h('a', { class: 'btn btn-primary', href: '#/bird/new' }, '+ ' + t('act.newBird'))),
-    h('div', { class: 'filter-bar' }, search, statusSel, sexSel, sortSel),
+    h('div', { class: 'filter-bar' }, search, ownSel, statusSel, sexSel, sortSel),
     count, list, sentinel,
   );
   refresh();
