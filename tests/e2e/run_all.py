@@ -14,10 +14,26 @@ internet and exercises the deployed build rather than the working tree.
 import os, subprocess, sys, glob
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+# Suites that are NOT part of the default run, with the reason shown in the
+# output. A suite must never be silently absent: if it does not run, the
+# summary says so and why.
+OPT_IN = {
+    'live_deployment.py': (
+        '--live',
+        'needs the internet and tests the DEPLOYED build, not the working tree',
+    ),
+}
+
 LOCAL = sorted(f for f in glob.glob(os.path.join(HERE, '*.py'))
-               if os.path.basename(f) not in ('run_all.py', 'live_deployment.py'))
-if '--live' in sys.argv:
-    LOCAL.append(os.path.join(HERE, 'live_deployment.py'))
+               if os.path.basename(f) not in ({'run_all.py'} | set(OPT_IN)))
+skipped = []
+for name, (flag, reason) in OPT_IN.items():
+    if flag in sys.argv:
+        LOCAL.append(os.path.join(HERE, name))
+    else:
+        skipped.append((name, flag, reason))
+LOCAL = sorted(LOCAL)
 
 total_pass = total_fail = 0
 failed_suites = []
@@ -44,6 +60,10 @@ for path in LOCAL:
                 summary += '\n        ' + line.strip()
     print(f'  [{flag}] {name:26} {summary}')
 
+for name, flag, reason in skipped:
+    print(f'  [skip] {name:26} not run — {reason} (add {flag})')
+
 print(f'\n  {total_pass} assertions passed, {total_fail} failed, '
-      f'{len(failed_suites)} suite(s) errored')
+      f'{len(failed_suites)} suite(s) errored'
+      + (f', {len(skipped)} skipped' if skipped else ''))
 sys.exit(1 if (total_fail or failed_suites) else 0)

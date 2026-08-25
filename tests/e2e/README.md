@@ -28,11 +28,27 @@ python3 -m http.server 8123
 
 # in another:
 python3 tests/e2e/run_all.py          # all local suites
-python3 tests/e2e/run_all.py --live   # also exercise the deployed GitHub Pages build
+python3 tests/e2e/run_all.py --live   # ALSO run live_deployment.py
 python3 tests/e2e/core_flows.py       # a single suite
 ```
 
 Each suite prints `✓`/`✗` per assertion and exits non-zero on failure.
+
+### One suite is opt-in
+
+**`live_deployment.py` does not run by default.** It needs the internet, and it
+tests the **deployed** build at the GitHub Pages URL — not your working tree —
+so a green result there says nothing about uncommitted changes, and a red one
+may only mean the deploy is behind `main`.
+
+`run_all.py` prints it as `[skip]` with the reason rather than leaving it
+silently absent, so the suite list in the output always accounts for every file
+in this directory. Run it with `--live`, or directly:
+
+```bash
+python3 tests/e2e/live_deployment.py
+ZAJIL_LIVE_URL=https://example.github.io/zajil/ python3 tests/e2e/live_deployment.py
+```
 
 | Suite | Covers |
 |---|---|
