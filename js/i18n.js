@@ -107,6 +107,7 @@ const dict = {
   'bird.addSibling': { ar: 'إضافة شقيق/شقيقة', en: 'Add sibling' },
   'bird.siblingHint': { ar: 'الأشقاء يُسجَّلون بإعطائهم نفس الأب والأم — لا يوجد ربط مباشر بين الأشقاء، فالقرابة تُشتق من الأبوين.', en: 'Siblings are recorded by giving them the same sire and dam — there is no direct sibling link; kinship derives from the parents.' },
   'bird.siblingNoParents': { ar: 'هذا الطير بلا أبوين مسجلين. لتسجيل شقيق، سيُنشئ زاجل سجلّين للأبوين «غير معروفين» ويربطهما بالطيرين معًا — يمكنك تعبئة بياناتهما لاحقًا.', en: 'This bird has no recorded parents. To record a sibling, Zajil will create two placeholder “unknown” parent records and link them to both birds — you can fill in their details later.' },
+  'bird.siblingOfNotice': { ar: 'سيُسجَّل هذا الطير شقيقًا لـ «{name}». عند الحفظ سيُنشأ أبوان «غير معروفان» ويُربطان بالطيرين معًا — ولن يُكتب شيء إن ألغيت.', en: 'This bird will be recorded as a sibling of “{name}”. On save, two “unknown” parents are created and linked to both birds — nothing is written if you cancel.' },
   'bird.createPlaceholders': { ar: 'إنشاء الأبوين والمتابعة', en: 'Create parents & continue' },
   'bird.unknownSire': { ar: 'أب غير معروف', en: 'Unknown sire' },
   'bird.unknownDam': { ar: 'أم غير معروفة', en: 'Unknown dam' },

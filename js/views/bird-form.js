@@ -18,6 +18,11 @@ export function renderBirdForm(birdId, query = null, carryOver = null) {
     if (qs && getBird(qs)) draft.sireId = qs;
     if (qd && getBird(qd)) draft.damId = qd;
   }
+  // "add sibling" for a bird with NO recorded parents: nothing is written until
+  // this form saves successfully, so abandoning it leaves the original bird
+  // untouched.
+  const siblingOfId = (!existing && query && query.get('siblingOf')) || null;
+  const siblingOf = siblingOfId ? getBird(siblingOfId) : null;
   const isNew = !existing;
 
   const root = h('section', { class: 'view-form' });
@@ -171,6 +176,15 @@ export function renderBirdForm(birdId, query = null, carryOver = null) {
   }
 
   async function doSave(bird, andNew = false, opts = {}) {
+    // Deferred sibling intent: mint the two placeholder ancestors now, attach
+    // them to BOTH birds, and only then persist anything.
+    if (siblingOf && !bird.sireId && !bird.damId) {
+      const sire = await saveBird(newBird({ name: t('bird.unknownSire'), sex: 'cock', external: true }));
+      const dam = await saveBird(newBird({ name: t('bird.unknownDam'), sex: 'hen', external: true }));
+      bird.sireId = sire.id;
+      bird.damId = dam.id;
+      await saveBird({ ...siblingOf, sireId: sire.id, damId: dam.id }, { allowWarnings: true });
+    }
     await saveBird(bird, opts);
     for (const m of pendingMedia) {
       await addMedia(bird.id, m.kind, m.subtype, m.file.name, m.file);
@@ -253,6 +267,8 @@ export function renderBirdForm(birdId, query = null, carryOver = null) {
     h('div', { class: 'form-section form-section-first' },
       h('h2', {}, t('bird.rings')),
       ringsWrap, addRing),
+    siblingOf ? h('div', { class: 'form-section banner-warn' },
+      t('bird.siblingOfNotice', { name: (siblingOf.name || (siblingOf.rings[0] && siblingOf.rings[0].raw) || '') })) : null,
     h('div', { class: 'form-section ownership-section' },
       field(t('bird.ownership'), ownSel), ownHint),
     h('div', { class: 'form-grid' },

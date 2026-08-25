@@ -156,7 +156,20 @@ function stamp(record) {
   return record;
 }
 
+/**
+ * THE bird factory. Every bird record in the app is minted here.
+ *
+ * Ownership and status are two views of one fact, so the factory derives them
+ * rather than trusting each caller to remember: an external bird (a
+ * never-owned ancestor from someone else's pedigree) always carries
+ * REFERENCE_STATUS, and asking for REFERENCE_STATUS means the bird is
+ * external. Four call sites used to mint birds independently and only one of
+ * them knew this rule, so ancestors created inline arrived as 'stock' and the
+ * register mislabelled and misfiltered them.
+ */
 export function newBird(partial = {}) {
+  const external = partial.external === true || partial.status === REFERENCE_STATUS;
+  const status = external ? REFERENCE_STATUS : (partial.status || 'stock');
   return stamp({
     id: uuid(),
     rings: [],            // [{country, union, year, serial, raw, type}]
@@ -177,6 +190,10 @@ export function newBird(partial = {}) {
     notes: [],            // [{id, at, text}]
     createdAt: nowISO(),
     ...partial,
+    // derived last so a caller cannot contradict the invariant by omission
+    // or by passing a stale pair of values
+    external,
+    status,
   });
 }
 
