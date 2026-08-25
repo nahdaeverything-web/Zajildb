@@ -46,10 +46,15 @@ with sync_playwright() as p:
     page.locator('button', has_text='👥').click(); page.wait_for_timeout(500)
     check('placeholder dialog shown', page.locator('.modal').count() == 1)
     page.locator('.modal-actions .btn-primary').click(); page.wait_for_timeout(900)
-    check('placeholder flow lands on prefilled form', '#/bird/new?sire=' in page.url)
+    # v1.7 phase 1.5: the placeholders are DEFERRED to the form's successful
+    # save. These two assertions previously encoded the defect — they required
+    # the parents to exist before the sibling did, which is exactly the
+    # permanent re-parenting that abandoning the form used to cause.
+    check('placeholder flow carries an intent, not a write', '#/bird/new?siblingOf=' in page.url, page.url)
     page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/bird/o-asifa'); page.wait_for_timeout(700)
     facts = page.locator('.facts').inner_text()
-    check('عاصفة now has placeholder parents', 'أب غير معروف' in facts and 'أم غير معروفة' in facts)
+    check('abandoning it leaves عاصفة with NO placeholder parents',
+          'أب غير معروف' not in facts and 'أم غير معروفة' not in facts)
 
     # 6. health dialog: bird field hides when whole-loft ([hidden] fix there too)
     page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/health'); page.wait_for_timeout(700)
