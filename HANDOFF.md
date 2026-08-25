@@ -36,15 +36,34 @@ If a proposed feature doesn't serve one of those three, it is out of scope.
 | | |
 |---|---|
 | App version (service worker) | `zajil-v1.7.0` |
-| JS source | ~3,770 lines (`js/`) |
-| CSS | 363 lines (one file) |
-| Automated tests | **75 passing, 0 failing** (`node tests/run.js`) |
-| Browser checks | **~150 passing** across 15 committed suites — `python3 tests/e2e/run_all.py` |
-| Browser E2E checks run to date | 63 across 4 suites, all passing (ad-hoc Playwright, not committed) |
+| `main` at | `eedb38d` — "Merge v1.7 invariant hardening pass" |
+| **Live** | **https://nahdaeverything-web.github.io/Zajildb/** — serving `zajil-v1.7.0`, verified installable and offline-capable |
+| Node tests | **75 passing, 0 failing** — `node tests/run.js` |
+| Browser assertions | **148 passing, 0 failing** across **15 suites** — `python3 tests/e2e/run_all.py` |
+| Opt-in suite | `live_deployment.py` — **11 passing**, not in the default run; printed as `[skip]` with its reason (needs the internet, tests the *deployed* build). Add `--live`. |
+| Browser suites | committed under `tests/e2e/` with a runner and README, plus 6 diagnostic scripts |
+| Source | `js/` 4,587 lines · `css/app.css` 372 · `sw.js` 89 |
+| Tests | node 1,014 lines · browser 1,407 lines |
+| Generators | `tools/` 448 lines |
 | Example datasets | 20-bird loft + 38-bird / 6-generation teaching loft |
-| Version control | git (`main`), pushed to **github.com/nahdaeverything-web/Zajildb** (public) |
-| Hosted | **not yet** — GitHub Pages not switched on (see Open decisions) |
-| Known issues | 33 open, catalogued in [BACKLOG.md](BACKLOG.md) |
+| Version control | git, pushed to **github.com/nahdaeverything-web/Zajildb** (public); `pre-v1.7-baseline` tagged, `hardening/v1.7` retained |
+| Known issues | catalogued in [BACKLOG.md](BACKLOG.md) |
+
+Line counts recounted from source, not carried forward:
+
+```
+$ find js -name "*.js" | xargs wc -l | tail -1
+   4587 total
+$ wc -l css/app.css sw.js
+    372 css/app.css
+     89 sw.js
+$ find tests -name "*.js" -not -path "*/e2e/*" | xargs wc -l | tail -1
+   1014 total
+$ find tests/e2e -name "*.py" | xargs wc -l | tail -1
+   1407 total
+$ find tools -name "*.js" | xargs wc -l | tail -1
+    448 total
+```
 
 ---
 
@@ -73,7 +92,7 @@ node tools/gen-example-large.js
 
 ⚠️ Over the **LAN URLs the app works but there is no service worker** — plain
 HTTP is not a secure context, so no offline mode and no home-screen install.
-Only `localhost` (or real HTTPS) gets those. See §10.
+Only `localhost` (or real HTTPS) gets those. See §11.
 
 **In-app test panel:** الأدوات → لوحة المطوّر → «تشغيل الفحوصات» runs the same
 engine suite inside the browser, plus an export/import round-trip check.
@@ -247,13 +266,13 @@ Regenerate with the `tools/gen-*.js` scripts — never hand-edit the JSON.
 
 - **33 node tests** — engine fixtures, cycle detection, AVK, relationships, ring parsing, FCI, velocity, validation, plus both datasets.
 - **Same suite runs in-app** (الأدوات → لوحة المطوّر) + export/import round-trip check.
-- **Playwright E2E** (ad-hoc, in scratch — worth committing, see §11): RTL mirroring proven *geometrically* (Arabic subject's bounding box is right of its ancestors; flips in English), Eastern-Arabic numerals apply everywhere **except** ring numbers, 5-gen certificate renders and prints to PDF, dev panel passes in-browser.
+- **Browser suites** (`tests/e2e/`, committed, 148 assertions): RTL mirroring proven *geometrically* (the Arabic subject's bounding box is right of its ancestors; flips in English), Eastern-Arabic numerals apply everywhere **except** ring numbers, 5-gen certificate renders and prints to PDF, the dev panel passes in-browser, dialogs pin the page and restore scroll, and the service worker never wipes a sibling project's cache.
 - **Offline test**: install service worker → set browser offline → reload → navigate → COI still computes. Passes with zero errors.
 - **Engine audit against a real loft's records**: 0 structural errors.
 
 ---
 
-## 9b. Market position (researched, sourced)
+## 10. Market position (researched, sourced)
 
 A verified competitive study was run against ~20 pigeon products and several
 general animal-pedigree suites. Claims were only kept if an agent fetched a
@@ -301,7 +320,7 @@ corner. That is the thing to defend.
   pigeon.plus), or via OCR of the paper pedigree (PigeonDB, WingLoft,
   MyPigeon Records). Zajil's Tier-3 scanner is the same idea.
 
-## 10. Known limitations & gotchas
+## 11. Known limitations & gotchas
 
 1. **LAN = no offline/install.** Plain HTTP isn't a secure context. Needs real HTTPS (Cloudflare tunnel — `cloudflared` is installed; or free static hosting; or a trusted local cert).
 2. **Static server isn't persistent** — dies on reboot/logout. No systemd unit yet.
@@ -314,7 +333,7 @@ corner. That is the thing to defend.
 
 ---
 
-## 10b. The five primitives (v1.7)
+## 12. The five primitives (v1.7)
 
 The medium backlog findings were symptoms of five missing shared primitives.
 These are now installed, every caller routed through them, and **guard tests
@@ -336,7 +355,7 @@ See `docs/WRITEPATH-v1.7.md` for the full call-site map and
 `docs/V1.7-NOTES.md` for known inconsistencies and where the structure will
 fight a server-backed data layer.
 
-## 11. Conventions a new session must not break
+## 13. Conventions a new session must not break
 
 - **Never key records on ring number.** UUIDs only.
 - **RTL is structural.** Use CSS **logical properties** (`inline-start/end`, `inline-size`, `border-inline-*`). The pedigree grid mirrors because grid tracks follow the document direction — **never** add `[dir="rtl"]` layout overrides to "fix" mirroring.
@@ -348,15 +367,39 @@ fight a server-backed data layer.
 - **Validation severity:** cycles, sex contradictions, parent-younger-than-child are **errors that block the save** and must name the offending link. Duplicate rings are **warnings** requiring confirmation.
 - **Touch targets ≥44px**, one-handed phone layout, high-contrast mode must keep working.
 - **No dependencies, no build step.** Anything that needs npm install or a bundler is a scope change to discuss first.
-- **Never bypass a primitive.** Dates via `js/dates.js`; writes via `db.js`
-  (never raw `idbPut`); validation via `saveBird`/`checkBird` (never
-  `validateBird` in a view); bird records via `newBird()`. `tests/guards.test.js`
-  enforces all four.
+- **Never bypass a primitive.** All six rules below are enforced by
+  `tests/guards.test.js`, which fails the build and names `file:line`:
+  - **Dates** — `todayISO()` / `parseLocalDate()` from `js/dates.js`. Never
+    `new Date().toISOString().slice(0,10)`: that is the UTC date, and east of
+    Greenwich it names yesterday. Never `new Date('YYYY-MM-DD')` for display:
+    that is UTC midnight, and west of Greenwich it renders a day early.
+  - **Writes** — through `js/db.js` only. `idbPut`/`idbDelete`/`idbClear` are
+    forbidden outside it; reads (`idbGet`/`idbGetAll`) are fine. Every write
+    emits a change event and keeps the in-memory mirror in sync.
+  - **Validation** — happens inside `saveBird()`, not in views. Views call
+    `checkBird()` from db.js for pre-flight; `validateBird` must not be
+    imported by a view.
+  - **The save contract** — `saveBird` is strict by default: hard errors AND
+    unconfirmed warnings both reject the write, throwing `ValidationError`
+    with i18n keys. `{allowWarnings: true}` means *the user has confirmed
+    them*; `{force: true}` skips validation entirely and belongs only to
+    `importAll` and the dataset loaders.
+  - **Bird records** — only ever from `newBird()`, which derives
+    `external === (status === REFERENCE_STATUS)` after the spread so a caller
+    cannot contradict it.
+  - **Referential integrity** — `checkIntegrity()` in `js/engine/integrity.js`
+    must report zero dangling references. Extend its `CROSS_REFERENCES` table
+    whenever a store or cross-record field is added; nothing detects a
+    reference it does not know about.
+- **Every browser suite is either run or printed as skipped.** `run_all.py`
+  derives its list from the difference between what exists on disk and what
+  ran, and every exclusion carries its reason and the flag that lifts it. A
+  suite must never be silently absent from the output.
 - **`[hidden]` must always win** — `css/app.css` has a global `[hidden]{display:none!important}` because class-based `display` rules once resurrected hidden elements (this was a real bug: the parent-picker dropdown could never close).
 
 ---
 
-## 12. Open items / awaiting the user's decision
+## 14. Open items / awaiting the user's decision
 
 ### Open decisions
 - **Local-network testing without HTTPS** has no service worker, so no offline
@@ -365,24 +408,20 @@ fight a server-backed data layer.
 - Whether to run the dev server as a persistent service on the workstation.
 
 ### Roadmap
-1. **Switch on GitHub Pages** → `https://nahdaeverything-web.github.io/Zajildb/`
-   (Settings → Pages → Deploy from branch → `main` → `/root`). Verified working
-   under a Pages-style subpath, offline included. This is what finally gives a
-   phone the installed, offline experience the product is designed around.
-2. **Design & typography pass** — the next planned piece of work. See §15.
-3. **Work the [BACKLOG.md](BACKLOG.md)** — 33 verified findings. Highest value
-   first: ring-chick bypasses validation; UTC date defaults record *yesterday*
-   between midnight and 03:00 in Jordan; the FCI column shows ✓ for birds with
-   no FCI ring; Statistics freezes for seconds on a few hundred birds.
-4. **Commit the Playwright suites.** 72 browser checks live only as ad-hoc
-   scripts; they have caught several real regressions and should be repeatable.
-5. **Promote-to-loft** for external birds, and **fostering / placed eggs** — the
-   two conventions the market research says we're missing (§9b).
-6. Tier 3 #14 **public loft page** — small, serves the “shareable to buyers” pillar.
-7. Tier 3 #12 **scanner** — biggest effort; needs an Arabic-handwriting vision
+1. **Design & typography pass** — the next planned piece of work. See §15.
+2. **Work the [BACKLOG.md](BACKLOG.md)** — highest value first: the FCI column
+   shows ✓ for birds with no FCI ring; Statistics freezes for seconds on a few
+   hundred birds; the same bird can be linked as the chick of two eggs.
+3. **Promote-to-loft** for external birds, and **fostering / placed eggs** — the
+   two conventions the market research says we're missing (§10).
+4. Tier 3 #14 **public loft page** — small, serves the “shareable to buyers” pillar.
+5. Tier 3 #12 **scanner** — biggest effort; needs an Arabic-handwriting vision
    model server. Must stay strictly optional.
-8. Club mode — the business case (a federation is the paying customer). Schema
+6. Club mode — the business case (a federation is the paying customer). Schema
    is ready; UI is not.
+
+*(Switching on GitHub Pages and committing the browser suites were roadmap
+items through v1.6; both are done — see the status snapshot.)*
 
 ## 15. Design & typography — the next piece of work
 
@@ -411,7 +450,7 @@ committing to choices. What surfaced, to be re-verified:
 
 ---
 
-## 13. Change log
+## 16. Change log
 
 - **v1.0** — initial build: engine + tests first, then Tier 1, Tier 2, docs, sample data. Verified offline + RTL geometry.
 - **v1.1** — data audit pass (0 structural errors). Fixed: `[hidden]` override bug (parent-picker dropdown could never close; same latent bug in the health dialog). Added readable **sex chips** (♂ ذكر / ♀ أنثى) in lists, pickers, detail, plus tree tinting and a legend. Added **add-sibling** flow (siblings derive from shared parents; creates placeholder parents when none exist). Added in-app example-data loader.
@@ -419,11 +458,24 @@ committing to choices. What surfaced, to be re-verified:
 - **v1.3** — added the 38-bird / 6-generation teaching loft (`example-loft-large.json`) + 5 asserting tests; both examples offered in the empty state and Tools; precached for offline.
 - **v1.4** — pre-publish audit before going public (18 findings): removed a real name from the shipped sample data and real breeders' names from demo pedigrees, stripped private notes/paths from this file, moved commits to a noreply address, added the LICENSE, and fixed two service-worker bugs that only bite on GitHub Pages (per-origin cache deletion would have wiped sibling projects' offline caches; `addAll` read through the HTTP cache and could bake a stale deploy into a new version cache). Repo pushed public.
 - **v1.5** — the ownership model (§5), register ownership filter, link-an-existing-bird to an egg, pair provenance and backdating. Plus a UI sweep across 11 routes × 3 viewports that found the real cause of the reported “page jumps to the top” bug: **the page scrolled behind open dialogs**. Dialogs now pin the page and restore position exactly; tall dialogs scroll themselves; Tab is trapped; race tabs remember scroll position.
+- **v1.7** — invariant hardening. Five shared primitives installed and every
+  caller routed through them: local dates (`js/dates.js`), validation at the
+  write boundary (`saveBird`/`classifySave`), change events driving a deferred
+  scroll-preserving refresh, referential integrity (`checkIntegrity` + a
+  cascading delete with a complete undo snapshot), and one record factory.
+  Structural guard tests make it permanent — one of them immediately caught two
+  new modules missing from the service-worker precache, which would have broken
+  offline. `importAll` made atomic: it decodes and validates the whole payload,
+  and snapshots to `backups`, before touching anything — previously one
+  malformed media entry destroyed the loft. Eleven backlog findings closed as
+  side effects rather than patched individually. Browser suites moved out of
+  scratch into `tests/e2e/` with a runner and README. Tests 33 → 75; browser
+  assertions 148 across 15 suites. Merged as `eedb38d` and deployed.
 - **v1.6** — deep bug hunt (39 confirmed, 32 refuted). Fixed the four data-loss defects: the parent picker silently detaching a link on an abandoned search; snapshot restore deleting every photo; a foreign replace-import bricking the loft; and object URLs pinning every photo Blob for the life of the tab. Also fixed ownership being dropped by “Save & add another”. The remaining 33 findings are in [BACKLOG.md](BACKLOG.md).
 
 ---
 
-## 14. Seed prompt for a new chat
+## 17. Seed prompt for a new chat
 
 > I'm continuing work on **Zajil** — an Arabic-first, offline-first
 > PWA for racing-pigeon pedigree and loft management, in Jordan/Gulf.
@@ -437,9 +489,12 @@ committing to choices. What surfaced, to be re-verified:
 > COI fixtures are contractual. RTL is structural via CSS logical properties.
 > Serve with `python3 -m http.server 8123` from the repo root.
 >
-> Current state: v1.6.0, pushed to `github.com/nahdaeverything-web/Zajildb`
-> (public, all-rights-reserved licence). GitHub Pages is NOT switched on yet.
-> 33 known issues are catalogued in `BACKLOG.md` — all verified, none blocking.
+> Current state: **v1.7.0**, `main` at `eedb38d`, live at
+> https://nahdaeverything-web.github.io/Zajildb/ (public repo,
+> all-rights-reserved licence). 75 node tests and 148 browser assertions pass.
+> Known issues are catalogued in `BACKLOG.md` — all verified, none blocking.
+> **Read §13 (Conventions) before writing code**: v1.7 installed five shared
+> primitives and guard tests that fail the build if you go around them.
 > The next planned piece of work is the **design & typography pass** (§15).
 >
 > What I want to work on next: **<describe your task here>**
