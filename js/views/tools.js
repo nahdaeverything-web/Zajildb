@@ -287,8 +287,23 @@ function devCard() {
     },
   }, '⇄ ' + t('dev.roundtrip'));
 
+  const integrityBtn = h('button', {
+    class: 'btn', onclick: async () => {
+      const { checkIntegrity } = await import('../engine/integrity.js');
+      const problems = checkIntegrity({
+        birds: state.birds, pairs: state.pairs,
+        raceResults: state.raceResults, healthEvents: state.healthEvents,
+      });
+      out.textContent = problems.length
+        ? t('integrity.found', { n: problems.length }) + '\n' +
+          problems.map((p2) => '  ✗ ' + t(p2.key, p2.params)).join('\n')
+        : '✓ ' + t('integrity.clean');
+      out.classList.toggle('test-fail', problems.length > 0);
+    },
+  }, '🔗 ' + t('integrity.title'));
+
   return h('div', { class: 'card' },
     h('h2', {}, t('dev.title')),
-    h('div', { class: 'row-inline' }, runBtn, rtBtn),
+    h('div', { class: 'row-inline' }, runBtn, rtBtn, integrityBtn),
     out);
 }

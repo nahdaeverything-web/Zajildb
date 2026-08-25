@@ -221,12 +221,25 @@ export async function saveBird(bird, { allowWarnings = false, force = false } = 
   return bird;
 }
 
+/**
+ * Delete a bird and every reference to it, leaving the database referentially
+ * consistent (assert with checkIntegrity). Everything touched is snapshotted so
+ * undo restores the whole picture, not just the bird.
+ *
+ * Offspring keep their records and lose the parent link; race results, health
+ * events and pairs that name the bird are removed, because a race result for a
+ * bird that does not exist is not a record of anything. Eggs in OTHER pairs
+ * that pointed at this bird as their chick are unlinked.
+ */
 export async function deleteBird(id) {
-  // Detach as parent from offspring; keep their records intact.
-  // Original snapshots of every touched record are returned so the UI can undo.
-  const affectedOriginals = [];
   const bird = state.birds.get(id);
   const media = await idbGetAll('media', 'birdId', id);
+  const affectedOriginals = [];   // offspring whose parent link is cleared
+  const removedRaces = [];
+  const removedHealth = [];
+  const removedPairs = [];
+  const affectedPairs = [];       // pairs that merely referenced it from an egg
+
   for (const b of state.birds.values()) {
     if (b.sireId === id || b.damId === id) {
       affectedOriginals.push({ ...b });
@@ -238,20 +251,57 @@ export async function deleteBird(id) {
       state.birds.set(copy.id, copy);
     }
   }
+  for (const r of [...state.raceResults.values()]) {
+    if (r.birdId === id) { removedRaces.push({ ...r }); await idbDelete('raceResults', r.id); state.raceResults.delete(r.id); }
+  }
+  for (const e of [...state.healthEvents.values()]) {
+    if (e.birdId === id) { removedHealth.push({ ...e }); await idbDelete('healthEvents', e.id); state.healthEvents.delete(e.id); }
+  }
+  for (const p of [...state.pairs.values()]) {
+    if (p.sireId === id || p.damId === id) {
+      removedPairs.push(JSON.parse(JSON.stringify(p)));
+      await idbDelete('pairs', p.id);
+      state.pairs.delete(p.id);
+      continue;
+    }
+    const referencesBird = (p.rounds || []).some((r) =>
+      (r.eggs || []).some((e) => e.chickId === id));
+    if (referencesBird) {
+      affectedPairs.push(JSON.parse(JSON.stringify(p)));   // snapshot BEFORE mutating
+      for (const round of p.rounds || []) {
+        for (const egg of round.eggs || []) {
+          if (egg.chickId === id) { egg.chickId = null; egg.ringed = false; }
+        }
+      }
+      stamp(p);
+      await idbPut('pairs', p);
+    }
+  }
+
   for (const m of media) await idbDelete('media', m.id);
   await idbDelete('birds', id);
   state.birds.delete(id);
   emitChange({ type: 'bird', id });
-  return { bird, media, affectedOriginals };
+  return { bird, media, affectedOriginals, removedRaces, removedHealth, removedPairs, affectedPairs };
 }
 
-export async function restoreBird({ bird, media, affectedOriginals }) {
+/** Undo a deleteBird: puts back the bird AND everything the cascade removed. */
+export async function restoreBird(snapshot) {
+  const { bird, media, affectedOriginals, removedRaces, removedHealth,
+          removedPairs, affectedPairs } = snapshot || {};
+  if (!bird) return;
   // an undo restores exactly what was there; it is not a new edit to re-judge
   await idbPut('birds', bird);
   state.birds.set(bird.id, bird);
   for (const orig of affectedOriginals || []) {
     await idbPut('birds', orig);
     state.birds.set(orig.id, orig);
+  }
+  for (const r of removedRaces || []) { await idbPut('raceResults', r); state.raceResults.set(r.id, r); }
+  for (const e of removedHealth || []) { await idbPut('healthEvents', e); state.healthEvents.set(e.id, e); }
+  for (const p of [...(removedPairs || []), ...(affectedPairs || [])]) {
+    await idbPut('pairs', p);
+    state.pairs.set(p.id, p);
   }
   for (const m of media || []) await idbPut('media', m);
   emitChange({ type: 'bird', id: bird.id });
