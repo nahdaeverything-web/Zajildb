@@ -296,6 +296,14 @@ export async function addMedia(birdId, kind, subtype, name, blob) {
   return m;
 }
 export function mediaForBird(birdId) { return idbGetAll('media', 'birdId', birdId); }
+/** Put a media record back after a delete (undo). Emits, so views refresh. */
+export async function restoreMedia(m) {
+  if (!m) return null;
+  await idbPut('media', m);
+  emitChange({ type: 'media', id: m.id, birdId: m.birdId });
+  return m;
+}
+
 export async function deleteMedia(id) {
   const m = await idbGet('media', id);
   await idbDelete('media', id);

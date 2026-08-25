@@ -4,7 +4,7 @@
 
 import {
   getBird, allBirds, state, saveBird, deleteBird, restoreBird,
-  mediaForBird, deleteMedia, exportBirdWithAncestry, nowISO, uuid,
+  mediaForBird, deleteMedia, restoreMedia, exportBirdWithAncestry, nowISO, uuid,
 } from '../db.js';
 import { t, fmtDate, fmtNum, fmtPercent, statusLabel, escapeHTML, ringHTML } from '../i18n.js';
 import {
@@ -232,8 +232,8 @@ export function renderBirdDetail(id) {
               const snap = await deleteMedia(m.id);
               fig.remove();
               undoToast(t('toast.deleted'), async () => {
-                const { idbPut } = await import('../db.js');
-                await idbPut('media', snap);
+                if (!snap) return;            // nothing to restore (double-delete)
+                await restoreMedia(snap);     // emits, so the gallery refreshes
                 toast(t('toast.undone'));
               });
             }
