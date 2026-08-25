@@ -12,12 +12,19 @@ import { haversineMetres, velocityMPM } from '../js/engine/velocity.js';
 const LOFT = 'loft-zarqa';
 const T = '2026-08-01T09:00:00.000Z'; // fixed updatedAt for determinism
 
-const bird = (id, o) => ({
+const bird = (id, o) => withStatus({
   id, rings: [], name: '', sex: 'unknown', hatchDate: '', colour: '', strain: '',
   eyeSign: '', status: 'stock', sireId: null, damId: null, external: false,
   breeder: '', owner: 'لوفت الزرقاء', acquiredFrom: '', acquiredDate: '',
   notes: [], createdAt: T, updatedAt: T, loftId: LOFT, ...o,
 });
+
+// mirror js/db.js newBird(): a never-owned ancestor carries the reference
+// status, so the shipped data satisfies the same invariant as live records
+function withStatus(b) {
+  if (b.external) b.status = 'reference';
+  return b;
+}
 const ring = (raw, type = 'national') => {
   const parts = raw.split('-');
   return { country: parts[0] === 'FCI' ? parts[1] : parts[0], union: '', year: +(parts[parts.length - 2]), serial: parts[parts.length - 1], raw, type };

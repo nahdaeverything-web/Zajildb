@@ -6,6 +6,8 @@
 // `updatedAt` (device clock, ISO). If sync is added later it must be
 // per-field last-write-wins keyed on these — never whole-record overwrite.
 
+import { classifySave } from './engine/validate.js';
+
 const DB_NAME = 'zajil';
 const DB_VERSION = 1;
 
@@ -154,7 +156,20 @@ function stamp(record) {
   return record;
 }
 
+/**
+ * THE bird factory. Every bird record in the app is minted here.
+ *
+ * Ownership and status are two views of one fact, so the factory derives them
+ * rather than trusting each caller to remember: an external bird (a
+ * never-owned ancestor from someone else's pedigree) always carries
+ * REFERENCE_STATUS, and asking for REFERENCE_STATUS means the bird is
+ * external. Four call sites used to mint birds independently and only one of
+ * them knew this rule, so ancestors created inline arrived as 'stock' and the
+ * register mislabelled and misfiltered them.
+ */
 export function newBird(partial = {}) {
+  const external = partial.external === true || partial.status === REFERENCE_STATUS;
+  const status = external ? REFERENCE_STATUS : (partial.status || 'stock');
   return stamp({
     id: uuid(),
     rings: [],            // [{country, union, year, serial, raw, type}]
@@ -175,10 +190,47 @@ export function newBird(partial = {}) {
     notes: [],            // [{id, at, text}]
     createdAt: nowISO(),
     ...partial,
+    // derived last so a caller cannot contradict the invariant by omission
+    // or by passing a stale pair of values
+    external,
+    status,
   });
 }
 
-export async function saveBird(bird) {
+/**
+ * Thrown by saveBird when a record fails validation. Carries the i18n keys so
+ * a view can render them; never a pre-rendered string.
+ */
+export class ValidationError extends Error {
+  constructor(errors, warnings) {
+    super('zajil/validation-failed');
+    this.name = 'ValidationError';
+    this.errors = errors;
+    this.warnings = warnings;
+  }
+}
+
+/**
+ * Pre-flight check, bound to the live flock. Views use this to show errors and
+ * to ask the user to confirm warnings BEFORE writing. It is the same single
+ * implementation saveBird enforces — not a second copy of the rules.
+ */
+export function checkBird(bird, opts = {}) {
+  return classifySave(bird, getBird, allBirds(), opts);
+}
+
+/**
+ * THE write boundary for birds. Validation happens here, so no view can write
+ * an invalid record by forgetting to check — that is how "ring chick" used to
+ * create duplicate rings and impossible parent links.
+ *
+ * Strict by default. Pass { allowWarnings: true } once the user has confirmed
+ * them, or { force: true } from importAll / dataset loaders only.
+ * @throws {ValidationError}
+ */
+export async function saveBird(bird, { allowWarnings = false, force = false } = {}) {
+  const verdict = classifySave(bird, getBird, allBirds(), { allowWarnings, force });
+  if (!verdict.ok) throw new ValidationError(verdict.errors, verdict.warnings);
   stamp(bird);
   await idbPut('birds', bird);
   state.birds.set(bird.id, bird);
@@ -186,12 +238,25 @@ export async function saveBird(bird) {
   return bird;
 }
 
+/**
+ * Delete a bird and every reference to it, leaving the database referentially
+ * consistent (assert with checkIntegrity). Everything touched is snapshotted so
+ * undo restores the whole picture, not just the bird.
+ *
+ * Offspring keep their records and lose the parent link; race results, health
+ * events and pairs that name the bird are removed, because a race result for a
+ * bird that does not exist is not a record of anything. Eggs in OTHER pairs
+ * that pointed at this bird as their chick are unlinked.
+ */
 export async function deleteBird(id) {
-  // Detach as parent from offspring; keep their records intact.
-  // Original snapshots of every touched record are returned so the UI can undo.
-  const affectedOriginals = [];
   const bird = state.birds.get(id);
   const media = await idbGetAll('media', 'birdId', id);
+  const affectedOriginals = [];   // offspring whose parent link is cleared
+  const removedRaces = [];
+  const removedHealth = [];
+  const removedPairs = [];
+  const affectedPairs = [];       // pairs that merely referenced it from an egg
+
   for (const b of state.birds.values()) {
     if (b.sireId === id || b.damId === id) {
       affectedOriginals.push({ ...b });
@@ -203,19 +268,57 @@ export async function deleteBird(id) {
       state.birds.set(copy.id, copy);
     }
   }
+  for (const r of [...state.raceResults.values()]) {
+    if (r.birdId === id) { removedRaces.push({ ...r }); await idbDelete('raceResults', r.id); state.raceResults.delete(r.id); }
+  }
+  for (const e of [...state.healthEvents.values()]) {
+    if (e.birdId === id) { removedHealth.push({ ...e }); await idbDelete('healthEvents', e.id); state.healthEvents.delete(e.id); }
+  }
+  for (const p of [...state.pairs.values()]) {
+    if (p.sireId === id || p.damId === id) {
+      removedPairs.push(JSON.parse(JSON.stringify(p)));
+      await idbDelete('pairs', p.id);
+      state.pairs.delete(p.id);
+      continue;
+    }
+    const referencesBird = (p.rounds || []).some((r) =>
+      (r.eggs || []).some((e) => e.chickId === id));
+    if (referencesBird) {
+      affectedPairs.push(JSON.parse(JSON.stringify(p)));   // snapshot BEFORE mutating
+      for (const round of p.rounds || []) {
+        for (const egg of round.eggs || []) {
+          if (egg.chickId === id) { egg.chickId = null; egg.ringed = false; }
+        }
+      }
+      stamp(p);
+      await idbPut('pairs', p);
+    }
+  }
+
   for (const m of media) await idbDelete('media', m.id);
   await idbDelete('birds', id);
   state.birds.delete(id);
   emitChange({ type: 'bird', id });
-  return { bird, media, affectedOriginals };
+  return { bird, media, affectedOriginals, removedRaces, removedHealth, removedPairs, affectedPairs };
 }
 
-export async function restoreBird({ bird, media, affectedOriginals }) {
+/** Undo a deleteBird: puts back the bird AND everything the cascade removed. */
+export async function restoreBird(snapshot) {
+  const { bird, media, affectedOriginals, removedRaces, removedHealth,
+          removedPairs, affectedPairs } = snapshot || {};
+  if (!bird) return;
+  // an undo restores exactly what was there; it is not a new edit to re-judge
   await idbPut('birds', bird);
   state.birds.set(bird.id, bird);
   for (const orig of affectedOriginals || []) {
     await idbPut('birds', orig);
     state.birds.set(orig.id, orig);
+  }
+  for (const r of removedRaces || []) { await idbPut('raceResults', r); state.raceResults.set(r.id, r); }
+  for (const e of removedHealth || []) { await idbPut('healthEvents', e); state.healthEvents.set(e.id, e); }
+  for (const p of [...(removedPairs || []), ...(affectedPairs || [])]) {
+    await idbPut('pairs', p);
+    state.pairs.set(p.id, p);
   }
   for (const m of media || []) await idbPut('media', m);
   emitChange({ type: 'bird', id: bird.id });
@@ -260,6 +363,14 @@ export async function addMedia(birdId, kind, subtype, name, blob) {
   return m;
 }
 export function mediaForBird(birdId) { return idbGetAll('media', 'birdId', birdId); }
+/** Put a media record back after a delete (undo). Emits, so views refresh. */
+export async function restoreMedia(m) {
+  if (!m) return null;
+  await idbPut('media', m);
+  emitChange({ type: 'media', id: m.id, birdId: m.birdId });
+  return m;
+}
+
 export async function deleteMedia(id) {
   const m = await idbGet('media', id);
   await idbDelete('media', id);
@@ -284,11 +395,12 @@ export async function dataURLToBlob(dataURL) {
 }
 
 /** Full export: everything, media as data URLs. Round-trip tested. */
-export async function exportAll() {
-  const media = await idbGetAll('media');
+export async function exportAll({ includeMedia = true } = {}) {
   const mediaOut = [];
-  for (const m of media) {
-    mediaOut.push({ ...m, blob: undefined, dataURL: await blobToDataURL(m.blob) });
+  if (includeMedia) {
+    for (const m of await idbGetAll('media')) {
+      mediaOut.push({ ...m, blob: undefined, dataURL: await blobToDataURL(m.blob) });
+    }
   }
   return {
     format: 'zajil-export',
@@ -310,6 +422,42 @@ export async function exportAll() {
 export async function importAll(payload, mode = 'merge') {
   if (!payload || payload.format !== 'zajil-export') throw new Error('bad-format');
   const counts = { birds: 0, pairs: 0, raceResults: 0, healthEvents: 0, lofts: 0, media: 0, skipped: 0 };
+
+  // ── decode and validate EVERYTHING before touching the database ──
+  // A replace-import used to clear all six stores and only then decode the
+  // media blobs, so one malformed data URL — or a quota error part-way
+  // through — destroyed the loft with nothing to put back. Decoding first
+  // means a bad payload fails while the existing data is still intact.
+  for (const key of ['lofts', 'birds', 'pairs', 'raceResults', 'healthEvents', 'media']) {
+    if (payload[key] !== undefined && !Array.isArray(payload[key])) {
+      throw new Error(`bad-format: ${key} is not a list`);
+    }
+  }
+  for (const b of payload.birds || []) {
+    if (!b || typeof b.id !== 'string' || !b.id) throw new Error('bad-format: a bird has no id');
+  }
+  const decodedMedia = [];
+  for (const m of payload.media || []) {
+    if (!m || typeof m.id !== 'string') throw new Error('bad-format: a media entry has no id');
+    let blob;
+    try {
+      blob = await dataURLToBlob(m.dataURL);
+    } catch (err) {
+      throw new Error(`bad-media: ${m.name || m.id} could not be decoded`);
+    }
+    if (!blob || typeof blob.size !== 'number') throw new Error(`bad-media: ${m.name || m.id}`);
+    decodedMedia.push({ id: m.id, birdId: m.birdId, kind: m.kind, subtype: m.subtype,
+                        name: m.name, blob, addedAt: m.addedAt });
+  }
+
+  // ── a rollback point, taken before anything is cleared ──
+  if (mode === 'replace') {
+    try {
+      const snapshot = await exportAll({ includeMedia: false });
+      snapshot.kind = 'auto-backup';
+      await idbPut('backups', { id: `pre-import-${nowISO()}`, payload: snapshot });
+    } catch { /* a snapshot is a safety net, not a reason to block the import */ }
+  }
   // Automatic snapshots deliberately carry no media (blobs would make them
   // huge), so wiping the media store on restore would destroy every photo and
   // scanned pedigree the payload cannot put back. Keep media in that case.
@@ -336,11 +484,10 @@ export async function importAll(payload, mode = 'merge') {
   for (const p of payload.pairs || []) await put('pairs', 'pairs', p);
   for (const r of payload.raceResults || []) await put('raceResults', 'raceResults', r);
   for (const h of payload.healthEvents || []) await put('healthEvents', 'healthEvents', h);
-  for (const m of payload.media || []) {
+  for (const m of decodedMedia) {
     const existing = await idbGet('media', m.id);
     if (mode === 'merge' && existing) { counts.skipped++; continue; }
-    const blob = await dataURLToBlob(m.dataURL);
-    await idbPut('media', { id: m.id, birdId: m.birdId, kind: m.kind, subtype: m.subtype, name: m.name, blob, addedAt: m.addedAt });
+    await idbPut('media', m);
     counts.media++;
   }
   // An export from another device carries its own loft ids, so the stored
@@ -396,9 +543,10 @@ export async function exportBirdWithAncestry(birdId, { includeRaces = true, incl
 
 const BACKUP_KEEP = 7;
 export async function autoBackup() {
-  const payload = await exportAll();
-  // Media can be huge; interval backups keep data only. Full exports include media.
-  payload.media = [];
+  // Media can be huge; interval snapshots keep data only. Full exports include
+  // media. Asking exportAll not to read the blobs at all avoids base64-encoding
+  // every photo twice a day only to throw the result away.
+  const payload = await exportAll({ includeMedia: false });
   payload.kind = 'auto-backup';
   const id = nowISO();
   await idbPut('backups', { id, payload });

@@ -1,7 +1,7 @@
 // sw.js — service worker: precache the entire app shell so Zajil launches
 // and works fully offline. Cache-first; the app never blocks on the network.
 
-const VERSION = 'zajil-v1.6.0';
+const VERSION = 'zajil-v1.7.0';
 
 const SHELL = [
   './',
@@ -10,10 +10,12 @@ const SHELL = [
   './css/app.css',
   './js/app.js',
   './js/db.js',
+  './js/dates.js',
   './js/i18n.js',
   './js/ui.js',
   './js/engine/pedigree.js',
   './js/engine/coi.js',
+  './js/engine/integrity.js',
   './js/engine/relationship.js',
   './js/engine/rings.js',
   './js/engine/fci.js',

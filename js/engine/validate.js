@@ -81,3 +81,26 @@ export function validatePairSexes(sire, dam) {
   if (sire && dam && sire.id === dam.id) errors.push({ key: 'val.pairSameBird', params: {} });
   return errors;
 }
+
+/**
+ * The save decision, in one pure place.
+ *
+ * Validation lives at the WRITE boundary (db.js saveBird) rather than in each
+ * view, because a view that forgets to call it writes bad data silently — which
+ * is exactly how "ring chick" came to create duplicate rings and impossible
+ * parent links that the bird form would have refused.
+ *
+ * Strict by default: BOTH hard errors and unconfirmed warnings block the write.
+ * A caller that has shown the warnings to the user and had them confirmed
+ * passes { allowWarnings: true }. Errors are never waivable.
+ * { force: true } skips everything and exists only for importAll and the
+ * bundled dataset loaders, which must land a payload verbatim.
+ *
+ * @returns {{ok: boolean, errors: Array, warnings: Array}} i18n keys + params
+ */
+export function classifySave(bird, getBird, allBirds, { allowWarnings = false, force = false } = {}) {
+  if (force) return { ok: true, errors: [], warnings: [] };
+  const { errors, warnings } = validateBird(bird, getBird, allBirds);
+  const ok = errors.length === 0 && (allowWarnings || warnings.length === 0);
+  return { ok, errors, warnings };
+}

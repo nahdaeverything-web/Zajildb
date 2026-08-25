@@ -3,7 +3,7 @@
 
 import { initDB, state, setSetting, onChange, autoBackup } from './db.js';
 import { configure, t, getLang, fmtDate } from './i18n.js';
-import { h, clear, toast, runViewTeardowns } from './ui.js';
+import { h, clear, toast, runViewTeardowns, isModalOpen, onModalsClosed } from './ui.js';
 import { renderBirds } from './views/birds.js';
 import { renderBirdDetail } from './views/bird-detail.js';
 import { renderBirdForm } from './views/bird-form.js';
@@ -116,6 +116,60 @@ async function route() {
   navigateReplace('#/birds');
 }
 
+// --- auto-refresh on data change --------------------------------------------
+// A write from outside the current view (an undo toast, a dialog on another
+// screen) must show up in what the user is looking at. Three things make this
+// safe rather than a source of new bugs:
+//
+//   1. While a DIALOG is open we defer. Re-rendering underneath an open dialog
+//      is how the v1.5 "page jumps to the top" bug would come back, and the
+//      user is mid-interaction anyway. The refresh runs when the last dialog
+//      closes.
+//   2. On a FORM route we skip entirely. Re-rendering a form would discard
+//      whatever the user has typed — the form owns its own state and navigates
+//      away when it saves.
+//   3. Refreshes are COALESCED and preserve scroll position, so a write loop
+//      (deleteBird detaching several offspring) causes one re-route, not many,
+//      and the user keeps their place.
+const FORM_ROUTES = /^#\/bird\/(new|[\w-]+\/edit)/;
+let _refreshQueued = false;
+let _refreshPending = false;
+
+function refreshCurrentView() {
+  const y = window.scrollY;
+  Promise.resolve(route()).then(() => {
+    requestAnimationFrame(() => {
+      const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      window.scrollTo(0, Math.min(y, max));
+    });
+  });
+}
+
+function queueRefresh() {
+  if (_refreshQueued) return;
+  _refreshQueued = true;
+  setTimeout(() => {
+    _refreshQueued = false;
+    if (isModalOpen()) { _refreshPending = true; return; }
+    refreshCurrentView();
+  }, 0);
+}
+
+function wireAutoRefresh() {
+  onChange((ev) => {
+    if (!ev) return;
+    if (ev.type === 'import') { rerender(); return; }   // structural: rebuild the shell
+    if (FORM_ROUTES.test(location.hash || '')) return;   // never clobber unsaved input
+    if (isModalOpen()) { _refreshPending = true; return; }
+    queueRefresh();
+  });
+  onModalsClosed(() => {
+    if (!_refreshPending) return;
+    _refreshPending = false;
+    if (!FORM_ROUTES.test(location.hash || '')) queueRefresh();
+  });
+}
+
 export function rerender() {
   applySettings();
   renderShell();
@@ -131,7 +185,7 @@ async function boot() {
   applySettings();
   renderShell();
   window.addEventListener('hashchange', route);
-  onChange((ev) => { if (ev && ev.type === 'import') rerender(); });
+  wireAutoRefresh();
   await route();
 
   // Interval auto-backup (internal snapshot; distinct from user exports).

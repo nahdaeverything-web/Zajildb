@@ -3,6 +3,8 @@
 // logical properties + document dir; THIS module owns strings, numerals,
 // and dates. Ring numbers always render Western digits, LTR-isolated.
 
+import { parseLocalDate } from './dates.js';
+
 export const LANGS = ['ar', 'en'];
 
 const dict = {
@@ -105,6 +107,7 @@ const dict = {
   'bird.addSibling': { ar: 'إضافة شقيق/شقيقة', en: 'Add sibling' },
   'bird.siblingHint': { ar: 'الأشقاء يُسجَّلون بإعطائهم نفس الأب والأم — لا يوجد ربط مباشر بين الأشقاء، فالقرابة تُشتق من الأبوين.', en: 'Siblings are recorded by giving them the same sire and dam — there is no direct sibling link; kinship derives from the parents.' },
   'bird.siblingNoParents': { ar: 'هذا الطير بلا أبوين مسجلين. لتسجيل شقيق، سيُنشئ زاجل سجلّين للأبوين «غير معروفين» ويربطهما بالطيرين معًا — يمكنك تعبئة بياناتهما لاحقًا.', en: 'This bird has no recorded parents. To record a sibling, Zajil will create two placeholder “unknown” parent records and link them to both birds — you can fill in their details later.' },
+  'bird.siblingOfNotice': { ar: 'سيُسجَّل هذا الطير شقيقًا لـ «{name}». عند الحفظ سيُنشأ أبوان «غير معروفان» ويُربطان بالطيرين معًا — ولن يُكتب شيء إن ألغيت.', en: 'This bird will be recorded as a sibling of “{name}”. On save, two “unknown” parents are created and linked to both birds — nothing is written if you cancel.' },
   'bird.createPlaceholders': { ar: 'إنشاء الأبوين والمتابعة', en: 'Create parents & continue' },
   'bird.unknownSire': { ar: 'أب غير معروف', en: 'Unknown sire' },
   'bird.unknownDam': { ar: 'أم غير معروفة', en: 'Unknown dam' },
@@ -210,6 +213,14 @@ const dict = {
   'val.pairSireIsHen': { ar: 'ذكر الزوج مسجل كأنثى.', en: 'The pair’s cock is recorded as a hen.' },
   'val.pairDamIsCock': { ar: 'أنثى الزوج مسجلة كذكر.', en: 'The pair’s hen is recorded as a cock.' },
   'val.pairSameBird': { ar: 'لا يمكن تزويج الطير مع نفسه.', en: 'A bird cannot be paired with itself.' },
+  'integrity.birdParent': { ar: 'الطير {birdId}: رابط {role} يشير إلى سجل غير موجود ({missingId}).', en: 'Bird {birdId}: {role} points at a record that does not exist ({missingId}).' },
+  'integrity.pairParent': { ar: 'الزوج {pairId}: {role} يشير إلى سجل غير موجود ({missingId}).', en: 'Pair {pairId}: {role} points at a record that does not exist ({missingId}).' },
+  'integrity.eggChick': { ar: 'البيضة {eggId} في الزوج {pairId} مرتبطة بفرخ غير موجود ({missingId}).', en: 'Egg {eggId} in pair {pairId} is linked to a chick that does not exist ({missingId}).' },
+  'integrity.raceBird': { ar: 'نتيجة السباق {resultId} تخصّ طيرًا غير موجود ({missingId}).', en: 'Race result {resultId} belongs to a bird that does not exist ({missingId}).' },
+  'integrity.healthBird': { ar: 'الحدث الصحي {eventId} يخصّ طيرًا غير موجود ({missingId}).', en: 'Health event {eventId} belongs to a bird that does not exist ({missingId}).' },
+  'integrity.title': { ar: 'فحص ترابط البيانات', en: 'Data integrity check' },
+  'integrity.clean': { ar: 'لا مراجع معلّقة. ✓', en: 'No dangling references. ✓' },
+  'integrity.found': { ar: 'وُجدت {n} مرجعًا معلّقًا.', en: '{n} dangling reference(s) found.' },
   'val.fixErrors': { ar: 'لا يمكن الحفظ — صحّح الأخطاء أولًا:', en: 'Cannot save — fix these errors first:' },
   'val.warningsTitle': { ar: 'تحذيرات — راجع قبل الحفظ:', en: 'Warnings — review before saving:' },
 
@@ -380,6 +391,7 @@ const dict = {
   'confirm.deleteGeneric': { ar: 'تأكيد الحذف؟', en: 'Delete this record?' },
   'confirm.replaceAll': { ar: 'سيُستبدل كل شيء في قاعدة البيانات بمحتوى الملف. متابعة؟', en: 'Everything in the database will be replaced by the file contents. Continue?' },
   'toast.saved': { ar: 'تم الحفظ', en: 'Saved' },
+  'toast.saveFailed': { ar: 'تعذّر الحفظ — راجع البيانات', en: 'Could not save — check the record' },
   'toast.deleted': { ar: 'تم الحذف', en: 'Deleted' },
   'toast.undone': { ar: 'تم التراجع', en: 'Undone' },
   'toast.exported': { ar: 'تم التصدير', en: 'Exported' },
@@ -442,7 +454,10 @@ export function fmtPercent(x, dp = 2) {
 
 /** Gregorian display in the active locale. Storage is always ISO Gregorian. */
 function fmtGregorian(iso, withTime) {
-  const d = new Date(iso);
+  // parseLocalDate keeps a bare "YYYY-MM-DD" on its own calendar day; using
+  // `new Date(iso)` would parse it as UTC midnight and render a day early
+  // west of Greenwich.
+  const d = parseLocalDate(iso);
   if (isNaN(d)) return iso || '—';
   const opts = withTime
     ? { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
@@ -452,7 +467,7 @@ function fmtGregorian(iso, withTime) {
 }
 
 function fmtHijri(iso) {
-  const d = new Date(iso);
+  const d = parseLocalDate(iso);
   if (isNaN(d)) return '';
   try {
     const locale = (lang === 'ar' ? 'ar-SA' : 'en') +

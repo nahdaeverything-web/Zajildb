@@ -4,7 +4,7 @@
 
 import {
   getBird, allBirds, state, saveBird, deleteBird, restoreBird,
-  mediaForBird, deleteMedia, exportBirdWithAncestry, nowISO, uuid,
+  mediaForBird, deleteMedia, restoreMedia, exportBirdWithAncestry, nowISO, uuid,
 } from '../db.js';
 import { t, fmtDate, fmtNum, fmtPercent, statusLabel, escapeHTML, ringHTML } from '../i18n.js';
 import {
@@ -52,6 +52,10 @@ export function renderBirdDetail(id) {
       navigate('#/bird/new?' + q.join('&'));
       return;
     }
+    // Express the INTENT and let the form commit it on a successful save.
+    // This used to create both placeholder parents and re-parent this bird
+    // immediately — so abandoning the form left the bird permanently attached
+    // to two junk ancestors, with no undo.
     modal(t('bird.addSibling'), h('div', {},
       h('p', {}, t('bird.siblingHint')),
       h('p', { class: 'muted' }, t('bird.siblingNoParents'))), {
@@ -59,17 +63,7 @@ export function renderBirdDetail(id) {
         { label: t('act.cancel') },
         {
           label: t('bird.createPlaceholders'), kind: 'primary',
-          onClick: () => {
-            (async () => {
-              const { newBird } = await import('../db.js');
-              const sire = await saveBird(newBird({ name: t('bird.unknownSire'), sex: 'cock', external: true }));
-              const dam = await saveBird(newBird({ name: t('bird.unknownDam'), sex: 'hen', external: true }));
-              bird.sireId = sire.id;
-              bird.damId = dam.id;
-              await saveBird(bird);
-              navigate('#/bird/new?sire=' + sire.id + '&dam=' + dam.id);
-            })();
-          },
+          onClick: () => { navigate('#/bird/new?siblingOf=' + id); },
         },
       ],
     });
@@ -232,8 +226,8 @@ export function renderBirdDetail(id) {
               const snap = await deleteMedia(m.id);
               fig.remove();
               undoToast(t('toast.deleted'), async () => {
-                const { idbPut } = await import('../db.js');
-                await idbPut('media', snap);
+                if (!snap) return;            // nothing to restore (double-delete)
+                await restoreMedia(snap);     // emits, so the gallery refreshes
                 toast(t('toast.undone'));
               });
             }

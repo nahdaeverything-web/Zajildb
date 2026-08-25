@@ -105,6 +105,12 @@ export function undoToast(msg, onUndo) {
 // because a confirm dialog can open on top of another modal.
 let _modalDepth = 0;
 let _savedScrollY = 0;
+const _modalClosedListeners = new Set();
+
+/** Is any dialog currently open? The router defers refreshes while one is. */
+export function isModalOpen() { return _modalDepth > 0; }
+/** Fires when the LAST open dialog closes. */
+export function onModalsClosed(fn) { _modalClosedListeners.add(fn); return () => _modalClosedListeners.delete(fn); }
 
 function lockBodyScroll() {
   if (_modalDepth++ > 0) return;
@@ -127,6 +133,7 @@ function unlockBodyScroll() {
   body.style.inlineSize = '';
   body.classList.remove('modal-open');
   window.scrollTo(0, _savedScrollY);
+  for (const fn of _modalClosedListeners) { try { fn(); } catch { /* never block closing */ } }
 }
 
 export function modal(title, contentNode, { actions = [], wide = false } = {}) {

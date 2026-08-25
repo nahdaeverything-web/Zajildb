@@ -5,16 +5,17 @@
 // mating is recorded.
 
 import {
-  getBird, allBirds, state, Pairs, newBird, saveBird, uuid, nowISO,
+  getBird, allBirds, state, Pairs, newBird, saveBird, checkBird, ValidationError, uuid, nowISO,
 } from '../db.js';
 import { t, fmtDate, fmtNum, escapeHTML } from '../i18n.js';
 import {
   h, clear, birdLabelHTML, birdLabelText, birdPicker, field, toast,
   undoToast, confirmDialog, modal,
 } from '../ui.js';
-import { validatePairSexes, validateBird } from '../engine/validate.js';
+import { validatePairSexes } from '../engine/validate.js';
 import { relationshipSummary } from './pedigree.js';
 import { navigate } from '../app.js';
+import { todayISO } from '../dates.js';
 
 const vs = { season: String(new Date().getFullYear()) };
 
@@ -64,7 +65,7 @@ function newPairDialog(refresh) {
   const nestIn = h('input', { class: 'input', type: 'text' });
   const seasonIn = h('input', { class: 'input', type: 'number', value: vs.season, dir: 'ltr' });
   // a bought pair was paired before you owned it — the date must be settable
-  const startIn = h('input', { class: 'input', type: 'date', value: new Date().toISOString().slice(0, 10) });
+  const startIn = h('input', { class: 'input', type: 'date', value: todayISO() });
   const acqFromIn = h('input', { class: 'input', type: 'text' });
   const acqDateIn = h('input', { class: 'input', type: 'date' });
   const errBox = h('div', { class: 'problems' });
@@ -98,7 +99,7 @@ function newPairDialog(refresh) {
             season: seasonIn.value || vs.season,
             nestBox: nestIn.value.trim(),
             status: 'active',
-            startDate: startIn.value || nowISO().slice(0, 10),
+            startDate: startIn.value || todayISO(),
             acquiredFrom: acqFromIn.value.trim(),
             acquiredDate: acqDateIn.value,
             rounds: [],
@@ -173,7 +174,7 @@ function roundBlock(pair, round, refresh) {
         const prev = round.eggs[round.eggs.length - 1];
         round.eggs.push({
           id: uuid(),
-          laidDate: (prev && prev.laidDate) || nowISO().slice(0, 10),
+          laidDate: (prev && prev.laidDate) || todayISO(),
           state: 'laid',
         });
         await Pairs.save(pair); refresh();
@@ -210,7 +211,7 @@ function eggRow(pair, round, egg, refresh) {
       h('button', {
         class: 'btn btn-small', onclick: async () => {
           egg.state = 'hatched';
-          egg.hatchDate = nowISO().slice(0, 10);
+          egg.hatchDate = todayISO();
           await Pairs.save(pair); refresh();
         },
       }, t('br.markHatched')),
@@ -246,7 +247,7 @@ function eggRow(pair, round, egg, refresh) {
       if (!egg.weaned) {
         row.append(h('button', {
           class: 'btn btn-small', onclick: async () => {
-            egg.weaned = true; egg.weanDate = nowISO().slice(0, 10);
+            egg.weaned = true; egg.weanDate = todayISO();
             await Pairs.save(pair); refresh();
           },
         }, t('br.wean')));
@@ -283,20 +284,21 @@ function linkExistingDialog(pair, egg, refresh) {
           errBox.innerHTML = '';
           const bird = picker.value ? getBird(picker.value) : null;
           if (!bird) return false;
+          // Compose the final record first — including the hatch date — and
+          // validate THAT. Previously hatchDate was applied in a second,
+          // unvalidated write, so an impossible date slipped past the check.
           const candidate = { ...bird, sireId: pair.sireId, damId: pair.damId };
-          const { errors } = validateBird(candidate, getBird, allBirds());
+          if (egg.hatchDate && !bird.hatchDate) candidate.hatchDate = egg.hatchDate;
+          const { errors } = checkBird(candidate, { allowWarnings: true });
           if (errors.length) {
             errBox.append(h('ul', { class: 'problem-errors' },
               errors.map((e) => h('li', {}, t('br.linkBlocked', { reason: t(e.key, e.params) })))));
             return false; // keep the dialog open so the user can pick another
           }
           (async () => {
-            await saveBird(candidate);
+            await saveBird(candidate, { allowWarnings: true });
             egg.chickId = bird.id;
             egg.ringed = (bird.rings || []).length > 0;
-            if (egg.hatchDate && !bird.hatchDate) {
-              await saveBird({ ...candidate, hatchDate: egg.hatchDate });
-            }
             await Pairs.save(pair);
             toast(t('br.linked'));
             refresh();
@@ -308,6 +310,7 @@ function linkExistingDialog(pair, egg, refresh) {
 }
 
 function ringChickDialog(pair, egg, refresh) {
+  let dlg = null;
   const ringIn = h('input', {
     class: 'input', type: 'text', dir: 'ltr', placeholder: 'JO-2026-12345',
     lang: 'en', autocapitalize: 'characters', autocorrect: 'off', spellcheck: 'false',
@@ -315,15 +318,19 @@ function ringChickDialog(pair, egg, refresh) {
   const nameIn = h('input', { class: 'input', type: 'text' });
   const sexSel = h('select', { class: 'input' },
     ['unknown', 'cock', 'hen'].map((s) => h('option', { value: s }, t('sex.' + s))));
-  modal(t('br.ringChick'), h('div', { class: 'form-grid' },
-    field(t('bird.ring'), ringIn),
-    field(t('bird.name'), nameIn),
-    field(t('bird.sex'), sexSel)), {
+  const errBox = h('div', { class: 'problems' });
+  dlg = modal(t('br.ringChick'), h('div', {},
+    h('div', { class: 'form-grid' },
+      field(t('bird.ring'), ringIn),
+      field(t('bird.name'), nameIn),
+      field(t('bird.sex'), sexSel)),
+    errBox), {
     actions: [
       { label: t('act.cancel') },
       {
         label: t('act.save'), kind: 'primary',
         onClick: () => {
+          errBox.innerHTML = '';
           (async () => {
             const { parseRing } = await import('../engine/rings.js');
             const chick = newBird({
@@ -337,13 +344,33 @@ function ringChickDialog(pair, egg, refresh) {
             });
             const sire = getBird(pair.sireId);
             if (sire && sire.strain) chick.strain = sire.strain;
-            await saveBird(chick);
+            // This used to write straight to the database with no checks, so it
+            // could mint duplicate rings and impossible parent links the bird
+            // form would have refused. saveBird now enforces both.
+            const verdict = checkBird(chick);
+            if (verdict.errors.length) {
+              errBox.append(h('ul', { class: 'problem-errors' },
+                verdict.errors.map((e) => h('li', {}, t(e.key, e.params)))));
+              return;
+            }
+            if (verdict.warnings.length) {
+              const proceed = await confirmDialog(
+                t('val.warningsTitle') + ' ' + verdict.warnings.map((w) => t(w.key, w.params)).join(' · '));
+              if (!proceed) return;
+            }
+            await saveBird(chick, { allowWarnings: true });
             egg.chickId = chick.id;
             egg.ringed = !!ringIn.value.trim();
             await Pairs.save(pair);
             toast(t('br.chickCreated'));
+            if (dlg) dlg.close();
             refresh();
-          })();
+          })().catch((err) => {
+            errBox.append(h('ul', { class: 'problem-errors' },
+              (err instanceof ValidationError ? err.errors : [{ key: 'toast.saveFailed', params: {} }])
+                .map((e) => h('li', {}, t(e.key, e.params)))));
+          });
+          return false; // keep the dialog open; it closes itself on success
         },
       },
     ],

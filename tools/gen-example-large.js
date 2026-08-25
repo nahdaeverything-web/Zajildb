@@ -29,6 +29,9 @@ function bird(id, o) {
     breeder: '', owner: OWNER, acquiredFrom: '', acquiredDate: '', notes: [],
     createdAt: T, updatedAt: T, loftId: LOFT, ...o,
   };
+  // mirror js/db.js newBird(): a never-owned ancestor carries the reference
+  // status, so the shipped data satisfies the same invariant as live records
+  if (b.external) b.status = 'reference';
   birds.push(b);
   return id;
 }
