@@ -2,16 +2,40 @@
 // blocks on the network. An in-memory Map of birds is kept in sync so the
 // pure engine (which needs a synchronous getBird) stays fast with 1000+ birds.
 //
-// Sync-readiness (club mode hook): every record carries `loftId` and
-// `updatedAt` (device clock, ISO). If sync is added later it must be
-// per-field last-write-wins keyed on these — never whole-record overwrite.
+// Sync-readiness (club mode hook): every record carries `loftId`, `updatedAt`
+// (device clock, ISO) and `deviceId`. If sync is added later it must be
+// per-field last-write-wins — never whole-record overwrite.
+//
+// CONFLICT ORDER COMES FROM THE OP LOG, NOT FROM `updatedAt`.
+// This supersedes the earlier note that said updatedAt keys LWW. The reason is
+// concrete: restoreBird deliberately reinstates a record's ORIGINAL timestamps
+// (an undo restores what was there; it is not a new edit). So after any
+// delete+undo the surviving record carries an old updatedAt, and any
+// updatedAt-keyed resolution would let a stale remote copy win. Order comes
+// instead from the op log's per-device monotonic `seq`, which only ever
+// increases and is unaffected by restores.
+//
+// PROVENANCE. Records carry `provenance: [{ event, at, deviceId }]` — an
+// append-only history of what happened to the record itself, as opposed to
+// the op log which records what this device DID. newBird() seeds it with a
+// 'created' event; promote-to-loft and ownership transfers will append later.
+//
+// ACCEPTED LIMITATION (v1.8): an op and the record it describes are written in
+// SEPARATE transactions, so a crash between them can drop an op. This is
+// tolerated deliberately: ops carry the full record, so server reconciliation
+// is self-healing, and multi-store transactions would mean restructuring every
+// write path. Revisit only if a real inconsistency is observed.
+//
+// OUT OF SYNC SCOPE (no ops, no tombstones): the `settings` store, which is
+// per-device preference rather than loft data; and the `backups` store, whose
+// snapshots are local safety nets. See setSetting() and autoBackup().
 
 import { classifySave } from './engine/validate.js';
 
 const DB_NAME = 'zajil';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
-export const STORES = ['birds', 'pairs', 'raceResults', 'healthEvents', 'lofts', 'media', 'settings', 'backups'];
+export const STORES = ['birds', 'pairs', 'raceResults', 'healthEvents', 'lofts', 'media', 'settings', 'backups', 'oplog', 'tombstones'];
 
 let _db = null;
 
@@ -31,9 +55,13 @@ export function openDB() {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = (e) => {
       const db = e.target.result;
-      const mk = (name, indexes = []) => {
+      // idempotent: an existing store is left exactly as it is, so upgrading a
+      // v1 database only ADDS the new stores and touches no existing record
+      const mk = (name, indexes = [], keyPath = null) => {
         if (db.objectStoreNames.contains(name)) return;
-        const store = db.createObjectStore(name, { keyPath: name === 'settings' ? 'key' : 'id' });
+        const store = db.createObjectStore(name, {
+          keyPath: keyPath || (name === 'settings' ? 'key' : 'id'),
+        });
         for (const [idx, path] of indexes) store.createIndex(idx, path);
       };
       mk('birds', [['sireId', 'sireId'], ['damId', 'damId'], ['status', 'status'], ['loftId', 'loftId']]);
@@ -44,6 +72,9 @@ export function openDB() {
       mk('media', [['birdId', 'birdId']]);
       mk('settings');
       mk('backups');
+      // v2 — sync shape. Both are device-local and additive.
+      mk('oplog', [['seq', 'seq']], 'opId');
+      mk('tombstones');
     };
     req.onsuccess = () => { _db = req.result; resolve(_db); };
     req.onerror = () => reject(req.error);
@@ -132,6 +163,14 @@ export async function initDB() {
     await setSetting('currentLoftId', loft.id);
   }
   state.currentLoftId = state.settings.currentLoftId || [...state.lofts.keys()][0];
+
+  // Device identity. Generated ONCE and never regenerated: it is what lets a
+  // future sync layer attribute an op to the machine that made it, and what
+  // makes the per-device `seq` monotonic sequence meaningful.
+  if (!state.settings.deviceId) await setSetting('deviceId', uuid());
+  if (state.settings.deviceName === undefined) await setSetting('deviceName', '');
+  if (typeof state.settings.opSeq !== 'number') await setSetting('opSeq', 0);
+
   state.ready = true;
 }
 
@@ -143,6 +182,11 @@ export function loftStatuses({ includeReference = false } = {}) {
   return base.includes(REFERENCE_STATUS) ? base : [...base, REFERENCE_STATUS];
 }
 
+/**
+ * Per-device preference. Deliberately OUT of sync scope: no op, no tombstone.
+ * Language, numerals, COI depth, the device's own identity — none of it is
+ * loft data, and syncing it would fight the user across devices.
+ */
 export async function setSetting(key, value) {
   state.settings[key] = value;
   await idbPut('settings', { key, value });
