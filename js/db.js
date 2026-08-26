@@ -269,9 +269,38 @@ async function logOp({ origin, store, op, recordId, record, changed }) {
     changed: changed || [],
     record: opRecord(record),
   });
+  return seq;                            // shared with the tombstone of the same deletion
 }
 
 export function listOps() { return idbGetAll('oplog'); }
+export function listTombstones() { return idbGetAll('tombstones'); }
+
+// ─────────────────────────────── tombstones ───────────────────────────────
+// A delete is the one change that leaves no trace in final state: a record
+// that is simply absent is indistinguishable from one that never arrived. Without
+// a tombstone, any merge of an older export silently resurrects deleted birds.
+//
+// Keyed `store:recordId` so a repeat delete overwrites rather than accumulating.
+// The `seq` is the SAME number as the op that recorded the deletion — they are
+// one logical operation.
+
+const tombstoneId = (store, recordId) => `${store}:${recordId}`;
+
+async function writeTombstone(store, recordId, seq) {
+  await idbPut('tombstones', {
+    id: tombstoneId(store, recordId),
+    store,
+    recordId,
+    at: nowISO(),
+    deviceId: state.settings.deviceId || null,
+    seq,
+  });
+}
+
+/** An undone deletion never happened, so its tombstone must go. */
+async function clearTombstone(store, recordId) {
+  await idbDelete('tombstones', tombstoneId(store, recordId));
+}
 
 function stamp(record) {
   record.updatedAt = nowISO();
@@ -400,14 +429,16 @@ export async function deleteBird(id) {
     if (r.birdId === id) {
       removedRaces.push({ ...r });
       await idbDelete('raceResults', r.id); state.raceResults.delete(r.id);
-      await logOp({ origin: 'user', store: 'raceResults', op: 'delete', recordId: r.id, record: r });
+      const seq = await logOp({ origin: 'user', store: 'raceResults', op: 'delete', recordId: r.id, record: r });
+      await writeTombstone('raceResults', r.id, seq);
     }
   }
   for (const e of [...state.healthEvents.values()]) {
     if (e.birdId === id) {
       removedHealth.push({ ...e });
       await idbDelete('healthEvents', e.id); state.healthEvents.delete(e.id);
-      await logOp({ origin: 'user', store: 'healthEvents', op: 'delete', recordId: e.id, record: e });
+      const seq = await logOp({ origin: 'user', store: 'healthEvents', op: 'delete', recordId: e.id, record: e });
+      await writeTombstone('healthEvents', e.id, seq);
     }
   }
   for (const p of [...state.pairs.values()]) {
@@ -415,7 +446,8 @@ export async function deleteBird(id) {
       removedPairs.push(JSON.parse(JSON.stringify(p)));
       await idbDelete('pairs', p.id);
       state.pairs.delete(p.id);
-      await logOp({ origin: 'user', store: 'pairs', op: 'delete', recordId: p.id, record: p });
+      const seq = await logOp({ origin: 'user', store: 'pairs', op: 'delete', recordId: p.id, record: p });
+      await writeTombstone('pairs', p.id, seq);
       continue;
     }
     const referencesBird = (p.rounds || []).some((r) =>
@@ -438,11 +470,13 @@ export async function deleteBird(id) {
   // deleteMedia(), so each one is logged here.
   for (const m of media) {
     await idbDelete('media', m.id);
-    await logOp({ origin: 'user', store: 'media', op: 'delete', recordId: m.id, record: m });
+    const seq = await logOp({ origin: 'user', store: 'media', op: 'delete', recordId: m.id, record: m });
+    await writeTombstone('media', m.id, seq);   // A1: the cascade deletes media directly
   }
   await idbDelete('birds', id);
   state.birds.delete(id);
-  await logOp({ origin: 'user', store: 'birds', op: 'delete', recordId: id, record: bird });
+  const birdSeq = await logOp({ origin: 'user', store: 'birds', op: 'delete', recordId: id, record: bird });
+  await writeTombstone('birds', id, birdSeq);
   emitChange({ type: 'bird', id });
   return { bird, media, affectedOriginals, removedRaces, removedHealth, removedPairs, affectedPairs };
 }
@@ -456,27 +490,33 @@ export async function restoreBird(snapshot) {
   await idbPut('birds', bird);
   state.birds.set(bird.id, bird);
   await logOp({ origin: 'restore', store: 'birds', op: 'put', recordId: bird.id, record: bird });
+  await clearTombstone('birds', bird.id);
   for (const orig of affectedOriginals || []) {
     await idbPut('birds', orig);
     state.birds.set(orig.id, orig);
     await logOp({ origin: 'restore', store: 'birds', op: 'put', recordId: orig.id, record: orig });
+    await clearTombstone('birds', orig.id);
   }
   for (const r of removedRaces || []) {
     await idbPut('raceResults', r); state.raceResults.set(r.id, r);
     await logOp({ origin: 'restore', store: 'raceResults', op: 'put', recordId: r.id, record: r });
+    await clearTombstone('raceResults', r.id);
   }
   for (const e of removedHealth || []) {
     await idbPut('healthEvents', e); state.healthEvents.set(e.id, e);
     await logOp({ origin: 'restore', store: 'healthEvents', op: 'put', recordId: e.id, record: e });
+    await clearTombstone('healthEvents', e.id);
   }
   for (const p of [...(removedPairs || []), ...(affectedPairs || [])]) {
     await idbPut('pairs', p);
     state.pairs.set(p.id, p);
     await logOp({ origin: 'restore', store: 'pairs', op: 'put', recordId: p.id, record: p });
+    await clearTombstone('pairs', p.id);
   }
   for (const m of media || []) {
     await idbPut('media', m);
     await logOp({ origin: 'restore', store: 'media', op: 'put', recordId: m.id, record: m });
+    await clearTombstone('media', m.id);
   }
   emitChange({ type: 'bird', id: bird.id });
 }
@@ -498,7 +538,8 @@ export function makeGeneric(storeName, stateMap, typeName) {
       const rec = state[stateMap].get(id);
       await idbDelete(storeName, id);
       state[stateMap].delete(id);
-      await logOp({ origin: 'user', store: storeName, op: 'delete', recordId: id, record: rec });
+      const seq = await logOp({ origin: 'user', store: storeName, op: 'delete', recordId: id, record: rec });
+      await writeTombstone(storeName, id, seq);
       emitChange({ type: typeName, id });
       return rec;
     },
@@ -506,6 +547,7 @@ export function makeGeneric(storeName, stateMap, typeName) {
       await idbPut(storeName, rec);
       state[stateMap].set(rec.id, rec);
       await logOp({ origin: 'restore', store: storeName, op: 'put', recordId: rec.id, record: rec });
+      await clearTombstone(storeName, rec.id);
       emitChange({ type: typeName, id: rec.id });
     },
   };
@@ -533,6 +575,7 @@ export async function restoreMedia(m) {
   if (!m) return null;
   await idbPut('media', m);
   await logOp({ origin: 'restore', store: 'media', op: 'put', recordId: m.id, record: m });
+  await clearTombstone('media', m.id);
   emitChange({ type: 'media', id: m.id, birdId: m.birdId });
   return m;
 }
@@ -540,7 +583,8 @@ export async function restoreMedia(m) {
 export async function deleteMedia(id) {
   const m = await idbGet('media', id);
   await idbDelete('media', id);
-  await logOp({ origin: 'user', store: 'media', op: 'delete', recordId: id, record: m });
+  const seq = await logOp({ origin: 'user', store: 'media', op: 'delete', recordId: id, record: m });
+  await writeTombstone('media', id, seq);
   emitChange({ type: 'media', id, birdId: m && m.birdId });
   return m;
 }
@@ -573,6 +617,12 @@ export async function exportAll({ includeMedia = true } = {}) {
     format: 'zajil-export',
     version: 1,
     exportedAt: nowISO(),
+    // Tombstones travel with an export so a deletion survives a round trip
+    // through another device. The OP LOG deliberately does NOT: it is this
+    // device's own history, not shared loft data, and leaking it into files
+    // people exchange would expose per-device activity. Asserted in
+    // tests/e2e/resurrection.py.
+    tombstones: await idbGetAll('tombstones'),
     lofts: [...state.lofts.values()],
     birds: [...state.birds.values()],
     pairs: [...state.pairs.values()],
@@ -617,6 +667,26 @@ export async function importAll(payload, mode = 'merge') {
                         name: m.name, blob, addedAt: m.addedAt });
   }
 
+  // ── deletion protection ──
+  // A record whose deletion is NEWER than the record itself must not come
+  // back. Without this, merging any older export silently resurrects every
+  // bird deleted since. Tombstones from BOTH sides are considered, so the
+  // protection works whether the delete happened here or on another device.
+  // Replace mode deliberately ignores them: a replace is a restore of a point
+  // in time, and the user has explicitly asked for that snapshot.
+  const tombIndex = new Map();
+  for (const t of await idbGetAll('tombstones')) tombIndex.set(t.id, t);
+  for (const t of payload.tombstones || []) {
+    const existing = tombIndex.get(t.id);
+    // union by id, keep whichever deletion is newer
+    if (!existing || (t.at || '') > (existing.at || '')) tombIndex.set(t.id, t);
+  }
+  const isDeleted = (storeName, rec) => {
+    if (mode === 'replace') return false;
+    const t = tombIndex.get(`${storeName}:${rec.id}`);
+    return !!t && (t.at || '') > (rec.updatedAt || '');
+  };
+
   // ── a rollback point, taken before anything is cleared ──
   if (mode === 'replace') {
     try {
@@ -630,6 +700,16 @@ export async function importAll(payload, mode = 'merge') {
   // scanned pedigree the payload cannot put back. Keep media in that case.
   const carriesMedia = payload.kind !== 'auto-backup';
   if (mode === 'replace') {
+    // ONLY the data stores are cleared. oplog, tombstones, settings and
+    // backups are never touched: the op log is this device's own history,
+    // settings are per-device preference, and backups are the local safety
+    // net that a bad import is supposed to fall back on.
+    //
+    // A2 — a replace-import RESETS THE SYNC BASELINE. The data is wholesale
+    // replaced while the op log keeps describing the records that were here
+    // before, so a future sync layer must treat a replace as a new starting
+    // point rather than replaying history across it. That reconciliation is a
+    // v1.9 concern; nothing here depends on it yet.
     const stores = ['birds', 'pairs', 'raceResults', 'healthEvents', 'lofts'];
     if (carriesMedia) stores.push('media');
     for (const s of stores) await idbClear(s);
@@ -637,6 +717,10 @@ export async function importAll(payload, mode = 'merge') {
     state.healthEvents.clear(); state.lofts.clear();
   }
   const put = async (storeName, mapName, rec) => {
+    if (isDeleted(storeName, rec)) {
+      counts.skipped++;
+      return;                       // deleted here, and the deletion is newer
+    }
     const existing = state[mapName] && state[mapName].get(rec.id);
     if (mode === 'merge' && existing && (existing.updatedAt || '') >= (rec.updatedAt || '')) {
       counts.skipped++;
@@ -663,6 +747,14 @@ export async function importAll(payload, mode = 'merge') {
   // An export from another device carries its own loft ids, so the stored
   // currentLoftId can end up pointing at a loft that no longer exists — which
   // silently breaks the loft settings card and every new record's loftId.
+  // persist the union so the protection survives on this device too
+  if (mode === 'merge') {
+    for (const t of payload.tombstones || []) {
+      const winner = tombIndex.get(t.id);
+      if (winner) await idbPut('tombstones', winner);
+    }
+  }
+
   if (!state.lofts.has(state.currentLoftId)) {
     state.currentLoftId = state.lofts.size ? [...state.lofts.keys()][0] : null;
     await setSetting('currentLoftId', state.currentLoftId);
