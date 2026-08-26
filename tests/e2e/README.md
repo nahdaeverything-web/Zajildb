@@ -34,6 +34,16 @@ python3 tests/e2e/core_flows.py       # a single suite
 
 Each suite prints `✓`/`✗` per assertion and exits non-zero on failure.
 
+### Gotchas worth knowing before writing a suite
+
+- **`wait_until='networkidle'` hangs** — the service worker holds the
+  connection open, so the page never goes idle. Use `'load'` plus an explicit
+  `wait_for_timeout`.
+- **To seed a database without booting the app**, navigate to a same-origin
+  URL that isn't the app (e.g. `BASE + '__seed__'`, which 404s). Loading `BASE`
+  runs `initDB()` first, which creates a current-version database and makes
+  opening an older version block forever.
+
 ### One suite is opt-in
 
 **`live_deployment.py` does not run by default.** It needs the internet, and it

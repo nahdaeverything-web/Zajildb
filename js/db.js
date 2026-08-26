@@ -194,6 +194,85 @@ export async function setSetting(key, value) {
 
 // ---------------------------------------------------------------- record CRUD
 
+// ─────────────────────────────── the op log ───────────────────────────────
+// What THIS DEVICE DID, in order. A future sync layer needs intent, not just
+// final state: which fields a write touched, that a delete happened at all,
+// and a total order it can trust. Conflict order comes from `seq` — see the
+// header comment for why not `updatedAt`.
+//
+// Compaction is a SYNC-TIME concern, deliberately not done here: ops can be
+// dropped once a server has acknowledged them. Until sync exists there is
+// nothing to acknowledge against, so the log simply grows. At loft scale
+// (hundreds of records, a few edits a day) that is negligible.
+
+/**
+ * Top-level field names that differ between two versions of a record.
+ * A nested or array change surfaces as its top-level field — enough for a sync
+ * layer to merge per field without storing a structural diff.
+ * Exported only so the node suite can test it; not for use outside db.js.
+ */
+export function diffFields(prev, next) {
+  if (!prev) return Object.keys(next || {}).filter((k) => next[k] !== undefined);
+  const keys = new Set([...Object.keys(prev), ...Object.keys(next || {})]);
+  const changed = [];
+  for (const k of keys) {
+    const a = prev[k], b = (next || {})[k];
+    if (a === undefined && b === undefined) continue;
+    if (JSON.stringify(a) !== JSON.stringify(b)) changed.push(k);
+  }
+  return changed;
+}
+
+/** A record as it should be stored in an op: never a Blob. */
+export function opRecord(record) {
+  if (!record) return null;
+  if (!('blob' in record)) return record;
+  const { blob, ...rest } = record;   // media metadata only — blobs stay in their store
+  return rest;
+}
+
+/**
+ * Claim the next sequence number.
+ *
+ * The claim is SYNCHRONOUS — `state.settings.opSeq` is incremented before any
+ * await — so two writes started in the same tick can never receive the same
+ * number, which would silently corrupt conflict ordering. Persistence then
+ * writes whatever the highest claimed value currently is (not the captured
+ * one), so out-of-order completion still leaves the stored counter at the
+ * maximum rather than a lower value that would hand the number out twice
+ * after a reload.
+ */
+async function nextSeq() {
+  const n = (state.settings.opSeq || 0) + 1;
+  state.settings.opSeq = n;
+  await idbPut('settings', { key: 'opSeq', value: state.settings.opSeq });
+  return n;
+}
+
+/**
+ * Append one op. Internal to db.js by design — a view must never write to the
+ * log directly, or the log stops being a faithful record of the write path.
+ * Enforced by tests/guards.test.js.
+ */
+async function logOp({ origin, store, op, recordId, record, changed }) {
+  const seq = await nextSeq();          // persisted before the op counts as logged
+  await idbPut('oplog', {
+    opId: uuid(),
+    seq,
+    deviceId: state.settings.deviceId || null,
+    actorId: null,                      // becomes real when authentication exists
+    at: nowISO(),
+    origin,                             // 'user' | 'import' | 'restore'
+    store,
+    op,                                 // 'put' | 'delete'
+    recordId,
+    changed: changed || [],
+    record: opRecord(record),
+  });
+}
+
+export function listOps() { return idbGetAll('oplog'); }
+
 function stamp(record) {
   record.updatedAt = nowISO();
   if (!record.loftId) record.loftId = state.currentLoftId;
@@ -275,9 +354,12 @@ export function checkBird(bird, opts = {}) {
 export async function saveBird(bird, { allowWarnings = false, force = false } = {}) {
   const verdict = classifySave(bird, getBird, allBirds(), { allowWarnings, force });
   if (!verdict.ok) throw new ValidationError(verdict.errors, verdict.warnings);
+  const previous = state.birds.get(bird.id) || null;
   stamp(bird);
   await idbPut('birds', bird);
   state.birds.set(bird.id, bird);
+  await logOp({ origin: 'user', store: 'birds', op: 'put', recordId: bird.id,
+                record: bird, changed: diffFields(previous, bird) });
   emitChange({ type: 'bird', id: bird.id });
   return bird;
 }
@@ -310,19 +392,30 @@ export async function deleteBird(id) {
       stamp(copy);
       await idbPut('birds', copy);
       state.birds.set(copy.id, copy);
+      await logOp({ origin: 'user', store: 'birds', op: 'put', recordId: copy.id,
+                    record: copy, changed: diffFields(affectedOriginals[affectedOriginals.length - 1], copy) });
     }
   }
   for (const r of [...state.raceResults.values()]) {
-    if (r.birdId === id) { removedRaces.push({ ...r }); await idbDelete('raceResults', r.id); state.raceResults.delete(r.id); }
+    if (r.birdId === id) {
+      removedRaces.push({ ...r });
+      await idbDelete('raceResults', r.id); state.raceResults.delete(r.id);
+      await logOp({ origin: 'user', store: 'raceResults', op: 'delete', recordId: r.id, record: r });
+    }
   }
   for (const e of [...state.healthEvents.values()]) {
-    if (e.birdId === id) { removedHealth.push({ ...e }); await idbDelete('healthEvents', e.id); state.healthEvents.delete(e.id); }
+    if (e.birdId === id) {
+      removedHealth.push({ ...e });
+      await idbDelete('healthEvents', e.id); state.healthEvents.delete(e.id);
+      await logOp({ origin: 'user', store: 'healthEvents', op: 'delete', recordId: e.id, record: e });
+    }
   }
   for (const p of [...state.pairs.values()]) {
     if (p.sireId === id || p.damId === id) {
       removedPairs.push(JSON.parse(JSON.stringify(p)));
       await idbDelete('pairs', p.id);
       state.pairs.delete(p.id);
+      await logOp({ origin: 'user', store: 'pairs', op: 'delete', recordId: p.id, record: p });
       continue;
     }
     const referencesBird = (p.rounds || []).some((r) =>
@@ -336,12 +429,20 @@ export async function deleteBird(id) {
       }
       stamp(p);
       await idbPut('pairs', p);
+      await logOp({ origin: 'user', store: 'pairs', op: 'put', recordId: p.id,
+                    record: p, changed: ['rounds'] });
     }
   }
 
-  for (const m of media) await idbDelete('media', m.id);
+  // A1: the cascade hard-deletes media rows directly rather than via
+  // deleteMedia(), so each one is logged here.
+  for (const m of media) {
+    await idbDelete('media', m.id);
+    await logOp({ origin: 'user', store: 'media', op: 'delete', recordId: m.id, record: m });
+  }
   await idbDelete('birds', id);
   state.birds.delete(id);
+  await logOp({ origin: 'user', store: 'birds', op: 'delete', recordId: id, record: bird });
   emitChange({ type: 'bird', id });
   return { bird, media, affectedOriginals, removedRaces, removedHealth, removedPairs, affectedPairs };
 }
@@ -354,27 +455,42 @@ export async function restoreBird(snapshot) {
   // an undo restores exactly what was there; it is not a new edit to re-judge
   await idbPut('birds', bird);
   state.birds.set(bird.id, bird);
+  await logOp({ origin: 'restore', store: 'birds', op: 'put', recordId: bird.id, record: bird });
   for (const orig of affectedOriginals || []) {
     await idbPut('birds', orig);
     state.birds.set(orig.id, orig);
+    await logOp({ origin: 'restore', store: 'birds', op: 'put', recordId: orig.id, record: orig });
   }
-  for (const r of removedRaces || []) { await idbPut('raceResults', r); state.raceResults.set(r.id, r); }
-  for (const e of removedHealth || []) { await idbPut('healthEvents', e); state.healthEvents.set(e.id, e); }
+  for (const r of removedRaces || []) {
+    await idbPut('raceResults', r); state.raceResults.set(r.id, r);
+    await logOp({ origin: 'restore', store: 'raceResults', op: 'put', recordId: r.id, record: r });
+  }
+  for (const e of removedHealth || []) {
+    await idbPut('healthEvents', e); state.healthEvents.set(e.id, e);
+    await logOp({ origin: 'restore', store: 'healthEvents', op: 'put', recordId: e.id, record: e });
+  }
   for (const p of [...(removedPairs || []), ...(affectedPairs || [])]) {
     await idbPut('pairs', p);
     state.pairs.set(p.id, p);
+    await logOp({ origin: 'restore', store: 'pairs', op: 'put', recordId: p.id, record: p });
   }
-  for (const m of media || []) await idbPut('media', m);
+  for (const m of media || []) {
+    await idbPut('media', m);
+    await logOp({ origin: 'restore', store: 'media', op: 'put', recordId: m.id, record: m });
+  }
   emitChange({ type: 'bird', id: bird.id });
 }
 
 export function makeGeneric(storeName, stateMap, typeName) {
   return {
     async save(rec) {
+      const previous = rec.id ? (state[stateMap].get(rec.id) || null) : null;
       stamp(rec);
       if (!rec.id) rec.id = uuid();
       await idbPut(storeName, rec);
       state[stateMap].set(rec.id, rec);
+      await logOp({ origin: 'user', store: storeName, op: 'put', recordId: rec.id,
+                    record: rec, changed: diffFields(previous, rec) });
       emitChange({ type: typeName, id: rec.id });
       return rec;
     },
@@ -382,12 +498,14 @@ export function makeGeneric(storeName, stateMap, typeName) {
       const rec = state[stateMap].get(id);
       await idbDelete(storeName, id);
       state[stateMap].delete(id);
+      await logOp({ origin: 'user', store: storeName, op: 'delete', recordId: id, record: rec });
       emitChange({ type: typeName, id });
       return rec;
     },
     async restore(rec) {
       await idbPut(storeName, rec);
       state[stateMap].set(rec.id, rec);
+      await logOp({ origin: 'restore', store: storeName, op: 'put', recordId: rec.id, record: rec });
       emitChange({ type: typeName, id: rec.id });
     },
   };
@@ -403,6 +521,9 @@ export const Lofts = makeGeneric('lofts', 'lofts', 'loft');
 export async function addMedia(birdId, kind, subtype, name, blob) {
   const m = { id: uuid(), birdId, kind, subtype, name, blob, addedAt: nowISO() };
   await idbPut('media', m);
+  // metadata only — a Blob never enters the op log
+  await logOp({ origin: 'user', store: 'media', op: 'put', recordId: m.id, record: m,
+                changed: ['id', 'birdId', 'kind', 'subtype', 'name', 'addedAt'] });
   emitChange({ type: 'media', id: m.id, birdId });
   return m;
 }
@@ -411,6 +532,7 @@ export function mediaForBird(birdId) { return idbGetAll('media', 'birdId', birdI
 export async function restoreMedia(m) {
   if (!m) return null;
   await idbPut('media', m);
+  await logOp({ origin: 'restore', store: 'media', op: 'put', recordId: m.id, record: m });
   emitChange({ type: 'media', id: m.id, birdId: m.birdId });
   return m;
 }
@@ -418,6 +540,7 @@ export async function restoreMedia(m) {
 export async function deleteMedia(id) {
   const m = await idbGet('media', id);
   await idbDelete('media', id);
+  await logOp({ origin: 'user', store: 'media', op: 'delete', recordId: id, record: m });
   emitChange({ type: 'media', id, birdId: m && m.birdId });
   return m;
 }
@@ -517,11 +640,13 @@ export async function importAll(payload, mode = 'merge') {
     const existing = state[mapName] && state[mapName].get(rec.id);
     if (mode === 'merge' && existing && (existing.updatedAt || '') >= (rec.updatedAt || '')) {
       counts.skipped++;
-      return;
+      return;                       // skipped records produce no op
     }
     await idbPut(storeName, rec);
     if (state[mapName]) state[mapName].set(rec.id, rec);
-    counts[storeName === 'raceResults' ? 'raceResults' : storeName]++;
+    await logOp({ origin: 'import', store: storeName, op: 'put', recordId: rec.id,
+                  record: rec, changed: diffFields(existing || null, rec) });
+    counts[storeName]++;
   };
   for (const l of payload.lofts || []) await put('lofts', 'lofts', l);
   for (const b of payload.birds || []) await put('birds', 'birds', b);
@@ -532,6 +657,7 @@ export async function importAll(payload, mode = 'merge') {
     const existing = await idbGet('media', m.id);
     if (mode === 'merge' && existing) { counts.skipped++; continue; }
     await idbPut('media', m);
+    await logOp({ origin: 'import', store: 'media', op: 'put', recordId: m.id, record: m });
     counts.media++;
   }
   // An export from another device carries its own loft ids, so the stored

@@ -4,6 +4,7 @@ import './engine.test.js';
 import './writeboundary.test.js';
 import './integrity.test.js';
 import './factory.test.js';
+import './oplog.test.js';
 import './guards.test.js';
 import './sample.test.js';
 import './example-large.test.js';
