@@ -35,14 +35,14 @@ If a proposed feature doesn't serve one of those three, it is out of scope.
 
 | | |
 |---|---|
-| App version (service worker) | `zajil-v1.7.0` |
-| `main` at | `eedb38d` — "Merge v1.7 invariant hardening pass" |
-| **Live** | **https://nahdaeverything-web.github.io/Zajildb/** — serving `zajil-v1.7.0`, verified installable and offline-capable |
-| Node tests | **75 passing, 0 failing** — `node tests/run.js` |
-| Browser assertions | **148 passing, 0 failing** across **15 suites** — `python3 tests/e2e/run_all.py` |
+| App version (service worker) | `zajil-v1.8.0` |
+| `main` at | `4185578` — "v1.8: sync shape — op log, tombstones, provenance, device identity" · tagged `v1.8.0` |
+| **Live** | **https://nahdaeverything-web.github.io/Zajildb/** — serving `zajil-v1.8.0`, verified installable and offline-capable |
+| Node tests | **96 passing, 0 failing** — `node tests/run.js` |
+| Browser assertions | **276 passing, 0 failing** across **21 suites** — `python3 tests/e2e/run_all.py` |
 | Opt-in suite | `live_deployment.py` — **11 passing**, not in the default run; printed as `[skip]` with its reason (needs the internet, tests the *deployed* build). Add `--live`. |
 | Browser suites | committed under `tests/e2e/` with a runner and README, plus 6 diagnostic scripts |
-| Source | `js/` 4,587 lines · `css/app.css` 372 · `sw.js` 89 |
+| Source | `js/` 4,916 lines (`db.js` alone is **866** — see §15) · `css/app.css` 372 · `sw.js` 89 |
 | Tests | node 1,014 lines · browser 1,407 lines |
 | Generators | `tools/` 448 lines |
 | Example datasets | 20-bird loft + 38-bird / 6-generation teaching loft |
@@ -93,6 +93,14 @@ node tools/gen-example-large.js
 ⚠️ Over the **LAN URLs the app works but there is no service worker** — plain
 HTTP is not a secure context, so no offline mode and no home-screen install.
 Only `localhost` (or real HTTPS) gets those. See §11.
+
+**Browser-test gotchas** (also in `tests/e2e/README.md`):
+`wait_until='networkidle'` **hangs** — the service worker holds the connection
+open; use `'load'` plus an explicit wait. And to seed a database without
+booting the app, navigate to a same-origin URL that isn't the app (e.g.
+`BASE + '__seed__'`, which 404s) — loading `BASE` runs `initDB()` first, which
+creates a current-version database and makes opening an older version block
+forever.
 
 **In-app test panel:** الأدوات → لوحة المطوّر → «تشغيل الفحوصات» runs the same
 engine suite inside the browser, plus an export/import round-trip check.
@@ -355,7 +363,70 @@ See `docs/WRITEPATH-v1.7.md` for the full call-site map and
 `docs/V1.7-NOTES.md` for known inconsistencies and where the structure will
 fight a server-backed data layer.
 
-## 13. Conventions a new session must not break
+## 13. Sync shape (v1.8) — local only, no server
+
+v1.8 captured the things a future sync layer **cannot reconstruct after the
+fact**: who wrote, what changed, that a delete happened, and ownership as
+history. Everything is local; there is no network code anywhere in the app.
+
+### Two new stores (schema v2)
+
+| Store | Key | Holds |
+|---|---|---|
+| `oplog` | `opId` (index on `seq`) | `{ opId, seq, deviceId, actorId, at, origin, store, op, recordId, changed, record }` — what THIS DEVICE did |
+| `tombstones` | `store:recordId` | `{ id, store, recordId, at, deviceId, seq }` — that a deletion happened |
+
+The upgrade is additive: `mk()` is idempotent, so a v1 database gains the two
+stores and **no existing record changes** (asserted against a real v1.7 fixture
+in `tests/e2e/schema_upgrade.py`).
+
+### Device identity
+`settings` gains `deviceId` (uuid, generated once, **never** regenerated),
+`deviceName`, and `opSeq`. Settings are per-device preference and are
+**out of sync scope** — no ops, no tombstones. So is the `backups` store.
+
+### THREE CONCEPTS THAT ARE EASY TO CONFUSE
+
+| | Answers |
+|---|---|
+| `record.deviceId` | the **last** device to write this record. `stamp()` sets it on every write, so it changes as a record moves between devices. |
+| `record.provenance[0]` | the `created` event — so **that** is the creating device. Never read `record.deviceId` for that. |
+| the op log | a third thing entirely: what **this device did**, not what happened to a record. |
+
+**Absence of `provenance` is legal permanently.** Pre-v1.8 records have none
+and nothing backfills it: fabricating a `created` event would assert a history
+that did not happen. `stamp()` must never invent one.
+
+### Conflict order comes from `seq`, NOT `updatedAt`
+`restoreBird` deliberately reinstates a record's original timestamps — an undo
+restores what was there, it is not a new edit. So after any delete+undo the
+record carries an old `updatedAt`, and any `updatedAt`-keyed resolution would
+let a stale remote copy win. `seq` is a per-device monotonic counter that only
+increases.
+
+**`nextSeq()` claims its number synchronously, before any `await`** — otherwise
+two writes started in the same tick receive the same seq and conflict ordering
+is silently corrupted. It persists the current *maximum*, not the captured
+value, so out-of-order completion cannot re-issue a number after a reload.
+Proven with 20 writes fired via `Promise.all`.
+
+### The op-log ordering trap
+`idbGetAll('oplog')` returns records in **key order**, and the key is a random
+uuid — so a raw read is shuffled and any "last N" gets arbitrary ops. Always
+read through `listOps()` / `getOpsSinceSeq()`. A guard test forbids raw
+`idbGetAll('oplog')` and `idbGetAll('tombstones')` outside `db.js`.
+
+### The resurrection fix (the one user-visible change)
+Merge-importing an older export **no longer resurrects deleted birds** — they
+are counted as `skipped`. Tombstones from both sides are considered and the
+union is persisted, so protection survives a round trip. A genuinely *newer*
+record still wins. Replace mode ignores tombstones: it is an explicit restore
+of a point in time, and it **resets the sync baseline** (a v1.9 concern).
+
+Exports carry `tombstones` but **never** the op log — that is device-local
+history, asserted *absent* rather than empty.
+
+## 14. Conventions a new session must not break
 
 - **Never key records on ring number.** UUIDs only.
 - **RTL is structural.** Use CSS **logical properties** (`inline-start/end`, `inline-size`, `border-inline-*`). The pedigree grid mirrors because grid tracks follow the document direction — **never** add `[dir="rtl"]` layout overrides to "fix" mirroring.
@@ -391,6 +462,21 @@ fight a server-backed data layer.
     must report zero dangling references. Extend its `CROSS_REFERENCES` table
     whenever a store or cross-record field is added; nothing detects a
     reference it does not know about.
+- **Sync-shape rules (v1.8), all guard-enforced:**
+  - **Never call `logOp` outside `js/db.js`.** The op log must be a faithful
+    record of the write path; a view logging directly would record something
+    that never went through `saveBird`.
+  - **Never read `oplog` or `tombstones` raw.** `idbGetAll` returns key order
+    and the op-log key is a random uuid, so raw reads are shuffled. Use
+    `listOps()` / `getOpsSinceSeq()`.
+  - **`stamp()` must never invent `provenance`.** Pre-v1.8 records have none
+    and a fabricated `created` event would assert a history that did not happen.
+  - **A deletion writes an op AND a tombstone sharing one `seq`** — they are one
+    logical operation. A restore deletes the tombstone.
+  - **`settings` and `backups` are out of sync scope** — no ops, no tombstones.
+- **`docs/WRITEPATH-*.md` is GENERATED** — `node tools/gen-writepath.js 1.8`.
+  Never hand-edit it; the v1.7 copy's line numbers drifted from its own grep
+  output within days.
 - **Every browser suite is either run or printed as skipped.** `run_all.py`
   derives its list from the difference between what exists on disk and what
   ran, and every exclusion carries its reason and the flag that lifts it. A
@@ -399,7 +485,7 @@ fight a server-backed data layer.
 
 ---
 
-## 14. Open items / awaiting the user's decision
+## 15. Open items / awaiting the user's decision
 
 ### Open decisions
 - **Local-network testing without HTTPS** has no service worker, so no offline
@@ -407,8 +493,20 @@ fight a server-backed data layer.
   the way to exercise the offline promise on a phone in a loft.
 - Whether to run the dev server as a persistent service on the workstation.
 
+### Planned for v1.9 — split `js/db.js`
+`db.js` is **866 lines** and now holds the IndexedDB layer, the in-memory
+mirror, validation, the op log, tombstones, provenance, export/import and
+backups. That is a structural signal, not a defect.
+
+The reason to decide it deliberately: **every guard test keys on "outside
+`js/db.js`"** — the `idbPut`/`idbDelete` write guard, the `logOp` guard, and the
+raw-read guard. Splitting the file means updating those allow-lists on purpose
+rather than discovering them broken. A likely split is `db/storage.js`
+(IndexedDB + mirror), `db/sync.js` (op log, tombstones, seq) and `db/io.js`
+(export/import/backups), with `db.js` re-exporting so callers do not move.
+
 ### Roadmap
-1. **Design & typography pass** — the next planned piece of work. See §15.
+1. **Design & typography pass** — the next planned piece of work. See §16.
 2. **Work the [BACKLOG.md](BACKLOG.md)** — highest value first: the FCI column
    shows ✓ for birds with no FCI ring; Statistics freezes for seconds on a few
    hundred birds; the same bird can be linked as the chick of two eggs.
@@ -423,7 +521,7 @@ fight a server-backed data layer.
 *(Switching on GitHub Pages and committing the browser suites were roadmap
 items through v1.6; both are done — see the status snapshot.)*
 
-## 15. Design & typography — the next piece of work
+## 16. Design & typography — the next piece of work
 
 Not started. The brief: make it feel as professional as a paid product, and
 unmistakably Arabic-first rather than a translated Latin UI.
@@ -450,7 +548,7 @@ committing to choices. What surfaced, to be re-verified:
 
 ---
 
-## 16. Change log
+## 17. Change log
 
 - **v1.0** — initial build: engine + tests first, then Tier 1, Tier 2, docs, sample data. Verified offline + RTL geometry.
 - **v1.1** — data audit pass (0 structural errors). Fixed: `[hidden]` override bug (parent-picker dropdown could never close; same latent bug in the health dialog). Added readable **sex chips** (♂ ذكر / ♀ أنثى) in lists, pickers, detail, plus tree tinting and a legend. Added **add-sibling** flow (siblings derive from shared parents; creates placeholder parents when none exist). Added in-app example-data loader.
@@ -458,6 +556,18 @@ committing to choices. What surfaced, to be re-verified:
 - **v1.3** — added the 38-bird / 6-generation teaching loft (`example-loft-large.json`) + 5 asserting tests; both examples offered in the empty state and Tools; precached for offline.
 - **v1.4** — pre-publish audit before going public (18 findings): removed a real name from the shipped sample data and real breeders' names from demo pedigrees, stripped private notes/paths from this file, moved commits to a noreply address, added the LICENSE, and fixed two service-worker bugs that only bite on GitHub Pages (per-origin cache deletion would have wiped sibling projects' offline caches; `addAll` read through the HTTP cache and could bake a stale deploy into a new version cache). Repo pushed public.
 - **v1.5** — the ownership model (§5), register ownership filter, link-an-existing-bird to an egg, pair provenance and backdating. Plus a UI sweep across 11 routes × 3 viewports that found the real cause of the reported “page jumps to the top” bug: **the page scrolled behind open dialogs**. Dialogs now pin the page and restore position exactly; tall dialogs scroll themselves; Tab is trapped; race tabs remember scroll position.
+- **v1.8** — sync shape, all local: no server, no network code. Schema v2 adds
+  `oplog` and `tombstones` (additive; a v1.7 database upgrades with zero data
+  change, asserted against a real fixture). Device identity (`deviceId`,
+  generated once). Every write in `db.js` logs an op carrying which fields
+  changed and why (`user`/`import`/`restore`); every hard delete writes a
+  tombstone sharing the op's `seq`; a restore clears it. Conflict order comes
+  from `seq`, not `updatedAt`, because `restoreBird` reinstates old timestamps.
+  `newBird()` seeds `provenance`; absence stays legal permanently for pre-v1.8
+  records. `checkIntegrity` gains a live-record-with-tombstone check. Three new
+  source guards. `docs/WRITEPATH` is now generated. One user-visible change:
+  merge-importing an older export no longer resurrects deleted birds. Tests
+  75 → 96 node, 183 → 276 browser. Merged as `4185578`, tagged `v1.8.0`.
 - **v1.7** — invariant hardening. Five shared primitives installed and every
   caller routed through them: local dates (`js/dates.js`), validation at the
   write boundary (`saveBird`/`classifySave`), change events driving a deferred
@@ -475,7 +585,7 @@ committing to choices. What surfaced, to be re-verified:
 
 ---
 
-## 17. Seed prompt for a new chat
+## 18. Seed prompt for a new chat
 
 > I'm continuing work on **Zajil** — an Arabic-first, offline-first
 > PWA for racing-pigeon pedigree and loft management, in Jordan/Gulf.
@@ -489,12 +599,12 @@ committing to choices. What surfaced, to be re-verified:
 > COI fixtures are contractual. RTL is structural via CSS logical properties.
 > Serve with `python3 -m http.server 8123` from the repo root.
 >
-> Current state: **v1.7.0**, `main` at `eedb38d`, live at
+> Current state: **v1.8.0**, `main` at `4185578` (tagged `v1.8.0`), live at
 > https://nahdaeverything-web.github.io/Zajildb/ (public repo,
-> all-rights-reserved licence). 75 node tests and 148 browser assertions pass.
+> all-rights-reserved licence). 96 node tests and 276 browser assertions pass.
 > Known issues are catalogued in `BACKLOG.md` — all verified, none blocking.
-> **Read §13 (Conventions) before writing code**: v1.7 installed five shared
+> **Read §14 (Conventions) before writing code**: v1.7 installed five shared
 > primitives and guard tests that fail the build if you go around them.
-> The next planned piece of work is the **design & typography pass** (§15).
+> The next planned piece of work is the **design & typography pass** (§16).
 >
 > What I want to work on next: **<describe your task here>**
