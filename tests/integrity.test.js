@@ -79,3 +79,69 @@ test('checkIntegrity: tolerates missing stores', () => {
   assertEq(checkIntegrity({ birds: [{ id: 'A', sireId: null, damId: null }] }).length, 0);
   assertEq(checkIntegrity({}).length, 0);
 });
+
+// ───────────────────── tombstone consistency (v1.8) ─────────────────────
+
+test('checkIntegrity: a live record with a matching tombstone is REPORTED', () => {
+  // This state means a deletion half-completed, or a resurrection slipped past
+  // the import guard. Either way the database is lying about whether the
+  // record exists.
+  const r = checkIntegrity({
+    ...CLEAN,
+    tombstones: [{ id: 'birds:C', store: 'birds', recordId: 'C', at: '2026-01-01T00:00:00.000Z' }],
+  });
+  assert(r.some((x) => x.key === 'integrity.liveWithTombstone'
+    && x.params.store === 'birds' && x.params.recordId === 'C'), JSON.stringify(r));
+});
+
+test('checkIntegrity: a tombstone for an absent record is CORRECT, not a problem', () => {
+  // the normal case: the record is gone and the tombstone records that
+  const r = checkIntegrity({
+    ...CLEAN,
+    tombstones: [{ id: 'birds:GHOST', store: 'birds', recordId: 'GHOST', at: '2026-01-01T00:00:00.000Z' }],
+  });
+  assert(!r.some((x) => x.key === 'integrity.liveWithTombstone'), JSON.stringify(r));
+});
+
+test('checkIntegrity: catches a live/tombstone clash in every store', () => {
+  const stores = {
+    birds: 'C', pairs: 'P', raceResults: 'RR', healthEvents: 'H',
+  };
+  for (const [store, recordId] of Object.entries(stores)) {
+    const r = checkIntegrity({
+      ...CLEAN,
+      tombstones: [{ id: `${store}:${recordId}`, store, recordId, at: '2026-01-01T00:00:00.000Z' }],
+    });
+    assert(r.some((x) => x.key === 'integrity.liveWithTombstone' && x.params.store === store),
+      `${store} clash not reported: ${JSON.stringify(r)}`);
+  }
+});
+
+test('checkIntegrity: the op log is NEVER scanned for dangling references', () => {
+  // ops legitimately reference records that no longer exist — that is the
+  // entire point of keeping them
+  const r = checkIntegrity({
+    ...CLEAN,
+    oplog: [
+      { opId: 'o1', seq: 1, store: 'birds', op: 'delete', recordId: 'LONG-GONE', record: { id: 'LONG-GONE' } },
+      { opId: 'o2', seq: 2, store: 'raceResults', op: 'delete', recordId: 'ALSO-GONE', record: null },
+    ],
+  });
+  assertEq(r.length, 0, `the op log must not produce findings: ${JSON.stringify(r)}`);
+});
+
+test('checkIntegrity: tombstones are not scanned as if they were records', () => {
+  const r = checkIntegrity({
+    ...CLEAN,
+    tombstones: [
+      { id: 'birds:GONE', store: 'birds', recordId: 'GONE', at: '2026-01-01T00:00:00.000Z' },
+      { id: 'pairs:ALSO', store: 'pairs', recordId: 'ALSO', at: '2026-01-01T00:00:00.000Z' },
+    ],
+  });
+  assertEq(r.length, 0, JSON.stringify(r));
+});
+
+test('checkIntegrity: still tolerates a database with no tombstone store at all', () => {
+  assertEq(checkIntegrity(CLEAN).length, 0);
+  assertEq(checkIntegrity({ ...CLEAN, tombstones: [] }).length, 0);
+});
