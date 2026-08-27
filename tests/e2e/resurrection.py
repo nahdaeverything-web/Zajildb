@@ -94,7 +94,7 @@ with sync_playwright() as p:
         const db = await import('./js/db.js');
         await db.saveBird(db.newBird({ name: 'scope-probe', sex: 'cock' }));
         const before = {
-            oplog: (await db.idbGetAll('oplog')).length,
+            oplog: (await db.listOps()).length,
             tombstones: (await db.idbGetAll('tombstones')).length,
             settings: (await db.idbGetAll('settings')).length,
             backups: (await db.idbGetAll('backups')).length,
@@ -105,7 +105,7 @@ with sync_playwright() as p:
             birds: [], pairs: [], raceResults: [], healthEvents: [], media: [], tombstones: [] };
         await db.importAll(payload, 'replace');
         const after = {
-            oplog: (await db.idbGetAll('oplog')).length,
+            oplog: (await db.listOps()).length,
             tombstones: (await db.idbGetAll('tombstones')).length,
             settings: (await db.idbGetAll('settings')).length,
             backups: (await db.idbGetAll('backups')).length,

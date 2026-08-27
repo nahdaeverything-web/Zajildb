@@ -15,10 +15,24 @@
 // instead from the op log's per-device monotonic `seq`, which only ever
 // increases and is unaffected by restores.
 //
-// PROVENANCE. Records carry `provenance: [{ event, at, deviceId }]` — an
-// append-only history of what happened to the record itself, as opposed to
-// the op log which records what this device DID. newBird() seeds it with a
-// 'created' event; promote-to-loft and ownership transfers will append later.
+// PROVENANCE vs deviceId — two different questions, do not confuse them:
+//
+//   record.deviceId    the LAST device to write this record. stamp() sets it on
+//                      every write, so it changes as the record moves between
+//                      devices. It answers "who touched this most recently".
+//   record.provenance  an append-only history, [{ event, at, deviceId }].
+//                      provenance[0] is the 'created' event, so THAT is the
+//                      creating device — never read record.deviceId for that.
+//
+// newBird() seeds provenance with a single 'created' event; promote-to-loft and
+// ownership transfers will append to it later. The op log is a third thing
+// again: it records what THIS DEVICE DID, not what happened to a record.
+//
+// Records created before v1.8 have NO provenance field and nothing backfills
+// one. Absence is legal permanently: stamp() and saveBird() must never invent
+// provenance for a record that lacks it, because a fabricated 'created' event
+// would assert a history that did not happen. Asserted in
+// tests/e2e/provenance.py.
 //
 // ACCEPTED LIMITATION (v1.8): an op and the record it describes are written in
 // SEPARATE transactions, so a crash between them can drop an op. This is
@@ -272,7 +286,21 @@ async function logOp({ origin, store, op, recordId, record, changed }) {
   return seq;                            // shared with the tombstone of the same deletion
 }
 
-export function listOps() { return idbGetAll('oplog'); }
+/**
+ * Ops in sequence order.
+ *
+ * TRAP, found the hard way: idbGetAll('oplog') returns records in KEY order,
+ * and the key is `opId` — a random uuid. So the raw result is effectively
+ * shuffled, and anything that slices or assumes "the last N" gets arbitrary
+ * ops. Always read through here, never idbGetAll('oplog') directly.
+ */
+export async function getOpsSinceSeq(since = 0) {
+  const ops = await idbGetAll('oplog');
+  return ops.filter((o) => o.seq > since).sort((a, b) => a.seq - b.seq);
+}
+
+/** Every op, in sequence order. */
+export function listOps() { return getOpsSinceSeq(0); }
 export function listTombstones() { return idbGetAll('tombstones'); }
 
 // ─────────────────────────────── tombstones ───────────────────────────────
@@ -302,8 +330,16 @@ async function clearTombstone(store, recordId) {
   await idbDelete('tombstones', tombstoneId(store, recordId));
 }
 
+/**
+ * Stamp a record on its way to storage.
+ * `deviceId` is the LAST writing device by design — it changes every time the
+ * record is written anywhere. For the CREATING device read provenance[0].
+ * Deliberately does NOT touch `provenance`: pre-v1.8 records have none, and
+ * inventing a 'created' event would assert a history that did not happen.
+ */
 function stamp(record) {
   record.updatedAt = nowISO();
+  record.deviceId = state.settings.deviceId || null;
   if (!record.loftId) record.loftId = state.currentLoftId;
   return record;
 }
@@ -340,6 +376,11 @@ export function newBird(partial = {}) {
     acquiredFrom: '',
     acquiredDate: '',
     notes: [],            // [{id, at, text}]
+    // Append-only history of what happened to this bird. provenance[0] is the
+    // creation event — that, not `deviceId`, identifies the creating device.
+    // A caller may supply an existing history (a shared or imported bird) and
+    // it is kept verbatim: the spread below wins.
+    provenance: [{ event: 'created', at: nowISO(), deviceId: state.settings.deviceId || null }],
     createdAt: nowISO(),
     ...partial,
     // derived last so a caller cannot contradict the invariant by omission

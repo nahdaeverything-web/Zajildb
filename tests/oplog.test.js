@@ -6,7 +6,7 @@
 // monotonic seq) is proven in tests/e2e/oplog.py.
 
 import { test, assert, assertEq, assertDeepEq } from './harness.js';
-import { diffFields, opRecord } from '../js/db.js';
+import { diffFields, opRecord, newBird } from '../js/db.js';
 
 test('diffFields: a new record reports every field', () => {
   const next = { id: 'A', name: 'x', sex: 'cock' };
@@ -61,4 +61,32 @@ test('opRecord: an ordinary record passes through unchanged', () => {
 test('opRecord: null/undefined is tolerated', () => {
   assertEq(opRecord(null), null);
   assertEq(opRecord(undefined), null);
+});
+
+// ─────────────────────────── provenance (phase 3) ───────────────────────────
+
+test('newBird: seeds provenance with a single created event', () => {
+  const b = newBird({ name: 'x' });
+  assert(Array.isArray(b.provenance), 'provenance must be an array');
+  assertEq(b.provenance.length, 1);
+  assertEq(b.provenance[0].event, 'created');
+  assert(typeof b.provenance[0].at === 'string' && b.provenance[0].at.includes('T'), 'at must be ISO');
+  assert('deviceId' in b.provenance[0], 'the creating device is recorded');
+});
+
+test('newBird: a caller may supply provenance and it is not overwritten', () => {
+  // an imported/shared bird arrives with a history that must survive
+  const history = [
+    { event: 'created', at: '2020-01-01T00:00:00.000Z', deviceId: 'other-device' },
+    { event: 'transferred', at: '2021-06-01T00:00:00.000Z', deviceId: 'other-device' },
+  ];
+  const b = newBird({ name: 'imported', provenance: history });
+  assertDeepEq(b.provenance, history);
+});
+
+test('newBird: provenance is a fresh array per record, never shared', () => {
+  const a = newBird({}), b = newBird({});
+  assert(a.provenance !== b.provenance, 'must not share the array reference');
+  a.provenance.push({ event: 'x', at: 'y', deviceId: 'z' });
+  assertEq(b.provenance.length, 1, 'mutating one record must not affect another');
 });
