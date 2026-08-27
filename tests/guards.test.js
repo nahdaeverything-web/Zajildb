@@ -61,6 +61,26 @@ test('guard: no view writes to IndexedDB directly', () => {
     `writes must go through db.js (saveBird/Pairs.save/restoreMedia/…):\n  ${hits.join('\n  ')}`);
 });
 
+test('guard: logOp never escapes js/db.js', () => {
+  // The op log must be a faithful record of the WRITE PATH. A view writing to
+  // it directly would log something that never went through saveBird, so the
+  // log would stop matching what actually happened to the data.
+  const hits = scan(FILES, /\blogOp\b/, { allow: (f) => f.rel === 'js/db.js' });
+  assertEq(hits.length, 0,
+    `writes go through db.js, which logs them:\n  ${hits.join('\n  ')}`);
+});
+
+test('guard: nothing reads oplog or tombstones raw outside js/db.js', () => {
+  // idbGetAll returns records in KEY order, and oplog's key is a random uuid,
+  // so a raw read is effectively shuffled — any "last N" or slice gets
+  // arbitrary ops. Read through listOps()/getOpsSinceSeq() instead. Views have
+  // no business reading either store directly in any case.
+  const hits = scan(FILES, /idbGetAll\(\s*['"](oplog|tombstones)['"]/,
+    { allow: (f) => f.rel === 'js/db.js' });
+  assertEq(hits.length, 0,
+    `use listOps() / getOpsSinceSeq(); the raw store is unordered:\n  ${hits.join('\n  ')}`);
+});
+
 test('guard: views never call validateBird directly', () => {
   // validation lives at the write boundary; views use db.js checkBird()
   const hits = scan(FILES.filter((f) => f.rel.startsWith('js/views/')), /\bvalidateBird\b/);

@@ -9,6 +9,16 @@
 // │ Nothing detects a reference this function does not know about.           │
 // └──────────────────────────────────────────────────────────────────────────┘
 //
+// DELIBERATELY NOT SCANNED (v1.8): `oplog` and `tombstones`. Both exist
+// precisely to describe records that no longer exist — an op recording a
+// deletion names a recordId that is *supposed* to be gone, and a tombstone is
+// nothing but such a name. Treating either as a dangling reference would
+// report every correct deletion as a fault. They are absent from
+// CROSS_REFERENCES for that reason, not by oversight.
+//
+// What IS checked about them is the opposite condition — see
+// TOMBSTONE_CONSISTENCY below.
+//
 // Deletion used to leave a bird's race results, health events, pairs and egg
 // links pointing at a record that no longer existed. deleteBird now cascades,
 // and this makes the property checkable instead of assumed.
@@ -72,8 +82,35 @@ const CROSS_REFERENCES = [
 ];
 
 /**
- * Find every dangling reference.
- * @param {{birds, pairs, raceResults, healthEvents}} stores arrays or Maps
+ * A record and a tombstone for that record must never coexist.
+ *
+ * If they do, either a deletion half-completed (the record was left behind, or
+ * an undo cleared the record but not the marker) or a resurrection slipped past
+ * the import guard. Either way the database is lying about whether the record
+ * exists, and every downstream answer — counts, pedigrees, sync — inherits the
+ * lie. Cheap to check, and it is the failure this pass most needs to notice.
+ */
+function tombstoneConsistency(stores) {
+  const problems = [];
+  const live = {};
+  for (const store of ['birds', 'pairs', 'raceResults', 'healthEvents', 'media', 'lofts']) {
+    live[store] = new Set(values(stores[store]).map((r) => r.id));
+  }
+  for (const t of values(stores.tombstones)) {
+    if (live[t.store] && live[t.store].has(t.recordId)) {
+      problems.push({
+        key: 'integrity.liveWithTombstone',
+        params: { store: t.store, recordId: t.recordId, at: t.at },
+      });
+    }
+  }
+  return problems;
+}
+
+/**
+ * Find every inconsistency.
+ * @param {{birds, pairs, raceResults, healthEvents, media, lofts, tombstones}} stores
+ *        arrays or Maps; any store may be omitted
  * @returns {Array<{key: string, params: object}>} empty when consistent
  */
 export function checkIntegrity(stores = {}) {
@@ -84,5 +121,6 @@ export function checkIntegrity(stores = {}) {
       problems.push(...ref.each(record, birdIds));
     }
   }
+  problems.push(...tombstoneConsistency(stores));
   return problems;
 }

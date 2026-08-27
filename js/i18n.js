@@ -218,6 +218,7 @@ const dict = {
   'integrity.eggChick': { ar: 'البيضة {eggId} في الزوج {pairId} مرتبطة بفرخ غير موجود ({missingId}).', en: 'Egg {eggId} in pair {pairId} is linked to a chick that does not exist ({missingId}).' },
   'integrity.raceBird': { ar: 'نتيجة السباق {resultId} تخصّ طيرًا غير موجود ({missingId}).', en: 'Race result {resultId} belongs to a bird that does not exist ({missingId}).' },
   'integrity.healthBird': { ar: 'الحدث الصحي {eventId} يخصّ طيرًا غير موجود ({missingId}).', en: 'Health event {eventId} belongs to a bird that does not exist ({missingId}).' },
+  'integrity.liveWithTombstone': { ar: 'السجل {recordId} في «{store}» موجود ومحذوف في آن واحد — حذف لم يكتمل أو سجل عاد بالخطأ.', en: 'Record {recordId} in “{store}” exists AND is marked deleted — a half-completed deletion, or a record that came back when it should not have.' },
   'integrity.title': { ar: 'فحص ترابط البيانات', en: 'Data integrity check' },
   'integrity.clean': { ar: 'لا مراجع معلّقة. ✓', en: 'No dangling references. ✓' },
   'integrity.found': { ar: 'وُجدت {n} مرجعًا معلّقًا.', en: '{n} dangling reference(s) found.' },
