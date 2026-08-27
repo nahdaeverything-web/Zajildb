@@ -330,6 +330,7 @@ body.modal-open { overflow: hidden; }
   text-align: left;
 }
 .test-output.test-fail { color: #f5b8b3; }
+.about-version { font-variant-numeric: tabular-nums; font-weight: 600; }
 
 /* ------------------------------------------------------------ certificate */
 .cert-toolbar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-block-end: 1rem; }

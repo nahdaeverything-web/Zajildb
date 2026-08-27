@@ -18,7 +18,8 @@ import { rerender } from '../app.js';
 export function renderTools() {
   const root = h('section', { class: 'view-tools' });
   root.append(h('div', { class: 'view-head' }, h('h1', {}, t('tools.title'))));
-  root.append(settingsCard(), loftCard(), duplicatesCard(), examplesCard(), backupCard(), scannerCard(), devCard());
+  root.append(settingsCard(), loftCard(), duplicatesCard(), examplesCard(),
+              backupCard(), scannerCard(), devCard(), aboutCard());
   return root;
 }
 
@@ -239,6 +240,52 @@ function scannerCard() {
     h('p', { class: 'muted' }, t('scan.hint')),
     field(t('scan.serverUrl'), urlIn),
     state.settings.scanServerUrl ? null : h('p', { class: 'muted small' }, t('scan.notConfigured')));
+}
+
+// ------------------------------------------------------------------- about
+/**
+ * Ask the CONTROLLING service worker for its version.
+ *
+ * Deliberately NOT a constant in js/: a constant reports what the code says,
+ * while this reports what is actually installed — and those disagree exactly
+ * when it matters, i.e. when an update has been downloaded but not activated,
+ * or when the app is running without a service worker at all.
+ *
+ * Resolves to null rather than rejecting: no controller (plain HTTP, first
+ * load before activation), no reply, or a timeout all mean "cannot say".
+ */
+function askServiceWorkerVersion(timeoutMs = 2000) {
+  return new Promise((resolve) => {
+    const sw = navigator.serviceWorker && navigator.serviceWorker.controller;
+    if (!sw) { resolve(null); return; }
+    let settled = false;
+    const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+    const timer = setTimeout(() => done(null), timeoutMs);
+    try {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = (e) => {
+        clearTimeout(timer);
+        done(e.data && e.data.type === 'VERSION' ? e.data.version : null);
+      };
+      sw.postMessage({ type: 'GET_VERSION' }, [channel.port2]);
+    } catch {
+      clearTimeout(timer);
+      done(null);
+    }
+  });
+}
+
+function aboutCard() {
+  // starts as the fallback, so the row is never blank while the reply is
+  // in flight and never blank if it never arrives
+  const value = h('span', { class: 'about-version' }, t('about.version', { v: t('about.unknown') }));
+  askServiceWorkerVersion().then((version) => {
+    value.textContent = t('about.version', { v: version || t('about.unknown') });
+  });
+  return h('div', { class: 'card' },
+    h('h2', {}, t('about.title')),
+    value,
+    h('p', { class: 'muted small' }, t('about.hint')));
 }
 
 // ------------------------------------------------------- dev panel + tests

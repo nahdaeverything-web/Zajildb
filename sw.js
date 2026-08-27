@@ -1,7 +1,7 @@
 // sw.js — service worker: precache the entire app shell so Zajil launches
 // and works fully offline. Cache-first; the app never blocks on the network.
 
-const VERSION = 'zajil-v1.8.0';
+const VERSION = 'zajil-v1.8.1';
 
 const SHELL = [
   './',
@@ -62,6 +62,18 @@ self.addEventListener('activate', (e) => {
         keys.filter((k) => k.startsWith('zajil-') && k !== VERSION).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
+});
+
+// The page asks the CONTROLLING worker what it is, so the About row reports
+// what is actually installed rather than a constant compiled into js/ — those
+// two disagree exactly when it matters, i.e. when an update has not activated
+// yet. Replies down the MessageChannel port when given one, otherwise to the
+// requesting client.
+self.addEventListener('message', (e) => {
+  if (!e.data || e.data.type !== 'GET_VERSION') return;
+  const reply = { type: 'VERSION', version: VERSION };
+  if (e.ports && e.ports[0]) e.ports[0].postMessage(reply);
+  else if (e.source && e.source.postMessage) e.source.postMessage(reply);
 });
 
 self.addEventListener('fetch', (e) => {
