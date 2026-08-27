@@ -7,10 +7,45 @@ were never verified (that run hit a limit), so this list is thorough but not
 exhaustive.
 
 **20 open** (0 high · 10 medium · 10 low) ·
-**13 closed in v1.7** · plus **3 open decisions** below.
+**13 closed in v1.7** · **0 closed in v1.8** ·
+plus **3 open decisions** and **1 planned item** below.
 
 Nothing open is a crash or a blocker. Severity is the auditor's and reflects
 user impact, not effort.
+
+**v1.8 closed nothing from this list, deliberately.** It was a sync-shape pass —
+additive infrastructure (op log, tombstones, provenance, device identity) rather
+than defect work, so every item below survives it untouched. The one bug v1.8
+did fix — merge-importing an older export resurrecting deleted birds — was
+never in this list: it was found while specifying v1.8, not by the audit that
+produced these findings. It is recorded here for completeness only:
+
+> **Fixed in v1.8, not from this backlog** — deleted birds resurrected when
+> merge-importing an older export. Closed by `b9d2f53` (tombstones + the import
+> guard). The one user-visible behaviour change in that release.
+
+---
+
+## Planned work
+
+Not debt — a decision already taken, recorded so it is not rediscovered.
+
+### P1. Split `js/db.js` at v1.9
+
+`db.js` is **866 lines** (562 at v1.7) and now holds the IndexedDB layer, the
+in-memory mirror, validation, the op log, tombstones, provenance,
+export/import and backups. That is a structural signal, not a defect — nothing
+is wrong with it today.
+
+The reason to plan rather than drift into it: **every guard test keys on
+"outside `js/db.js`"** — the `idbPut`/`idbDelete` write guard, the `logOp`
+guard, and the raw `oplog`/`tombstones` read guard. Splitting the file means
+updating those allow-lists deliberately, rather than finding them silently
+broken or, worse, quietly weakened to make a build pass.
+
+A likely shape: `db/storage.js` (IndexedDB + the in-memory mirror),
+`db/sync.js` (op log, tombstones, seq), `db/io.js` (export/import/backups),
+with `db.js` re-exporting so no caller has to move. See HANDOFF §15.
 
 ---
 
