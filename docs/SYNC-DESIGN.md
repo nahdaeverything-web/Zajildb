@@ -96,6 +96,16 @@ create index sync_records_owner_seq on public.sync_records (owner, server_seq);
 create or replace function public.sync_assign_server_seq()
 returns trigger language plpgsql as $$
 begin
+  -- Serialise sequence assignment PER OWNER. Without this there is a
+  -- sequence-gap race: two devices push concurrently, the transaction holding
+  -- server_seq = 1000 commits AFTER 1001 is already visible, and a pull with
+  -- cursor = 1001 never sees row 1000 — until that row happens to be updated
+  -- again, which may be never. A silently missed change.
+  --
+  -- One fancier's devices serialise against each other, which at this scale is
+  -- a handful of writes; different owners hash to different lock keys and are
+  -- unaffected. The lock is transaction-scoped and released on commit.
+  perform pg_advisory_xact_lock(hashtext(new.owner::text));
   new.server_seq := nextval('public.sync_server_seq');
   return new;
 end $$;
@@ -105,6 +115,13 @@ create trigger sync_records_seq
   for each row execute function public.sync_assign_server_seq();
 
 alter table public.sync_records enable row level security;
+
+-- Rejected alternative for the same race: pull with an OVERLAP — re-request
+-- from (cursor - N) every time and rely on idempotent apply to absorb the
+-- repeats. Rejected because N is a guess: too small and the race survives, too
+-- large and every pull re-downloads and re-applies rows for nothing. It trades
+-- a correctness guarantee for a tunable that can only be wrong. The advisory
+-- lock removes the gap instead of hoping to out-run it.
 
 -- ── grants ───────────────────────────────────────────────────────────────
 -- No DELETE to anyone: a deletion is an UPDATE setting deleted = true.
@@ -195,6 +212,63 @@ replays it.
   ─→ more ops? collecting : idle
 ```
 
+### 2a. The op → row mapping — and the timestamp rule that makes it correct
+
+> **`updated_at` on the server row is the OP's `at` — the moment the operation
+> happened. It is NEVER `record.updatedAt`.**
+
+| Server column | Source |
+|---|---|
+| `owner` | omitted; defaulted server-side to `auth.uid()` |
+| `store` | `op.store` |
+| `record_id` | `op.recordId` |
+| `data` | `op.record` (the full record; blobs already stripped by `opRecord`) |
+| `deleted` | `op.op === 'delete'` |
+| `updated_at` | **`op.at`** — operation time, never `record.updatedAt` |
+| `device_id` | `op.deviceId` |
+| `op_seq` | `op.seq` |
+| `server_seq` | assigned by the trigger; never sent |
+
+For a collapsed batch (several ops on one record reduced to one upsert), the
+row takes the **last** op's `at`, `data` and `seq`.
+
+#### Why this is not a detail
+
+`restoreBird` **deliberately reinstates a record's original timestamps** — an
+undo restores what was there; it is not a new edit. That is a v1.8 decision and
+it is correct. But it means `record.updatedAt` can move *backwards*, and a sync
+layer that trusted it would diverge permanently:
+
+```
+  10:00  A deletes a bird       → tombstone at 10:00, pushed
+  10:01  B pulls the delete     → B applies it, writes its own tombstone
+  10:05  A undoes the delete    → restoreBird reinstates updatedAt = 09:00
+         push maps updated_at = 09:00   ← WRONG
+  10:06  B pulls the restore    → 09:00 < B's tombstone at 10:00
+                                → B SKIPS it. A has the bird. B does not.
+                                → they never converge.
+```
+
+With `updated_at = op.at`, the undo's op happened at 10:05, beats B's 10:00
+tombstone, and B restores the bird. The two devices converge.
+
+The same rule governs **LWW comparison** (§4) and **tombstone comparison**
+(§3): every timestamp decision in sync reads operation time. `record.updatedAt`
+is a local bookkeeping field and plays no part in sync ordering.
+
+#### Corollary — a winning record clears the tombstone
+
+> When a pulled row with `deleted = false` **beats** a local tombstone (its
+> `updated_at` is newer), applying it must **delete that tombstone**.
+
+Leaving it would let the record be re-suppressed by the next merge-import or
+comparison, and the device would flip between states. This mirrors v1.8's
+`restoreBird`, which already clears tombstones on undo — the same rule reached
+from the other direction.
+
+**Test:** delete a bird on device A, let device B pull the delete, undo on A,
+sync both — assert both devices hold the bird and neither retains a tombstone.
+
 ### The affected-row rule is the ack condition
 
 SPIKE §4d: **a write blocked by RLS returns `200` with `0` rows.** So a `200`
@@ -205,6 +279,33 @@ alone must never advance `lastAckedSeq`.
 > batch is retried rather than acked. Advancing the cursor on an unverified
 > `200` would silently drop writes — the exact failure v1.7 and v1.8 exist to
 > prevent.
+
+#### A poison record must never deadlock the queue
+
+"Retried rather than acked" is correct exactly once. Repeated forever it is a
+deadlock: **one permanently-rejected record blocks all sync, for every store,
+indefinitely** — and the user sees only a sync that never completes.
+
+```
+  short count ─→ retry the same batch (backoff)
+              ─→ still short, 3 identical attempts?
+                 ├→ batch > 1 : BISECT — split and retry each half
+                 └→ batch = 1 : this record is poison
+                                ├→ record it in syncAnomalies (loud, in الأدوات)
+                                ├→ ACK it — advance past it
+                                └→ continue with the rest
+```
+
+Bisection isolates the offender in `log₂(n)` round trips rather than `n`, and
+for a healthy batch costs nothing because it never triggers.
+
+> **An anomaly is loud but never a roadblock.** The alternative — a correct-
+> looking queue that never drains — is worse than a visible, named failure the
+> fancier can be asked about.
+
+`syncAnomalies` is capped at **100 entries**, newest kept; it is a diagnostic
+surface, not a log. Each entry records store, record id, the server's status
+and body, and when it happened.
 
 ### Deletes
 
@@ -248,11 +349,26 @@ Applying a remote record is a write, and it obeys every rule the local path
 does: it goes through `saveBird` / the generic savers, it emits a change event,
 and it keeps the in-memory mirror in step. It is *not* a raw `idbPut`.
 
-Two differences, both deliberate:
+Three differences, all deliberate:
 
 - **`origin: 'sync'` logs no op.** Echo prevention. This is the single most
   important line in the design: a pulled change that logged an op would be
   pushed straight back, and two devices would trade the same record forever.
+- **`origin: 'sync'` does NOT re-stamp the record.** `stamp()` writes
+  `updatedAt = now` and *this* `deviceId` onto everything it touches. A pulled
+  record put through it would become locally-authored with a fresh timestamp —
+  it would then beat the very version it came from in every later comparison,
+  and would claim this device as its last writer when another device wrote it.
+  LWW would be corrupted and the audit trail falsified.
+
+  > **A sync-apply writes the incoming record verbatim: `updatedAt`,
+  > `deviceId`, `provenance` and all.** This follows the `restoreBird`
+  > precedent — *"an undo restores exactly what was there; it is not a new edit
+  > to re-judge"* — not the `saveBird` one. Applying a remote record is
+  > likewise not authorship.
+
+  **Test:** apply a pulled record, assert `updatedAt` and `deviceId` are
+  byte-identical to what came over the wire.
 - **Validation runs in `force` mode.** A record that already exists on the
   server is a historical fact, not a new edit to re-judge — the same reasoning
   that made `importAll` a `force` path in v1.7. A remote record that fails
@@ -330,7 +446,17 @@ each time**, so the stored one must be replaced on every refresh — the old one
 is spent.
 
 Tokens are stored in `settings`, which is already out of sync scope (v1.8) —
-they are per-device by definition and must not travel.
+they are per-device by definition and must not travel. See §9 for the export
+exclusion that keeps them there.
+
+**Multi-instance refresh race.** The installed app and a browser tab on the
+same device share one IndexedDB, so both may attempt a refresh with the same
+token and one loses. Supabase applies a **reuse grace interval** to refresh
+tokens for exactly this case, so the loser's token is not immediately invalid.
+v1.9 relies on that rather than building a cross-instance lock: on a refresh
+rejection the instance re-reads the stored tokens once before concluding the
+session is dead, which resolves the ordinary case where the other instance had
+already written a fresh pair.
 
 ### Offline behaviour — the part that matters most
 
@@ -358,8 +484,27 @@ simple case.
 knew about an account. They are the fancier's records and must not be lost.
 
 > On first successful sign-in, every local record is enqueued as a synthetic op
-> (`origin: 'user'`, current device, current `seq`), then normal push runs.
-> Nothing is special-cased in push itself.
+> (`origin: 'user'`, current device, current `seq`) whose **`at` is the
+> record's own `updatedAt` — NOT `now()`**. Then normal push runs; nothing is
+> special-cased in push itself.
+
+#### Why `at` must not be `now()`
+
+A laptop last used months ago holds stale copies. Stamping its synthetic ops
+with today's time would make every one of them **beat the fresher server data**
+in LWW (§4) — the stale device would silently overwrite edits the fancier made
+on their phone last week, simply by logging in.
+
+Using each record's own `updatedAt` says what is true: *this is what this
+device knew, as of when it knew it.* Fresh server data then wins, which is the
+correct outcome.
+
+This is the one place `record.updatedAt` legitimately feeds an op's `at` — and
+it is not an exception to §2a but an instance of it: for a record that has
+never been synced, the last local write **is** the operation being replayed.
+
+**Test:** a stale device holding an old copy signs in; assert the server's
+newer version wins and the stale copy does not overwrite it.
 
 Ordering matters: **push before pull** on first login. Pulling first would apply
 server rows over local records and the subsequent push would send back
@@ -452,6 +597,23 @@ Three guards key on the literal `js/db.js`:
 > A guard whose allow-list was widened without re-proving is a guard that may
 > now allow everything.
 
+### The v1.8 enumeration matrix extends, it does not bend
+
+`tests/e2e/op_enumeration.py` asserts *one op per record touched* for every
+mutation type. Sync introduces two cases that would otherwise look like
+failures of that rule, so the matrix gains them explicitly rather than having
+the rule loosened:
+
+| Case | Expected ops |
+|---|---|
+| apply a pulled record (`origin: 'sync'`) | **ZERO** — mutation without an op, by design (echo prevention) |
+| apply a pulled delete (`origin: 'sync'`) | **ZERO** — the tombstone is written, no op |
+| first-login synthetic op | **one op, no mutation** — the record already exists locally; the op is enqueued to describe it |
+
+These are the only two places in the codebase where mutations and ops do not
+correspond one-to-one, and both are deliberate. Naming them in the matrix means
+a *third* such case cannot appear by accident without failing a test.
+
 A **new** guard is added with the sync layer:
 
 > **`origin: 'sync'` must never reach `logOp`.** Echo prevention is the
@@ -476,6 +638,33 @@ All in `settings`, which is out of sync scope — these are per-device by nature
 | `lastSyncAt` | ISO timestamp of the last successful cycle |
 | `lastSyncError` | last error key + timestamp, or null |
 | `syncEnabled` | user can turn sync off and keep working locally |
+| `syncAnomalies` | capped at 100 entries, newest kept — a diagnostic surface, not a log |
+
+### Tokens must never leave the device
+
+`authAccessToken` and `authRefreshToken` are bearer credentials. If they
+reached an export, they would travel in every JSON backup a fancier shares —
+over WhatsApp, to a club administrator, anywhere — and whoever received the
+file could act as that user until the tokens expired or were rotated.
+
+**Current behaviour, checked in the source rather than assumed:**
+
+`exportAll()` builds an explicit key list — `format`, `version`, `exportedAt`,
+`tombstones`, `lofts`, `birds`, `pairs`, `raceResults`, `healthEvents`,
+`media`. **`settings` is not among them**, so no setting of any kind is
+exported today. `autoBackup()` wraps `exportAll({ includeMedia: false })` and
+adds only `kind`, so the `backups` store inherits the same exclusion.
+
+> **So tokens do not leak today. This amendment is a REGRESSION GUARD, not a
+> fix.** The risk is a future release adding `settings` to an export for some
+> reasonable-sounding purpose — remembering a COI depth across a restore, say —
+> and carrying credentials out with it.
+
+**Required:** a test asserting that **no export payload and no backups-store
+snapshot contains any key beginning `auth`**, run against a database where a
+user is signed in and the tokens are genuinely present. Belt and braces: if a
+future change ever does export settings, the `auth*` keys are filtered at the
+export boundary, and the test fails first if that filter is forgotten.
 
 ### DB_VERSION impact: none
 
@@ -576,9 +765,9 @@ node / 287 browser**.
 | **0** | This document | 96 | 287 |
 | **1** | `db.js` split + facade; guards updated and **re-proven**; zero behaviour change | 96 → ~100 | 287 → ~292 |
 | **2** | Auth: sign-in, refresh loop, token storage, offline-tolerant | ~104 | ~305 |
-| **3** | Push: batching, affected-row-verified ack, `lastAckedSeq`, compaction | ~112 | ~320 |
-| **4** | Pull: cursor, apply via `origin: 'sync'`, echo-prevention guard | ~118 | ~338 |
-| **5** | Conflicts + first-login flows + the duplicate notice | ~124 | ~352 |
+| **3** | Push: op→row mapping, batching, affected-row-verified ack, poison bisection, `lastAckedSeq`, compaction | ~114 | ~326 |
+| **4** | Pull: cursor, verbatim apply via `origin: 'sync'`, echo-prevention guard, tombstone-clearing corollary | ~120 | ~346 |
+| **5** | Conflicts (incl. the delete+undo convergence test), first-login flows with `updatedAt`-based synthetic ops, the duplicate notice | ~126 | ~362 |
 | **6** | Sync-status UI, الأدوات card, error surfacing | ~126 | ~365 |
 | **7** | Docs: HANDOFF, BACKLOG, WRITEPATH regenerated | ~126 | ~365 |
 
@@ -627,3 +816,9 @@ Stated so scope creep has to argue with a document.
 | Two devices, same bird, different UUIDs | Surfaced through the existing duplicate finder; user resolves (§6) |
 | `*.supabase.co` blocked regionally | Custom domain **before** any Gulf pilot — SPIKE standing note |
 | A split that quietly changes behaviour | Phase 1 is refactor-only; success = 287 browser assertions unchanged |
+| Delete+undo diverges across devices | `updated_at` is the OP's `at`, never `record.updatedAt` (§2a); convergence test |
+| Sync-apply re-stamps and falsifies authorship | `origin: 'sync'` writes verbatim — no stamp, no op (§3) |
+| Stale device overwrites fresher server data on first login | Synthetic ops carry each record's own `updatedAt` as `at` (§6) |
+| One poison record blocks all sync forever | Bisect after 3 short counts, isolate to `syncAnomalies`, ack the rest (§2) |
+| Tokens leak into a shared backup | Not exported today (checked); regression guard test on `auth*` keys (§9) |
+| Sequence gap silently skips a row | `pg_advisory_xact_lock` per owner in the trigger (§1) |
