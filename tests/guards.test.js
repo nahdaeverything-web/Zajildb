@@ -11,12 +11,22 @@
 //
 // A scan that cannot be made reliable is not loosened until it passes — it is
 // reported instead. See the note on newBird at the bottom.
+//
+// v1.9 WIDENED THREE ALLOW-LISTS from `js/db.js` to `js/db.js` OR `js/db/`,
+// because db.js became a facade over four modules and the write path moved
+// into that directory. A widened allow-list is a weakened guard unless it is
+// re-proven, so each of the three was re-checked by reintroducing its
+// violation in a view and confirming the failure. Note the consequence: ANY
+// file added under js/db/ is exempt from all three. That is deliberate — the
+// directory IS the boundary now — and it is why the sync layer arrives with
+// its own guard rather than relying on these.
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { test, assert, assertEq } from './harness.js';
+import * as db from '../js/db.js';
 import { newBird, REFERENCE_STATUS } from '../js/db.js';
 import { checkIntegrity } from '../js/engine/integrity.js';
 
@@ -56,7 +66,7 @@ test('guard: no view writes to IndexedDB directly', () => {
   // reads (idbGet/idbGetAll) are fine; WRITES must go through db.js so the
   // change event fires and the in-memory mirror stays in sync
   const hits = scan(FILES, /\bidbPut\b|\bidbDelete\b|\bidbClear\b/,
-    { allow: (f) => f.rel === 'js/db.js' });
+    { allow: (f) => f.rel === 'js/db.js' || f.rel.startsWith('js/db/') });
   assertEq(hits.length, 0,
     `writes must go through db.js (saveBird/Pairs.save/restoreMedia/…):\n  ${hits.join('\n  ')}`);
 });
@@ -65,7 +75,7 @@ test('guard: logOp never escapes js/db.js', () => {
   // The op log must be a faithful record of the WRITE PATH. A view writing to
   // it directly would log something that never went through saveBird, so the
   // log would stop matching what actually happened to the data.
-  const hits = scan(FILES, /\blogOp\b/, { allow: (f) => f.rel === 'js/db.js' });
+  const hits = scan(FILES, /\blogOp\b/, { allow: (f) => f.rel === 'js/db.js' || f.rel.startsWith('js/db/') });
   assertEq(hits.length, 0,
     `writes go through db.js, which logs them:\n  ${hits.join('\n  ')}`);
 });
@@ -76,7 +86,7 @@ test('guard: nothing reads oplog or tombstones raw outside js/db.js', () => {
   // arbitrary ops. Read through listOps()/getOpsSinceSeq() instead. Views have
   // no business reading either store directly in any case.
   const hits = scan(FILES, /idbGetAll\(\s*['"](oplog|tombstones)['"]/,
-    { allow: (f) => f.rel === 'js/db.js' });
+    { allow: (f) => f.rel === 'js/db.js' || f.rel.startsWith('js/db/') });
   assertEq(hits.length, 0,
     `use listOps() / getOpsSinceSeq(); the raw store is unordered:\n  ${hits.join('\n  ')}`);
 });
@@ -138,6 +148,62 @@ test('guard: every app module is precached, or offline will break', () => {
   const notListed = FILES.map((f) => f.rel).filter((rel) => !sw.includes(`'./${rel}'`));
   assertEq(notListed.length, 0,
     `add these to the SHELL list in sw.js:\n  ${notListed.join('\n  ')}`);
+});
+
+// ------------------------------------------------------------------- the facade
+
+// The public API of the db layer, pinned. db.js was split into four modules in
+// v1.9; this list is what "no view changed a single import" MEANS. A name may
+// be added here deliberately, but one must never go missing by accident — a
+// dropped re-export is invisible until a view calls it at runtime.
+const FACADE = [
+  'Health', 'Lofts', 'Pairs', 'REFERENCE_STATUS', 'Races', 'STORES', 'ValidationError',
+  'addMedia', 'allBirds', 'autoBackup', 'checkBird', 'currentLoft', 'dataURLToBlob',
+  'deleteBird', 'deleteMedia', 'diffFields', 'emitChange', 'exportAll',
+  'exportBirdWithAncestry', 'getBird', 'getOpsSinceSeq', 'idbClear', 'idbDelete', 'idbGet',
+  'idbGetAll', 'idbPut', 'importAll', 'initDB', 'listBackups', 'listOps', 'listTombstones',
+  'loftStatuses', 'makeGeneric', 'mediaForBird', 'newBird', 'nowISO', 'onChange', 'opRecord',
+  'openDB', 'restoreBird', 'restoreMedia', 'saveBird', 'setSetting', 'state', 'uuid',
+];
+
+test('guard: js/db.js exports exactly the pinned public surface', () => {
+  const actual = Object.keys(db).sort();
+  const missing = FACADE.filter((n) => !actual.includes(n));
+  const extra = actual.filter((n) => !FACADE.includes(n));
+  assertEq(missing.length + extra.length, 0,
+    `the db facade drifted — missing: [${missing.join(', ')}] unexpected: [${extra.join(', ')}]`);
+  assertEq(actual.length, 45, `expected 45 exports, found ${actual.length}`);
+});
+
+test('guard: js/db.js stays a facade — re-exports only, no logic', () => {
+  const src = FILES.find((f) => f.rel === 'js/db.js').src;
+  const code = src.split('\n')
+    .map((l, i) => ({ n: i + 1, l }))
+    .filter(({ l }) => l.trim() && !/^\s*(\/\/|\*|\/\*)/.test(l));
+  // every non-comment line must belong to an `export { ... } from '...'` block
+  const offenders = code.filter(({ l }) =>
+    !/^export \{$/.test(l.trim()) && !/^\}? ?from '\.\/db\/\w+\.js';$/.test(l.trim()) &&
+    !/^[A-Za-z0-9_$]+,$/.test(l.trim()) && !/^export \{.*\} from '\.\/db\/\w+\.js';$/.test(l.trim()));
+  assertEq(offenders.length, 0,
+    `db.js must only re-export; move logic into js/db/:\n  ${offenders.map((o) => `js/db.js:${o.n}  ${o.l.trim()}`).join('\n  ')}`);
+});
+
+test('guard: the db modules form a DAG — storage <- oplog <- records <- io', () => {
+  // A cycle here would be a real bug, not a style point: ES modules would hand
+  // one of the two files a partly-initialised namespace, and which one depends
+  // on import order. The layering is also what keeps `storage` importable by
+  // anything without dragging the write path along.
+  const RANK = { 'js/db/storage.js': 0, 'js/db/oplog.js': 1, 'js/db/records.js': 2, 'js/db/io.js': 3 };
+  const bad = [];
+  for (const f of FILES.filter((x) => RANK[x.rel] !== undefined)) {
+    for (const m of f.src.matchAll(/from '\.\/(\w+)\.js'/g)) {
+      const target = `js/db/${m[1]}.js`;
+      if (RANK[target] === undefined) { bad.push(`${f.rel} imports unknown sibling ${m[1]}.js`); continue; }
+      if (RANK[target] >= RANK[f.rel]) bad.push(`${f.rel} imports ${target} — wrong direction`);
+    }
+    if (/from '\.\.\/db\.js'/.test(f.src)) bad.push(`${f.rel} imports the facade — that is a cycle`);
+  }
+  assertEq(bad.length, 0, `the db layer must stay acyclic:\n  ${bad.join('\n  ')}`);
 });
 
 // ---------------------------------------------------------------- data level
