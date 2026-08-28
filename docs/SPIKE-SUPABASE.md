@@ -1,7 +1,6 @@
 # Supabase spike — findings
 
-**Status:** steps 1–5 **proven**. Storage (stretch) **blocked, diagnostic pending** —
-this document will be amended in a follow-up commit when it resolves.
+**Status:** steps 1–6 **proven**, storage included.
 
 A throwaway proof, not app code. None of the spike scripts live in this repo;
 they ran in `~/zajil-spike/`. What is recorded here is the **contract v1.9 will
@@ -234,47 +233,64 @@ than an impression.
 
 ---
 
-## 6. Storage — ATTEMPTED, BLOCKED, DIAGNOSTIC PENDING
+## 6. Storage — private bucket, owner-only
 
-A stretch goal. **Not proven.** To be amended in a follow-up commit.
+**Proven.** 8 assertions, 0 failed, 0 not run.
 
-What worked: the bucket was created private via the storage API with the secret
-key — `POST {SUPABASE_URL}/storage/v1/bucket`, `{ id, name, public: false }` →
-**HTTP 200**. (This is what establishes that §3b's missing grants are scoped to
-`public`, not `storage`.)
+Bucket created private with the secret key —
+`POST {SUPABASE_URL}/storage/v1/bucket`, `{ id, name, public: false }` → **200**.
+(This is also what establishes that §3b's missing grants are scoped to `public`,
+not `storage`.)
 
-What failed: **every upload is refused, including a user writing into their own
-`<user-id>/` prefix**, after the four owner-scoped policies on `storage.objects`
-were applied and reported successful.
+Objects are addressed as `{SUPABASE_URL}/storage/v1/object/spike-media/<path>`
+with `{ apikey: <publishable>, Authorization: Bearer <user access token> }`.
 
-```
-POST {SUPABASE_URL}/storage/v1/object/spike-media/<A-id>/hello.txt
-headers { apikey: <publishable>, Authorization: Bearer <A access token>,
-          Content-Type: text/plain }
+| Case | Result |
+|---|---|
+| A uploads into its own prefix **[precondition]** | **200** — `{"Key":"spike-media/<A-id>/hello.txt","Id":…}` |
+| A reads it back | **200**, exact content returned |
+| B reads A's object *(which demonstrably exists)* | **400** / `{"statusCode":"404","code":"NoSuchKey"}` — denied, no content leaked |
+| Anonymous read (no user token) | **400** / `NoSuchKey` — denied, no content leaked |
+| B writes into A's prefix | **400** / `{"statusCode":"403","message":"new row violates row-level security policy"}` |
+| B writes into **its own** prefix | **200** — the policy scopes, it does not block everyone |
 
--> HTTP 400
-   {"statusCode":"403","error":"Unauthorized",
-    "message":"new row violates row-level security policy","code":"AccessDenied"}
-```
+A denied read reports **`404 NoSuchKey`, not `403`** — storage does not
+distinguish "exists but forbidden" from "absent" to a caller who may not see it.
+Good for privacy; it means **v1.9 cannot infer existence from a storage 404.**
 
-The error is an **RLS policy violation, never `42501`** — so grants on
-`storage.objects` are fine and the *predicate* is the suspect. Both users are
-refused their own prefixes, so it is not an ownership-matching subtlety.
+### Ownership is by path prefix
 
-Precondition-gated re-run: **1 passed, 2 failed, 5 NOT RUN.**
+`spike-media/<user-id>/<file>`, enforced by
+`(storage.foldername(name))[1] = (select auth.uid())::text` in all four policies
+on `storage.objects`.
 
-A read-only diagnostic (`~/zajil-spike/diagnose-storage.sql`) is outstanding:
-whether the four policies exist and against which roles, what privileges
-`authenticated` holds on `storage.objects`, and whether
-`(storage.foldername(name))[1]` evaluates as the policy assumes.
+Chosen over the `storage.objects.owner` column deliberately: `owner` is
+deprecated in favour of `owner_id` (text) and which exists varies by project
+age, whereas a path prefix is stable and self-evident in a policy. **This is a
+contract decision for v1.9**, not incidental spike detail.
 
-### The ownership decision, for when this resumes
+### Observation: storage grants are broad by design
 
-Ownership is expressed by **path prefix** — `spike-media/<user-id>/<file>` —
-rather than the `storage.objects.owner` column. `owner` is deprecated in favour
-of `owner_id` (text) and which exists varies by project age; a path prefix is
-stable and self-evident in a policy. This is a contract decision for v1.9, not
-incidental spike detail.
+Unlike `public` tables (§3a), `storage.objects` carries broad grants for all
+roles. That is Supabase's storage design — **policies are the control layer
+there, not grants.** No revoke is appropriate on `storage.objects`; the §3a
+revoke pattern applies to application tables in `public` only.
+
+### Root cause of the earlier failures: relay, not Supabase
+
+Two rounds of upload failures were traced to the storage policy SQL **never
+having been run** — `pg_policies` returned **zero** rows for
+`storage.objects`. Both times the "SQL applied" signal was asserted upstream
+rather than verified. Supabase behaved correctly throughout: with no policy,
+`storage.objects` denies every write, which is exactly what
+`new row violates row-level security policy` was reporting.
+
+The retrospective lesson is about diagnosis, not storage: the error was a
+**policy violation, never `42501`**, which correctly said "grants are fine, the
+predicate is not satisfied". A missing policy and a wrong policy are
+indistinguishable from the client — **the first diagnostic step must be "do the
+policies exist?", by querying `pg_policies`, before reasoning about predicates.**
+Two rounds were spent inspecting a predicate that was never installed.
 
 ### Lesson worth keeping: storage tests must gate on the upload
 
@@ -286,13 +302,16 @@ working one.
 
 > **Any storage test must treat a successful upload as a hard precondition and
 > report the dependent assertions as NOT RUN — never as passed — when it
-> fails.** The corrected run makes this explicit and is why the honest result is
-> `1 passed, 2 failed, 5 not run` rather than a comfortable `4 passed`.
+> fails.**
 
-The same trap applies to any "access is denied" test: confirm the thing being
-protected actually exists, or the test proves nothing.
+The gate proved its worth across all three runs: with no policies it reported
+`1 passed, 2 failed, 5 not run` instead of a comfortable, meaningless `4
+passed`; with policies in place the same script reports `8 passed, 0 failed, 0
+not run`, and every one of those passes is now backed by an object that
+demonstrably exists.
 
----
+The same trap applies to any "access is denied" test in any subsystem: confirm
+the thing being protected actually exists, or the test proves nothing.
 
 ## Standing notes
 
@@ -319,7 +338,6 @@ unreachable for a substantial part of its users.
 
 ## What this does not answer
 
-- **Storage** — see §6.
 - **Sync semantics.** The spike proves transport and authorisation. How v1.8's
   op log, tombstones and `seq` ordering reconcile against a server is a v1.9
   design question and was deliberately out of scope.
