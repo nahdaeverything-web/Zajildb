@@ -308,6 +308,35 @@ test('guard: js/db/sync.js never writes a record itself', () => {
     `route record writes through applySyncPut/applySyncDelete:\n  ${offenders.map((o) => `js/db/sync.js:${o.n}  ${o.line.trim()}`).join('\n  ')}`);
 });
 
+test('guard: the §1 migration script is the COMPLETE current schema', () => {
+  // The production project is created fresh at pre-pilot from this one block.
+  // Every correction found during implementation must be folded in IN PLACE —
+  // a schema assembled from an original plus a trail of amendment snippets is
+  // one missed paragraph away from a project that silently accepts nothing.
+  // Both of these were found the hard way, against a live server.
+  const doc = readFileSync(join(ROOT, 'docs', 'SYNC-DESIGN.md'), 'utf8');
+  const start = doc.indexOf('### Migration SQL');
+  assert(start > 0, 'the §1 migration section is missing');
+  const open = doc.indexOf('```sql', start);
+  assert(open > start, 'the §1 migration section has no sql block');
+  // search for the CLOSING fence after the opening one, not from the section
+  // start — otherwise the opening fence terminates its own slice
+  const script = doc.slice(open, doc.indexOf('\n```', open + 6));
+  const required = [
+    ['grant usage on sequence public.sync_server_seq to authenticated',
+     'without it every insert fails 403 and the table accepts nothing (Phase 3)'],
+    ["TG_OP = 'UPDATE'",
+     "without it a stale device overwrites fresher data by pushing (Phase 5)"],
+    ['pg_advisory_xact_lock',
+     'without it a sequence-gap race silently loses a change'],
+    ['enable row level security', 'without it every row is readable by every user'],
+  ];
+  const missing = required.filter(([needle]) => !script.includes(needle))
+    .map(([needle, why]) => `${needle}  — ${why}`);
+  assertEq(missing.length, 0,
+    `the migration script is not the current schema:\n  ${missing.join('\n  ')}`);
+});
+
 // ---------------------------------------------------------------- data level
 
 test('invariant: every bird from the factory satisfies ownership <-> status', () => {

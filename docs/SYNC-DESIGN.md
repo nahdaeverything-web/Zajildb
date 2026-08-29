@@ -64,9 +64,19 @@ the client write boundary. The server enforces *ownership and ordering only*.
 
 ### Migration SQL
 
+**This block is the COMPLETE CURRENT SCHEMA, not a starting point plus a patch
+trail.** The production project is created fresh at pre-pilot and must receive
+the final form in one run. Two corrections found during implementation — the
+sequence usage grant (Phase 3) and the last-write-wins guard inside the trigger
+(Phase 5) — are folded in below, in place. The amendment sections that follow
+record *why* they exist; they are history, not further steps to run.
+
 To be run in the dashboard SQL Editor. **Verification query follows; run it and
 paste the output — the proven workflow from the spike, where a policy set was
-twice assumed applied and was not.**
+twice assumed applied and was not.** Note what introspection can and cannot
+prove: it confirms objects EXIST, never that a write SUCCEEDS, because the SQL
+Editor runs as `postgres` and never exercises the `authenticated` path. The
+end-to-end check is `tests/e2e/push_live.py`.
 
 ```sql
 -- ── Zajil v1.9 sync table ────────────────────────────────────────────────
@@ -89,7 +99,8 @@ create table public.sync_records (
 -- The pull cursor. Every pull is: where owner = auth.uid() and server_seq > ?
 create index sync_records_owner_seq on public.sync_records (owner, server_seq);
 
--- server_seq is assigned by a trigger on INSERT **and** UPDATE.
+-- server_seq is assigned by a trigger on INSERT **and** UPDATE, which also
+-- enforces §4's last-write-wins (see the body).
 -- An identity/default column will NOT do: it fires on insert only, so an
 -- updated row would keep its original seq and be invisible to every cursor
 -- already past it — a silently missed change, the worst kind.
@@ -106,6 +117,27 @@ begin
   -- a handful of writes; different owners hash to different lock keys and are
   -- unaffected. The lock is transaction-scoped and released on commit.
   perform pg_advisory_xact_lock(hashtext(new.owner::text));
+
+  -- ── §4 LAST-WRITE-WINS, enforced where it can be authoritative ──
+  -- A client push is a blind upsert: POST with resolution=merge-duplicates
+  -- overwrites whatever is there. So a device that has been offline for
+  -- months replaces fresher data simply by pushing, and NO amount of
+  -- client-side care can prevent it — the client cannot see what it is about
+  -- to overwrite. This is the only place the comparison can be trusted.
+  --
+  -- The tie-break matches the client's exactly (the lexicographically greater
+  -- device_id wins), so both sides reach the same verdict without talking to
+  -- each other.
+  if TG_OP = 'UPDATE' and (
+       new.updated_at < old.updated_at
+       or (new.updated_at = old.updated_at and new.device_id <= old.device_id)
+     ) then
+    new := old;                       -- keep the winner's body
+  end if;
+
+  -- Advances on EVERY write, including one whose body was rejected above, so
+  -- the loser re-pulls the winner rather than sitting on a version the server
+  -- refused.
   new.server_seq := nextval('public.sync_server_seq');
   return new;
 end $$;
@@ -184,7 +216,8 @@ because `sync_assign_server_seq()` is not `security definer` and so calls
 > as `postgres` and never exercises the `authenticated` path. The end-to-end
 > check is `tests/e2e/push_live.py`, and it is what found this.
 
-Projects already migrated need only:
+**Folded into §1's script, in place.** A project created fresh needs nothing
+from this section. An ALREADY-MIGRATED project retrofits it with:
 
 ```sql
 grant usage on sequence public.sync_server_seq to authenticated;
@@ -537,29 +570,15 @@ would send the loser immediately afterwards and overwrite the version that just
 won. It stays in the log because §4 promises "the losing version remains in the
 op log", which is what makes a clock-skew mistake recoverable rather than fatal.
 
-#### The migration statement this needs
+#### Where the statement lives
 
-```sql
-create or replace function public.sync_assign_server_seq()
-returns trigger language plpgsql as $$
-begin
-  perform pg_advisory_xact_lock(hashtext(new.owner::text));
+**Folded into §1's script, in place.** A project created fresh gets it in the
+one run and needs nothing from this section. An ALREADY-MIGRATED project — the
+dev project was one — retrofits it by re-running §1's
+`create or replace function public.sync_assign_server_seq()` block on its own;
+`create or replace` makes that safe to repeat.
 
-  -- §4 last-write-wins. A client push is a blind upsert, so this is the only
-  -- place the comparison can be authoritative.
-  if TG_OP = 'UPDATE' and (
-       new.updated_at < old.updated_at
-       or (new.updated_at = old.updated_at and new.device_id <= old.device_id)
-     ) then
-    new := old;                       -- keep the winner's body
-  end if;
-
-  -- Advances either way, so the LOSER re-pulls the winner rather than sitting
-  -- on a version the server rejected.
-  new.server_seq := nextval('public.sync_server_seq');
-  return new;
-end $$;
-```
+This section is history: why the guard exists, not a further step to run.
 
 The tie-break matches the client's exactly — the lexicographically greater
 `device_id` wins — so both sides reach the same verdict without talking to each
