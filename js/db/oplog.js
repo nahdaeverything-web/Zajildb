@@ -83,7 +83,11 @@ export async function logOp({ origin, store, op, recordId, record, changed }) {
     opId: uuid(),
     seq,
     deviceId: state.settings.deviceId || null,
-    actorId: null,                      // becomes real when authentication exists
+    // The signed-in user, once there is one. Ops written BEFORE sign-in keep
+    // null and are pushed as-is: they were genuinely made by an unidentified
+    // actor on this device, and back-filling an id would be a lie in the audit
+    // trail (SYNC-DESIGN §5).
+    actorId: state.settings.authUserId || null,
     at: nowISO(),
     origin,                             // 'user' | 'import' | 'restore'
     store,

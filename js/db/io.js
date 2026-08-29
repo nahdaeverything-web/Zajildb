@@ -29,6 +29,33 @@ export async function dataURLToBlob(dataURL) {
   return res.blob();
 }
 
+/**
+ * Settings that must never leave the device, by key prefix.
+ *
+ * `authAccessToken` and `authRefreshToken` are bearer credentials. In an
+ * export they would travel in every JSON backup a fancier shares — over
+ * WhatsApp, to a club administrator, anywhere — and whoever received the file
+ * could act as that user until the tokens expired.
+ */
+export const SENSITIVE_SETTING_PREFIXES = ['auth'];
+
+/**
+ * THE funnel a setting must pass through to enter an export.
+ *
+ * Nothing calls it today, and that is the point worth stating plainly:
+ * `exportAll` carries no `settings` key at all, so no setting of any kind is
+ * exported and there is nothing yet to filter. This is a REGRESSION GUARD, not
+ * a fix — the risk it exists for is a future release adding settings to an
+ * export for some reasonable-sounding purpose (remembering a COI depth across
+ * a restore, say) and carrying credentials out with it. When that day comes,
+ * this is the function to route through, and tests/e2e/auth.py fails first if
+ * it is forgotten.
+ */
+export function exportableSettings(settings) {
+  return Object.fromEntries(Object.entries(settings || {})
+    .filter(([key]) => !SENSITIVE_SETTING_PREFIXES.some((prefix) => key.startsWith(prefix))));
+}
+
 /** Full export: everything, media as data URLs. Round-trip tested. */
 export async function exportAll({ includeMedia = true } = {}) {
   const mediaOut = [];

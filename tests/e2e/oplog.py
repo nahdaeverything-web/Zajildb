@@ -66,7 +66,11 @@ with sync_playwright() as p:
     op = shape['op']
     for field in ['opId', 'seq', 'deviceId', 'actorId', 'at', 'origin', 'store', 'op', 'recordId', 'changed', 'record']:
         check(f'op carries {field}', field in op, str(sorted(op.keys())))
-    check('actorId is null until auth exists', op['actorId'] is None)
+    # v1.9 Phase 2 wired actorId to the signed-in user. On a device with no
+    # session it is still null, and that is not a placeholder any more — it is
+    # the honest record of an op made by an unidentified actor. The signed-in
+    # half of this rule is asserted in tests/e2e/auth.py.
+    check('actorId is null when no one is signed in', op['actorId'] is None)
     check("origin is 'user' for a normal save", op['origin'] == 'user')
     check('a new record reports every field as changed', 'name' in op['changed'] and 'sex' in op['changed'])
 

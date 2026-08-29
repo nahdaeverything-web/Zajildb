@@ -23,6 +23,10 @@ OPT_IN = {
         '--live',
         'needs the internet and tests the DEPLOYED build, not the working tree',
     ),
+    'auth_live.py': (
+        '--live-auth',
+        'needs the internet and live credentials in the environment (see the file header)',
+    ),
 }
 
 LOCAL = sorted(f for f in glob.glob(os.path.join(HERE, '*.py'))

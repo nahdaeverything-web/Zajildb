@@ -7,6 +7,7 @@
 //   db/oplog.js     the op log and tombstones
 //   db/records.js   the write boundary: birds, generic stores, media
 //   db/io.js        export, import, sharing, backups
+//   db/sync.js      accounts and the Supabase session
 //
 // This file adds NOTHING. It re-exports, and that is all it may ever do —
 // logic here would be logic outside the boundary the guards police.
@@ -106,10 +107,25 @@ export {
 } from './db/records.js';
 
 export {
+  SENSITIVE_SETTING_PREFIXES,
   autoBackup,
   dataURLToBlob,
   exportAll,
   exportBirdWithAncestry,
+  exportableSettings,
   importAll,
   listBackups,
 } from './db/io.js';
+
+export {
+  AUTH_SETTING_KEYS,
+  AuthError,
+  authHeaders,
+  authState,
+  ensureAccessToken,
+  isSignedIn,
+  refreshSession,
+  signIn,
+  signOut,
+  syncConfig,
+} from './db/sync.js';
