@@ -580,7 +580,10 @@ move.
   js/db/sync.js       NEW — push, pull, cursors, auth token handling
 ```
 
-All 44 current exports keep their names and signatures.
+All 45 current exports keep their names and signatures. (Design amendment,
+v1.9 Phase 1: the count was written as 44; the pre-split file exports 45. The
+number is now pinned by `tests/guards.test.js`, so it cannot drift again
+without a test failing.)
 
 ### The guards must be updated deliberately, in the same commit
 
@@ -588,14 +591,29 @@ Three guards key on the literal `js/db.js`:
 
 | Guard | Current allow | Becomes |
 |---|---|---|
-| no view writes to IndexedDB | `rel === 'js/db.js'` | `rel === 'js/db.js' \|\| rel.startsWith('js/db/')` |
+| no view writes to IndexedDB | `rel === 'js/db.js'` | `rel.startsWith('js/db/')` |
 | `logOp` never escapes | same | same |
 | no raw `oplog`/`tombstones` reads | same | same |
 
+**Design amendment (v1.9 Phase 1).** This table first read
+`rel === 'js/db.js' || rel.startsWith('js/db/')`, keeping the facade exempt.
+The tighter form above is what shipped. After the split the facade provably
+contains zero writes — it is re-exports and comment, asserted by a guard — so
+it needs no write privilege, and **privileges should track proof**. The facade
+is therefore removed from all three allow-lists: a stray `idbPut` in `js/db.js`
+now fails exactly as it would in a view.
+
+Note the remaining consequence: any file added under `js/db/` is exempt from
+all three. That is deliberate — the directory is the boundary now — and it is
+precisely why `js/db/sync.js` arrives with its **own** dedicated guard when it
+lands (`origin: 'sync'` must never reach `logOp`, §8 above) rather than leaning
+on these three.
+
 > **Every guard is re-proven to fire after the split**, by reintroducing each
-> violation in a view and confirming the failure — exactly as in v1.7 and v1.8.
-> A guard whose allow-list was widened without re-proving is a guard that may
-> now allow everything.
+> violation and confirming the failure — exactly as in v1.7 and v1.8. A guard
+> whose allow-list was changed without re-proving is a guard that may now allow
+> everything. Under the tightened form each of the three is proven twice: once
+> with the violation in a view, and once with it in the facade itself.
 
 ### The v1.8 enumeration matrix extends, it does not bend
 

@@ -12,14 +12,19 @@
 // A scan that cannot be made reliable is not loosened until it passes — it is
 // reported instead. See the note on newBird at the bottom.
 //
-// v1.9 WIDENED THREE ALLOW-LISTS from `js/db.js` to `js/db.js` OR `js/db/`,
-// because db.js became a facade over four modules and the write path moved
-// into that directory. A widened allow-list is a weakened guard unless it is
-// re-proven, so each of the three was re-checked by reintroducing its
-// violation in a view and confirming the failure. Note the consequence: ANY
-// file added under js/db/ is exempt from all three. That is deliberate — the
-// directory IS the boundary now — and it is why the sync layer arrives with
-// its own guard rather than relying on these.
+// v1.9 MOVED THREE ALLOW-LISTS from `js/db.js` to `js/db/` — note: to, not
+// also. db.js became a facade over four modules and the write path moved into
+// that directory, so the facade itself is no longer exempt. It provably
+// contains zero writes (the guard below asserts it is re-exports and comment),
+// and privileges should track proof: a stray idbPut in js/db.js now fails
+// exactly as it would in a view.
+//
+// A changed allow-list is a weakened guard unless it is re-proven, so each of
+// the three is proven TWICE — once with the violation in a view, once with it
+// in the facade. Note the remaining consequence: ANY file added under js/db/
+// is exempt from all three. That is deliberate — the directory IS the boundary
+// now — and it is why js/db/sync.js arrives with its own dedicated guard
+// (`origin: 'sync'` must never reach logOp) rather than relying on these.
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -33,11 +38,35 @@ import { checkIntegrity } from '../js/engine/integrity.js';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const JS = join(ROOT, 'js');
 
+/**
+ * Blank out `export { … } from '…'` statements, preserving line numbering.
+ *
+ * A re-export NAMES a symbol; it cannot call one. Without this the facade
+ * fails the very guards it exists to submit to — `export { idbPut, … } from
+ * './db/storage.js'` reads, to a text scan, exactly like a write. Blanking is
+ * not a loophole: there is no syntax that both matches this shape and executes
+ * anything. Lines are replaced rather than removed so a reported line number
+ * still points at the real line.
+ */
+function withoutReExports(src) {
+  const lines = src.split('\n');
+  let inBlock = false;
+  return lines.map((l) => {
+    if (inBlock) { if (/^\}\s*from\s*'[^']+';/.test(l)) inBlock = false; return ''; }
+    if (/^export\s*\{[^}]*\}\s*from\s*'[^']+';/.test(l)) return '';   // single line
+    if (/^export\s*\{\s*$/.test(l)) { inBlock = true; return ''; }      // block opener
+    return l;
+  }).join('\n');
+}
+
 function sources(dir = JS, out = []) {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
     if (statSync(p).isDirectory()) sources(p, out);
-    else if (name.endsWith('.js')) out.push({ path: p, rel: relative(ROOT, p), src: readFileSync(p, 'utf8') });
+    else if (name.endsWith('.js')) {
+      const src = readFileSync(p, 'utf8');
+      out.push({ path: p, rel: relative(ROOT, p), src, code: withoutReExports(src) });
+    }
   }
   return out;
 }
@@ -48,7 +77,7 @@ function scan(files, re, { allow = () => false } = {}) {
   const hits = [];
   for (const f of files) {
     if (allow(f)) continue;
-    f.src.split('\n').forEach((line, i) => {
+    (f.code ?? f.src).split('\n').forEach((line, i) => {
       if (re.test(line) && !/^\s*(\/\/|\*)/.test(line)) hits.push(`${f.rel}:${i + 1}  ${line.trim().slice(0, 90)}`);
     });
   }
@@ -66,7 +95,7 @@ test('guard: no view writes to IndexedDB directly', () => {
   // reads (idbGet/idbGetAll) are fine; WRITES must go through db.js so the
   // change event fires and the in-memory mirror stays in sync
   const hits = scan(FILES, /\bidbPut\b|\bidbDelete\b|\bidbClear\b/,
-    { allow: (f) => f.rel === 'js/db.js' || f.rel.startsWith('js/db/') });
+    { allow: (f) => f.rel.startsWith('js/db/') });
   assertEq(hits.length, 0,
     `writes must go through db.js (saveBird/Pairs.save/restoreMedia/…):\n  ${hits.join('\n  ')}`);
 });
@@ -75,7 +104,7 @@ test('guard: logOp never escapes js/db.js', () => {
   // The op log must be a faithful record of the WRITE PATH. A view writing to
   // it directly would log something that never went through saveBird, so the
   // log would stop matching what actually happened to the data.
-  const hits = scan(FILES, /\blogOp\b/, { allow: (f) => f.rel === 'js/db.js' || f.rel.startsWith('js/db/') });
+  const hits = scan(FILES, /\blogOp\b/, { allow: (f) => f.rel.startsWith('js/db/') });
   assertEq(hits.length, 0,
     `writes go through db.js, which logs them:\n  ${hits.join('\n  ')}`);
 });
@@ -86,7 +115,7 @@ test('guard: nothing reads oplog or tombstones raw outside js/db.js', () => {
   // arbitrary ops. Read through listOps()/getOpsSinceSeq() instead. Views have
   // no business reading either store directly in any case.
   const hits = scan(FILES, /idbGetAll\(\s*['"](oplog|tombstones)['"]/,
-    { allow: (f) => f.rel === 'js/db.js' || f.rel.startsWith('js/db/') });
+    { allow: (f) => f.rel.startsWith('js/db/') });
   assertEq(hits.length, 0,
     `use listOps() / getOpsSinceSeq(); the raw store is unordered:\n  ${hits.join('\n  ')}`);
 });
