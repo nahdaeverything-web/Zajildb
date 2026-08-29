@@ -240,6 +240,33 @@ with sync_playwright() as p:
           cas2['chickSire'] == cas['sireId'], str(cas2['chickSire']))
     check('...and no op is logged for any of it', cas2['opsAdded'] == 0, str(cas2['opsAdded']))
 
+    # The transient dangling link above must not OUTLIVE the page. The origin
+    # logged its unlinks BEFORE the delete, so server_seq replays them in that
+    # order; once a full page has applied, the database is consistent again.
+    srv['rows'] = [
+        row(1, 'birds', cas['chickId'],
+            {'id': cas['chickId'], 'name': 'cascade-chick', 'sex': 'hen',
+             'sireId': None, 'damId': None, 'rings': [], 'status': 'stock', 'external': False},
+            updated_at='2026-08-29T14:59:00.000Z'),
+        row(2, 'birds', cas['sireId'], {'id': cas['sireId'], 'name': 'cascade-sire'},
+            deleted=True, updated_at='2026-08-29T15:00:00.000Z'),
+    ]
+    integ = run(page, """async (db) => {
+        const { checkIntegrity } = await import('./js/engine/integrity.js');
+        await db.setSetting('syncCursor', 0);
+        await db.pullAll();
+        const problems = checkIntegrity({
+            birds: db.allBirds(),
+            pairs: [...db.state.pairs.values()],
+            raceResults: [...db.state.raceResults.values()],
+            healthEvents: [...db.state.healthEvents.values()],
+            tombstones: await db.listTombstones(),
+        });
+        return { problems, count: problems.length };
+    }""")
+    check('after the FULL page applies, integrity is clean again',
+          integ['count'] == 0, str(integ['problems'])[:200])
+
     # ── 7. transport failures never move the cursor ──
     run(page, RESET)
     srv['rows'] = [row(1, 'birds', REMOTE_BIRD['id'], REMOTE_BIRD)]

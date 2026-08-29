@@ -448,6 +448,33 @@ Three differences, all deliberate:
   make the mirror diverge from the server invisibly, which is worse than
   holding a record the local rules dislike.
 
+### Design amendment (v1.9 Phase 4): a pulled delete is one row, not an operation
+
+`deleteBird` cascades. It clears the parent link on every offspring, removes
+race results, health events and pairs that name the bird, unlinks eggs that
+pointed at it, and deletes its media — because a LOCAL delete must leave the
+database referentially consistent.
+
+> **A pulled delete must NOT cascade.** It removes exactly the record its row
+> names, writes a tombstone, and stops.
+
+The origin device already ran its own cascade. Every record that cascade
+touched produced its own op and arrives as its own row, in `server_seq` order.
+Re-running the cascade here would delete records that are linked **on this
+device but not on the origin's** — records the origin never touched and never
+asked anyone to delete. That is data loss dressed as consistency.
+
+**The transient state, stated honestly.** Between the delete row and the
+origin's unlink rows, a parent link on this device may point at a bird that is
+already gone. This is real and it is visible to `checkIntegrity`. It resolves
+within the same pull page, because `server_seq` preserves the origin's order and
+the origin logged the unlinks *before* the delete. The pull loop applies a page
+in that order, so the window is the width of one page, not one row — and the
+suite asserts that once a FULL page has applied, integrity is clean.
+
+The same reasoning governs `media`: the origin's cascade deleted each media row
+individually and each arrives as its own row.
+
 ### Tombstone and resurrection semantics: identical to v1.8 merge-import
 
 A pulled row with `deleted = true` deletes locally **and writes a tombstone**.
