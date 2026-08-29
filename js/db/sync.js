@@ -28,6 +28,7 @@ import {
   state, setSetting, idbGet, idbGetAll, idbDelete, nowISO, allBirds, emitChange,
 } from './storage.js';
 import { findDuplicateRings } from '../engine/rings.js';
+import { toISO } from '../dates.js';
 import { getOpsSinceSeq, logOp, markOpsSuperseded } from './oplog.js';
 import { applySyncPut, applySyncDelete } from './records.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../sync-config.js';
@@ -626,6 +627,12 @@ async function fetchPage(cursor, { allowRefresh = true } = {}) {
   let rows = [];
   try { rows = JSON.parse(text); } catch { rows = []; }
   if (!Array.isArray(rows)) rows = [];
+  // THE ONE PLACE server timestamps enter the app. Normalised here so every
+  // comparison downstream — the conflict rule, tombstone comparison, export
+  // merging — sees a single spelling. Postgres writes `+00:00` where nowISO()
+  // writes `Z`; the same instant would otherwise compare unequal, and two
+  // devices would reach opposite verdicts about the same conflict.
+  rows = rows.map((r) => (r && r.updated_at ? { ...r, updated_at: toISO(r.updated_at) } : r));
   return { kind: 'ok', rows, status: res.status, body: null };
 }
 

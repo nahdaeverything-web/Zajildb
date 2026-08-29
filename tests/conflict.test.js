@@ -5,6 +5,7 @@
 
 import { test, assert, assertEq } from './harness.js';
 import { remoteWins } from '../js/db.js';
+import { toISO } from '../js/dates.js';
 
 const row = (at, device = 'device-remote') => ({ updated_at: at, device_id: device });
 const local = (at, deviceId = 'device-local') => ({ at, deviceId });
@@ -69,4 +70,49 @@ test('conflict: ISO strings compare correctly as strings', () => {
     assertEq(remoteWins(row(later), local(earlier)), true, `${later} should beat ${earlier}`);
     assertEq(remoteWins(row(earlier), local(later)), false, `${earlier} should lose to ${later}`);
   }
+});
+
+// --------------------------------------------------- timestamp normalisation
+
+test('conflict: Postgres and nowISO() spell the same instant differently', () => {
+  // The bug this exists for. Postgres serialises timestamptz as `+00:00`;
+  // nowISO() produces `.000Z`. Same instant, and `+` (0x2B) sorts BEFORE `.`
+  // (0x2E) — so an un-normalised comparison makes each device prefer its own
+  // copy, and two devices reach OPPOSITE verdicts about one conflict.
+  const server = '2026-08-29T12:00:00+00:00';
+  const local = '2026-08-29T12:00:00.000Z';
+  assertEq(Date.parse(server), Date.parse(local), 'these must be the same instant');
+  assert(server < local, 'the raw strings really do compare unequal — that is the trap');
+  assertEq(toISO(server), local, 'normalisation must make them identical');
+});
+
+test('conflict: normalisation makes cross-format comparison symmetric', () => {
+  // The property the same-format symmetry test could not see.
+  const at = '2026-08-29T12:00:00.000Z';
+  const serverForm = '2026-08-29T12:00:00+00:00';
+  const xWins = remoteWins({ updated_at: toISO(serverForm), device_id: 'bbb' }, { at, deviceId: 'aaa' });
+  const yWins = remoteWins({ updated_at: toISO(at), device_id: 'aaa' }, { at: toISO(serverForm), deviceId: 'bbb' });
+  assert(xWins !== yWins, `both devices claimed the same outcome: ${xWins} / ${yWins}`);
+  assertEq(xWins, true, 'with equal instants the greater deviceId must win, not whoever is local');
+});
+
+test('conflict: toISO normalises every shape Postgres can return', () => {
+  const cases = [
+    ['2026-08-29T12:00:00+00:00', '2026-08-29T12:00:00.000Z'],
+    ['2026-08-29T12:00:00.123+00:00', '2026-08-29T12:00:00.123Z'],
+    ['2026-08-29T12:00:00Z', '2026-08-29T12:00:00.000Z'],
+    ['2026-08-29T15:00:00+03:00', '2026-08-29T12:00:00.000Z'],   // an offset, not UTC
+    ['2026-08-29T12:00:00.000Z', '2026-08-29T12:00:00.000Z'],    // already canonical
+  ];
+  for (const [input, expected] of cases) {
+    assertEq(toISO(input), expected, `${input} should normalise to ${expected}`);
+  }
+});
+
+test('conflict: toISO leaves nonsense alone rather than inventing a date', () => {
+  // A comparison against nonsense should look wrong, not plausible.
+  assertEq(toISO('not-a-date'), 'not-a-date');
+  assertEq(toISO(''), '');
+  assertEq(toISO(null), '');
+  assertEq(toISO(undefined), '');
 });

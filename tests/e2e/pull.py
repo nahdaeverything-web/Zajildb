@@ -385,6 +385,47 @@ with sync_playwright() as p:
     check('every LATER sync pulls before it pushes', later['firstLogin'] is False and
           methods2 and methods2[0] == 'GET' and 'POST' in methods2, str(methods2[:4]))
 
+    # ── 12b. SERVER TIMESTAMP FORMAT ──
+    # Postgres serialises timestamptz as `+00:00`; nowISO() writes `.000Z`.
+    # Same instant, but `+` sorts before `.`, so an un-normalised comparison
+    # makes each device prefer its own copy and two devices reach opposite
+    # verdicts. Rows are normalised on arrival; assert that nothing downstream
+    # ever sees the server's spelling.
+    run(page, RESET)
+    srv['rows'] = [row(1, 'birds', 'pgfmt-0001',
+                       {**REMOTE_BIRD, 'id': 'pgfmt-0001', 'name': 'pg-format'},
+                       updated_at='2026-08-29T12:00:00+00:00'),
+                   row(2, 'birds', 'pgfmt-0002', {'id': 'pgfmt-0002', 'name': 'gone'},
+                       deleted=True, updated_at='2026-08-29T13:00:00+00:00')]
+    fmt = run(page, """async (db) => {
+        await db.pullAll();
+        const tombs = await db.listTombstones();
+        const t = tombs.find(x => x.recordId === 'pgfmt-0002') || null;
+        return { applied: db.getBird('pgfmt-0001') !== null, tombAt: t && t.at };
+    }""")
+    check('a row in the server\'s timestamp format still applies', fmt['applied'] is True, str(fmt))
+    check('a tombstone from a pulled delete is stored in the CANONICAL form',
+          fmt['tombAt'] == '2026-08-29T13:00:00.000Z',
+          f"stored {fmt['tombAt']!r} — the server's spelling must not leak into local state")
+
+    # and the comparison it feeds must now be format-blind: a local tombstone at
+    # the SAME INSTANT as the incoming row, written the local way
+    run(page, RESET)
+    srv['rows'] = [row(5, 'birds', 'pgfmt-0003',
+                       {**REMOTE_BIRD, 'id': 'pgfmt-0003', 'name': 'tie-instant'},
+                       updated_at='2026-08-29T12:00:00+00:00')]
+    tie = run(page, """async (db) => {
+        await db.idbPut('tombstones', { id: 'birds:pgfmt-0003', store: 'birds',
+            recordId: 'pgfmt-0003', at: '2026-08-29T12:00:00.000Z', deviceId: 'me', seq: 1 });
+        await db.pullOnce();
+        const tombs = await db.listTombstones();
+        return { present: db.getBird('pgfmt-0003') !== null,
+                 tombKept: tombs.some(x => x.recordId === 'pgfmt-0003') };
+    }""")
+    check('a tombstone at the SAME INSTANT does not beat the row on spelling alone',
+          tie['present'] is True and tie['tombKept'] is False,
+          'the tombstone is not strictly newer, so the record applies and the tombstone clears')
+
     # ── 13. still inert on an unconfigured build ──
     unc = run(page, """async (db) => {
         const saved = globalThis.ZAJIL_SYNC_CONFIG;

@@ -196,8 +196,16 @@ with sync_playwright() as p:
           lww['stored'] == 'NEWER',
           f"the server kept {lww['stored']!r}; without the §4 trigger guard a stale device "
           f"overwrites fresher data simply by pushing")
-    check('...and keeps the winner\'s timestamp', lww['storedAt'] == '2026-08-29T12:00:00.000Z',
-          str(lww['storedAt']))
+    # Compared as an INSTANT, not as a string: Postgres returns timestamptz as
+    # `+00:00` where the client writes `.000Z`. Asserting on the spelling would
+    # be asserting on a serialisation detail rather than on the value.
+    from datetime import datetime
+    def instant(x):
+        try: return datetime.fromisoformat(str(x).replace('Z', '+00:00')).timestamp()
+        except Exception: return None
+    check("...and keeps the winner's timestamp",
+          instant(lww['storedAt']) == instant('2026-08-29T12:00:00.000Z'),
+          f"{lww['storedAt']!r} is not the same instant as 2026-08-29T12:00:00Z")
     check('...while server_seq still advances, so the loser re-pulls the winner',
           (lww['seqAdvanced'] or 0) > 0, str(lww['seqAdvanced']))
 

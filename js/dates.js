@@ -51,3 +51,29 @@ export function parseLocalDate(iso) {
   if (typeof iso !== 'string' || !iso) return new Date(NaN);
   return new Date(iso);
 }
+
+/**
+ * Normalise any ISO-8601 timestamp to the exact form `nowISO()` produces.
+ *
+ * WHY THIS EXISTS. Every timestamp comparison in sync is lexicographic on ISO
+ * strings, which is only valid while both sides are written the same way.
+ * Postgres serialises `timestamptz` as `2026-08-29T12:00:00+00:00`; `nowISO()`
+ * produces `2026-08-29T12:00:00.000Z`. Those are the SAME INSTANT, and `+`
+ * (0x2B) sorts before `.` (0x2E) — so a pulled row and a local op describing
+ * the same moment compare as unequal, and each device concludes that ITS OWN
+ * copy is the later one. Two devices then reach opposite verdicts about the
+ * same conflict and never converge.
+ *
+ * So server timestamps are normalised on arrival and nothing downstream — the
+ * conflict rule, tombstone comparison, export merging — has to know that more
+ * than one spelling exists.
+ *
+ * An unparseable value is returned unchanged rather than turned into a
+ * fabricated date: a comparison against nonsense should look wrong, not
+ * plausible.
+ */
+export function toISO(value) {
+  if (!value) return '';
+  const t = Date.parse(value);
+  return Number.isNaN(t) ? String(value) : new Date(t).toISOString();
+}
