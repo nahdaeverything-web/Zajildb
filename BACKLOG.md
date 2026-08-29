@@ -7,8 +7,9 @@ were never verified (that run hit a limit), so this list is thorough but not
 exhaustive.
 
 **20 open** (0 high · 10 medium · 10 low) ·
-**13 closed in v1.7** · **0 closed in v1.8** ·
-plus **3 open decisions** and **1 planned item** below.
+**13 closed in v1.7** · **0 closed in v1.8** · **0 closed in v1.9** ·
+plus **3 open decisions**, **4 planned items**, and a **release checklist**
+below.
 
 Nothing open is a crash or a blocker. Severity is the auditor's and reflects
 user impact, not effort.
@@ -24,28 +25,150 @@ produced these findings. It is recorded here for completeness only:
 > merge-importing an older export. Closed by `b9d2f53` (tombstones + the import
 > guard). The one user-visible behaviour change in that release.
 
+**v1.9 closed nothing from this list either, and for the same reason.** It was
+a sync release: auth, push, pull, conflicts, and the status UI. It did close
+the one **planned** item (P1, the `db.js` split) and it fixed several defects
+of its own making — but none of those were audit findings, so every item below
+survives untouched. Recorded for completeness:
+
+> **Found and fixed inside v1.9, not from this backlog** — the migration script
+> was incomplete twice (a missing sequence grant, then a missing last-write-wins
+> guard), a `4xx` was treated as a poison record and would have discarded the
+> whole push queue, server and client spelled the same instant differently so
+> two devices reached opposite verdicts about one conflict, and the sync error
+> writer restarted the silence window on every cycle so a persistent failure
+> never surfaced. Each is written up in HANDOFF §15.12 with what it cost.
+
 ---
 
 ## Planned work
 
 Not debt — a decision already taken, recorded so it is not rediscovered.
 
-### P1. Split `js/db.js` at v1.9
+### P1. Split `js/db.js` at v1.9 — DONE in v1.9
 
-`db.js` is **866 lines** (562 at v1.7) and now holds the IndexedDB layer, the
-in-memory mirror, validation, the op log, tombstones, provenance,
-export/import and backups. That is a structural signal, not a defect — nothing
-is wrong with it today.
+Closed by `dbdc57d` (the split) and `d2bfe41` (the guard amendment).
 
-The reason to plan rather than drift into it: **every guard test keys on
-"outside `js/db.js`"** — the `idbPut`/`idbDelete` write guard, the `logOp`
-guard, and the raw `oplog`/`tombstones` read guard. Splitting the file means
-updating those allow-lists deliberately, rather than finding them silently
-broken or, worse, quietly weakened to make a build pass.
+`db.js` is now a **facade**: comment and re-export, nothing else, over
+`db/storage.js`, `db/oplog.js`, `db/records.js`, `db/io.js` and `db/sync.js`.
+The split was mechanical — of 59 top-level blocks, 55 moved byte-identical and
+4 differ only by a prepended `export` — and the browser suite passed unchanged,
+suite for suite.
 
-A likely shape: `db/storage.js` (IndexedDB + the in-memory mirror),
-`db/sync.js` (op log, tombstones, seq), `db/io.js` (export/import/backups),
-with `db.js` re-exporting so no caller has to move. See HANDOFF §15.
+The concern that prompted the plan was exactly right: the three guards keying
+on "outside `js/db.js`" had to be updated deliberately. They were, and then
+**tightened** rather than merely widened — they now exempt `js/db/` and *not*
+the facade, because after the split `js/db.js` provably contains zero writes.
+Tightening them immediately exposed a defect in the scan itself: the facade
+re-exports `idbPut`/`idbDelete`/`idbClear` by name, and a bare-identifier scan
+flagged its own re-export list. See HANDOFF §15.1.
+
+### P2. Blob sync — v1.9.x
+
+v1.9 syncs media **metadata** but not the bytes (SYNC-DESIGN §7). A device can
+hold a media row whose blob lives on another device; the gallery says so
+("الصورة على جهاز آخر") rather than showing a broken image.
+
+Deferred deliberately, not overlooked: blobs are large and slow on the
+connections this product targets, Supabase Storage needs its own
+upload/download state machine with resumability, and the spike's storage proof
+covers ownership rather than transfer of many megabytes over a weak link. The
+design is already proven in SPIKE §6 — a private bucket with path-prefix
+ownership `<user-id>/<media-id>`.
+
+### P3. Proactive token refresh — v1.9.x nice-to-have
+
+v1.9 refreshes **reactively**: use the access token, and on a `401` refresh once
+and retry. That costs one wasted request per hour of active use and needs no
+stored expiry and no timer to drift.
+
+Proactive refresh would avoid that request. It was considered and rejected for
+v1.9 on the grounds that the failure mode is a single retried request, which
+push idempotency absorbs — and that storing an expiry means a settings key
+holding a number the server already tells the truth about. Recorded so the
+trade-off is not re-litigated from scratch.
+
+### P4. Split `js/db/sync.js` — with the first v1.9.x item that touches it
+
+`sync.js` is **1,098 lines**: auth, push, pull, conflict resolution, status,
+backoff and the cycle loop. That is larger than `db.js` was (866) when P1 was
+raised — the v1.9 split solved the problem and the sync layer has recreated it.
+
+Nothing is wrong with it today, and this is deliberately **not** scheduled as
+work of its own. Splitting a file that nothing is about to change buys nothing
+and risks a regression in the most safety-critical code in the app. It is
+scheduled instead with **the first v1.9.x item that touches it** — P2 (blob
+sync) or P3 (proactive refresh), whichever lands first.
+
+A likely shape, following the seam the code already has:
+
+| Module | Content |
+|---|---|
+| `db/sync/auth.js` | config, session, refresh, the multi-instance re-read |
+| `db/sync/push.js` | op→row mapping, batching, the ack rule, bisection, compaction |
+| `db/sync/pull.js` | cursor, page fetch, apply, LWW resolution |
+| `db/sync/status.js` | state derivation, backoff, the cycle loop |
+| `js/db/sync.js` | facade over those, exactly as `js/db.js` is over `js/db/` |
+
+The precedent from P1 applies in full, and so does its warning: **the guards
+key on `js/db/`**, and `js/db/sync/` is not `js/db/` to a `startsWith` check.
+That allow-list must be updated deliberately and every guard re-proven to fire,
+or the split will quietly exempt the sync layer from the rules that police it.
+
+---
+
+## Release checklist — v1.9
+
+Carried here rather than in a chat message, because every item is a thing
+someone must do to a live system and none of them are code.
+
+### Before merge
+
+- [ ] **Nothing.** The branch is green: 138 node, 508 browser, and three live
+      suites against the dev project (auth 13, push 24, pull 12).
+
+### At release
+
+- [ ] **Create the production Supabase project from SYNC-DESIGN §1's script,
+      in one run.** That block is the complete current schema — sequence,
+      table, index, the trigger with both the advisory lock and the
+      last-write-wins guard, RLS, table grants, the **sequence usage grant**,
+      the revokes, and four policies. A guard asserts it stays complete. Do not
+      assemble it from the original plus the amendment sections; those are
+      history.
+- [ ] **Disable public signups** on the production project. This is what makes
+      "invite-only" true rather than aspirational (SPIKE §4f), and it is a
+      dashboard setting, not code.
+- [ ] **Run the verification queries**, then run `--live-push` against the new
+      project. Introspection proves objects exist, never that a write succeeds
+      — that lesson cost a debugging session on the dev project (HANDOFF
+      §15.12 item 1).
+- [ ] **Fill in `js/sync-config.js`**, or inject `globalThis.ZAJIL_SYNC_CONFIG`
+      at deploy. It ships empty on purpose: the publishable key is safe to
+      publish, but a live project URL in a public repository is a release
+      decision. Two guards will fail the build if the constants are filled in,
+      so **filling them in means updating that guard deliberately** — which is
+      the point.
+- [ ] **Prove the UI against the real project.** Every sync suite runs against
+      a stub; auth, push and pull are proven live, but nobody has yet driven
+      the status row and the المزامنة card against a real endpoint. This closes
+      in the first-user session after deploy, with config from the environment
+      per §5a. **It is the last gap between "tested" and "seen working."**
+- [ ] **A custom API domain** for the Supabase project, so the client is not
+      pinned to a generated hostname it cannot change later.
+- [ ] **Supabase Pro**, if the pilot needs the backup retention and the
+      resource floor a free project does not guarantee.
+- [ ] **Confirm backups.** The app's own `autoBackup` is a local safety net and
+      is deliberately not synced; server-side backups are a separate,
+      dashboard-level concern.
+
+### After deploy
+
+- [ ] Bump `main`'s tag and confirm the live service worker reports
+      `zajil-v1.9.0` (`version_display.py --live`).
+- [ ] Watch `syncAnomalies` on the first real devices. It is capped at 100 and
+      is a diagnostic surface, not a log — if it is filling up, something is
+      being refused and the الأدوات card names it.
 
 ---
 

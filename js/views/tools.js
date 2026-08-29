@@ -5,20 +5,21 @@
 import {
   state, setSetting, currentLoft, Lofts, exportAll, importAll,
   listBackups, autoBackup, allBirds, deleteBird, restoreBird, idbGetAll,
+  syncStatus, syncNow, setSyncEnabled, listSyncAnomalies,
 } from '../db.js';
 import { t, fmtDate, fmtNum, getLang, ringHTML } from '../i18n.js';
 import {
   h, clear, field, select, toast, confirmDialog, downloadJSON,
   birdLabelHTML, birdLabelText, undoToast,
 } from '../ui.js';
-import { ringKey } from '../engine/rings.js';
+import { findDuplicateRings } from '../engine/rings.js';
 import { todayISO } from '../dates.js';
 import { rerender } from '../app.js';
 
 export function renderTools() {
   const root = h('section', { class: 'view-tools' });
   root.append(h('div', { class: 'view-head' }, h('h1', {}, t('tools.title'))));
-  root.append(settingsCard(), loftCard(), duplicatesCard(), examplesCard(),
+  root.append(settingsCard(), syncCard(), loftCard(), duplicatesCard(), examplesCard(),
               backupCard(), scannerCard(), devCard(), aboutCard());
   return root;
 }
@@ -147,6 +148,80 @@ function backupCard() {
     backupsList);
 }
 
+
+// ---------------------------------------------------------------- sync card
+/**
+ * Everything about sync that is worth knowing, in one place (§10).
+ *
+ * The header says almost nothing on purpose; this is where the detail lives,
+ * for whoever is curious or debugging. The last error is shown IN FULL,
+ * including its status code — someone looking here wants the specifics, and
+ * hiding them behind friendly wording would waste the trip.
+ */
+function syncCard() {
+  const body = h('div', {});
+  const card = h('div', { class: 'card' }, h('h2', {}, t('sync.card')), body);
+
+  function refresh() {
+    clear(body);
+    const s = syncStatus();
+    if (s.state === 'hidden') {
+      body.append(h('p', { class: 'muted' },
+        s.email ? t('sync.notSetUp') : t('sync.signedOut')));
+      return;
+    }
+    const rows = h('div', { class: 'sync-facts' });
+    const fact = (label, value) => rows.append(
+      h('div', { class: 'row-inline' },
+        h('span', { class: 'muted small' }, label),
+        h('span', {}, value)));
+
+    fact(t('sync.account'), h('bdi', {}, s.email || '—'));
+    fact(t('sync.lastSync'), s.lastSyncAt ? fmtDate(s.lastSyncAt, { time: true }) : t('sync.never'));
+    fact(t('sync.pendingN'), fmtNum(s.pending));
+    body.append(rows);
+
+    if (s.error) {
+      // in full, status code and all — this is the page someone debugging opens
+      body.append(h('p', { class: 'warn' },
+        t('sync.lastError') + ': ' + t(s.error.key) +
+        (s.error.status ? ` (${s.error.status})` : '') +
+        (s.error.at ? ' — ' + fmtDate(s.error.at, { time: true }) : '')));
+    }
+
+    const anomalies = listSyncAnomalies();
+    if (anomalies.length) {
+      body.append(h('p', { class: 'warn' }, t('sync.anomalies', { n: anomalies.length })));
+      const list = h('ul', { class: 'small muted' });
+      for (const a of anomalies.slice(0, 10)) {
+        list.append(h('li', {}, `${a.store} · ${String(a.recordId || '').slice(0, 8)}… · ` +
+          `${a.status ?? '—'} ${String(a.body || '').slice(0, 80)}`));
+      }
+      body.append(list);
+    }
+
+    body.append(h('div', { class: 'row-inline' },
+      h('button', {
+        class: 'btn', disabled: s.state === 'syncing' ? '' : null,
+        onclick: async (e) => {
+          e.target.disabled = true;
+          await syncNow();
+          refresh();
+        },
+      }, t('sync.now')),
+      h('button', {
+        class: 'btn btn-small',
+        onclick: async () => {
+          await setSyncEnabled(state.settings.syncEnabled === false);
+          refresh();
+        },
+      }, state.settings.syncEnabled === false ? t('sync.toggleOn') : t('sync.toggleOff'))));
+  }
+
+  refresh();
+  return card;
+}
+
 // ------------------------------------------------------ duplicate finder
 /**
  * Birds sharing a normalised ring number. Real lofts do re-ring birds, so
@@ -164,16 +239,7 @@ function duplicatesCard() {
     for (const m of await idbGetAll('media')) {
       mediaCount.set(m.birdId, (mediaCount.get(m.birdId) || 0) + 1);
     }
-    const groups = new Map();
-    for (const b of allBirds()) {
-      for (const r of b.rings || []) {
-        const k = ringKey(r);
-        if (!k) continue;
-        if (!groups.has(k)) groups.set(k, { raw: r.raw, birds: [] });
-        if (!groups.get(k).birds.includes(b)) groups.get(k).birds.push(b);
-      }
-    }
-    const dupes = [...groups.values()].filter((g) => g.birds.length > 1);
+    const dupes = findDuplicateRings(allBirds());
     if (!dupes.length) {
       body.append(h('p', { class: 'muted' }, t('dup.none')));
       return;

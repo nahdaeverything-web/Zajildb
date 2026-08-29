@@ -72,7 +72,16 @@ with sync_playwright() as p:
           res['exists'] and res['current']=='other-device-loft', str(res))
     page.reload(); page.wait_for_timeout(900)
     page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/tools'); page.wait_for_timeout(1000)
-    loftname=page.evaluate("document.querySelectorAll('.card')[1].querySelector('input').value")
+    # Select the loft card by its HEADING, not by position. This read used to be
+    # `.card[1]`, which silently pointed at a different card the moment another
+    # was added above it — and the suite then died on a null rather than
+    # reporting anything useful.
+    loftname=page.evaluate("""() => {
+        const card = [...document.querySelectorAll('.card')]
+            .find(c => { const h = c.querySelector('h2'); return h && h.textContent.includes('اللوفت'); });
+        const input = card && card.querySelector('input');
+        return input ? input.value : null;
+    }""")
     check('loft settings card is usable, not blank', loftname=='لوفت آخر', repr(loftname))
 
     check('zero page errors', not errs, '; '.join(errs[:2]))

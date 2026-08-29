@@ -209,13 +209,23 @@ export function renderBirdDetail(id) {
     if (!gallery.isConnected) return;
     if (!items.length) { gallery.append(h('p', { class: 'muted' }, t('common.none'))); return; }
     for (const m of items) {
+      const fig = h('figure', { class: 'media-item' });
+      if (!m.blob) {
+        // A media row pulled from another device: the metadata syncs, the bytes
+        // do not (SYNC-DESIGN §7). The record is real and its content is
+        // elsewhere, so say so — createObjectURL(undefined) would throw, and a
+        // broken image would look like corruption rather than a known state.
+        fig.append(h('div', { class: 'muted media-elsewhere' },
+          m.kind === 'photo' ? '🖼 ' : '📄 ',
+          t(m.kind === 'photo' ? 'media.elsewhere' : 'media.elsewhereFile')));
+      } else {
       const url = URL.createObjectURL(m.blob);
       onViewTeardown(() => URL.revokeObjectURL(url));
-      const fig = h('figure', { class: 'media-item' });
       if (m.kind === 'photo' || (m.blob.type || '').startsWith('image/')) {
         fig.append(h('img', { src: url, alt: m.name || '', loading: 'lazy' }));
       } else {
         fig.append(h('a', { href: url, download: m.name || 'document', class: 'btn' }, '📄 ', h('bdi', {}, m.name || 'document')));
+      }
       }
       fig.append(h('figcaption', {},
         m.kind === 'photo' ? t('photo.' + (m.subtype || 'other')) : t('bird.documents'),

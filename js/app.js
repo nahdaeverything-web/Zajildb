@@ -1,7 +1,10 @@
 // app.js — boot, router, shell. Local-first: nothing here touches the network
 // except the (optional) service worker registration.
 
-import { initDB, state, setSetting, onChange, autoBackup } from './db.js';
+import {
+  initDB, state, setSetting, onChange, autoBackup, takeSyncDuplicateNotice,
+  syncStatus, refreshSyncStatus, startSyncLoop,
+} from './db.js';
 import { configure, t, getLang, fmtDate } from './i18n.js';
 import { h, clear, toast, runViewTeardowns, isModalOpen, onModalsClosed } from './ui.js';
 import { renderBirds } from './views/birds.js';
@@ -69,9 +72,43 @@ function renderShell() {
     ),
   );
   const banner = h('div', { id: 'banner' });
+  const syncRow = h('div', { id: 'sync-row', class: 'sync-row' });
   const main = h('main', { id: 'view', class: 'app-main' });
-  app.append(header, banner, main);
+  app.append(header, syncRow, banner, main);
+  renderSyncRow();
   return main;
+}
+
+/**
+ * One row, and usually nothing at all.
+ *
+ * Sync is infrastructure and should be almost invisible when it works (§10),
+ * so the row is EMPTY in the healthy case rather than displaying a reassuring
+ * tick nobody needs. It appears when there is something true to say: a cycle
+ * running, work queued, no signal, or a failure that has outlived the rounds
+ * which usually clear it.
+ */
+function renderSyncRow() {
+  const el = document.getElementById('sync-row');
+  if (!el) return;
+  clear(el);
+  const s = syncStatus();
+  if (s.state === 'hidden' || s.state === 'synced') {
+    el.className = 'sync-row';
+    return;                       // nothing to say, so say nothing
+  }
+  // OFFLINE IS NOT AN ERROR and is never styled as one. It is the normal
+  // condition this product was built for, and a red banner every time a
+  // fancier walks into a loft would train them to ignore warnings.
+  const TONE = { syncing: 'muted', pending: 'muted', offline: 'calm', off: 'muted', error: 'warn' };
+  el.className = 'sync-row sync-' + s.state + ' ' + (TONE[s.state] || 'muted');
+  const ICON = { syncing: '⟳', pending: '⌁', offline: '⚡', error: '⚠', off: '⏸' };
+  const label = s.state === 'pending' ? t('sync.pending', { n: s.pending }) : t('sync.' + s.state);
+  el.append(h('span', { class: 'sync-icon', 'aria-hidden': 'true' }, ICON[s.state] || ''),
+            h('span', { class: 'sync-label' }, label));
+  if (s.state === 'error') {
+    el.append(h('a', { class: 'sync-details', href: '#/tools' }, t('sync.details')));
+  }
 }
 
 function markActiveNav() {
@@ -158,6 +195,26 @@ function queueRefresh() {
 function wireAutoRefresh() {
   onChange((ev) => {
     if (!ev) return;
+    if (ev.type === 'sync-status') { renderSyncRow(); return; }
+    if (ev.type === 'sync-interrupt') {
+      // §11: only two things ever interrupt — a session that needs a password,
+      // and a rejection that needs us. Everything else lives in الأدوات for
+      // whoever is curious.
+      renderSyncRow();
+      toast(t(ev.key), { timeout: 10000 });
+      return;
+    }
+    if (ev.type === 'sync-complete') {
+      // Said ONCE, after the first sync on a device that had local data. Two
+      // devices that never synced generated different ids for the same
+      // physical bird, so both records now exist and both are valid. Only the
+      // fancier can say whether two records are one bird — the duplicate
+      // finder in الأدوات already groups them; this is what points at it.
+      takeSyncDuplicateNotice().then((n) => {
+        if (n) toast(t('sync.duplicates', { n }), { timeout: 8000 });
+      });
+      return;
+    }
     if (ev.type === 'import') { rerender(); return; }   // structural: rebuild the shell
     if (FORM_ROUTES.test(location.hash || '')) return;   // never clobber unsaved input
     if (isModalOpen()) { _refreshPending = true; return; }
@@ -187,6 +244,12 @@ async function boot() {
   window.addEventListener('hashchange', route);
   wireAutoRefresh();
   await route();
+
+  // Sync, if this device has it set up. Deliberately AFTER the first route:
+  // nothing about starting the app may wait on the network, and a device with
+  // no session or no configuration never reaches the loop at all.
+  refreshSyncStatus().catch(() => {});
+  startSyncLoop();
 
   // Interval auto-backup (internal snapshot; distinct from user exports).
   const last = state.settings.lastAutoBackup;

@@ -95,6 +95,50 @@ const dict = {
   'bird.externalShort': { ar: 'خارجي', en: 'External' },
   'bird.photos': { ar: 'الصور', en: 'Photos' },
   'bird.documents': { ar: 'الوثائق', en: 'Documents' },
+  // §7: media METADATA syncs, blobs do not. A row whose bytes live on another
+  // device is a real record with its content elsewhere — said plainly, rather
+  // than shown as a broken image.
+  'media.elsewhere': { ar: 'الصورة على جهاز آخر', en: 'Photo is on another device' },
+  // Shown ONCE, after the first sync on a device that had local data. Two
+  // devices that never synced generated different ids for the same physical
+  // bird, so both records now exist. Only the fancier can say whether two
+  // records are one bird — so they are told, and the tool is already there.
+  // ── §10 sync status. Five states, and offline is deliberately NOT one of the
+  // alarming ones: it is the normal condition this product was built for.
+  'sync.synced':   { ar: 'متزامن', en: 'Synced' },
+  'sync.syncing':  { ar: 'جارٍ المزامنة…', en: 'Syncing…' },
+  'sync.pending':  { ar: '{n} تغييرًا بانتظار المزامنة', en: '{n} change(s) waiting to sync' },
+  'sync.offline':  { ar: 'دون اتصال — يعمل محليًا', en: 'Offline — working locally' },
+  'sync.error':    { ar: 'تعذّرت المزامنة', en: 'Sync failed' },
+  'sync.off':      { ar: 'المزامنة متوقفة', en: 'Sync is off' },
+  'sync.details':  { ar: 'التفاصيل', en: 'Details' },
+
+  // الأدوات card
+  'sync.card':       { ar: 'المزامنة', en: 'Sync' },
+  'sync.account':    { ar: 'الحساب', en: 'Account' },
+  'sync.lastSync':   { ar: 'آخر مزامنة', en: 'Last sync' },
+  'sync.never':      { ar: 'لم تتم بعد', en: 'Not yet' },
+  'sync.pendingN':   { ar: 'بانتظار المزامنة', en: 'Waiting to sync' },
+  'sync.now':        { ar: 'مزامنة الآن', en: 'Sync now' },
+  'sync.toggleOn':   { ar: 'تشغيل المزامنة', en: 'Turn sync on' },
+  'sync.toggleOff':  { ar: 'إيقاف المزامنة', en: 'Turn sync off' },
+  'sync.lastError':  { ar: 'آخر خطأ', en: 'Last error' },
+  'sync.signedOut':  { ar: 'غير مسجّل الدخول', en: 'Not signed in' },
+  'sync.notSetUp':   { ar: 'المزامنة غير مهيأة على هذا الجهاز', en: 'Sync is not set up on this device' },
+  'sync.anomalies':  { ar: 'سجلات لم يقبلها الخادم: {n}', en: 'Records the server refused: {n}' },
+
+  // the two things that interrupt, and nothing else
+  'sync.err.session':  { ar: 'انتهت الجلسة — سجّل الدخول من جديد', en: 'Session expired — please sign in again' },
+  'sync.err.rejected': { ar: 'رفض الخادم المزامنة — تحقق من الأدوات', en: 'The server refused the sync — see Tools' },
+  'sync.err.short':    { ar: 'لم تُقبل بعض السجلات — تحقق من الأدوات', en: 'Some records were not accepted — see Tools' },
+  'sync.err.network':  { ar: 'تعذّر الاتصال — سنحاول تلقائيًا', en: 'Could not connect — we will retry automatically' },
+  'sync.err.config':   { ar: 'المزامنة غير مهيأة', en: 'Sync is not configured' },
+
+  'sync.duplicates': {
+    ar: 'تمت المزامنة. وُجدت {n} حلقة مكررة — راجعها.',
+    en: 'Sync complete. Found {n} duplicate ring(s) — please review.',
+  },
+  'media.elsewhereFile': { ar: 'الملف على جهاز آخر', en: 'File is on another device' },
   'bird.addNote': { ar: 'إضافة ملاحظة', en: 'Add note' },
   'bird.addPhoto': { ar: 'إضافة صورة', en: 'Add photo' },
   'bird.addDocument': { ar: 'إضافة وثيقة', en: 'Add document' },

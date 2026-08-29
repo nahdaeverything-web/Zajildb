@@ -11,23 +11,62 @@
 //
 // A scan that cannot be made reliable is not loosened until it passes — it is
 // reported instead. See the note on newBird at the bottom.
+//
+// v1.9 MOVED THREE ALLOW-LISTS from `js/db.js` to `js/db/` — note: to, not
+// also. db.js became a facade over four modules and the write path moved into
+// that directory, so the facade itself is no longer exempt. It provably
+// contains zero writes (the guard below asserts it is re-exports and comment),
+// and privileges should track proof: a stray idbPut in js/db.js now fails
+// exactly as it would in a view.
+//
+// A changed allow-list is a weakened guard unless it is re-proven, so each of
+// the three is proven TWICE — once with the violation in a view, once with it
+// in the facade. Note the remaining consequence: ANY file added under js/db/
+// is exempt from all three. That is deliberate — the directory IS the boundary
+// now — and it is why js/db/sync.js arrives with its own dedicated guard
+// (`origin: 'sync'` must never reach logOp) rather than relying on these.
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { test, assert, assertEq } from './harness.js';
+import * as db from '../js/db.js';
 import { newBird, REFERENCE_STATUS } from '../js/db.js';
 import { checkIntegrity } from '../js/engine/integrity.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const JS = join(ROOT, 'js');
 
+/**
+ * Blank out `export { … } from '…'` statements, preserving line numbering.
+ *
+ * A re-export NAMES a symbol; it cannot call one. Without this the facade
+ * fails the very guards it exists to submit to — `export { idbPut, … } from
+ * './db/storage.js'` reads, to a text scan, exactly like a write. Blanking is
+ * not a loophole: there is no syntax that both matches this shape and executes
+ * anything. Lines are replaced rather than removed so a reported line number
+ * still points at the real line.
+ */
+function withoutReExports(src) {
+  const lines = src.split('\n');
+  let inBlock = false;
+  return lines.map((l) => {
+    if (inBlock) { if (/^\}\s*from\s*'[^']+';/.test(l)) inBlock = false; return ''; }
+    if (/^export\s*\{[^}]*\}\s*from\s*'[^']+';/.test(l)) return '';   // single line
+    if (/^export\s*\{\s*$/.test(l)) { inBlock = true; return ''; }      // block opener
+    return l;
+  }).join('\n');
+}
+
 function sources(dir = JS, out = []) {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
     if (statSync(p).isDirectory()) sources(p, out);
-    else if (name.endsWith('.js')) out.push({ path: p, rel: relative(ROOT, p), src: readFileSync(p, 'utf8') });
+    else if (name.endsWith('.js')) {
+      const src = readFileSync(p, 'utf8');
+      out.push({ path: p, rel: relative(ROOT, p), src, code: withoutReExports(src) });
+    }
   }
   return out;
 }
@@ -38,7 +77,7 @@ function scan(files, re, { allow = () => false } = {}) {
   const hits = [];
   for (const f of files) {
     if (allow(f)) continue;
-    f.src.split('\n').forEach((line, i) => {
+    (f.code ?? f.src).split('\n').forEach((line, i) => {
       if (re.test(line) && !/^\s*(\/\/|\*)/.test(line)) hits.push(`${f.rel}:${i + 1}  ${line.trim().slice(0, 90)}`);
     });
   }
@@ -56,7 +95,7 @@ test('guard: no view writes to IndexedDB directly', () => {
   // reads (idbGet/idbGetAll) are fine; WRITES must go through db.js so the
   // change event fires and the in-memory mirror stays in sync
   const hits = scan(FILES, /\bidbPut\b|\bidbDelete\b|\bidbClear\b/,
-    { allow: (f) => f.rel === 'js/db.js' });
+    { allow: (f) => f.rel.startsWith('js/db/') });
   assertEq(hits.length, 0,
     `writes must go through db.js (saveBird/Pairs.save/restoreMedia/…):\n  ${hits.join('\n  ')}`);
 });
@@ -65,7 +104,7 @@ test('guard: logOp never escapes js/db.js', () => {
   // The op log must be a faithful record of the WRITE PATH. A view writing to
   // it directly would log something that never went through saveBird, so the
   // log would stop matching what actually happened to the data.
-  const hits = scan(FILES, /\blogOp\b/, { allow: (f) => f.rel === 'js/db.js' });
+  const hits = scan(FILES, /\blogOp\b/, { allow: (f) => f.rel.startsWith('js/db/') });
   assertEq(hits.length, 0,
     `writes go through db.js, which logs them:\n  ${hits.join('\n  ')}`);
 });
@@ -76,7 +115,7 @@ test('guard: nothing reads oplog or tombstones raw outside js/db.js', () => {
   // arbitrary ops. Read through listOps()/getOpsSinceSeq() instead. Views have
   // no business reading either store directly in any case.
   const hits = scan(FILES, /idbGetAll\(\s*['"](oplog|tombstones)['"]/,
-    { allow: (f) => f.rel === 'js/db.js' });
+    { allow: (f) => f.rel.startsWith('js/db/') });
   assertEq(hits.length, 0,
     `use listOps() / getOpsSinceSeq(); the raw store is unordered:\n  ${hits.join('\n  ')}`);
 });
@@ -138,6 +177,182 @@ test('guard: every app module is precached, or offline will break', () => {
   const notListed = FILES.map((f) => f.rel).filter((rel) => !sw.includes(`'./${rel}'`));
   assertEq(notListed.length, 0,
     `add these to the SHELL list in sw.js:\n  ${notListed.join('\n  ')}`);
+});
+
+// ------------------------------------------------------------------- the facade
+
+// The public API of the db layer, pinned. db.js was split into four modules in
+// v1.9; this list is what "no view changed a single import" MEANS. A name may
+// be added here deliberately, but one must never go missing by accident — a
+// dropped re-export is invisible until a view calls it at runtime.
+const FACADE = [
+  'AUTH_SETTING_KEYS', 'AuthError', 'BACKOFF_MS', 'Health', 'Lofts', 'OPLOG_KEEP',
+  'PULL_PAGE', 'PUSH_BATCH', 'Pairs', 'REFERENCE_STATUS', 'Races',
+  'SENSITIVE_SETTING_PREFIXES', 'SOFT_FAIL_WINDOW_MS', 'STORES', 'SYNC_STORES',
+  'ValidationError', 'addMedia', 'allBirds', 'applySyncDelete', 'applySyncPut', 'authHeaders',
+  'authState', 'autoBackup', 'backoffDelay', 'checkBird', 'collapseOps', 'currentLoft',
+  'dataURLToBlob', 'deleteBird', 'deleteMedia', 'diffFields', 'duplicateRingCount',
+  'emitChange', 'enqueueFirstSyncOps', 'ensureAccessToken', 'exportAll',
+  'exportBirdWithAncestry', 'exportableSettings', 'getBird', 'getOpsSinceSeq', 'getTombstone',
+  'hasEverSynced', 'idbClear', 'idbDelete', 'idbGet', 'idbGetAll', 'idbPut', 'importAll',
+  'initDB', 'isSignedIn', 'listBackups', 'listOps', 'listSyncAnomalies', 'listTombstones',
+  'loftStatuses', 'makeGeneric', 'markOpsSuperseded', 'mediaForBird', 'newBird', 'nowISO',
+  'onChange', 'opRecord', 'opToRow', 'openDB', 'pruneOplog', 'pullAll', 'pullOnce', 'pushAll',
+  'pushOnce', 'refreshSession', 'refreshSyncStatus', 'remoteWins', 'restoreBird',
+  'restoreMedia', 'runSyncCycle', 'saveBird', 'setSetting', 'setSyncEnabled', 'signIn',
+  'signOut', 'startSyncLoop', 'state', 'syncConfig', 'syncNow', 'syncOnce', 'syncStatus',
+  'takeSyncDuplicateNotice', 'uuid',
+];
+
+test('guard: js/db.js exports exactly the pinned public surface', () => {
+  const actual = Object.keys(db).sort();
+  const missing = FACADE.filter((n) => !actual.includes(n));
+  const extra = actual.filter((n) => !FACADE.includes(n));
+  assertEq(missing.length + extra.length, 0,
+    `the db facade drifted — missing: [${missing.join(', ')}] unexpected: [${extra.join(', ')}]`);
+  assertEq(actual.length, 88, `expected 88 exports, found ${actual.length}`);
+});
+
+test('guard: js/db.js stays a facade — re-exports only, no logic', () => {
+  const src = FILES.find((f) => f.rel === 'js/db.js').src;
+  const code = src.split('\n')
+    .map((l, i) => ({ n: i + 1, l }))
+    .filter(({ l }) => l.trim() && !/^\s*(\/\/|\*|\/\*)/.test(l));
+  // every non-comment line must belong to an `export { ... } from '...'` block
+  const offenders = code.filter(({ l }) =>
+    !/^export \{$/.test(l.trim()) && !/^\}? ?from '\.\/db\/\w+\.js';$/.test(l.trim()) &&
+    !/^[A-Za-z0-9_$]+,$/.test(l.trim()) && !/^export \{.*\} from '\.\/db\/\w+\.js';$/.test(l.trim()));
+  assertEq(offenders.length, 0,
+    `db.js must only re-export; move logic into js/db/:\n  ${offenders.map((o) => `js/db.js:${o.n}  ${o.l.trim()}`).join('\n  ')}`);
+});
+
+test('guard: the db modules form a DAG — storage <- oplog <- records <- io', () => {
+  // A cycle here would be a real bug, not a style point: ES modules would hand
+  // one of the two files a partly-initialised namespace, and which one depends
+  // on import order. The layering is also what keeps `storage` importable by
+  // anything without dragging the write path along.
+  const RANK = { 'js/db/storage.js': 0, 'js/db/oplog.js': 1, 'js/db/records.js': 2,
+                 'js/db/io.js': 3, 'js/db/sync.js': 4 };
+  const bad = [];
+  for (const f of FILES.filter((x) => RANK[x.rel] !== undefined)) {
+    for (const m of f.src.matchAll(/from '\.\/(\w+)\.js'/g)) {
+      const target = `js/db/${m[1]}.js`;
+      if (RANK[target] === undefined) { bad.push(`${f.rel} imports unknown sibling ${m[1]}.js`); continue; }
+      if (RANK[target] >= RANK[f.rel]) bad.push(`${f.rel} imports ${target} — wrong direction`);
+    }
+    if (/from '\.\.\/db\.js'/.test(f.src)) bad.push(`${f.rel} imports the facade — that is a cycle`);
+  }
+  assertEq(bad.length, 0, `the db layer must stay acyclic:\n  ${bad.join('\n  ')}`);
+});
+
+// ------------------------------------------------------- echo prevention (§8)
+
+test('guard: every logOp call names its origin as a STRING LITERAL', () => {
+  // The echo-prevention scan below reads the origin at each call site. A
+  // computed origin would be invisible to it, so the scan would silently stop
+  // guarding anything. Requiring a literal is what keeps it sound.
+  const hits = [];
+  for (const f of FILES) {
+    for (const m of f.src.matchAll(/(?<!function\s)logOp\(\s*\{[\s\S]*?\}\s*\)/g)) {
+      if (!/origin:\s*(['"])[a-z]+\1/.test(m[0])) {
+        hits.push(`${f.rel}  ${m[0].replace(/\s+/g, ' ').slice(0, 90)}`);
+      }
+    }
+  }
+  assertEq(hits.length, 0,
+    `origin must be a literal so the echo-prevention scan can see it:\n  ${hits.join('\n  ')}`);
+});
+
+test("guard: origin 'sync' never reaches logOp — echo prevention", () => {
+  // THE load-bearing invariant of the pull path, and it is one careless line
+  // from being broken: a pulled change that logged an op would be pushed
+  // straight back, and two devices would trade the same record forever.
+  // Asserted behaviourally too, in tests/e2e/pull.py.
+  const hits = [];
+  for (const f of FILES) {
+    for (const m of f.src.matchAll(/(?<!function\s)logOp\(\s*\{[\s\S]*?\}\s*\)/g)) {
+      if (/origin:\s*(['"])sync\1/.test(m[0])) {
+        hits.push(`${f.rel}  ${m[0].replace(/\s+/g, ' ').slice(0, 90)}`);
+      }
+    }
+  }
+  assertEq(hits.length, 0,
+    `a pulled change must log NO op, or the two devices echo forever:\n  ${hits.join('\n  ')}`);
+});
+
+test('guard: the sync-apply path neither logs an op nor stamps a record', () => {
+  // Stronger than reading origins: the apply functions must not REACH either
+  // primitive at all. stamp() would rewrite updatedAt and deviceId onto a
+  // record another device authored, corrupting LWW and falsifying the audit
+  // trail; logOp would echo.
+  const src = FILES.find((f) => f.rel === 'js/db/records.js').src;
+  const start = src.indexOf('export async function applySyncPut');
+  assert(start > 0, 'applySyncPut not found — has the sync-apply path moved?');
+  const region = src.slice(start);
+  const offenders = region.split('\n')
+    .map((line, i) => ({ line, n: i }))
+    .filter(({ line }) => !/^\s*(\/\/|\*)/.test(line))
+    .filter(({ line }) => /\blogOp\b/.test(line) || /(?<![A-Za-z_$])stamp\s*\(/.test(line));
+  assertEq(offenders.length, 0,
+    `a sync apply is not authorship — write the record verbatim:\n  ${offenders.map((o) => o.line.trim()).join('\n  ')}`);
+});
+
+test('guard: js/db/sync.js never writes a record itself', () => {
+  // The pull loop routes every write through the boundary in records.js so the
+  // mirror stays in step and views are told. A raw idbPut here would be a
+  // silent write: correct on disk, invisible in the app until a reload.
+  const src = FILES.find((f) => f.rel === 'js/db/sync.js').src;
+  const offenders = src.split('\n')
+    .map((line, n) => ({ line, n: n + 1 }))
+    .filter(({ line }) => !/^\s*(\/\/|\*)/.test(line))
+    .filter(({ line }) => /\bidbPut\s*\(\s*['"](birds|pairs|raceResults|healthEvents|lofts|media)['"]/.test(line));
+  assertEq(offenders.length, 0,
+    `route record writes through applySyncPut/applySyncDelete:\n  ${offenders.map((o) => `js/db/sync.js:${o.n}  ${o.line.trim()}`).join('\n  ')}`);
+});
+
+test('guard: the §1 migration script is the COMPLETE current schema', () => {
+  // The production project is created fresh at pre-pilot from this one block.
+  // Every correction found during implementation must be folded in IN PLACE —
+  // a schema assembled from an original plus a trail of amendment snippets is
+  // one missed paragraph away from a project that silently accepts nothing.
+  // Both of these were found the hard way, against a live server.
+  const doc = readFileSync(join(ROOT, 'docs', 'SYNC-DESIGN.md'), 'utf8');
+  const start = doc.indexOf('### Migration SQL');
+  assert(start > 0, 'the §1 migration section is missing');
+  const open = doc.indexOf('```sql', start);
+  assert(open > start, 'the §1 migration section has no sql block');
+  // search for the CLOSING fence after the opening one, not from the section
+  // start — otherwise the opening fence terminates its own slice
+  const script = doc.slice(open, doc.indexOf('\n```', open + 6));
+  const required = [
+    ['grant usage on sequence public.sync_server_seq to authenticated',
+     'without it every insert fails 403 and the table accepts nothing (Phase 3)'],
+    ["TG_OP = 'UPDATE'",
+     "without it a stale device overwrites fresher data by pushing (Phase 5)"],
+    ['pg_advisory_xact_lock',
+     'without it a sequence-gap race silently loses a change'],
+    ['enable row level security', 'without it every row is readable by every user'],
+  ];
+  const missing = required.filter(([needle]) => !script.includes(needle))
+    .map(([needle, why]) => `${needle}  — ${why}`);
+  assertEq(missing.length, 0,
+    `the migration script is not the current schema:\n  ${missing.join('\n  ')}`);
+});
+
+test('guard: only ONE place writes a sync error, so the silence window survives', () => {
+  // §11 measures the silent period from the FIRST failure in a run. Every
+  // writer must go through recordSyncError(), which preserves `since`. When
+  // push and pull each wrote this setting directly, the window restarted on
+  // every cycle and a rejection that had been failing for an hour still looked
+  // brand new — so it never surfaced, and the interruption never fired.
+  const src = FILES.find((f) => f.rel === 'js/db/sync.js').src;
+  const writes = src.split('\n')
+    .map((line, n) => ({ line, n: n + 1 }))
+    .filter(({ line }) => !/^\s*(\/\/|\*)/.test(line))
+    .filter(({ line }) => /setSetting\(\s*'lastSyncError'\s*,\s*\{/.test(line));
+  assertEq(writes.length, 1,
+    `a sync error must only be written by recordSyncError():\n  ${writes.map((w) => `js/db/sync.js:${w.n}  ${w.line.trim()}`).join('\n  ')}`);
+  assert(/async function recordSyncError\(/.test(src), 'recordSyncError() is missing');
 });
 
 // ---------------------------------------------------------------- data level

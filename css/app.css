@@ -371,3 +371,29 @@ body.modal-open { overflow: hidden; }
   .form-grid { grid-template-columns: 1fr; }
   h1 { font-size: 1.15rem; }
 }
+
+/* ── sync status row (SYNC-DESIGN §10) ───────────────────────────────────
+   Empty and invisible in the healthy case: sync is infrastructure and should
+   be almost unnoticeable when it works. OFFLINE IS NOT AN ERROR and gets a
+   calm tone, not the warning one — a red bar every time a fancier walks into
+   a loft would train them to ignore warnings. */
+.sync-row:empty { display: none; }
+.sync-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+  border-block-end: 1px solid var(--line);
+}
+.sync-row.muted { color: var(--muted); background: var(--surface); }
+/* calm, NOT warn: offline is the normal condition, not a fault */
+.sync-row.calm  { color: var(--muted); background: var(--surface); font-style: italic; }
+.sync-row.warn  { color: var(--warn-ink); background: var(--warn-bg); }
+.sync-row .sync-details { margin-inline-start: auto; }
+.sync-row.sync-syncing .sync-icon { animation: sync-spin 1.2s linear infinite; display: inline-block; }
+@keyframes sync-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .sync-row.sync-syncing .sync-icon { animation: none; }
+}
+.sync-facts .row-inline { justify-content: space-between; gap: 1rem; }
