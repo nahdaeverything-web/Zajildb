@@ -496,6 +496,75 @@ for one fancier editing their own bird on two devices it adds machinery to
 resolve a conflict that is nearly always "the same person edited the same bird
 twice, the later one is what they meant".
 
+### Design amendment (v1.9 Phase 5): where last-write-wins is enforced, and the cycle order
+
+§4 says to compare the ops' `at` timestamps. It did not say **who** compares
+them, and the answer turns out to constrain both the schema and the cycle order.
+
+**A client push is a blind upsert.** `POST` with `resolution=merge-duplicates`
+overwrites whatever is there. So a device that has been offline for months
+replaces fresher server data simply by pushing, and *no amount of client-side
+care can prevent it* — the client cannot see what it is about to overwrite.
+
+> **The server is the only place last-write-wins can be authoritative.** The
+> `server_seq` trigger gains a comparison: on UPDATE, if the incoming
+> `updated_at` is older — or equal with a lexicographically smaller `device_id`
+> — the existing row's body is kept. `server_seq` advances either way, so the
+> LOSER re-pulls the winner rather than sitting on a version the server refused.
+
+This was demonstrated, not assumed: with the guard removed from the test
+server, `tests/e2e/convergence.py` fails exactly two assertions — the stale
+device overwrites the fresh one, and the fresh device then pulls the stale copy
+back. With the guard, both pass.
+
+**Cycle order.** §6 mandates push-before-pull *on first login*, and that stands
+— local records must reach the server before anything can overwrite them. But
+generalising it to every cycle is wrong for the same reason as above: a push
+goes into a blind upsert, so it decides the outcome before any comparison
+happens.
+
+| Cycle | Order | Why |
+|---|---|---|
+| first login (`lastSyncAt` unset) | enqueue synthetic ops → **push** → pull | §6: local records must reach the server before remote rows arrive |
+| every later cycle | **pull** → resolve → push | §4 can only decide if the incoming row meets the local op *before* either is overwritten |
+
+Pulling first is safe precisely because of echo prevention (§3): a pulled record
+logs no op, so it can never be pushed back.
+
+**The loser is superseded, not deleted.** When an incoming row beats a local
+unpushed op, that op is marked `superseded` and push skips it — otherwise push
+would send the loser immediately afterwards and overwrite the version that just
+won. It stays in the log because §4 promises "the losing version remains in the
+op log", which is what makes a clock-skew mistake recoverable rather than fatal.
+
+#### The migration statement this needs
+
+```sql
+create or replace function public.sync_assign_server_seq()
+returns trigger language plpgsql as $$
+begin
+  perform pg_advisory_xact_lock(hashtext(new.owner::text));
+
+  -- §4 last-write-wins. A client push is a blind upsert, so this is the only
+  -- place the comparison can be authoritative.
+  if TG_OP = 'UPDATE' and (
+       new.updated_at < old.updated_at
+       or (new.updated_at = old.updated_at and new.device_id <= old.device_id)
+     ) then
+    new := old;                       -- keep the winner's body
+  end if;
+
+  -- Advances either way, so the LOSER re-pulls the winner rather than sitting
+  -- on a version the server rejected.
+  new.server_seq := nextval('public.sync_server_seq');
+  return new;
+end $$;
+```
+
+The tie-break matches the client's exactly — the lexicographically greater
+`device_id` wins — so both sides reach the same verdict without talking to each
+other. `tests/conflict.test.js` asserts that symmetry directly.
+
 ### The accepted imperfection: device clock skew
 
 LWW on a wall-clock timestamp is only as good as the clocks. A device set
