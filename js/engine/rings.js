@@ -45,3 +45,30 @@ export function ringKey(ring) {
     // Eastern Arabic digits typed by the user normalise to Western
     .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660));
 }
+
+/**
+ * Birds sharing a normalised ring number, grouped.
+ *
+ * Real lofts do re-ring birds, so a duplicate is a warning and never an error.
+ * Extracted from the الأدوات card in v1.9 because the post-first-sync notice
+ * needs the same answer: two devices that never synced generate DIFFERENT ids
+ * for the same physical bird, so the first sync can surface pairs that are one
+ * bird wearing two records. Only the user can say which — but they can only
+ * say it if they are told.
+ *
+ * @returns [{ key, raw, birds: [...] }] — groups of two or more, in the order
+ *   the rings were first seen, so the display is stable between runs.
+ */
+export function findDuplicateRings(birds) {
+  const groups = new Map();
+  for (const bird of birds || []) {
+    for (const ring of bird.rings || []) {
+      const key = ringKey(ring);
+      if (!key) continue;
+      if (!groups.has(key)) groups.set(key, { key, raw: ring.raw, birds: [] });
+      const group = groups.get(key);
+      if (!group.birds.includes(bird)) group.birds.push(bird);
+    }
+  }
+  return [...groups.values()].filter((g) => g.birds.length > 1);
+}

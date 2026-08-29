@@ -222,6 +222,11 @@ with sync_playwright() as p:
     cas = run(page, """async (db) => {
         const sire = await db.saveBird(db.newBird({ name: 'cascade-sire', sex: 'cock' }));
         const chick = await db.saveBird(db.newBird({ name: 'cascade-chick', sex: 'hen', sireId: sire.id }));
+        // Drop the ops these writes produced. This suite is about whether a
+        // pulled delete cascades; leaving unpushed ops here would instead
+        // exercise §4's conflict rule, which tests/e2e/convergence.py covers.
+        await db.idbClear('oplog');
+        await db.setSetting('opSeq', 0);
         return { sireId: sire.id, chickId: chick.id };
     }""")
     srv['rows'] = [row(1, 'birds', cas['sireId'], {'id': cas['sireId'], 'name': 'cascade-sire'},
@@ -355,13 +360,30 @@ with sync_playwright() as p:
           'جهاز آخر' in body or 'another device' in body, body[:120].replace('\n', ' '))
     check('no page error from a blob-less media row', not errs, '; '.join(errs[:2]))
 
-    # ── 12. a full cycle PUSHES BEFORE PULLING (§6) ──
+    # ── 12. CYCLE ORDER depends on whether this device has ever synced ──
+    # First login pushes first (§6): local records must reach the server before
+    # anything can overwrite them. The steady state pulls first, because that is
+    # the only ordering under which §4's last-write-wins decides anything — a
+    # push goes into a blind upsert and overwrites fresher data before any
+    # comparison happens.
     run(page, RESET); srv['requests'].clear(); srv['rows'] = []
-    run(page, """async (db) => { await db.saveBird(db.newBird({ name: 'order-test', sex: 'cock' })); }""")
-    run(page, "async (db) => await db.syncOnce()")
+    first = run(page, """async (db) => {
+        await db.setSetting('lastSyncAt', null);
+        await db.saveBird(db.newBird({ name: 'order-test', sex: 'cock' }));
+        return await db.syncOnce();
+    }""")
     methods = [m for m, _ in srv['requests']]
-    check('syncOnce pushes before it pulls',
+    check('a FIRST sync pushes before it pulls', first['firstLogin'] is True and
           methods and methods[0] == 'POST' and 'GET' in methods, str(methods[:4]))
+
+    srv['requests'].clear()
+    later = run(page, """async (db) => {
+        await db.saveBird(db.newBird({ name: 'order-test-2', sex: 'hen' }));
+        return await db.syncOnce();
+    }""")
+    methods2 = [m for m, _ in srv['requests']]
+    check('every LATER sync pulls before it pushes', later['firstLogin'] is False and
+          methods2 and methods2[0] == 'GET' and 'POST' in methods2, str(methods2[:4]))
 
     # ── 13. still inert on an unconfigured build ──
     unc = run(page, """async (db) => {

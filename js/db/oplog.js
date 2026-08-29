@@ -77,7 +77,7 @@ async function nextSeq() {
  * log directly, or the log stops being a faithful record of the write path.
  * Enforced by tests/guards.test.js.
  */
-export async function logOp({ origin, store, op, recordId, record, changed }) {
+export async function logOp({ origin, store, op, recordId, record, changed, at }) {
   const seq = await nextSeq();          // persisted before the op counts as logged
   await idbPut('oplog', {
     opId: uuid(),
@@ -88,7 +88,11 @@ export async function logOp({ origin, store, op, recordId, record, changed }) {
     // actor on this device, and back-filling an id would be a lie in the audit
     // trail (SYNC-DESIGN §5).
     actorId: state.settings.authUserId || null,
-    at: nowISO(),
+    // When the operation happened. Defaults to now; supplied explicitly only
+    // by the first-login synthetic ops, which carry each record's own
+    // `updatedAt` because that is what this device knew, as of when it knew it
+    // (SYNC-DESIGN §6).
+    at: at || nowISO(),
     origin,                             // 'user' | 'import' | 'restore'
     store,
     op,                                 // 'put' | 'delete'
@@ -110,6 +114,24 @@ export async function logOp({ origin, store, op, recordId, record, changed }) {
 export async function getOpsSinceSeq(since = 0) {
   const ops = await idbGetAll('oplog');
   return ops.filter((o) => o.seq > since).sort((a, b) => a.seq - b.seq);
+}
+
+/**
+ * Mark ops as superseded: they lost a conflict and must never be pushed.
+ *
+ * They are NOT deleted. §4 promises that "the losing version remains in the op
+ * log", which is what makes a clock-skew mistake recoverable rather than fatal
+ * — so the record stays and only its right to be pushed is withdrawn.
+ */
+export async function markOpsSuperseded(opIds) {
+  let marked = 0;
+  for (const opId of opIds || []) {
+    const op = await idbGet('oplog', opId);
+    if (!op || op.superseded) continue;
+    await idbPut('oplog', { ...op, superseded: true });
+    marked++;
+  }
+  return marked;
 }
 
 /** Every op, in sequence order. */

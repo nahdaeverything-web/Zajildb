@@ -190,14 +190,16 @@ const FACADE = [
   'PUSH_BATCH', 'Pairs', 'REFERENCE_STATUS', 'Races', 'SENSITIVE_SETTING_PREFIXES', 'STORES',
   'SYNC_STORES', 'ValidationError', 'addMedia', 'allBirds', 'applySyncDelete', 'applySyncPut',
   'authHeaders', 'authState', 'autoBackup', 'checkBird', 'collapseOps', 'currentLoft',
-  'dataURLToBlob', 'deleteBird', 'deleteMedia', 'diffFields', 'emitChange',
-  'ensureAccessToken', 'exportAll', 'exportBirdWithAncestry', 'exportableSettings', 'getBird',
-  'getOpsSinceSeq', 'getTombstone', 'idbClear', 'idbDelete', 'idbGet', 'idbGetAll', 'idbPut',
-  'importAll', 'initDB', 'isSignedIn', 'listBackups', 'listOps', 'listSyncAnomalies',
-  'listTombstones', 'loftStatuses', 'makeGeneric', 'mediaForBird', 'newBird', 'nowISO',
+  'dataURLToBlob', 'deleteBird', 'deleteMedia', 'diffFields', 'duplicateRingCount',
+  'emitChange', 'enqueueFirstSyncOps', 'ensureAccessToken', 'exportAll',
+  'exportBirdWithAncestry', 'exportableSettings', 'getBird', 'getOpsSinceSeq', 'getTombstone',
+  'hasEverSynced', 'idbClear', 'idbDelete', 'idbGet', 'idbGetAll', 'idbPut', 'importAll',
+  'initDB', 'isSignedIn', 'listBackups', 'listOps', 'listSyncAnomalies', 'listTombstones',
+  'loftStatuses', 'makeGeneric', 'markOpsSuperseded', 'mediaForBird', 'newBird', 'nowISO',
   'onChange', 'opRecord', 'opToRow', 'openDB', 'pruneOplog', 'pullAll', 'pullOnce', 'pushAll',
-  'pushOnce', 'refreshSession', 'restoreBird', 'restoreMedia', 'saveBird', 'setSetting',
-  'signIn', 'signOut', 'state', 'syncConfig', 'syncOnce', 'uuid',
+  'pushOnce', 'refreshSession', 'remoteWins', 'restoreBird', 'restoreMedia', 'saveBird',
+  'setSetting', 'signIn', 'signOut', 'state', 'syncConfig', 'syncOnce',
+  'takeSyncDuplicateNotice', 'uuid',
 ];
 
 test('guard: js/db.js exports exactly the pinned public surface', () => {
@@ -206,7 +208,7 @@ test('guard: js/db.js exports exactly the pinned public surface', () => {
   const extra = actual.filter((n) => !FACADE.includes(n));
   assertEq(missing.length + extra.length, 0,
     `the db facade drifted — missing: [${missing.join(', ')}] unexpected: [${extra.join(', ')}]`);
-  assertEq(actual.length, 73, `expected 73 exports, found ${actual.length}`);
+  assertEq(actual.length, 79, `expected 79 exports, found ${actual.length}`);
 });
 
 test('guard: js/db.js stays a facade — re-exports only, no logic', () => {

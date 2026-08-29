@@ -11,7 +11,7 @@ import {
   h, clear, field, select, toast, confirmDialog, downloadJSON,
   birdLabelHTML, birdLabelText, undoToast,
 } from '../ui.js';
-import { ringKey } from '../engine/rings.js';
+import { findDuplicateRings } from '../engine/rings.js';
 import { todayISO } from '../dates.js';
 import { rerender } from '../app.js';
 
@@ -164,16 +164,7 @@ function duplicatesCard() {
     for (const m of await idbGetAll('media')) {
       mediaCount.set(m.birdId, (mediaCount.get(m.birdId) || 0) + 1);
     }
-    const groups = new Map();
-    for (const b of allBirds()) {
-      for (const r of b.rings || []) {
-        const k = ringKey(r);
-        if (!k) continue;
-        if (!groups.has(k)) groups.set(k, { raw: r.raw, birds: [] });
-        if (!groups.get(k).birds.includes(b)) groups.get(k).birds.push(b);
-      }
-    }
-    const dupes = [...groups.values()].filter((g) => g.birds.length > 1);
+    const dupes = findDuplicateRings(allBirds());
     if (!dupes.length) {
       body.append(h('p', { class: 'muted' }, t('dup.none')));
       return;

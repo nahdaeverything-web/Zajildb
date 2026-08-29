@@ -99,6 +99,14 @@ const dict = {
   // device is a real record with its content elsewhere — said plainly, rather
   // than shown as a broken image.
   'media.elsewhere': { ar: 'الصورة على جهاز آخر', en: 'Photo is on another device' },
+  // Shown ONCE, after the first sync on a device that had local data. Two
+  // devices that never synced generated different ids for the same physical
+  // bird, so both records now exist. Only the fancier can say whether two
+  // records are one bird — so they are told, and the tool is already there.
+  'sync.duplicates': {
+    ar: 'تمت المزامنة. وُجدت {n} حلقة مكررة — راجعها.',
+    en: 'Sync complete. Found {n} duplicate ring(s) — please review.',
+  },
   'media.elsewhereFile': { ar: 'الملف على جهاز آخر', en: 'File is on another device' },
   'bird.addNote': { ar: 'إضافة ملاحظة', en: 'Add note' },
   'bird.addPhoto': { ar: 'إضافة صورة', en: 'Add photo' },

@@ -165,6 +165,42 @@ with sync_playwright() as p:
     check('no anomalies were recorded against the real server',
           run(page, "(db) => db.listSyncAnomalies().length") == 0)
 
+    # ── §4 LAST-WRITE-WINS, enforced server-side ──
+    # A client push is a blind upsert, so this is the only place the comparison
+    # can be authoritative. Push a record, then push the SAME record carrying an
+    # OLDER operation time, and assert the server kept the newer body.
+    lww = run(page, """async (db) => {
+        const { url } = db.syncConfig();
+        const id = crypto.randomUUID();
+        const post = (row) => fetch(`${url}/rest/v1/sync_records`, {
+            method: 'POST',
+            headers: { ...db.authHeaders(), 'Content-Type': 'application/json',
+                       Prefer: 'resolution=merge-duplicates,return=representation' },
+            body: JSON.stringify([row]),
+        });
+        const base = { store: 'birds', record_id: id, deleted: false,
+                       device_id: '11111111-1111-1111-1111-111111111111', op_seq: 1 };
+        await post({ ...base, data: { id, name: 'NEWER' }, updated_at: '2026-08-29T12:00:00.000Z' });
+        const r = await post({ ...base, data: { id, name: 'OLDER' }, updated_at: '2026-06-01T08:00:00.000Z' });
+        const echoed = await r.json();
+        const rows = await (await fetch(`${url}/rest/v1/sync_records?record_id=eq.${id}&select=*`,
+                                        { headers: db.authHeaders() })).json();
+        return { status: r.status, echoedCount: Array.isArray(echoed) ? echoed.length : 0,
+                 stored: (rows[0] && rows[0].data && rows[0].data.name) || null,
+                 storedAt: rows[0] && rows[0].updated_at,
+                 seqAdvanced: rows[0] && rows[0].server_seq };
+    }""")
+    check('a stale push is still ACKED — it echoes a row, so it is not mistaken for poison',
+          lww['echoedCount'] == 1, str(lww))
+    check('THE SERVER REFUSES THE STALE BODY — last-write-wins is authoritative',
+          lww['stored'] == 'NEWER',
+          f"the server kept {lww['stored']!r}; without the §4 trigger guard a stale device "
+          f"overwrites fresher data simply by pushing")
+    check('...and keeps the winner\'s timestamp', lww['storedAt'] == '2026-08-29T12:00:00.000Z',
+          str(lww['storedAt']))
+    check('...while server_seq still advances, so the loser re-pulls the winner',
+          (lww['seqAdvanced'] or 0) > 0, str(lww['seqAdvanced']))
+
     check('zero page errors', not errs, '; '.join(errs[:2]))
     br.close()
 

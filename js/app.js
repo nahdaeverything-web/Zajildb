@@ -1,7 +1,7 @@
 // app.js — boot, router, shell. Local-first: nothing here touches the network
 // except the (optional) service worker registration.
 
-import { initDB, state, setSetting, onChange, autoBackup } from './db.js';
+import { initDB, state, setSetting, onChange, autoBackup, takeSyncDuplicateNotice } from './db.js';
 import { configure, t, getLang, fmtDate } from './i18n.js';
 import { h, clear, toast, runViewTeardowns, isModalOpen, onModalsClosed } from './ui.js';
 import { renderBirds } from './views/birds.js';
@@ -158,6 +158,17 @@ function queueRefresh() {
 function wireAutoRefresh() {
   onChange((ev) => {
     if (!ev) return;
+    if (ev.type === 'sync-complete') {
+      // Said ONCE, after the first sync on a device that had local data. Two
+      // devices that never synced generated different ids for the same
+      // physical bird, so both records now exist and both are valid. Only the
+      // fancier can say whether two records are one bird — the duplicate
+      // finder in الأدوات already groups them; this is what points at it.
+      takeSyncDuplicateNotice().then((n) => {
+        if (n) toast(t('sync.duplicates', { n }), { timeout: 8000 });
+      });
+      return;
+    }
     if (ev.type === 'import') { rerender(); return; }   // structural: rebuild the shell
     if (FORM_ROUTES.test(location.hash || '')) return;   // never clobber unsaved input
     if (isModalOpen()) { _refreshPending = true; return; }

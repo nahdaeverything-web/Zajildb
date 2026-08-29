@@ -24,8 +24,11 @@
 // the one time they were swapped in the spike the server's refusal was
 // confusing rather than obvious.
 
-import { state, setSetting, idbGet, idbDelete, nowISO } from './storage.js';
-import { getOpsSinceSeq } from './oplog.js';
+import {
+  state, setSetting, idbGet, idbGetAll, idbDelete, nowISO, allBirds, emitChange,
+} from './storage.js';
+import { findDuplicateRings } from '../engine/rings.js';
+import { getOpsSinceSeq, logOp, markOpsSuperseded } from './oplog.js';
 import { applySyncPut, applySyncDelete } from './records.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../sync-config.js';
 
@@ -468,8 +471,18 @@ export async function pushOnce() {
   const ops = (await getOpsSinceSeq(since)).slice(0, PUSH_BATCH);
   if (!ops.length) return { ok: true, reason: 'idle', pushed: 0, rows: 0 };
 
-  const rows = collapseOps(ops);
   const maxSeq = ops[ops.length - 1].seq;
+  // A superseded op lost a conflict at pull time. It stays in the log as
+  // history (§4) but must never be sent, or it would overwrite the very
+  // version that beat it.
+  const live = ops.filter((op) => !op.superseded);
+  const rows = collapseOps(live);
+  if (!rows.length) {
+    // every op in the window lost. Nothing to send, but the window is handled.
+    const pruned = await ackThrough(maxSeq);
+    return { ok: true, reason: 'acked', pushed: 0, rows: 0, ops: ops.length,
+             superseded: ops.length, lastAckedSeq: maxSeq, pruned };
+  }
   const result = await sendRows(rows);
 
   if (result.kind === 'network' || result.kind === 'config') {
@@ -625,10 +638,25 @@ async function fetchPage(cursor, { allowRefresh = true } = {}) {
  * the cursor stops below it so the next pull sees it again.
  */
 async function applyPage(rows) {
-  let applied = 0, skipped = 0, cursor = null;
+  let applied = 0, skipped = 0, cursor = null, lost = 0;
   const anomalies = [];
+  const pending = await pendingOpIndex();
   for (const row of rows) {
     try {
+      // ── §4, per-record last-write-wins ──
+      // The incoming row meets whatever this device has written but not yet
+      // pushed. If the local op is newer, the row loses and is left alone: our
+      // push will carry the winner. If the row wins, any local op it beat is
+      // SUPERSEDED — otherwise push would send the loser straight afterwards
+      // and overwrite the version that just won.
+      const local = pending.get(`${row.store} ${row.record_id}`);
+      if (local && !remoteWins(row, local)) {
+        skipped++;
+        cursor = row.server_seq;
+        continue;
+      }
+      if (local) { lost += await markOpsSuperseded(local.opIds); }
+
       const result = row.deleted
         ? await applySyncDelete(row.store, row.record_id, row.updated_at)
         : await applySyncPut(row.store, row.data, row.updated_at);
@@ -643,11 +671,11 @@ async function applyPage(rows) {
       // cursor has passed.
       anomalies.push({ at: nowISO(), store: row.store, recordId: row.record_id,
                        status: null, body: `apply failed: ${String((err && err.message) || err)}`.slice(0, 300) });
-      return { applied, skipped, cursor, anomalies, stoppedAt: row.server_seq };
+      return { applied, skipped, cursor, anomalies, lost, stoppedAt: row.server_seq };
     }
     cursor = row.server_seq;
   }
-  return { applied, skipped, cursor, anomalies, stoppedAt: null };
+  return { applied, skipped, cursor, anomalies, lost, stoppedAt: null };
 }
 
 /**
@@ -683,6 +711,7 @@ export async function pullOnce() {
     reason: result.stoppedAt !== null ? 'stalled' : 'applied',
     applied: result.applied,
     skipped: result.skipped,
+    superseded: result.lost,
     rows: page.rows.length,
     cursor: state.settings.syncCursor || cursor,
     anomalies: result.anomalies.length,
@@ -705,17 +734,153 @@ export async function pullAll({ maxPages = 100 } = {}) {
   return { ok: false, reason: 'max-pages', applied, skipped, pages };
 }
 
+
+// ───────────────────── conflicts: per-record last-write-wins ─────────────────
+// Both sides carry the op that produced the record, so both sides carry a time
+// the operation HAPPENED. Compare those (SYNC-DESIGN §4). Per record, not per
+// field: for one fancier editing their own bird on two devices, "the later one
+// is what they meant" is almost always right, and per-field merge is machinery
+// for a conflict that does not arise.
+
 /**
- * A full cycle: PUSH FIRST, then pull.
+ * The latest UNPUSHED op per record, indexed by `${store} ${recordId}`.
  *
- * The order matters and is not arbitrary (§6). Pulling first would apply server
- * rows over local records, and the subsequent push would then send back
- * server-derived data — quietly discarding the local edits it just overwrote.
- * Pushing first means both sides are present and the conflict rule decides,
- * per record.
+ * Built once per page rather than queried per row: a 500-row page against a
+ * few thousand ops would otherwise be a quadratic scan on a phone.
+ *
+ * Superseded ops are excluded — they already lost, and a loser must not go on
+ * winning arguments.
+ */
+async function pendingOpIndex() {
+  const since = state.settings.lastAckedSeq || 0;
+  const index = new Map();
+  for (const op of await getOpsSinceSeq(since)) {
+    if (op.superseded) continue;
+    const key = `${op.store} ${op.recordId}`;
+    const seen = index.get(key);
+    if (seen) { seen.opIds.push(op.opId); if (op.at > seen.at) { seen.at = op.at; seen.deviceId = op.deviceId; } }
+    else index.set(key, { at: op.at, deviceId: op.deviceId || '', opIds: [op.opId] });
+  }
+  return index;
+}
+
+/**
+ * Does the incoming row beat the local unpushed op?
+ *
+ * Tie-break is lexicographic on deviceId — arbitrary, but STABLE, which is the
+ * only property that matters. A tie means the same millisecond on two devices,
+ * and both must reach the same verdict without talking to each other.
+ */
+export function remoteWins(row, local) {
+  if (!local) return true;
+  const remoteAt = String(row.updated_at || '');
+  const localAt = String(local.at || '');
+  if (remoteAt !== localAt) return remoteAt > localAt;
+  return String(row.device_id || '') > String(local.deviceId || '');
+}
+
+// ───────────────────────────── first login (§6) ─────────────────────────────
+
+/**
+ * Enqueue every local record as a synthetic op, so records made before this
+ * device knew about an account still reach the server.
+ *
+ * THE `at` IS EACH RECORD'S OWN `updatedAt`, NOT now(). A laptop last used
+ * months ago holds stale copies; stamping its synthetic ops with today's time
+ * would make every one of them beat the fresher data in LWW, and the stale
+ * device would silently overwrite edits made on the phone last week — simply
+ * by logging in. Using the record's own time says what is true: this is what
+ * this device knew, as of when it knew it. Fresh data then wins.
+ *
+ * Ordinary `origin: 'user'` ops. Nothing is special-cased in push itself.
+ */
+export async function enqueueFirstSyncOps() {
+  let count = 0;
+  const stores = [['lofts', 'lofts'], ['birds', 'birds'], ['pairs', 'pairs'],
+                  ['raceResults', 'raceResults'], ['healthEvents', 'healthEvents']];
+  for (const [store, mirror] of stores) {
+    for (const record of state[mirror].values()) {
+      await logOp({ origin: 'user', store, op: 'put', recordId: record.id, record,
+                    changed: Object.keys(record),
+                    at: record.updatedAt || record.createdAt || nowISO() });
+      count++;
+    }
+  }
+  // media metadata only — opRecord strips the blob, and blobs do not sync (§7)
+  for (const m of await idbGetAll('media')) {
+    await logOp({ origin: 'user', store: 'media', op: 'put', recordId: m.id, record: m,
+                  changed: ['id', 'birdId', 'kind', 'subtype', 'name', 'addedAt'],
+                  at: m.addedAt || nowISO() });
+    count++;
+  }
+  return count;
+}
+
+/** Has this device ever completed a sync? */
+export function hasEverSynced() { return Boolean(state.settings.lastSyncAt); }
+
+/**
+ * Birds that share a ring after a sync — very likely one physical bird wearing
+ * two records.
+ *
+ * Records carry client-generated uuids, so two devices that never synced
+ * generated DIFFERENT ids for the same bird. After the first sync both records
+ * exist, both valid, both surviving. That is not automatically solvable and
+ * guessing would be worse: a ring is the natural business key but deliberately
+ * is NOT identity — birds carry several rings and rings get reused.
+ *
+ * So: count them, say so once, and let the fancier decide. Only they know
+ * whether two records are one bird.
+ */
+export function duplicateRingCount() {
+  return findDuplicateRings(allBirds()).length;
+}
+
+/**
+ * A full cycle.
+ *
+ * ORDER: pull, resolve, then push — EXCEPT on a device that has never synced
+ * and holds local data, which pushes first (§6).
+ *
+ * Steady state pulls first because that is the only ordering under which §4's
+ * last-write-wins actually decides anything. Pushing first sends a possibly
+ * stale record into a blind upsert, which overwrites fresher server data
+ * before any comparison happens; pulling first lets the comparison run, so the
+ * loser is superseded rather than pushed. Echo prevention is what makes this
+ * safe — a pulled record logs no op, so pulling first cannot cause
+ * server-derived data to be pushed back.
  */
 export async function syncOnce() {
-  const push = await pushAll();
+  if (!syncConfig().configured) return { ok: false, reason: 'config' };
+  if (!isSignedIn()) return { ok: false, reason: 'signed-out' };
+
+  if (!hasEverSynced()) {
+    // First login. Local records reach the server before anything overwrites
+    // them, carrying each record's own time so freshness still decides.
+    const enqueued = await enqueueFirstSyncOps();
+    const push = await pushAll();
+    const pull = await pullAll();
+    const duplicates = duplicateRingCount();
+    await setSetting('syncDuplicateNotice', duplicates || null);
+    emitChange({ type: 'sync-complete', firstLogin: true, duplicates });
+    return { ok: Boolean(push.ok && pull.ok), firstLogin: true, enqueued, push, pull, duplicates };
+  }
+
   const pull = await pullAll();
-  return { ok: Boolean(push.ok && pull.ok), push, pull };
+  const push = await pushAll();
+  emitChange({ type: 'sync-complete', firstLogin: false, duplicates: 0 });
+  return { ok: Boolean(pull.ok && push.ok), firstLogin: false, push, pull };
+}
+
+/**
+ * The one-time notice after a first sync, or null.
+ *
+ * Read once and cleared: it is a notice, not a state. The duplicates remain
+ * findable in الأدوات for as long as they exist.
+ */
+export async function takeSyncDuplicateNotice() {
+  const n = state.settings.syncDuplicateNotice;
+  if (!n) return null;
+  await setSetting('syncDuplicateNotice', null);
+  return n;
 }

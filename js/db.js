@@ -86,6 +86,7 @@ export {
   getTombstone,
   listOps,
   listTombstones,
+  markOpsSuperseded,
   opRecord,
 } from './db/oplog.js';
 
@@ -130,7 +131,10 @@ export {
   authHeaders,
   authState,
   collapseOps,
+  duplicateRingCount,
+  enqueueFirstSyncOps,
   ensureAccessToken,
+  hasEverSynced,
   isSignedIn,
   listSyncAnomalies,
   opToRow,
@@ -140,8 +144,10 @@ export {
   pushAll,
   pushOnce,
   refreshSession,
+  remoteWins,
   signIn,
   signOut,
   syncConfig,
   syncOnce,
+  takeSyncDuplicateNotice,
 } from './db/sync.js';
