@@ -8,7 +8,7 @@ exhaustive.
 
 **20 open** (0 high · 10 medium · 10 low) ·
 **13 closed in v1.7** · **0 closed in v1.8** · **0 closed in v1.9** ·
-plus **3 open decisions**, **2 planned items**, and a **release checklist**
+plus **3 open decisions**, **4 planned items**, and a **release checklist**
 below.
 
 Nothing open is a crash or a blocker. Severity is the auditor's and reflects
@@ -87,6 +87,33 @@ v1.9 on the grounds that the failure mode is a single retried request, which
 push idempotency absorbs — and that storing an expiry means a settings key
 holding a number the server already tells the truth about. Recorded so the
 trade-off is not re-litigated from scratch.
+
+### P4. Split `js/db/sync.js` — with the first v1.9.x item that touches it
+
+`sync.js` is **1,098 lines**: auth, push, pull, conflict resolution, status,
+backoff and the cycle loop. That is larger than `db.js` was (866) when P1 was
+raised — the v1.9 split solved the problem and the sync layer has recreated it.
+
+Nothing is wrong with it today, and this is deliberately **not** scheduled as
+work of its own. Splitting a file that nothing is about to change buys nothing
+and risks a regression in the most safety-critical code in the app. It is
+scheduled instead with **the first v1.9.x item that touches it** — P2 (blob
+sync) or P3 (proactive refresh), whichever lands first.
+
+A likely shape, following the seam the code already has:
+
+| Module | Content |
+|---|---|
+| `db/sync/auth.js` | config, session, refresh, the multi-instance re-read |
+| `db/sync/push.js` | op→row mapping, batching, the ack rule, bisection, compaction |
+| `db/sync/pull.js` | cursor, page fetch, apply, LWW resolution |
+| `db/sync/status.js` | state derivation, backoff, the cycle loop |
+| `js/db/sync.js` | facade over those, exactly as `js/db.js` is over `js/db/` |
+
+The precedent from P1 applies in full, and so does its warning: **the guards
+key on `js/db/`**, and `js/db/sync/` is not `js/db/` to a `startsWith` check.
+That allow-list must be updated deliberately and every guard re-proven to fire,
+or the split will quietly exempt the sync layer from the rules that police it.
 
 ---
 
