@@ -127,6 +127,14 @@ alter table public.sync_records enable row level security;
 -- No DELETE to anyone: a deletion is an UPDATE setting deleted = true.
 -- The server never hard-deletes, so a tombstone can never be lost.
 grant select, insert, update on table public.sync_records to authenticated;
+
+-- REQUIRED, and missing from the first version of this migration. The trigger
+-- calls nextval() and is NOT security definer, so it runs as the CALLER. With
+-- no usage on the sequence, every insert fails 403 "permission denied for
+-- sequence sync_server_seq" and the table accepts nothing at all.
+-- Granting usage is safe: a client cannot reach nextval() except through this
+-- trigger, and the trigger overwrites any client-supplied server_seq anyway.
+grant usage on sequence public.sync_server_seq to authenticated;
 -- (no grant to anon, by design)
 
 -- Standing revoke pattern (SPIKE §3a): Postgres default privileges hand
@@ -155,6 +163,36 @@ create policy "sync_records owner delete" on public.sync_records
   for delete to authenticated
   using (owner = (select auth.uid()));
 ```
+
+### Design amendment (v1.9 Phase 3): the sequence grant, and why introspection was not enough
+
+The migration above originally ended its grants at the table. It was applied,
+and all four verification queries came back green — the trigger existed, four
+policies existed, `authenticated` held exactly `INSERT, SELECT, UPDATE`, and
+`relrowsecurity` was true. **Every object was correct and the table still
+accepted nothing**: the first live push returned
+
+```
+403 {"code":"42501","message":"permission denied for sequence sync_server_seq"}
+```
+
+because `sync_assign_server_seq()` is not `security definer` and so calls
+`nextval()` as the caller.
+
+> **The lesson is about the verification, not the grant.** Introspection proves
+> objects EXIST. It cannot prove a write SUCCEEDS, because the SQL Editor runs
+> as `postgres` and never exercises the `authenticated` path. The end-to-end
+> check is `tests/e2e/push_live.py`, and it is what found this.
+
+Projects already migrated need only:
+
+```sql
+grant usage on sequence public.sync_server_seq to authenticated;
+```
+
+`security definer` was considered and rejected: it would run the trigger with
+more privilege than the task needs, and would require a pinned `search_path` to
+be safe. A usage grant is the least privilege that works.
 
 ### Verification query — run after, paste the output
 
@@ -302,6 +340,39 @@ for a healthy batch costs nothing because it never triggers.
 > **An anomaly is loud but never a roadblock.** The alternative — a correct-
 > looking queue that never drains — is worse than a visible, named failure the
 > fancier can be asked about.
+
+#### Design amendment (v1.9 Phase 3): only a short count identifies a poison record
+
+The flow above is reached by a **short count**, and that is the whole of its
+input domain. Stated explicitly, because the first implementation folded a 4xx
+into it as "a short count of zero" and that is wrong in a way that loses data:
+
+> **Row-level security does not reject with a status.** A blocked write comes
+> back `200` with the row simply ABSENT (SPIKE §4d). So a short count is the
+> only signal that can identify a poison RECORD. A `4xx` is a REQUEST-level
+> failure — a misconfigured grant, a malformed body, a revoked policy — and it
+> affects every record equally.
+
+Folding a 4xx into the poison path means three retries, then bisection down to
+single rows, then **every record marked poison, acked past, and pruned** — the
+entire queue discarded because the server was misconfigured. This is not
+hypothetical: the missing sequence grant above produced exactly that 403, and
+the implementation would have thrown the queue away.
+
+So:
+
+| Outcome | Meaning | Action |
+|---|---|---|
+| `200`, every row echoed | accepted | ack, advance, prune |
+| `200`, rows missing | RLS blocked THOSE records | retry ×3, then bisect |
+| `4xx` | request-level failure | **loud, not acked, nothing blamed on a record** |
+| `401` unrecoverable | session gone | not acked, nothing blamed on a record |
+| `5xx` / offline | transport | not acked, back off |
+
+Bisection may therefore conclude "poison" only from a `200` that omits the row.
+Every other outcome makes it abandon rather than conclude. A 4xx consequently
+does block the queue until it is fixed — correctly, since the alternative is
+discarding a fancier's records because a grant was missing.
 
 `syncAnomalies` is capped at **100 entries**, newest kept; it is a diagnostic
 surface, not a log. Each entry records store, record id, the server's status
