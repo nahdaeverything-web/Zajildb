@@ -95,6 +95,11 @@ const dict = {
   'bird.externalShort': { ar: 'خارجي', en: 'External' },
   'bird.photos': { ar: 'الصور', en: 'Photos' },
   'bird.documents': { ar: 'الوثائق', en: 'Documents' },
+  // §7: media METADATA syncs, blobs do not. A row whose bytes live on another
+  // device is a real record with its content elsewhere — said plainly, rather
+  // than shown as a broken image.
+  'media.elsewhere': { ar: 'الصورة على جهاز آخر', en: 'Photo is on another device' },
+  'media.elsewhereFile': { ar: 'الملف على جهاز آخر', en: 'File is on another device' },
   'bird.addNote': { ar: 'إضافة ملاحظة', en: 'Add note' },
   'bird.addPhoto': { ar: 'إضافة صورة', en: 'Add photo' },
   'bird.addDocument': { ar: 'إضافة وثيقة', en: 'Add document' },

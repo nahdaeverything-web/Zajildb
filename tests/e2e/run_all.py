@@ -31,6 +31,10 @@ OPT_IN = {
         '--live-push',
         'needs the internet and live credentials, and WRITES to the real project',
     ),
+    'pull_live.py': (
+        '--live-pull',
+        'needs the internet and live credentials; reads the real project',
+    ),
 }
 
 LOCAL = sorted(f for f in glob.glob(os.path.join(HERE, '*.py'))

@@ -11,7 +11,7 @@ import { classifySave } from '../engine/validate.js';
 import {
   REFERENCE_STATUS, allBirds, emitChange, getBird, idbDelete, idbGet, idbGetAll, idbPut, nowISO, stamp, state, uuid,
 } from './storage.js';
-import { clearTombstone, diffFields, logOp, writeTombstone } from './oplog.js';
+import { clearTombstone, diffFields, getTombstone, logOp, writeTombstone } from './oplog.js';
 
 /**
  * THE bird factory. Every bird record in the app is minted here.
@@ -299,3 +299,113 @@ export async function deleteMedia(id) {
   return m;
 }
 
+
+// ─────────────────────── applying a pulled record ───────────────────────
+// A remote record is written HERE, through the boundary, so the in-memory
+// mirror stays in step and views are told (SYNC-DESIGN §3). It is never a raw
+// idbPut from the pull loop.
+//
+// Three things differ from a local write, all deliberate:
+//
+//   1. NO OP IS LOGGED. Echo prevention, and the single most load-bearing line
+//      in the design: a pulled change that logged an op would be pushed
+//      straight back, and two devices would trade the same record forever.
+//   2. NO stamp(). stamp() writes `updatedAt = now` and THIS device's id onto
+//      whatever it touches. A pulled record put through it would become
+//      locally-authored with a fresh timestamp, beat the very version it came
+//      from in every later comparison, and claim this device as its last
+//      writer when another device wrote it. LWW corrupted, audit trail
+//      falsified. It follows restoreBird's precedent, not saveBird's: applying
+//      a remote record is not authorship.
+//   3. VALIDATION DIAGNOSES BUT DOES NOT BLOCK. A record already on the server
+//      is a historical fact, not a new edit to re-judge — the reasoning that
+//      made importAll a force path in v1.7. One that fails local rules is
+//      applied AND reported, never silently dropped: dropping it would make
+//      the mirror diverge from the server invisibly, which is worse than
+//      holding a record the local rules dislike.
+
+/** Stores with an in-memory mirror. `media` has none — it holds blobs. */
+const SYNC_MIRROR = {
+  birds: 'birds', pairs: 'pairs', raceResults: 'raceResults',
+  healthEvents: 'healthEvents', lofts: 'lofts',
+};
+
+/** Every store a pulled row may name. Anything else is refused rather than guessed. */
+export const SYNC_STORES = [...Object.keys(SYNC_MIRROR), 'media'];
+
+/**
+ * Write a pulled record VERBATIM.
+ *
+ * @returns {{applied: boolean, skipped: string|null, anomaly: object|null}}
+ *   `skipped: 'tombstone'` when a newer local deletion wins (§3, the v1.8
+ *   merge-import rule reused unchanged rather than re-derived).
+ */
+export async function applySyncPut(store, record, at) {
+  if (!SYNC_STORES.includes(store)) {
+    return { applied: false, skipped: 'unknown-store', anomaly: { reason: 'unknown-store', store } };
+  }
+  if (!record || typeof record.id !== 'string' || !record.id) {
+    return { applied: false, skipped: 'no-id', anomaly: { reason: 'no-id', store } };
+  }
+
+  // A deletion newer than this version of the record wins, and the record stays
+  // gone. Identical to what importAll does with a merge payload — reusing the
+  // rule rather than writing a second, subtly different one.
+  const tomb = await getTombstone(store, record.id);
+  if (tomb && (tomb.at || '') > (at || '')) {
+    return { applied: false, skipped: 'tombstone', anomaly: null };
+  }
+
+  // Diagnose without force so the real verdict is available, then apply anyway.
+  let anomaly = null;
+  if (store === 'birds') {
+    const verdict = classifySave(record, getBird, allBirds(), {});
+    if (!verdict.ok) {
+      anomaly = {
+        reason: 'validation',
+        store,
+        recordId: record.id,
+        errors: (verdict.errors || []).map((e) => e.key),
+        warnings: (verdict.warnings || []).map((w) => w.key),
+      };
+    }
+  }
+
+  await idbPut(store, record);
+  const mirror = SYNC_MIRROR[store];
+  if (mirror) state[mirror].set(record.id, record);
+
+  // THE COROLLARY (§2a): a winning record clears the tombstone. Leaving it
+  // would let the record be re-suppressed by the next merge-import or
+  // comparison, and the device would flip between states. restoreBird already
+  // does this on undo; this is the same rule reached from the other direction.
+  if (tomb) await clearTombstone(store, record.id);
+
+  emitChange({ type: 'sync', store, id: record.id });
+  return { applied: true, skipped: null, anomaly };
+}
+
+/**
+ * Apply a pulled deletion: remove the record and write a tombstone.
+ *
+ * DELIBERATELY DOES NOT CASCADE, and this is not an oversight. deleteBird
+ * cascades because a local delete must leave the database referentially
+ * consistent. A pulled delete must not: the origin device already ran its own
+ * cascade, and every record it touched produced its own op and arrives as its
+ * own row, in server_seq order. Re-cascading here would delete records the
+ * origin device never deleted — anything linked LOCALLY but not remotely —
+ * which is data loss dressed up as consistency.
+ */
+export async function applySyncDelete(store, recordId, at) {
+  if (!SYNC_STORES.includes(store)) {
+    return { applied: false, skipped: 'unknown-store', anomaly: { reason: 'unknown-store', store } };
+  }
+  await idbDelete(store, recordId);
+  const mirror = SYNC_MIRROR[store];
+  if (mirror) state[mirror].delete(recordId);
+  // seq is null: there is no local op behind this deletion. `at` is the remote
+  // operation time, so the tombstone claims the moment the delete happened.
+  await writeTombstone(store, recordId, null, at);
+  emitChange({ type: 'sync', store, id: recordId });
+  return { applied: true, skipped: null, anomaly: null };
+}

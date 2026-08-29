@@ -186,17 +186,18 @@ test('guard: every app module is precached, or offline will break', () => {
 // be added here deliberately, but one must never go missing by accident — a
 // dropped re-export is invisible until a view calls it at runtime.
 const FACADE = [
-  'AUTH_SETTING_KEYS', 'AuthError', 'Health', 'Lofts', 'OPLOG_KEEP', 'PUSH_BATCH', 'Pairs',
-  'REFERENCE_STATUS', 'Races', 'SENSITIVE_SETTING_PREFIXES', 'STORES', 'ValidationError',
-  'addMedia', 'allBirds', 'authHeaders', 'authState', 'autoBackup', 'checkBird',
-  'collapseOps', 'currentLoft', 'dataURLToBlob', 'deleteBird', 'deleteMedia', 'diffFields',
-  'emitChange', 'ensureAccessToken', 'exportAll', 'exportBirdWithAncestry',
-  'exportableSettings', 'getBird', 'getOpsSinceSeq', 'idbClear', 'idbDelete', 'idbGet',
-  'idbGetAll', 'idbPut', 'importAll', 'initDB', 'isSignedIn', 'listBackups', 'listOps',
-  'listSyncAnomalies', 'listTombstones', 'loftStatuses', 'makeGeneric', 'mediaForBird',
-  'newBird', 'nowISO', 'onChange', 'opRecord', 'opToRow', 'openDB', 'pruneOplog', 'pushAll',
+  'AUTH_SETTING_KEYS', 'AuthError', 'Health', 'Lofts', 'OPLOG_KEEP', 'PULL_PAGE',
+  'PUSH_BATCH', 'Pairs', 'REFERENCE_STATUS', 'Races', 'SENSITIVE_SETTING_PREFIXES', 'STORES',
+  'SYNC_STORES', 'ValidationError', 'addMedia', 'allBirds', 'applySyncDelete', 'applySyncPut',
+  'authHeaders', 'authState', 'autoBackup', 'checkBird', 'collapseOps', 'currentLoft',
+  'dataURLToBlob', 'deleteBird', 'deleteMedia', 'diffFields', 'emitChange',
+  'ensureAccessToken', 'exportAll', 'exportBirdWithAncestry', 'exportableSettings', 'getBird',
+  'getOpsSinceSeq', 'getTombstone', 'idbClear', 'idbDelete', 'idbGet', 'idbGetAll', 'idbPut',
+  'importAll', 'initDB', 'isSignedIn', 'listBackups', 'listOps', 'listSyncAnomalies',
+  'listTombstones', 'loftStatuses', 'makeGeneric', 'mediaForBird', 'newBird', 'nowISO',
+  'onChange', 'opRecord', 'opToRow', 'openDB', 'pruneOplog', 'pullAll', 'pullOnce', 'pushAll',
   'pushOnce', 'refreshSession', 'restoreBird', 'restoreMedia', 'saveBird', 'setSetting',
-  'signIn', 'signOut', 'state', 'syncConfig', 'uuid',
+  'signIn', 'signOut', 'state', 'syncConfig', 'syncOnce', 'uuid',
 ];
 
 test('guard: js/db.js exports exactly the pinned public surface', () => {
@@ -205,7 +206,7 @@ test('guard: js/db.js exports exactly the pinned public surface', () => {
   const extra = actual.filter((n) => !FACADE.includes(n));
   assertEq(missing.length + extra.length, 0,
     `the db facade drifted — missing: [${missing.join(', ')}] unexpected: [${extra.join(', ')}]`);
-  assertEq(actual.length, 65, `expected 65 exports, found ${actual.length}`);
+  assertEq(actual.length, 73, `expected 73 exports, found ${actual.length}`);
 });
 
 test('guard: js/db.js stays a facade — re-exports only, no logic', () => {
@@ -238,6 +239,71 @@ test('guard: the db modules form a DAG — storage <- oplog <- records <- io', (
     if (/from '\.\.\/db\.js'/.test(f.src)) bad.push(`${f.rel} imports the facade — that is a cycle`);
   }
   assertEq(bad.length, 0, `the db layer must stay acyclic:\n  ${bad.join('\n  ')}`);
+});
+
+// ------------------------------------------------------- echo prevention (§8)
+
+test('guard: every logOp call names its origin as a STRING LITERAL', () => {
+  // The echo-prevention scan below reads the origin at each call site. A
+  // computed origin would be invisible to it, so the scan would silently stop
+  // guarding anything. Requiring a literal is what keeps it sound.
+  const hits = [];
+  for (const f of FILES) {
+    for (const m of f.src.matchAll(/(?<!function\s)logOp\(\s*\{[\s\S]*?\}\s*\)/g)) {
+      if (!/origin:\s*(['"])[a-z]+\1/.test(m[0])) {
+        hits.push(`${f.rel}  ${m[0].replace(/\s+/g, ' ').slice(0, 90)}`);
+      }
+    }
+  }
+  assertEq(hits.length, 0,
+    `origin must be a literal so the echo-prevention scan can see it:\n  ${hits.join('\n  ')}`);
+});
+
+test("guard: origin 'sync' never reaches logOp — echo prevention", () => {
+  // THE load-bearing invariant of the pull path, and it is one careless line
+  // from being broken: a pulled change that logged an op would be pushed
+  // straight back, and two devices would trade the same record forever.
+  // Asserted behaviourally too, in tests/e2e/pull.py.
+  const hits = [];
+  for (const f of FILES) {
+    for (const m of f.src.matchAll(/(?<!function\s)logOp\(\s*\{[\s\S]*?\}\s*\)/g)) {
+      if (/origin:\s*(['"])sync\1/.test(m[0])) {
+        hits.push(`${f.rel}  ${m[0].replace(/\s+/g, ' ').slice(0, 90)}`);
+      }
+    }
+  }
+  assertEq(hits.length, 0,
+    `a pulled change must log NO op, or the two devices echo forever:\n  ${hits.join('\n  ')}`);
+});
+
+test('guard: the sync-apply path neither logs an op nor stamps a record', () => {
+  // Stronger than reading origins: the apply functions must not REACH either
+  // primitive at all. stamp() would rewrite updatedAt and deviceId onto a
+  // record another device authored, corrupting LWW and falsifying the audit
+  // trail; logOp would echo.
+  const src = FILES.find((f) => f.rel === 'js/db/records.js').src;
+  const start = src.indexOf('export async function applySyncPut');
+  assert(start > 0, 'applySyncPut not found — has the sync-apply path moved?');
+  const region = src.slice(start);
+  const offenders = region.split('\n')
+    .map((line, i) => ({ line, n: i }))
+    .filter(({ line }) => !/^\s*(\/\/|\*)/.test(line))
+    .filter(({ line }) => /\blogOp\b/.test(line) || /(?<![A-Za-z_$])stamp\s*\(/.test(line));
+  assertEq(offenders.length, 0,
+    `a sync apply is not authorship — write the record verbatim:\n  ${offenders.map((o) => o.line.trim()).join('\n  ')}`);
+});
+
+test('guard: js/db/sync.js never writes a record itself', () => {
+  // The pull loop routes every write through the boundary in records.js so the
+  // mirror stays in step and views are told. A raw idbPut here would be a
+  // silent write: correct on disk, invisible in the app until a reload.
+  const src = FILES.find((f) => f.rel === 'js/db/sync.js').src;
+  const offenders = src.split('\n')
+    .map((line, n) => ({ line, n: n + 1 }))
+    .filter(({ line }) => !/^\s*(\/\/|\*)/.test(line))
+    .filter(({ line }) => /\bidbPut\s*\(\s*['"](birds|pairs|raceResults|healthEvents|lofts|media)['"]/.test(line));
+  assertEq(offenders.length, 0,
+    `route record writes through applySyncPut/applySyncDelete:\n  ${offenders.map((o) => `js/db/sync.js:${o.n}  ${o.line.trim()}`).join('\n  ')}`);
 });
 
 // ---------------------------------------------------------------- data level

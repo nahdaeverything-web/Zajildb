@@ -26,6 +26,7 @@
 
 import { state, setSetting, idbGet, idbDelete, nowISO } from './storage.js';
 import { getOpsSinceSeq } from './oplog.js';
+import { applySyncPut, applySyncDelete } from './records.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../sync-config.js';
 
 /**
@@ -570,4 +571,151 @@ export async function pushAll({ maxCycles = 50 } = {}) {
     if (!r.ok) return { ...r, pushed, cycles, poison };
   }
   return { ok: false, reason: 'max-cycles', pushed, cycles, poison };
+}
+
+// ─────────────────────────────── pull ───────────────────────────────
+// A cursor on server_seq, and nothing else. server_seq is assigned per row by
+// the trigger, so a row updated after our cursor moves ABOVE it and is
+// re-delivered — which is why the trigger fires on UPDATE and not only on
+// INSERT (SYNC-DESIGN §3).
+
+/** Rows per pull page. Larger than a push batch: a pull is cheap to redo and
+ *  benefits from fewer round trips (§11). */
+export const PULL_PAGE = 500;
+
+/**
+ * Fetch one page of rows above the cursor.
+ *
+ * Classified exactly as push classifies its outcomes, and for the same reason:
+ * offline is not a verdict on anything.
+ */
+async function fetchPage(cursor, { allowRefresh = true } = {}) {
+  const { url, configured } = syncConfig();
+  if (!configured) return { kind: 'config', rows: [], status: null, body: null };
+
+  const query = `select=*&server_seq=gt.${encodeURIComponent(cursor)}` +
+                `&order=server_seq.asc&limit=${PULL_PAGE}`;
+  let res;
+  try {
+    res = await fetch(`${url}/rest/v1/sync_records?${query}`, { headers: authHeaders() });
+  } catch (err) {
+    return { kind: 'network', rows: [], status: null, body: String((err && err.message) || err) };
+  }
+  if (res.status === 401 && allowRefresh) {
+    const refreshed = await refreshSession();
+    if (refreshed.ok) return fetchPage(cursor, { allowRefresh: false });
+    return { kind: 'auth', rows: [], status: 401, body: 'session could not be refreshed' };
+  }
+  if (res.status >= 500) return { kind: 'network', rows: [], status: res.status, body: 'server error' };
+
+  const text = await res.text();
+  if (!res.ok) return { kind: 'rejected', rows: [], status: res.status, body: text.slice(0, 300) };
+  let rows = [];
+  try { rows = JSON.parse(text); } catch { rows = []; }
+  if (!Array.isArray(rows)) rows = [];
+  return { kind: 'ok', rows, status: res.status, body: null };
+}
+
+/**
+ * Apply one page of rows, in server_seq order.
+ *
+ * THE CURSOR ADVANCES ONLY OVER ROWS ACTUALLY APPLIED — and a row deliberately
+ * skipped (a newer local tombstone wins) counts as handled, because re-fetching
+ * it forever would never change the outcome. A row that THREW is not handled:
+ * the cursor stops below it so the next pull sees it again.
+ */
+async function applyPage(rows) {
+  let applied = 0, skipped = 0, cursor = null;
+  const anomalies = [];
+  for (const row of rows) {
+    try {
+      const result = row.deleted
+        ? await applySyncDelete(row.store, row.record_id, row.updated_at)
+        : await applySyncPut(row.store, row.data, row.updated_at);
+      if (result.applied) applied++; else skipped++;
+      if (result.anomaly) {
+        anomalies.push({ at: nowISO(), store: row.store, recordId: row.record_id,
+                         status: null, body: JSON.stringify(result.anomaly).slice(0, 300) });
+      }
+    } catch (err) {
+      // Stop the cursor BELOW this row. Advancing past a row that failed to
+      // apply would lose it permanently: nothing ever re-delivers a row the
+      // cursor has passed.
+      anomalies.push({ at: nowISO(), store: row.store, recordId: row.record_id,
+                       status: null, body: `apply failed: ${String((err && err.message) || err)}`.slice(0, 300) });
+      return { applied, skipped, cursor, anomalies, stoppedAt: row.server_seq };
+    }
+    cursor = row.server_seq;
+  }
+  return { applied, skipped, cursor, anomalies, stoppedAt: null };
+}
+
+/**
+ * One pull cycle. Never throws.
+ *
+ *   { ok: true,  reason: 'idle' }      nothing above the cursor
+ *   { ok: true,  reason: 'applied' }   a page was applied; cursor advanced
+ *   { ok: false, reason: 'network' }   offline or 5xx — cursor unmoved
+ *   { ok: false, reason: 'rejected' }  request-level failure — cursor unmoved
+ *   { ok: false, reason: 'auth' }      session gone — cursor unmoved
+ *   { ok: false, reason: 'config' | 'signed-out' }
+ */
+export async function pullOnce() {
+  if (!syncConfig().configured) return { ok: false, reason: 'config', applied: 0 };
+  if (!isSignedIn()) return { ok: false, reason: 'signed-out', applied: 0 };
+
+  const cursor = state.settings.syncCursor || 0;
+  const page = await fetchPage(cursor);
+  if (page.kind !== 'ok') {
+    await setSetting('lastSyncError', { key: `sync.err.${page.kind}`, status: page.status, at: nowISO() });
+    return { ok: false, reason: page.kind, status: page.status, applied: 0, cursor };
+  }
+  if (!page.rows.length) return { ok: true, reason: 'idle', applied: 0, skipped: 0, cursor, more: false };
+
+  const result = await applyPage(page.rows);
+  for (const anomaly of result.anomalies) await recordAnomaly(anomaly);
+  if (result.cursor !== null) await setSetting('syncCursor', result.cursor);
+  await setSetting('lastSyncAt', nowISO());
+  if (!result.anomalies.length) await setSetting('lastSyncError', null);
+
+  return {
+    ok: true,
+    reason: result.stoppedAt !== null ? 'stalled' : 'applied',
+    applied: result.applied,
+    skipped: result.skipped,
+    rows: page.rows.length,
+    cursor: state.settings.syncCursor || cursor,
+    anomalies: result.anomalies.length,
+    // a full page means there is probably more behind it
+    more: result.stoppedAt === null && page.rows.length === PULL_PAGE,
+  };
+}
+
+/** Pull until a short page arrives or something stops it. */
+export async function pullAll({ maxPages = 100 } = {}) {
+  let applied = 0, skipped = 0, pages = 0;
+  while (pages < maxPages) {
+    pages++;
+    const r = await pullOnce();
+    applied += r.applied || 0;
+    skipped += r.skipped || 0;
+    if (!r.ok) return { ...r, applied, skipped, pages };
+    if (r.reason === 'idle' || !r.more) return { ok: true, reason: 'idle', applied, skipped, pages };
+  }
+  return { ok: false, reason: 'max-pages', applied, skipped, pages };
+}
+
+/**
+ * A full cycle: PUSH FIRST, then pull.
+ *
+ * The order matters and is not arbitrary (§6). Pulling first would apply server
+ * rows over local records, and the subsequent push would then send back
+ * server-derived data — quietly discarding the local edits it just overwrote.
+ * Pushing first means both sides are present and the conflict rule decides,
+ * per record.
+ */
+export async function syncOnce() {
+  const push = await pushAll();
+  const pull = await pullAll();
+  return { ok: Boolean(push.ok && pull.ok), push, pull };
 }

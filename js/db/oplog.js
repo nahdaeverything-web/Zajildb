@@ -13,7 +13,7 @@
 //
 // Import from `js/db.js`, never from here directly — the facade is the API.
 
-import { idbDelete, idbGetAll, idbPut, nowISO, state, uuid } from './storage.js';
+import { idbDelete, idbGet, idbGetAll, idbPut, nowISO, state, uuid } from './storage.js';
 
 // ---------------------------------------------------------------- record CRUD
 
@@ -127,15 +127,28 @@ export function listTombstones() { return idbGetAll('tombstones'); }
 
 const tombstoneId = (store, recordId) => `${store}:${recordId}`;
 
-export async function writeTombstone(store, recordId, seq) {
+/**
+ * @param at  when the deletion HAPPENED. Defaults to now for a local delete.
+ *   A sync-applied delete passes the remote row's `updated_at` instead: the
+ *   tombstone must claim the time the deletion actually occurred, or every
+ *   later tombstone-versus-record comparison is made against a time that never
+ *   happened. Same reasoning as §2a's timestamp rule, reached from the other
+ *   side. `seq` is null for a sync-applied delete — there is no local op.
+ */
+export async function writeTombstone(store, recordId, seq, at = nowISO()) {
   await idbPut('tombstones', {
     id: tombstoneId(store, recordId),
     store,
     recordId,
-    at: nowISO(),
+    at,
     deviceId: state.settings.deviceId || null,
     seq,
   });
+}
+
+/** The tombstone for one record, or null. */
+export function getTombstone(store, recordId) {
+  return idbGet('tombstones', tombstoneId(store, recordId));
 }
 
 /** An undone deletion never happened, so its tombstone must go. */
