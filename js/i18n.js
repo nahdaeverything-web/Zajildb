@@ -103,6 +103,37 @@ const dict = {
   // devices that never synced generated different ids for the same physical
   // bird, so both records now exist. Only the fancier can say whether two
   // records are one bird — so they are told, and the tool is already there.
+  // ── §10 sync status. Five states, and offline is deliberately NOT one of the
+  // alarming ones: it is the normal condition this product was built for.
+  'sync.synced':   { ar: 'متزامن', en: 'Synced' },
+  'sync.syncing':  { ar: 'جارٍ المزامنة…', en: 'Syncing…' },
+  'sync.pending':  { ar: '{n} تغييرًا بانتظار المزامنة', en: '{n} change(s) waiting to sync' },
+  'sync.offline':  { ar: 'دون اتصال — يعمل محليًا', en: 'Offline — working locally' },
+  'sync.error':    { ar: 'تعذّرت المزامنة', en: 'Sync failed' },
+  'sync.off':      { ar: 'المزامنة متوقفة', en: 'Sync is off' },
+  'sync.details':  { ar: 'التفاصيل', en: 'Details' },
+
+  // الأدوات card
+  'sync.card':       { ar: 'المزامنة', en: 'Sync' },
+  'sync.account':    { ar: 'الحساب', en: 'Account' },
+  'sync.lastSync':   { ar: 'آخر مزامنة', en: 'Last sync' },
+  'sync.never':      { ar: 'لم تتم بعد', en: 'Not yet' },
+  'sync.pendingN':   { ar: 'بانتظار المزامنة', en: 'Waiting to sync' },
+  'sync.now':        { ar: 'مزامنة الآن', en: 'Sync now' },
+  'sync.toggleOn':   { ar: 'تشغيل المزامنة', en: 'Turn sync on' },
+  'sync.toggleOff':  { ar: 'إيقاف المزامنة', en: 'Turn sync off' },
+  'sync.lastError':  { ar: 'آخر خطأ', en: 'Last error' },
+  'sync.signedOut':  { ar: 'غير مسجّل الدخول', en: 'Not signed in' },
+  'sync.notSetUp':   { ar: 'المزامنة غير مهيأة على هذا الجهاز', en: 'Sync is not set up on this device' },
+  'sync.anomalies':  { ar: 'سجلات لم يقبلها الخادم: {n}', en: 'Records the server refused: {n}' },
+
+  // the two things that interrupt, and nothing else
+  'sync.err.session':  { ar: 'انتهت الجلسة — سجّل الدخول من جديد', en: 'Session expired — please sign in again' },
+  'sync.err.rejected': { ar: 'رفض الخادم المزامنة — تحقق من الأدوات', en: 'The server refused the sync — see Tools' },
+  'sync.err.short':    { ar: 'لم تُقبل بعض السجلات — تحقق من الأدوات', en: 'Some records were not accepted — see Tools' },
+  'sync.err.network':  { ar: 'تعذّر الاتصال — سنحاول تلقائيًا', en: 'Could not connect — we will retry automatically' },
+  'sync.err.config':   { ar: 'المزامنة غير مهيأة', en: 'Sync is not configured' },
+
   'sync.duplicates': {
     ar: 'تمت المزامنة. وُجدت {n} حلقة مكررة — راجعها.',
     en: 'Sync complete. Found {n} duplicate ring(s) — please review.',

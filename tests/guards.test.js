@@ -186,10 +186,11 @@ test('guard: every app module is precached, or offline will break', () => {
 // be added here deliberately, but one must never go missing by accident — a
 // dropped re-export is invisible until a view calls it at runtime.
 const FACADE = [
-  'AUTH_SETTING_KEYS', 'AuthError', 'Health', 'Lofts', 'OPLOG_KEEP', 'PULL_PAGE',
-  'PUSH_BATCH', 'Pairs', 'REFERENCE_STATUS', 'Races', 'SENSITIVE_SETTING_PREFIXES', 'STORES',
-  'SYNC_STORES', 'ValidationError', 'addMedia', 'allBirds', 'applySyncDelete', 'applySyncPut',
-  'authHeaders', 'authState', 'autoBackup', 'checkBird', 'collapseOps', 'currentLoft',
+  'AUTH_SETTING_KEYS', 'AuthError', 'BACKOFF_MS', 'Health', 'Lofts', 'OPLOG_KEEP',
+  'PULL_PAGE', 'PUSH_BATCH', 'Pairs', 'REFERENCE_STATUS', 'Races',
+  'SENSITIVE_SETTING_PREFIXES', 'SOFT_FAIL_WINDOW_MS', 'STORES', 'SYNC_STORES',
+  'ValidationError', 'addMedia', 'allBirds', 'applySyncDelete', 'applySyncPut', 'authHeaders',
+  'authState', 'autoBackup', 'backoffDelay', 'checkBird', 'collapseOps', 'currentLoft',
   'dataURLToBlob', 'deleteBird', 'deleteMedia', 'diffFields', 'duplicateRingCount',
   'emitChange', 'enqueueFirstSyncOps', 'ensureAccessToken', 'exportAll',
   'exportBirdWithAncestry', 'exportableSettings', 'getBird', 'getOpsSinceSeq', 'getTombstone',
@@ -197,8 +198,9 @@ const FACADE = [
   'initDB', 'isSignedIn', 'listBackups', 'listOps', 'listSyncAnomalies', 'listTombstones',
   'loftStatuses', 'makeGeneric', 'markOpsSuperseded', 'mediaForBird', 'newBird', 'nowISO',
   'onChange', 'opRecord', 'opToRow', 'openDB', 'pruneOplog', 'pullAll', 'pullOnce', 'pushAll',
-  'pushOnce', 'refreshSession', 'remoteWins', 'restoreBird', 'restoreMedia', 'saveBird',
-  'setSetting', 'signIn', 'signOut', 'state', 'syncConfig', 'syncOnce',
+  'pushOnce', 'refreshSession', 'refreshSyncStatus', 'remoteWins', 'restoreBird',
+  'restoreMedia', 'runSyncCycle', 'saveBird', 'setSetting', 'setSyncEnabled', 'signIn',
+  'signOut', 'startSyncLoop', 'state', 'syncConfig', 'syncNow', 'syncOnce', 'syncStatus',
   'takeSyncDuplicateNotice', 'uuid',
 ];
 
@@ -208,7 +210,7 @@ test('guard: js/db.js exports exactly the pinned public surface', () => {
   const extra = actual.filter((n) => !FACADE.includes(n));
   assertEq(missing.length + extra.length, 0,
     `the db facade drifted — missing: [${missing.join(', ')}] unexpected: [${extra.join(', ')}]`);
-  assertEq(actual.length, 79, `expected 79 exports, found ${actual.length}`);
+  assertEq(actual.length, 88, `expected 88 exports, found ${actual.length}`);
 });
 
 test('guard: js/db.js stays a facade — re-exports only, no logic', () => {
@@ -335,6 +337,22 @@ test('guard: the §1 migration script is the COMPLETE current schema', () => {
     .map(([needle, why]) => `${needle}  — ${why}`);
   assertEq(missing.length, 0,
     `the migration script is not the current schema:\n  ${missing.join('\n  ')}`);
+});
+
+test('guard: only ONE place writes a sync error, so the silence window survives', () => {
+  // §11 measures the silent period from the FIRST failure in a run. Every
+  // writer must go through recordSyncError(), which preserves `since`. When
+  // push and pull each wrote this setting directly, the window restarted on
+  // every cycle and a rejection that had been failing for an hour still looked
+  // brand new — so it never surfaced, and the interruption never fired.
+  const src = FILES.find((f) => f.rel === 'js/db/sync.js').src;
+  const writes = src.split('\n')
+    .map((line, n) => ({ line, n: n + 1 }))
+    .filter(({ line }) => !/^\s*(\/\/|\*)/.test(line))
+    .filter(({ line }) => /setSetting\(\s*'lastSyncError'\s*,\s*\{/.test(line));
+  assertEq(writes.length, 1,
+    `a sync error must only be written by recordSyncError():\n  ${writes.map((w) => `js/db/sync.js:${w.n}  ${w.line.trim()}`).join('\n  ')}`);
+  assert(/async function recordSyncError\(/.test(src), 'recordSyncError() is missing');
 });
 
 // ---------------------------------------------------------------- data level

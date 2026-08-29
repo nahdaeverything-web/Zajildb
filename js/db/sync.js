@@ -404,6 +404,23 @@ async function bisect(rows) {
   return { resolved: true, poison };
 }
 
+/**
+ * Record a sync failure, PRESERVING when this run of failures began.
+ *
+ * The silence window of §11 is measured from the FIRST failure, not the
+ * latest. Every writer has to go through here or the window silently restarts
+ * on each cycle and a problem that has been going for an hour keeps looking
+ * new — which is exactly what happened when push and pull each wrote this
+ * setting directly.
+ *
+ * It lives in settings so a reload does not restart the clock either.
+ */
+async function recordSyncError(key, status) {
+  const prev = state.settings.lastSyncError;
+  const since = (prev && prev.key === key && prev.since) ? prev.since : nowISO();
+  await setSetting('lastSyncError', { key, status: status ?? null, at: nowISO(), since });
+}
+
 /** Newest first, capped. A diagnostic surface for الأدوات, not a log. */
 export function listSyncAnomalies() {
   const list = state.settings.syncAnomalies;
@@ -441,7 +458,6 @@ export async function pruneOplog() {
 async function ackThrough(seq) {
   await setSetting('lastAckedSeq', seq);
   await setSetting('lastSyncAt', nowISO());
-  await setSetting('lastSyncError', null);
   return pruneOplog();
 }
 
@@ -487,7 +503,7 @@ export async function pushOnce() {
   const result = await sendRows(rows);
 
   if (result.kind === 'network' || result.kind === 'config') {
-    await setSetting('lastSyncError', { key: 'sync.err.network', status: result.status, at: nowISO() });
+    await recordSyncError('sync.err.network', result.status);
     return { ok: false, reason: result.kind, status: result.status, pushed: 0, rows: rows.length };
   }
 
@@ -496,7 +512,7 @@ export async function pushOnce() {
   // nothing is suspected of being poison. The next cycle sees a signed-out
   // device and stops before sending anything.
   if (result.kind === 'auth') {
-    await setSetting('lastSyncError', { key: 'sync.err.session', status: result.status, at: nowISO() });
+    await recordSyncError('sync.err.session', result.status);
     return { ok: false, reason: 'auth', status: result.status, pushed: 0, rows: rows.length };
   }
 
@@ -522,8 +538,7 @@ export async function pushOnce() {
   // server was misconfigured. A real 403 during live testing did exactly that.
   // So it stops here: loud, not acked, nothing blamed on a record.
   if (result.kind === 'rejected') {
-    await setSetting('lastSyncError', { key: 'sync.err.rejected', status: result.status,
-                                        body: result.body, at: nowISO() });
+    await recordSyncError('sync.err.rejected', result.status);
     return { ok: false, reason: 'rejected', status: result.status, body: result.body,
              pushed: 0, rows: rows.length };
   }
@@ -535,7 +550,7 @@ export async function pushOnce() {
   const key = `${ops[0].opId}-${maxSeq}-${rows.length}`;
   attempts = (attempts.key === key) ? { key, count: attempts.count + 1 } : { key, count: 1 };
   if (attempts.count < POISON_ATTEMPTS) {
-    await setSetting('lastSyncError', { key: 'sync.err.short', status: result.status, at: nowISO() });
+    await recordSyncError('sync.err.short', result.status);
     return { ok: false, reason: 'short-count', attempt: attempts.count,
              landed: result.landed, expected: rows.length, pushed: 0, rows: rows.length };
   }
@@ -702,7 +717,7 @@ export async function pullOnce() {
   const cursor = state.settings.syncCursor || 0;
   const page = await fetchPage(cursor);
   if (page.kind !== 'ok') {
-    await setSetting('lastSyncError', { key: `sync.err.${page.kind}`, status: page.status, at: nowISO() });
+    await recordSyncError(`sync.err.${page.kind}`, page.status);
     return { ok: false, reason: page.kind, status: page.status, applied: 0, cursor };
   }
   if (!page.rows.length) return { ok: true, reason: 'idle', applied: 0, skipped: 0, cursor, more: false };
@@ -711,7 +726,9 @@ export async function pullOnce() {
   for (const anomaly of result.anomalies) await recordAnomaly(anomaly);
   if (result.cursor !== null) await setSetting('syncCursor', result.cursor);
   await setSetting('lastSyncAt', nowISO());
-  if (!result.anomalies.length) await setSetting('lastSyncError', null);
+  // clearing belongs to the CYCLE (runSyncCycle), not to one leg of it: a push
+  // that succeeds while pull keeps failing would otherwise restart the silence
+  // window every time and the failure would never surface.
 
   return {
     ok: true,
@@ -890,4 +907,191 @@ export async function takeSyncDuplicateNotice() {
   if (!n) return null;
   await setSetting('syncDuplicateNotice', null);
   return n;
+}
+
+// ─────────────────── status, backoff, and the cycle loop ───────────────────
+// Sync is infrastructure and should be almost invisible when it works (§10).
+// Everything below exists to keep it that way: a quiet state for the normal
+// case, a calm state for the loft with no signal, and an interruption reserved
+// for the two things a fancier can actually do something about.
+
+/** Exponential with jitter (§11). Capped at 60 s so a device that has been
+ *  offline for hours reconnects within a minute of the network returning. */
+export const BACKOFF_MS = [2000, 4000, 8000, 16000, 32000, 60000];
+
+/** How long a non-network failure stays silent before it is worth showing.
+ *  Most resolve themselves, and a warning that clears itself teaches people to
+ *  ignore warnings (§11). */
+export const SOFT_FAIL_WINDOW_MS = 120000;
+
+/** Jitter is ±25 %: several devices coming back on the same wifi should not
+ *  retry in lockstep. */
+export function backoffDelay(attempt) {
+  const base = BACKOFF_MS[Math.min(Math.max(attempt, 0), BACKOFF_MS.length - 1)];
+  const spread = base * 0.25;
+  return Math.round(base - spread + Math.random() * 2 * spread);
+}
+
+let phase = 'idle';          // 'idle' | 'syncing'
+let pendingCount = 0;        // unpushed, un-superseded ops
+let attempt = 0;             // consecutive failures, for the backoff curve
+let timer = null;
+let interruptedFor = null;   // the error we have already interrupted about
+
+/** Ops waiting to be pushed. Recounted after every cycle and every change. */
+export async function refreshSyncStatus() {
+  if (!isSignedIn()) { pendingCount = 0; }
+  else {
+    const ops = await getOpsSinceSeq(state.settings.lastAckedSeq || 0);
+    pendingCount = ops.filter((op) => !op.superseded).length;
+  }
+  emitChange({ type: 'sync-status' });
+  return pendingCount;
+}
+
+const online = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false);
+
+/**
+ * What the header should say. Synchronous, because it is read during render.
+ *
+ * `hidden` means sync is not set up on this device, and the row does not
+ * appear at all — an unconfigured build is a fully working Zajil and should
+ * not be advertising machinery it does not have.
+ */
+export function syncStatus() {
+  const s = state.settings;
+  const error = s.lastSyncError || null;
+  const base = {
+    pending: pendingCount,
+    email: s.authEmail || null,
+    lastSyncAt: s.lastSyncAt || null,
+    error,
+  };
+  if (!syncConfig().configured || !isSignedIn()) return { ...base, state: 'hidden', pending: 0 };
+  if (s.syncEnabled === false) return { ...base, state: 'off' };
+  if (phase === 'syncing') return { ...base, state: 'syncing' };
+
+  if (error) {
+    // THE SESSION IS THE ONE THING THAT INTERRUPTS IMMEDIATELY. It needs a
+    // password, nothing else will fix it, and sync stays broken until it does.
+    if (error.key === 'sync.err.session') return { ...base, state: 'error' };
+
+    // OFFLINE IS NOT AN ERROR AND NEVER BECOMES ONE, however long it lasts.
+    // Walking into a loft for ten minutes is the normal condition this product
+    // was built for; a red banner every time would train people to ignore
+    // warnings. It gets its own calm state and stays there.
+    if (error.key === 'sync.err.network' || error.key === 'sync.err.config') {
+      return { ...base, state: 'offline' };
+    }
+
+    // Anything else — a rejected request, a persistent short count — is quiet
+    // until it has outlived the backoff rounds that usually resolve it.
+    const since = Date.parse(error.since || error.at || '');
+    const persisted = Number.isFinite(since) && (Date.now() - since) >= SOFT_FAIL_WINDOW_MS;
+    if (persisted) return { ...base, state: 'error' };
+    return { ...base, state: pendingCount ? 'pending' : 'synced' };
+  }
+
+  if (!online()) return { ...base, state: 'offline' };
+  if (pendingCount > 0) return { ...base, state: 'pending' };
+  return { ...base, state: 'synced' };
+}
+
+/** Only two things ever interrupt: a session that needs a password, and a
+ *  rejection that needs us. Each interrupts ONCE, not on every cycle. */
+function interruptFor(status) {
+  if (status.state !== 'error') { interruptedFor = null; return null; }
+  const key = (status.error && status.error.key) || 'sync.err.rejected';
+  if (interruptedFor === key) return null;
+  interruptedFor = key;
+  return key;
+}
+
+/** Run one full cycle and fold the outcome into the status. Never throws. */
+export async function runSyncCycle({ manual = false } = {}) {
+  if (!syncConfig().configured || !isSignedIn()) return { ok: false, reason: 'hidden' };
+  if (state.settings.syncEnabled === false && !manual) return { ok: false, reason: 'off' };
+  if (phase === 'syncing') return { ok: false, reason: 'busy' };
+
+  phase = 'syncing';
+  emitChange({ type: 'sync-status' });
+  let result;
+  try {
+    result = await syncOnce();
+  } catch (err) {
+    // syncOnce is written not to throw; if it ever does, the loop must survive
+    result = { ok: false, reason: 'network', thrown: String((err && err.message) || err) };
+  }
+  phase = 'idle';
+
+  const reason = (result.push && !result.push.ok && result.push.reason)
+              || (result.pull && !result.pull.ok && result.pull.reason)
+              || (result.ok ? null : result.reason);
+
+  if (result.ok) {
+    attempt = 0;
+    await setSetting('lastSyncError', null);
+  } else {
+    attempt++;
+    const map = { network: 'sync.err.network', config: 'sync.err.config',
+                  auth: 'sync.err.session', 'signed-out': 'sync.err.session',
+                  rejected: 'sync.err.rejected', 'short-count': 'sync.err.short' };
+    await recordSyncError(map[reason] || 'sync.err.rejected',
+                          (result.push && result.push.status) || (result.pull && result.pull.status) || null);
+  }
+  await refreshSyncStatus();
+  const status = syncStatus();
+  const interrupt = interruptFor(status);
+  if (interrupt) emitChange({ type: 'sync-interrupt', key: interrupt, status });
+  return { ok: Boolean(result.ok), reason, status };
+}
+
+/** The «مزامنة الآن» button. Manual means now, not after the backoff. */
+export async function syncNow() {
+  attempt = 0;
+  return runSyncCycle({ manual: true });
+}
+
+export async function setSyncEnabled(on) {
+  await setSetting('syncEnabled', Boolean(on));
+  await refreshSyncStatus();
+  if (on) scheduleNext(0);
+  else if (timer) { clearTimeout(timer); timer = null; }
+}
+
+function scheduleNext(delay) {
+  if (timer) clearTimeout(timer);
+  timer = setTimeout(async () => {
+    timer = null;
+    await runSyncCycle();
+    scheduleNext(attempt ? backoffDelay(attempt - 1) : HEARTBEAT_MS);
+  }, delay);
+}
+
+/** While work is queued, check back on a slow heartbeat (§11). Never a poll
+ *  for its own sake: it costs battery and proves nothing that attempting the
+ *  actual sync would not. */
+const HEARTBEAT_MS = 60000;
+
+/**
+ * Start the background loop.
+ *
+ * Three reconnect signals, cheapest first (§11): the `online` event, which is
+ * instant when it fires but lies often enough that it cannot be the only one;
+ * a slow heartbeat; and `visibilitychange` to visible, because the phone
+ * coming out of a pocket is the single most likely moment for a fancier to
+ * have walked back into signal.
+ */
+export function startSyncLoop() {
+  if (typeof window === 'undefined') return () => {};
+  const wake = () => { if (state.settings.syncEnabled !== false) scheduleNext(0); };
+  const onVisible = () => { if (document.visibilityState === 'visible') wake(); };
+  window.addEventListener('online', wake);
+  document.addEventListener('visibilitychange', onVisible);
+  scheduleNext(0);
+  return () => {
+    window.removeEventListener('online', wake);
+    document.removeEventListener('visibilitychange', onVisible);
+    if (timer) { clearTimeout(timer); timer = null; }
+  };
 }
