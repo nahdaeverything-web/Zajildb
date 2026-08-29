@@ -473,6 +473,49 @@ before sign-in keep `actorId: null` and are pushed as-is: they were genuinely
 made by an unidentified actor on this device, and rewriting history to claim
 otherwise would be a lie in the audit trail.
 
+### 5a. Client configuration — where the endpoint comes from
+
+**Design amendment (v1.9 Phase 2).** The sections above specify the header
+shapes but never said where the client gets the project URL and the publishable
+key. This records what shipped.
+
+`js/sync-config.js` declares two constants and ships them **empty**:
+
+```js
+export const SUPABASE_URL = '';
+export const SUPABASE_PUBLISHABLE_KEY = '';
+```
+
+A build points itself somewhere by setting `globalThis.ZAJIL_SYNC_CONFIG =
+{ url, publishableKey }` before the app loads, which wins over the constants.
+`syncConfig()` resolves the two, strips trailing slashes from the URL, and
+reports `configured: false` when either is missing.
+
+**An unconfigured build is a fully working Zajil.** Sync is inert, `signIn`
+raises `AuthError` of kind `'config'`, `refreshSession` returns
+`{ ok: false, reason: 'config' }` without touching the session, and every
+existing feature behaves exactly as it did before v1.9. This is the offline
+rule of §5 holding at the level of configuration, not just the network.
+
+**Why empty, and not the dev project's values.** The publishable key is safe to
+ship in client code — that is what it is for, and the server denies `anon`
+outright. But writing a live project URL into a public repository is a release
+decision, and it should not arrive inside a feature commit. Filling these in is
+scheduled with the domain and release work, not with any implementation phase.
+
+Two guards hold the line, both in the node suite:
+
+| Guard | Asserts |
+|---|---|
+| `js/sync-config.js` ships with no endpoint filled in | both constants are still the empty string |
+| no secret or service-role key anywhere in the client source | no `sb_secret_`, `service_role`, `SUPABASE_SECRET` or `SERVICE_ROLE` in any non-comment line under `js/` |
+
+**Test configuration follows the credential rule of the live suites**: injected
+from the environment at run time, never committed. `tests/e2e/auth.py` injects
+a stub endpoint; `tests/e2e/auth_live.py` builds real credentials from
+environment variables and refuses to run if handed anything but a publishable
+key. Phase 6's UI tests inject the same way.
+
 ---
 
 ## 6. First-login flows
