@@ -42,9 +42,26 @@ def handler(route, request):
         body['user'] = srv['user']
     route.fulfill(status=200, content_type='application/json', body=json.dumps(body))
 
+class Res(dict):
+    """A page result whose missing keys read as None instead of raising.
+
+    pushOnce/refreshSession deliberately return DIFFERENT SHAPES per outcome,
+    so a test that indexes a key the failing path did not set would die with a
+    KeyError — aborting the whole suite on the first failure and hiding every
+    assertion after it. A regression has to be REPORTED, not turned into a
+    traceback. (Found by mutation testing: breaking the ack rule made five
+    other proofs silently unreachable.)"""
+    def __missing__(self, key):
+        return None
+
+def _wrap(v):
+    if isinstance(v, dict): return Res({k: _wrap(x) for k, x in v.items()})
+    if isinstance(v, list): return [_wrap(x) for x in v]
+    return v
+
 JS = "async (a) => { const db = await import('./js/db.js'); return (%s)(db, a); }"
 def run(page, fn, arg=None):
-    return page.evaluate(JS % fn, arg)
+    return _wrap(page.evaluate(JS % fn, arg))
 
 with sync_playwright() as p:
     br = p.chromium.launch(); page = br.new_page(); page.set_default_timeout(25000)

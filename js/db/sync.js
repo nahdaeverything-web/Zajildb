@@ -24,7 +24,8 @@
 // the one time they were swapped in the spike the server's refusal was
 // confusing rather than obvious.
 
-import { state, setSetting, idbGet } from './storage.js';
+import { state, setSetting, idbGet, idbDelete, nowISO } from './storage.js';
+import { getOpsSinceSeq } from './oplog.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../sync-config.js';
 
 /**
@@ -259,4 +260,314 @@ export async function ensureAccessToken() {
   if (state.settings.authAccessToken) return state.settings.authAccessToken;
   const result = await refreshSession();
   return result.ok ? (state.settings.authAccessToken || null) : null;
+}
+
+// ─────────────────────────────── push ───────────────────────────────
+// The op log is already an ordered, complete record of what this device did.
+// Push replays it (SYNC-DESIGN §2). Nothing here invents state: every row sent
+// is derived from an op that was written at the moment the user acted.
+
+/** Ops taken per cycle. Small because a failed batch is retried whole, and 200
+ *  records of jsonb is a comfortable request on a weak connection (§11). */
+export const PUSH_BATCH = 200;
+
+/** Acked ops are prunable, but this many most-recent ops are kept regardless,
+ *  as a forensic tail (§2 compaction). */
+export const OPLOG_KEEP = 500;
+
+/** Identical short counts before a batch is presumed poisoned and bisected. */
+const POISON_ATTEMPTS = 3;
+
+/** syncAnomalies is a diagnostic surface, not a log. Newest kept. */
+const MAX_ANOMALIES = 100;
+
+/**
+ * One op to one server row (§2a).
+ *
+ * THE TIMESTAMP RULE: `updated_at` is the OP's `at` — when the operation
+ * happened — and NEVER `record.updatedAt`.
+ *
+ * This is not a detail. `restoreBird` deliberately reinstates a record's
+ * ORIGINAL timestamps, because an undo restores what was there rather than
+ * making a new edit. So `record.updatedAt` can move BACKWARDS, and a sync layer
+ * that trusted it would diverge permanently: an undo stamped 09:00 loses to
+ * another device's 10:00 tombstone, that device skips the restore, and the two
+ * never converge. Operation time cannot move backwards, so it can be trusted.
+ *
+ * `owner` is omitted deliberately — the server defaults it to auth.uid(), which
+ * is what stops a client writing into someone else's rows even if it tried.
+ * `server_seq` is omitted because the trigger assigns it.
+ */
+export function opToRow(op) {
+  return {
+    store: op.store,
+    record_id: op.recordId,
+    // a delete carries the record's last-known body rather than null: it costs
+    // little and makes an audit or a server-side undo possible later. `{}` only
+    // when an op genuinely captured no record, since the column is NOT NULL.
+    data: op.record || {},
+    deleted: op.op === 'delete',
+    updated_at: op.at,
+    device_id: op.deviceId,
+    op_seq: op.seq,
+  };
+}
+
+/**
+ * Collapse ops to one row per (store, record). Replaying three edits to one
+ * bird is three round trips for one final state.
+ *
+ * The LAST op wins — its `at`, `data` and `seq` — which is why the input must
+ * be in seq order. Map insertion order is preserved, so the request body still
+ * reads oldest-record-first and a failing batch is easier to read.
+ */
+export function collapseOps(ops) {
+  const byRecord = new Map();
+  for (const op of ops) byRecord.set(`${op.store} ${op.recordId}`, opToRow(op));
+  return [...byRecord.values()];
+}
+
+/** POST rows, classifying the outcome the same way the token endpoint does. */
+async function sendRows(rows, { allowRefresh = true } = {}) {
+  const { url, configured } = syncConfig();
+  if (!configured) return { kind: 'config', landed: 0, status: null, body: null };
+
+  let res;
+  try {
+    res = await fetch(`${url}/rest/v1/sync_records`, {
+      method: 'POST',
+      headers: {
+        ...authHeaders(),
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=representation',
+      },
+      body: JSON.stringify(rows),
+    });
+  } catch (err) {
+    return { kind: 'network', landed: 0, status: null, body: String((err && err.message) || err) };
+  }
+
+  if (res.status === 401 && allowRefresh) {
+    // The access token expired mid-cycle. Refresh is REACTIVE — this is the
+    // 401 it reacts to — and the batch is retried once, never acked on the way.
+    const refreshed = await refreshSession();
+    if (refreshed.ok) return sendRows(rows, { allowRefresh: false });
+    // NOT 'rejected'. A rejection means the SERVER refused this record, and
+    // that is what bisection hunts for and eventually marks poison. A session
+    // that could not be refreshed says nothing about any record: treating it
+    // as a rejection would let a expiring session mark a whole batch poisoned,
+    // ack past it and prune the ops — losing writes that never left the device.
+    return { kind: 'auth', landed: 0, status: 401,
+             body: `session could not be refreshed (${refreshed.reason})` };
+  }
+  if (res.status >= 500) return { kind: 'network', landed: 0, status: res.status, body: 'server error' };
+
+  const text = await res.text();
+  if (!res.ok) return { kind: 'rejected', landed: 0, status: res.status, body: text.slice(0, 300) };
+
+  // THE ACK CONDITION (§2, SPIKE §4d). A write blocked by row-level security
+  // returns 200 with ZERO rows, so a 200 alone must never advance the cursor.
+  // Count the rows that actually came back.
+  let returned = [];
+  try { returned = JSON.parse(text); } catch { returned = []; }
+  const landed = Array.isArray(returned) ? returned.length : 0;
+  return { kind: 'ok', landed, status: res.status, body: text.slice(0, 300), rows: returned };
+}
+
+/**
+ * Isolate the offender in log2(n) round trips.
+ *
+ * Reached only after POISON_ATTEMPTS identical short counts, so a healthy batch
+ * never pays for it. A half that lands whole is done; a half that comes back
+ * short is split again; a SINGLE row that comes back short is the poison.
+ */
+async function bisect(rows) {
+  const poison = [];
+  const stack = [rows];
+  while (stack.length) {
+    const chunk = stack.pop();
+    const result = await sendRows(chunk);
+    // Only a 200 that omits the row identifies a poison record. Every other
+    // outcome — offline, 5xx, expired session, 4xx — is request-level and says
+    // nothing about any record, so bisection abandons rather than concluding.
+    if (result.kind !== 'ok') return { resolved: false, poison };
+    if (result.kind === 'ok' && result.landed === chunk.length) continue;   // this half is fine
+    if (chunk.length === 1) { poison.push({ row: chunk[0], result }); continue; }
+    const mid = Math.floor(chunk.length / 2);
+    stack.push(chunk.slice(0, mid), chunk.slice(mid));
+  }
+  return { resolved: true, poison };
+}
+
+/** Newest first, capped. A diagnostic surface for الأدوات, not a log. */
+export function listSyncAnomalies() {
+  const list = state.settings.syncAnomalies;
+  return Array.isArray(list) ? list : [];
+}
+
+async function recordAnomaly(entry) {
+  await setSetting('syncAnomalies', [entry, ...listSyncAnomalies()].slice(0, MAX_ANOMALIES));
+}
+
+/**
+ * Drop ops the server has verifiably taken (§2 compaction — the v1.8 deferral).
+ *
+ * An op with `seq <= lastAckedSeq` is prunable. The most recent OPLOG_KEEP ops
+ * are kept regardless of ack state as a forensic tail. Tombstones are NEVER
+ * pruned: they are the resurrection protection and they are cheap.
+ *
+ * A device that has never synced has lastAckedSeq = 0 and prunes nothing, so
+ * its history is exactly what v1.8 kept.
+ */
+export async function pruneOplog() {
+  const acked = state.settings.lastAckedSeq || 0;
+  if (!acked) return 0;
+  const ops = await getOpsSinceSeq(0);                       // seq order
+  const tail = new Set(ops.slice(-OPLOG_KEEP).map((o) => o.opId));
+  let pruned = 0;
+  for (const op of ops) {
+    if (op.seq > acked || tail.has(op.opId)) continue;
+    await idbDelete('oplog', op.opId);
+    pruned++;
+  }
+  return pruned;
+}
+
+async function ackThrough(seq) {
+  await setSetting('lastAckedSeq', seq);
+  await setSetting('lastSyncAt', nowISO());
+  await setSetting('lastSyncError', null);
+  return pruneOplog();
+}
+
+// Identical short counts are counted against the batch that produced them, so
+// an unrelated batch never inherits another's suspicion. Module state, not
+// persisted: a reload restarts the count, which errs toward retrying rather
+// than toward declaring a record poisoned.
+let attempts = { key: null, count: 0 };
+
+/**
+ * One push cycle: take ops, collapse, send, verify, ack.
+ *
+ * Never throws — the caller is a background loop. Returns:
+ *
+ *   { ok: true,  reason: 'idle' }        nothing to push
+ *   { ok: true,  reason: 'acked' }       every row landed; cursor advanced
+ *   { ok: true,  reason: 'bisected' }    poison isolated, recorded, acked past
+ *   { ok: false, reason: 'short-count' } retry this batch (attempt N of 3)
+ *   { ok: false, reason: 'network' }     offline or 5xx — cursor NOT advanced
+ *   { ok: false, reason: 'config' }      sync not set up
+ *   { ok: false, reason: 'signed-out' }  nothing to push as
+ */
+export async function pushOnce() {
+  if (!syncConfig().configured) return { ok: false, reason: 'config', pushed: 0 };
+  if (!isSignedIn()) return { ok: false, reason: 'signed-out', pushed: 0 };
+
+  const since = state.settings.lastAckedSeq || 0;
+  const ops = (await getOpsSinceSeq(since)).slice(0, PUSH_BATCH);
+  if (!ops.length) return { ok: true, reason: 'idle', pushed: 0, rows: 0 };
+
+  const rows = collapseOps(ops);
+  const maxSeq = ops[ops.length - 1].seq;
+  const result = await sendRows(rows);
+
+  if (result.kind === 'network' || result.kind === 'config') {
+    await setSetting('lastSyncError', { key: 'sync.err.network', status: result.status, at: nowISO() });
+    return { ok: false, reason: result.kind, status: result.status, pushed: 0, rows: rows.length };
+  }
+
+  // The session expired and could not be renewed. Deliberately NOT counted as
+  // a short count: the batch is untouched, the cursor does not move, and
+  // nothing is suspected of being poison. The next cycle sees a signed-out
+  // device and stops before sending anything.
+  if (result.kind === 'auth') {
+    await setSetting('lastSyncError', { key: 'sync.err.session', status: result.status, at: nowISO() });
+    return { ok: false, reason: 'auth', status: result.status, pushed: 0, rows: rows.length };
+  }
+
+  if (result.kind === 'ok' && result.landed === rows.length) {
+    attempts = { key: null, count: 0 };
+    const pruned = await ackThrough(maxSeq);
+    return { ok: true, reason: 'acked', pushed: rows.length, rows: rows.length,
+             ops: ops.length, lastAckedSeq: maxSeq, pruned };
+  }
+
+  // ── a 4xx is a REQUEST-level failure, never a verdict on a record ──
+  // This distinction was learned from the live server, and it is load-bearing.
+  // Row-level security does NOT reject with a status: a blocked write comes
+  // back 200 with the row simply ABSENT (SPIKE §4d). So a short count is the
+  // only signal that identifies a poison RECORD, and a 4xx is something else
+  // entirely — a misconfigured grant, a malformed request, a revoked policy.
+  // All of them affect every record equally and none of them are anyone's
+  // fault but ours.
+  //
+  // Treating a 4xx as "a short count of zero" (which this did at first) means
+  // three retries, then bisection down to single rows, then EVERY record marked
+  // poison, acked past and pruned — the entire queue discarded because the
+  // server was misconfigured. A real 403 during live testing did exactly that.
+  // So it stops here: loud, not acked, nothing blamed on a record.
+  if (result.kind === 'rejected') {
+    await setSetting('lastSyncError', { key: 'sync.err.rejected', status: result.status,
+                                        body: result.body, at: nowISO() });
+    return { ok: false, reason: 'rejected', status: result.status, body: result.body,
+             pushed: 0, rows: rows.length };
+  }
+
+  // Keyed on the first op's opId — a uuid — not on its seq. Seq-based keys can
+  // repeat across genuinely different batches (any device whose counter is ever
+  // reset), and a batch inheriting another's suspicion would bisect on its first
+  // short count instead of its third.
+  const key = `${ops[0].opId}-${maxSeq}-${rows.length}`;
+  attempts = (attempts.key === key) ? { key, count: attempts.count + 1 } : { key, count: 1 };
+  if (attempts.count < POISON_ATTEMPTS) {
+    await setSetting('lastSyncError', { key: 'sync.err.short', status: result.status, at: nowISO() });
+    return { ok: false, reason: 'short-count', attempt: attempts.count,
+             landed: result.landed, expected: rows.length, pushed: 0, rows: rows.length };
+  }
+
+  // Three identical short counts: bisect. "Retried rather than acked" is
+  // correct exactly once. Repeated forever it is a deadlock — one permanently
+  // rejected record blocks all sync, for every store, indefinitely, and the
+  // user sees only a sync that never completes.
+  const { resolved, poison } = await bisect(rows);
+  if (!resolved) {
+    return { ok: false, reason: 'network', pushed: 0, rows: rows.length, bisecting: true };
+  }
+  for (const p of poison) {
+    await recordAnomaly({
+      at: nowISO(),
+      store: p.row.store,
+      recordId: p.row.record_id,
+      status: p.result.status,
+      body: p.result.body,
+    });
+  }
+  attempts = { key: null, count: 0 };
+  // An anomaly is loud but never a roadblock: advance past the poison so the
+  // rest of the queue drains. A correct-looking queue that never empties is
+  // worse than a visible, named failure the fancier can be asked about.
+  const pruned = await ackThrough(maxSeq);
+  return { ok: true, reason: 'bisected', pushed: rows.length - poison.length, rows: rows.length,
+           ops: ops.length, poison: poison.length, lastAckedSeq: maxSeq, pruned };
+}
+
+/**
+ * Push until the queue is drained or something stops it.
+ *
+ * `maxCycles` is a backstop, not a policy: real pacing (backoff, jitter,
+ * reconnect detection) is §11 and lands with the sync loop in Phase 6. A
+ * short-count result ends the run rather than spinning, because the retry it
+ * asks for is supposed to arrive after a backoff, not immediately.
+ */
+export async function pushAll({ maxCycles = 50 } = {}) {
+  let pushed = 0, cycles = 0, poison = 0;
+  while (cycles < maxCycles) {
+    cycles++;
+    const r = await pushOnce();
+    pushed += r.pushed || 0;
+    poison += r.poison || 0;
+    if (r.reason === 'idle') return { ok: true, reason: 'idle', pushed, cycles, poison };
+    if (!r.ok) return { ...r, pushed, cycles, poison };
+  }
+  return { ok: false, reason: 'max-cycles', pushed, cycles, poison };
 }

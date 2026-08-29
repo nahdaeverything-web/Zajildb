@@ -186,15 +186,17 @@ test('guard: every app module is precached, or offline will break', () => {
 // be added here deliberately, but one must never go missing by accident — a
 // dropped re-export is invisible until a view calls it at runtime.
 const FACADE = [
-  'AUTH_SETTING_KEYS', 'AuthError', 'Health', 'Lofts', 'Pairs', 'REFERENCE_STATUS', 'Races',
-  'SENSITIVE_SETTING_PREFIXES', 'STORES', 'ValidationError', 'addMedia', 'allBirds',
-  'authHeaders', 'authState', 'autoBackup', 'checkBird', 'currentLoft', 'dataURLToBlob',
-  'deleteBird', 'deleteMedia', 'diffFields', 'emitChange', 'ensureAccessToken', 'exportAll',
-  'exportBirdWithAncestry', 'exportableSettings', 'getBird', 'getOpsSinceSeq', 'idbClear',
-  'idbDelete', 'idbGet', 'idbGetAll', 'idbPut', 'importAll', 'initDB', 'isSignedIn',
-  'listBackups', 'listOps', 'listTombstones', 'loftStatuses', 'makeGeneric', 'mediaForBird',
-  'newBird', 'nowISO', 'onChange', 'opRecord', 'openDB', 'refreshSession', 'restoreBird',
-  'restoreMedia', 'saveBird', 'setSetting', 'signIn', 'signOut', 'state', 'syncConfig', 'uuid',
+  'AUTH_SETTING_KEYS', 'AuthError', 'Health', 'Lofts', 'OPLOG_KEEP', 'PUSH_BATCH', 'Pairs',
+  'REFERENCE_STATUS', 'Races', 'SENSITIVE_SETTING_PREFIXES', 'STORES', 'ValidationError',
+  'addMedia', 'allBirds', 'authHeaders', 'authState', 'autoBackup', 'checkBird',
+  'collapseOps', 'currentLoft', 'dataURLToBlob', 'deleteBird', 'deleteMedia', 'diffFields',
+  'emitChange', 'ensureAccessToken', 'exportAll', 'exportBirdWithAncestry',
+  'exportableSettings', 'getBird', 'getOpsSinceSeq', 'idbClear', 'idbDelete', 'idbGet',
+  'idbGetAll', 'idbPut', 'importAll', 'initDB', 'isSignedIn', 'listBackups', 'listOps',
+  'listSyncAnomalies', 'listTombstones', 'loftStatuses', 'makeGeneric', 'mediaForBird',
+  'newBird', 'nowISO', 'onChange', 'opRecord', 'opToRow', 'openDB', 'pruneOplog', 'pushAll',
+  'pushOnce', 'refreshSession', 'restoreBird', 'restoreMedia', 'saveBird', 'setSetting',
+  'signIn', 'signOut', 'state', 'syncConfig', 'uuid',
 ];
 
 test('guard: js/db.js exports exactly the pinned public surface', () => {
@@ -203,7 +205,7 @@ test('guard: js/db.js exports exactly the pinned public surface', () => {
   const extra = actual.filter((n) => !FACADE.includes(n));
   assertEq(missing.length + extra.length, 0,
     `the db facade drifted — missing: [${missing.join(', ')}] unexpected: [${extra.join(', ')}]`);
-  assertEq(actual.length, 57, `expected 57 exports, found ${actual.length}`);
+  assertEq(actual.length, 65, `expected 65 exports, found ${actual.length}`);
 });
 
 test('guard: js/db.js stays a facade — re-exports only, no logic', () => {

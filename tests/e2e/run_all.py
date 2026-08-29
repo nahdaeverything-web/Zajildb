@@ -27,6 +27,10 @@ OPT_IN = {
         '--live-auth',
         'needs the internet and live credentials in the environment (see the file header)',
     ),
+    'push_live.py': (
+        '--live-push',
+        'needs the internet and live credentials, and WRITES to the real project',
+    ),
 }
 
 LOCAL = sorted(f for f in glob.glob(os.path.join(HERE, '*.py'))
