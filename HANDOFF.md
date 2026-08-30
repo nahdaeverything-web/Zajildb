@@ -821,6 +821,22 @@ does not.
    screen."** Found in the first-user session, by trying to hand someone the
    app. Add that walk to the checklist for any release that changes what a
    user must do.
+
+9. **A convention is not the data.** HANDOFF §14 says *"UUIDs only"*. That was
+   read, believed, and encoded as a `uuid` column on the server — while the
+   app's own shipped example datasets use ids like `e-gouden` and `x-remco`,
+   111 of them, offered to every new user from the empty state. Every push from
+   such a loft was rejected whole, `22P02`, and the queue stalled silently for
+   half an hour until the first real user hit it.
+
+   Nothing caught it because every test built records through `newBird()`,
+   which does generate uuids. 508 assertions and three live suites passed over
+   the top of it. **The convention was verified; the data never was.**
+
+   Before encoding any invariant in a place that can reject data — a column
+   type, a check constraint, a parser — **grep the shipped fixtures for
+   counter-examples first.** The app's own data is the cheapest adversarial
+   test available and it costs one command.
 ---
 
 ## 16. Open items / awaiting the user's decision

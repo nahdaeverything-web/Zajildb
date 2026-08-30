@@ -327,6 +327,9 @@ test('guard: the §1 migration script is the COMPLETE current schema', () => {
   const required = [
     ['grant usage on sequence public.sync_server_seq to authenticated',
      'without it every insert fails 403 and the table accepts nothing (Phase 3)'],
+    ['record_id   text',
+     'as `uuid` it rejects every id the example datasets use, stalling the queue '
+     + 'silently and permanently (first-user session)'],
     ["TG_OP = 'UPDATE'",
      "without it a stale device overwrites fresher data by pushing (Phase 5)"],
     ['pg_advisory_xact_lock',

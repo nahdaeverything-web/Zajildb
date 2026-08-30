@@ -74,6 +74,56 @@ The workaround used in the first-user session, for reference:
 (await import('./js/db.js')).signIn('you@example.com', 'your-password')
 ```
 
+### R2. `record_id` was typed `uuid`; Zajil ids are not uuids — FIXED AND VERIFIED
+
+Found by the first real user, within an hour of signing in. Fixed the same
+session.
+
+`sync_records.record_id` was `uuid`. Both shipped example datasets — offered in
+the empty state and in الأدوات — use readable ids (`e-gouden`, `x-remco`,
+`f-saqr`): **111 records between them, none of them uuids**. `importAll`
+accepts any string id, so any export from such a loft carries them too.
+
+```
+400  {"code":"22P02","message":"invalid input syntax for type uuid: \"g1-lama\""}
+```
+
+Every push carried at least one, so **every push was rejected whole** —
+including the valid records batched with them. 45 ops sat queued for half an
+hour and would have sat there forever.
+
+**Fixed:** `alter table public.sync_records alter column record_id type text;`
+Verified on the dashboard (column is `text`, PK and both indexes intact, RLS on,
+four policies, LWW guard present) and end-to-end: the queue drained on the next
+cycle and 48 rows landed across six stores, owner-scoped and ascending.
+
+**No format or length constraint replaces it**, deliberately — a `check` on id
+shape would recreate the identical failure for the next import that does not
+match it. See SYNC-DESIGN §1, "client ids are opaque strings".
+
+**What did NOT fail, which is worth as much as the fix.** The 4xx rule from
+Phase 5 held the queue instead of discarding it; the silence window escalated on
+schedule; the header showed the amber interruption and الأدوات showed the full
+error with count and date. One defect, and the containment and surfacing built
+around it worked on the first real failure they ever met.
+
+### B. Regenerate the example datasets with real uuids — v1.9.1 tidy-up
+
+`sample-data.json` and `example-loft-large.json` use readable ids. That is no
+longer a sync problem (R2 fixed the column), but it contradicts the convention
+in HANDOFF §14 — *"UUIDs only"* — and a convention the shipped data breaks is
+a convention that will mislead someone again.
+
+Regenerate both through `tools/gen-sample.js` and `tools/gen-example-large.js`
+with `crypto.randomUUID()`. **Not urgent and not risky to defer**: ids are
+opaque to the server now.
+
+Care needed: the COI acceptance fixtures are contractual and reference birds by
+id (`tests/e2e/*.py`, `tests/sample.test.js`, `tests/example-large.test.js`).
+Regenerating means updating those references in the same commit, and the four
+COI values must come out identical — they are computed from pedigree structure,
+not ids, so any change in them means the regeneration was wrong.
+
 ---
 
 ## Planned work

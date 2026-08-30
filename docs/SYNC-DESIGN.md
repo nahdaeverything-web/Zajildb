@@ -86,7 +86,12 @@ create sequence if not exists public.sync_server_seq;
 create table public.sync_records (
   owner       uuid        not null default auth.uid() references auth.users (id) on delete cascade,
   store       text        not null,
-  record_id   uuid        not null,
+  -- TEXT, not uuid. Client record ids are OPAQUE STRINGS to the server: it
+  -- scopes by `owner`, never parses an id, and never joins on one. Typing this
+  -- `uuid` enforced nothing the server relies on and offered exactly one
+  -- behaviour — a permanently, silently stalled queue — the moment a client
+  -- held an id that was not a uuid. See the amendment below.
+  record_id   text        not null,
   data        jsonb       not null,
   deleted     boolean     not null default false,
   updated_at  timestamptz not null,
@@ -195,6 +200,71 @@ create policy "sync_records owner delete" on public.sync_records
   for delete to authenticated
   using (owner = (select auth.uid()));
 ```
+
+### Design amendment (first-user session): client ids are opaque strings
+
+`record_id` was typed `uuid`. **Zajil record ids are not uuids.** Both shipped
+example datasets — offered in the empty state and in الأدوات — use readable ids
+(`e-gouden`, `x-remco`, `f-saqr`): 111 records between them, none of them uuids.
+`importAll` accepts any string id, so any export ever made from such a loft
+carries them too.
+
+The result, found by the first real user within an hour of signing in:
+
+```
+400  {"code":"22P02","message":"invalid input syntax for type uuid: \"g1-lama\""}
+```
+
+Every push carried at least one such id, so **every push was rejected whole**,
+including the records that were perfectly valid. 45 ops queued and never moved.
+
+> **THE RULE: client-supplied identifiers are OPAQUE STRINGS to the server.**
+> It scopes by `owner`, never parses an id, never joins on one. A type
+> constraint here enforces nothing and can only strand a queue.
+>
+> **And no format or length constraint in its place** — a `check` on id shape
+> would recreate the identical failure mode for the next import that does not
+> match it.
+
+**How it hid.** HANDOFF §14 states the convention: *"Never key records on ring
+number. UUIDs only."* That convention was read, believed, and encoded as a
+column type — while the app's own shipped data violates it. Every test used
+`newBird()`, which does generate uuids, so 508 assertions and three live suites
+passed straight over the top of it. **The convention was verified; the data
+never was.**
+
+The fix, applied and verified:
+
+```sql
+alter table public.sync_records alter column record_id type text;
+```
+
+#### `device_id` stays `uuid` — reviewed, with the measurement
+
+The same reasoning argues for `text`: `device_id` is client-supplied, opaque to
+the server, never a key, never joined. Against that, it is the one column the
+LWW tie-break compares, and unlike `record_id` it is *provably* always
+`uuid()`-generated — `initDB` sets it once and nothing else ever writes it.
+
+The concern with changing it was that `uuid` ordering is by byte value while
+`text` ordering is by collation, and the tie-break must agree with the client's
+JavaScript string comparison. That was **measured rather than argued**, on the
+live database with its own collation:
+
+```sql
+select count(*) filter (where (a::text <= b::text) <> (a <= b)) as ordering_disagreements
+from (select gen_random_uuid() a, gen_random_uuid() b from generate_series(1, 2000)) t;
+--  ordering_disagreements = 0
+```
+
+So a change would be *safe*. It is nonetheless **not made**, and the reason is
+worth stating: the argument for `text` is risk elimination, and here there is no
+risk to eliminate — `device_id` cannot hold a non-uuid without `initDB` itself
+changing, and that change would be deliberate. Touching the most
+safety-critical comparison in the system to remove a hypothetical is the wrong
+trade. **If device identity ever becomes anything a human or an import can
+supply, this becomes `text` in the same commit** — the measurement above is
+recorded so that decision needs no new investigation.
 
 ### Design amendment (v1.9 Phase 3): the sequence grant, and why introspection was not enough
 
