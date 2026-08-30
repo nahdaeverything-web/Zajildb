@@ -41,6 +41,41 @@ survives untouched. Recorded for completeness:
 
 ---
 
+## v1.9.1 — RELEASE-BLOCKING
+
+### R1. There is no sign-in surface in the UI
+
+`signIn()` exists and works; **nothing in `js/views/` calls it.** Signed out,
+the المزامنة card renders one line of text — *"غير مسجّل الدخول"* — and offers
+no way to change that. A fancier who installs Zajil cannot reach their account
+from the interface at all.
+
+> **An invite-only product where the invited person cannot sign in is not
+> shippable to them.** This blocks any release to a real user. It does not
+> block the deployed v1.9.0 build, which ships with sync inert by decision.
+
+Found in the first-user session (2026-08-30), by walking the path rather than
+by reading the spec — see HANDOFF §15.12 item 8.
+
+**The work:** email + password fields and a sign-in button in the المزامنة card,
+a sign-out button when signed in, `AuthError` surfaced by `kind` using the
+strings that already exist (`sync.err.session` for a rejection, and the calm
+network wording for `kind: 'network'` — a bad connection is not a wrong
+password, and the split already exists in `js/db/sync.js`). Disable the button
+while the request is in flight; the existing double-tap backlog item applies.
+
+**What NOT to do:** do not add a "create account" flow. Accounts are created
+through the admin API and public signups stay disabled — that is what makes
+invite-only true rather than aspirational (SPIKE §4f).
+
+The workaround used in the first-user session, for reference:
+
+```js
+(await import('./js/db.js')).signIn('you@example.com', 'your-password')
+```
+
+---
+
 ## Planned work
 
 Not debt — a decision already taken, recorded so it is not rediscovered.

@@ -807,6 +807,20 @@ does not.
    against one stateful server. Nothing less would have caught the ordering and
    supersession bugs.
 
+
+8. **A completeness gap hides from a checklist audit.** §10 listed what the
+   المزامنة card must show — signed-in email, last sync, pending count, sync
+   now, the toggle, the last error. It was built exactly as specified, and
+   every audit verified exactly what was specified, and all of it passed. The
+   card displays an email it gives the user no way to acquire: **there is no
+   sign-in surface anywhere in the app.** Nothing in the spec was wrong;
+   the spec was incomplete, and an audit that checks the spec cannot see that.
+
+   The question that would have caught it is not "does each requirement pass?"
+   but **"walk the user's path from installed to signed in and name every
+   screen."** Found in the first-user session, by trying to hand someone the
+   app. Add that walk to the checklist for any release that changes what a
+   user must do.
 ---
 
 ## 16. Open items / awaiting the user's decision
