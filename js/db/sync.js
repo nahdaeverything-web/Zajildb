@@ -681,7 +681,7 @@ async function applyPage(rows) {
 
       const result = row.deleted
         ? await applySyncDelete(row.store, row.record_id, row.updated_at)
-        : await applySyncPut(row.store, row.data, row.updated_at);
+        : await applySyncPut(row.store, row.data, row.updated_at, row.record_id);
       if (result.applied) applied++; else skipped++;
       if (result.anomaly) {
         anomalies.push({ at: nowISO(), store: row.store, recordId: row.record_id,
