@@ -837,6 +837,97 @@ does not.
    type, a check constraint, a parser — **grep the shipped fixtures for
    counter-examples first.** The app's own data is the cheapest adversarial
    test available and it costs one command.
+
+10. **Every identity used to WRITE must be the identity used to DELETE.** The
+    pull path keyed a record's local write on the row's body id and its
+    deletion on the row's primary key. Those agree for every record the app
+    itself produces, so nothing caught it — until one row disagreed, and the
+    record became unreachable by every future sync while every layer reported
+    success.
+
+    Generalise it past this bug: **an identity asymmetry is invisible in the
+    happy path by construction**, because in the happy path the two identities
+    are equal. It only appears when something makes them differ, and by then
+    the record is already orphaned. Wherever a system writes under one key and
+    removes under another — a cache, a mirror, an index, a queue — those keys
+    must be provably the same expression, not merely equal in practice.
+
+    The corollary cost a second round: the same asymmetry was ALSO hiding in
+    the resurrection check, and the first fix left it there. Only a mutation
+    exposed it — reverting just the tombstone lookup to the body id passed
+    every test, because no test had a tombstone present at the moment a
+    mismatched row arrived. **When you find an identity asymmetry, grep for
+    every other place that identity is used before declaring it fixed.**
+
+### 15.13 The first-user session (2026-08-30) — what an hour of real use found
+
+v1.9 shipped with 508 assertions, three live suites against a real project, and
+eleven guards. The first hour of one person actually using it found **three
+defects that all of that missed**, and confirmed one thing working that had
+never been exercised for real.
+
+Read this before adding tests to anything in §15: it is the clearest available
+evidence about which kinds of test find which kinds of bug.
+
+#### 1. `record_id` was typed `uuid`; Zajil ids are not uuids
+
+Every push rejected whole, `22P02`, 45 ops queued for half an hour. The shipped
+example datasets use readable ids (`e-gouden`, `x-remco`) — 111 records between
+them, offered to every new user from the empty state — and `importAll` accepts
+any string id. Fixed by `alter column record_id type text`; the rule is now
+§1's "client ids are opaque strings to the server". Lesson 9.
+
+#### 2. The pull path was asymmetric about record identity
+
+`applySyncPut` keyed the local write on `row.data.id`; `applySyncDelete` keys
+on `row.record_id`. A row whose body disagreed with its primary key landed
+under an identity the server does not know, and was then unreachable by every
+future sync — **including its own deletion**. The device held it forever while
+every layer reported success: `applied: 1`, `ok: true`, `state: synced`.
+
+Fixed on `fix/v1.9.1-pulled-delete`. Lesson 10.
+
+#### 3. There is no sign-in surface
+
+Covered as R1 and lesson 8. The card displays an email the user has no way to
+acquire.
+
+#### What did NOT fail, which is worth as much
+
+Defect 1 produced a genuine 30-minute server rejection on a real device, and
+**every containment and surfacing mechanism behaved exactly as designed**:
+
+- The **4xx rule** (§2, Phase 5) held the queue instead of discarding it. Under
+  the original implementation — treating a 4xx as a short count — bisection
+  would have marked all 45 ops poison, acked past them and pruned them. The
+  fancier's entire loft would have been destroyed by a missing column type.
+- The **silence window** (§11) stayed quiet through the transient phase and
+  escalated on schedule.
+- **Both surfaces told the truth**: the header showed the amber
+  *"تعذّرت المزامنة"* interruption, and the الأدوات card showed the full error
+  with its status code and timestamp.
+- **Convergence held**: once the column was fixed, the queue drained on the
+  next cycle, and after the identity repair all three fingerprints — two
+  devices and the server — agreed exactly.
+
+Three defects, and zero failures in the machinery built to contain them.
+
+#### Observed sync timing, confirmed in live use
+
+Recorded because it was watched happening, not inferred from the code:
+
+| Trigger | Behaviour |
+|---|---|
+| idle window, work pending elsewhere | pulls on the ~60 s heartbeat — a bird appeared unprompted in an untouched window |
+| page refresh | syncs immediately, via `startSyncLoop()` at boot |
+| in-app navigation | **deliberately not a trigger** — routing is local and must never wait on the network |
+| tab becoming visible | pulls immediately (`visibilitychange`, §11) |
+
+All as designed. **Real-time subscriptions remain the v2.x upgrade path**, for
+when club mode or a marketplace needs live cross-user updates; a 60 s heartbeat
+is right for one fancier's own devices and wrong for two people watching the
+same auction.
+
 ---
 
 ## 16. Open items / awaiting the user's decision

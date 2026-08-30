@@ -8,7 +8,8 @@ exhaustive.
 
 **20 open** (0 high · 10 medium · 10 low) ·
 **13 closed in v1.7** · **0 closed in v1.8** · **0 closed in v1.9** ·
-plus **3 open decisions**, **4 planned items**, and a **release checklist**
+plus **3 open decisions**, **4 planned items**, a **v1.9.1 bundle**, and a
+**release checklist**
 below.
 
 Nothing open is a crash or a blocker. Severity is the auditor's and reflects
@@ -42,6 +43,21 @@ survives untouched. Recorded for completeness:
 ---
 
 ## v1.9.1 — RELEASE-BLOCKING
+
+**These merge together as ONE micro-release, not separately.** `main` ships
+sync-inert (`js/sync-config.js` empty), so no user is exposed to any of this
+today, and one coherent v1.9.1 beats three tiny deploys. The bundle is R1, R4,
+R5 and B; R2 and R3 are already closed.
+
+| | Item | State |
+|---|---|---|
+| R1 | sign-in surface | **not started** — release-blocking for any real user |
+| R2 | `record_id` typed `uuid` | **fixed and verified** (server-side, live) |
+| R3 | error surfacing under a real failure | **resolved, no defect** |
+| R4 | an empty default loft per device | not started |
+| R5 | pulled-delete identity asymmetry | **fixed on `fix/v1.9.1-pulled-delete`**, held |
+| B | example datasets → real uuids | not started |
+
 
 ### R1. There is no sign-in surface in the UI
 
@@ -106,6 +122,62 @@ Phase 5 held the queue instead of discarding it; the silence window escalated on
 schedule; the header showed the amber interruption and الأدوات showed the full
 error with count and date. One defect, and the containment and surfacing built
 around it worked on the first real failure they ever met.
+
+### R3. Error surfacing under a real failure — RESOLVED, NO DEFECT
+
+Recorded because a mechanism that works under a genuine failure is worth as
+much on the record as one that does not.
+
+R2 produced a real 30-minute server rejection on a real device. Every part of
+the containment and surfacing built in Phases 3, 5 and 6 behaved exactly as
+designed, confirmed by screenshot:
+
+- the **4xx rule** held the queue instead of discarding it — under the original
+  "a 4xx is a short count of zero" implementation, bisection would have marked
+  all 45 ops poison, acked past them and pruned them, destroying the loft
+- the **silence window** stayed quiet through the transient phase and escalated
+  on schedule
+- the header showed the amber *"تعذّرت المزامنة"* interruption
+- the الأدوات card showed the full error with status code and timestamp
+
+No action. See HANDOFF §15.13.
+
+### R4. Every device adds an empty default loft to the account — v1.9.1
+
+`initDB()` creates a default loft on a fresh database, and first-login sync
+dutifully pushes it. So a fancier with a phone, a tablet and a laptop ends up
+with **three empty lofts plus the one they actually named**. Observed directly
+in the first-user session: two devices produced three loft rows.
+
+Nothing breaks — the clutter simply grows with device count, and every extra
+loft is a row that syncs forever.
+
+Not obvious which fix is right, so it needs a decision rather than a patch:
+suppress the synthetic op for an untouched default loft; or adopt an existing
+remote loft on first sync instead of pushing a local empty one; or let the user
+delete lofts (there is no delete-loft flow today). The first is smallest, the
+second is most correct, the third is needed regardless.
+
+### R5. A pulled record was keyed on its body id, not the server's — FIXED ON BRANCH
+
+`applySyncPut` keyed the local write on `row.data.id` while `applySyncDelete`
+keys on `row.record_id`. A row whose body disagreed with its primary key landed
+under an identity the server does not know and became **unreachable by every
+future sync, including its own deletion** — while every layer reported success
+(`applied: 1`, `ok: true`, `state: synced`).
+
+Found in the first-user session: one device held a record that no amount of
+syncing could remove. Fixed on `fix/v1.9.1-pulled-delete` (`84d0571`), tests
+first, four mutations all caught, browser 508 → 515. **Held for the v1.9.1
+bundle** — the deployed build is sync-inert, so nobody is exposed.
+
+The affected device was healed through the **normal sync path**, with no local
+database surgery: a delete addressed to the identity the orphan actually had.
+All three fingerprints — two devices and the server — then agreed exactly.
+
+The part worth remembering is in HANDOFF lesson 10: the same asymmetry was also
+hiding in the resurrection check, and the first fix left it there. Only a
+mutation exposed it.
 
 ### B. Regenerate the example datasets with real uuids — v1.9.1 tidy-up
 
@@ -172,6 +244,23 @@ v1.9 on the grounds that the failure mode is a single retried request, which
 push idempotency absorbs — and that storing an expiry means a settings key
 holding a number the server already tells the truth about. Recorded so the
 trade-off is not re-litigated from scratch.
+
+### P5. Real-time subscriptions — v2.x, when club mode needs them
+
+v1.9 syncs on a ~60 s heartbeat, plus `online` and `visibilitychange`. Confirmed
+in live use: an idle window pulled a bird unprompted on the heartbeat, a refresh
+synced instantly via boot, and in-app navigation is deliberately not a trigger
+because routing is local and must never wait on the network.
+
+That cadence is right for one fancier's own devices and wrong for two people
+watching the same thing. **When club mode or a marketplace needs live
+cross-user updates, the upgrade is Supabase real-time subscriptions** on
+`sync_records`, filtered by owner — the pull path already applies rows
+idempotently through `applySyncPut`, so a subscription would feed the same
+apply, not a second code path.
+
+Not scheduled. Recorded so the option is known and the heartbeat is not
+mistaken for a limitation nobody noticed.
 
 ### P4. Split `js/db/sync.js` — with the first v1.9.x item that touches it
 
