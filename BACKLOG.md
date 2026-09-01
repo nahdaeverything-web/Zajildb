@@ -44,20 +44,23 @@ survives untouched. Recorded for completeness:
 
 ## v1.9.1 — RELEASE-BLOCKING
 
-**These merge together as ONE micro-release, not separately.** `main` ships
-sync-inert (`js/sync-config.js` empty), so no user is exposed to any of this
-today, and one coherent v1.9.1 beats three tiny deploys. The bundle is R1, R4,
-R5 and B; R2 and R3 are already closed.
+**Bundled as ONE micro-release, not shipped separately.** `main` runs
+sync-inert (`js/sync-config.js` empty), so no user was exposed to any of this,
+and one coherent v1.9.1 beats four tiny deploys.
+
+**COMPLETE on `release/v1.9.1`, awaiting merge.**
 
 | | Item | State |
 |---|---|---|
-| R1 | sign-in surface | **not started** — release-blocking for any real user |
+| R1 | sign-in surface | **done** — form, three error kinds, sign-out keeps data |
 | R2 | `record_id` typed `uuid` | **fixed and verified** (server-side, live) |
 | R3 | error surfacing under a real failure | **resolved, no defect** |
-| R4 | an empty default loft per device | **fixed** |
-| R5 | pulled-delete identity asymmetry | **fixed on `fix/v1.9.1-pulled-delete`**, held |
-| B | example datasets → real uuids | **done** |
-| R6 | a suite depended on a server it did not start | **fixed** |
+| R4 | an empty default loft per device | **done** — pristine lofts are never pushed; a lone remote loft is adopted |
+| R5 | pulled-delete identity asymmetry | **done** — a record is keyed on the server's identity |
+| R6 | a suite depended on a server it did not start | **done** — it provisions its own |
+| B | example datasets → real uuids | **done** — plus a guard so it cannot return |
+
+Everything below this table is either already closed or is future work.
 
 
 ### R1. There is no sign-in surface in the UI

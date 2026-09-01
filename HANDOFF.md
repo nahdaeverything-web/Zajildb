@@ -35,18 +35,18 @@ If a proposed feature doesn't serve one of those three, it is out of scope.
 
 | | |
 |---|---|
-| App version (service worker) | `zajil-v1.9.0` |
-| Branch | `sync/v1.9` — **not merged**; merge and deploy are a separate explicit go |
-| `main` at | `4185578` — v1.8.0, tagged · **`main` still serves v1.8.1** |
-| **Live** | **https://nahdaeverything-web.github.io/Zajildb/** — serving `zajil-v1.8.1` until v1.9 is deployed |
-| Node tests | **138 passing, 0 failing** — `node tests/run.js` |
-| Browser assertions | **508 passing, 0 failing** across **27 suites** — `python3 tests/e2e/run_all.py` |
-| Opt-in suites | 4, never silently absent — each printed as `[skip]` with its reason and the flag that lifts it: `live_deployment.py` (`--live`), `auth_live.py` (`--live-auth`, 13 passing), `push_live.py` (`--live-push`, 24 passing), `pull_live.py` (`--live-pull`, 12 passing). The three sync suites take every credential from the environment and commit none. |
+| App version (service worker) | `zajil-v1.9.1` |
+| Branch | `release/v1.9.1` — **not merged**; merge and deploy are a separate explicit go |
+| `main` at | `3a7bed7` — v1.9.0, tagged `v1.9.0` |
+| **Live** | **https://nahdaeverything-web.github.io/Zajildb/** — serving `zajil-v1.9.0`, SYNC-INERT by decision (`js/sync-config.js` ships empty) |
+| Node tests | **141 passing, 0 failing** — `node tests/run.js` |
+| Browser assertions | **544 passing, 0 failing** across **27 suites** — `python3 tests/e2e/run_all.py` |
+| Opt-in suites | 4, never silently absent — each printed as `[skip]` with its reason and the flag that lifts it: `live_deployment.py` (`--live`), `auth_live.py` (`--live-auth`, 18 passing), `push_live.py` (`--live-push`, 24 passing), `pull_live.py` (`--live-pull`, 12 passing). The three sync suites take every credential from the environment and commit none. |
 | Browser suites | committed under `tests/e2e/` with a runner and README, plus 6 diagnostic scripts |
-| Source | `js/` 6,688 lines · the db layer is **2,312** across a facade and five modules (§15.1) · `css/app.css` 399 · `sw.js` 107 |
-| Tests | node 1,801 lines · browser 4,172 lines |
+| Source | `js/` 6,912 lines · the db layer is **2,425** across a facade and five modules (§15.1) · `css/app.css` 403 · `sw.js` 107 |
+| Tests | node 1,873 lines · browser 4,623 lines |
 | Server | Supabase, schema in [docs/SYNC-DESIGN.md](docs/SYNC-DESIGN.md) §1 — **that block is the complete current schema**, guard-asserted, and is what a fresh project is created from |
-| Generators | `tools/` 448 lines |
+| Generators | `tools/` 716 lines |
 | Example datasets | 20-bird loft + 38-bird / 6-generation teaching loft |
 | Version control | git, pushed to **github.com/nahdaeverything-web/Zajildb** (public); `pre-v1.7-baseline` tagged, `hardening/v1.7` retained |
 | Known issues | catalogued in [BACKLOG.md](BACKLOG.md) |
@@ -497,7 +497,7 @@ history, asserted *absent* rather than empty.
     only in the `apikey` header — never as `Authorization: Bearer`.
   - **Never write `lastSyncError` directly** — `recordSyncError()` preserves the
     `since` that decides when a failure is allowed to surface.
-- **`docs/WRITEPATH-*.md` is GENERATED** — `node tools/gen-writepath.js 1.9`.
+- **`docs/WRITEPATH-*.md` is GENERATED** — `node tools/gen-writepath.js 1.9.1`.
   Never hand-edit it; the v1.7 copy's line numbers drifted from its own grep
   output within days.
 - **Every browser suite is either run or printed as skipped.** `run_all.py`
@@ -790,6 +790,13 @@ does not.
    `lastSyncError` directly, clobbering the window that decides when a failure
    surfaces. The same shape as the storage spike's vacuous pass.
 
+   **The same family, found again in v1.9.1:** an assertion that checks only
+   PART of the thing is the same mistake wearing different clothes. "the status
+   is not in the text before the message" passes happily when the status is
+   appended after it. Assert on the element you mean, not on a substring near
+   it. And `birdLoftId === currentLoftId` passes whatever `current` happens to
+   be — including the wrong loft, which was the entire bug.
+
 5. **A prover that pipes output can lie.** `timeout` killing a pipeline
    discards whatever `grep`/`head`/`tail` were buffering, so a hung suite reads
    as "no failure line" — three wrong MISSED verdicts before it was noticed.
@@ -821,6 +828,11 @@ does not.
    screen."** Found in the first-user session, by trying to hand someone the
    app. Add that walk to the checklist for any release that changes what a
    user must do.
+
+    v1.9.1 built that screen (R1). The live suite now **drives the form** —
+    types, presses Enter — rather than calling `signIn()`, because *"the API
+    works"* and *"a person can sign in"* turned out to be different claims and
+    the release shipped with the first true and the second false.
 
 9. **A convention is not the data.** HANDOFF §14 says *"UUIDs only"*. That was
    read, believed, and encoded as a `uuid` column on the server — while the
@@ -858,6 +870,20 @@ does not.
     every test, because no test had a tombstone present at the moment a
     mismatched row arrived. **When you find an identity asymmetry, grep for
     every other place that identity is used before declaring it fixed.**
+
+11. **A test that depends on something it did not start can be green about the
+    wrong thing.** `subpath_hosting.py` assumed a static server on a fixed port
+    whose document root someone had populated by hand. That root was a COPY of
+    the repo, eight days stale. The suite was **not failing — it was passing,
+    about a tree nobody was shipping**, and it only surfaced when the shipped
+    datasets changed underneath it.
+
+    That is worse than a failure, because a failure gets investigated. Green is
+    the answer everyone wants and nobody interrogates. **If a suite needs
+    infrastructure, the suite starts it** — on an ephemeral port, rooted at
+    something derived from the repo rather than copied from it. Fixed in v1.9.1
+    (R6); it was the only suite with such a dependency, but the class is easy to
+    reintroduce.
 
 ### 15.13 The first-user session (2026-08-30) — what an hour of real use found
 
@@ -927,6 +953,34 @@ All as designed. **Real-time subscriptions remain the v2.x upgrade path**, for
 when club mode or a marketplace needs live cross-user updates; a 60 s heartbeat
 is right for one fancier's own devices and wrong for two people watching the
 same auction.
+
+### 15.14 v1.9.1 — what the first user's hour produced
+
+One micro-release, bundled deliberately rather than shipped as four small
+deploys: `main` runs sync-inert (`js/sync-config.js` empty), so nobody was
+exposed to any of it.
+
+| | Item | What it was |
+|---|---|---|
+| **R1** | the sign-in form | `signIn()` worked and nothing called it — the card showed an email nobody could acquire |
+| **R4** | the pristine default loft | every device after the first showed a blank loft and filed new birds under an id the loft did not know |
+| **R5** | pull keyed writes on the body id, deletes on the primary key | a record no amount of syncing could remove |
+| **R6** | a suite depended on a server it did not start | passing, about a tree nobody was shipping |
+| **B** | shipped datasets used readable ids | contradicted the project's own "UUIDs only" rule |
+
+Two of those (R4, R5) were **silent data-correctness bugs**, and neither was
+findable by the tests as written: R5 needed a row whose body id disagreed with
+its key, which nothing the app produces ever does, and R4 needed someone to
+*write* on a second device rather than read.
+
+Three fixes came with a guard so the class cannot return: every id in a shipped
+dataset must be a uuid; only the sync card may sign in or out; and no
+create-account control may appear.
+
+`tools/idmap.js` is the standing pattern for dataset work — readable keys in the
+generator, remapped mechanically on the way out, deterministic via RFC 4122 v5
+so regeneration does not churn, and derivable identically in Python so the
+browser suites keep naming records by the key that documents them.
 
 ---
 
@@ -1001,6 +1055,14 @@ committing to choices. What surfaced, to be re-verified:
 - **v1.3** — added the 38-bird / 6-generation teaching loft (`example-loft-large.json`) + 5 asserting tests; both examples offered in the empty state and Tools; precached for offline.
 - **v1.4** — pre-publish audit before going public (18 findings): removed a real name from the shipped sample data and real breeders' names from demo pedigrees, stripped private notes/paths from this file, moved commits to a noreply address, added the LICENSE, and fixed two service-worker bugs that only bite on GitHub Pages (per-origin cache deletion would have wiped sibling projects' offline caches; `addAll` read through the HTTP cache and could bake a stale deploy into a new version cache). Repo pushed public.
 - **v1.5** — the ownership model (§5), register ownership filter, link-an-existing-bird to an egg, pair provenance and backdating. Plus a UI sweep across 11 routes × 3 viewports that found the real cause of the reported “page jumps to the top” bug: **the page scrolled behind open dialogs**. Dialogs now pin the page and restore position exactly; tall dialogs scroll themselves; Tab is trapped; race tabs remember scroll position.
+- **v1.9.1** — the first user's hour, in one micro-release. A sign-in form
+  (v1.9 shipped `signIn()` with nothing calling it); a second device no longer
+  strands itself on an empty default loft and files birds under an id the loft
+  does not know; a pulled record is keyed on the SERVER's identity, so a record
+  can no longer become one no amount of syncing removes; the shipped datasets
+  carry real uuids; and a suite that had been passing about an eight-day-old
+  tree now provisions its own server. Three new guards so each class cannot
+  return. See §15.13 for the incident and §15.14 for the bundle.
 - **v1.9** — sync and accounts against Supabase. `js/db.js` split into a facade
   over five modules (§15.1), mechanically and with zero behaviour change. Auth
   (invite-only, reactive refresh, the multi-instance re-read rule), push (op
@@ -1052,13 +1114,15 @@ committing to choices. What surfaced, to be re-verified:
 > `README.md` the user-facing overview.
 >
 > Key context: vanilla ES modules + IndexedDB, no build step, no dependencies.
-> 138 node tests pass (`node tests/run.js`) and must stay passing — the four
+> 141 node tests pass (`node tests/run.js`) and must stay passing — the four
 > COI fixtures are contractual. RTL is structural via CSS logical properties.
 > Serve with `python3 -m http.server 8123` from the repo root.
 >
-> Current state: **v1.9.0 on branch `sync/v1.9`, not yet merged**. `main` is at
-> v1.8.1, live at https://nahdaeverything-web.github.io/Zajildb/ (public repo,
-> all-rights-reserved licence). 138 node tests and 508 browser assertions pass,
+> Current state: **v1.9.1 on branch `release/v1.9.1`, not yet merged**. `main`
+> is at v1.9.0, live at https://nahdaeverything-web.github.io/Zajildb/ (public
+> repo, all-rights-reserved licence) and running SYNC-INERT: `js/sync-config.js`
+> ships empty by decision, so sync is present, inert and invisible until a
+> release bundle injects config. 141 node tests and 544 browser assertions pass,
 > plus three opt-in live suites against a real Supabase project.
 > Known issues are catalogued in `BACKLOG.md` — all verified, none blocking.
 > **Read §14 (Conventions) before writing code**: v1.7 installed five shared
