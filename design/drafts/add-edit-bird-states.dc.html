@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin" />
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet" />
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#E9EDF0;font-family:'Alexandria',system-ui,sans-serif;color:#101820;line-height:1.5;direction:rtl}
+input::placeholder,textarea::placeholder{color:#8C97A2}
+input:focus,textarea:focus{border-color:#128C6E !important;background:#FFFFFF !important}
+@media (min-width:701px){
+  [data-phone]{max-width:660px !important;border-inline:1px solid #E4E9ED}
+  [data-col]{max-width:560px;margin-inline:auto}
+  [data-actions]{max-width:660px !important}
+  [data-actions] > div{max-width:560px;margin-inline:auto}
+}
+@media (min-width:1100px){
+  [data-rail]{display:flex !important}
+  [data-phone]{margin-inline-end:132px}
+  [data-actions]{margin-inline-end:calc(50% - 330px + 132px) !important;margin-inline-start:calc(50% - 330px) !important}
+}
+</style>
+</helmet>
+<div dir="rtl" style="min-height:100vh;display:flex;justify-content:center;background:#E9EDF0">
+<div data-phone="1" style="width:100%;max-width:430px;min-height:100vh;background:#F5F7F8;position:relative">
+
+<div style="background:#101820;color:#fff;padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+  <span style="font-size:11px;font-weight:800;color:#8C97A2;letter-spacing:.5px">حالات النموذج</span>
+  <sc-for list="{{ modes }}" as="m" hint-placeholder-count="3">
+    <button onClick="{{ m.pick }}" style="{{ m.style }}">{{ m.label }}</button>
+  </sc-for>
+  <span style="width:1px;height:18px;background:#4A5560"></span>
+  <button onClick="{{ toggleErrors }}" style="{{ errStyle }}">أخطاء التحقق</button>
+  <button onClick="{{ toggleDup }}" style="{{ dupStyle }}">حلقة مكررة</button>
+</div>
+
+<div data-col="1">
+<div style="background:#FFFFFF;padding:16px 20px 0">
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <button aria-label="رجوع" style="width:46px;height:46px;border:none;border-radius:14px;cursor:pointer;background:#F5F7F8;color:#101820;display:grid;place-items:center" style-hover="background:#E3F4EE">
+      <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M9 6l6 6-6 6"></path></svg>
+    </button>
+    <span style="font-size:15px;font-weight:700;color:#8C97A2">الطيور</span>
+    <span style="width:46px"></span>
+  </div>
+</div>
+
+<header style="background:#FFFFFF;padding:14px 20px 24px;border-bottom:1px solid #E4E9ED">
+  <h1 style="font-size:42px;font-weight:900;line-height:1.05">{{ title }}</h1>
+  <p style="font-size:15px;font-weight:600;color:#4A5560;margin-top:8px">{{ subtitle }}</p>
+</header>
+
+<div style="padding:4px 20px 168px">
+
+  <sc-if value="{{ isSibling }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#E3F4EE;border-radius:20px;padding:16px 18px;margin-top:18px">
+      <div style="font-size:15px;font-weight:800;color:#0E6F57">الوالدان مُعبآن من الشقيق برق</div>
+      <p style="font-size:13.5px;font-weight:500;color:#0E6F57;opacity:.85;margin-top:4px">يمكنك تغييرهما قبل الحفظ.</p>
+    </div>
+  </sc-if>
+
+  <div style="font-size:22px;font-weight:900;margin:26px 0 14px">الأساسيات</div>
+  <div style="background:#FFFFFF;border:1px solid #E4E9ED;border-radius:20px;padding:20px">
+
+    <div style="display:flex;align-items:center;gap:16px;padding-bottom:20px;border-bottom:1px solid #E4E9ED">
+      <button style="flex:none;width:92px;height:92px;border-radius:20px;border:1px solid #E4E9ED;background:#E3F4EE;display:grid;place-items:center;cursor:pointer" style-hover="border-color:#128C6E">
+        <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:#128C6E;stroke-width:2.6;fill:none;stroke-linecap:round"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+      <div>
+        <div style="font-size:17px;font-weight:800">إضافة صورة</div>
+        <p style="font-size:13.5px;font-weight:500;color:#4A5560;margin-top:4px;text-wrap:pretty">تُحفظ على هذا الجهاز وتُشارَك عند المزامنة.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:20px">
+      <label style="display:block;font-size:13.5px;font-weight:800;color:#4A5560;margin-bottom:8px">الاسم</label>
+      <input value="{{ nameVal }}" onChange="{{ setName }}" placeholder="مثال: رعد" style="{{ nameInputStyle }}" />
+      <sc-if value="{{ nameErr }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:13px;font-weight:700;color:#C43D2B;margin-top:8px">الاسم مطلوب</div>
+      </sc-if>
+    </div>
+
+    <div style="margin-top:20px">
+      <label style="display:block;font-size:13.5px;font-weight:800;color:#4A5560;margin-bottom:8px">رقم الحلقة</label>
+      <input value="{{ ringVal }}" onChange="{{ setRing }}" placeholder="JOR 26 00000" style="{{ ringInputStyle }}" />
+      <sc-if value="{{ showDup }}" hint-placeholder-val="{{ true }}">
+        <div style="background:#FBF3DF;border:1px solid #C9971F;border-radius:16px;padding:14px 16px;margin-top:10px">
+          <div style="font-size:13px;font-weight:800;color:#101820">رقم حلقة مكرر</div>
+          <p style="font-size:14px;font-weight:600;color:#101820;margin-top:4px;text-wrap:pretty">هذا الرقم مسجل لطائر آخر: شقراء. يمكنك المتابعة والحفظ.</p>
+          <button style="margin-top:10px;border:none;background:none;padding:0;cursor:pointer;font-family:'Alexandria',sans-serif;font-size:13.5px;font-weight:800;color:#0E6F57;text-decoration:underline">عرض الطائر</button>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="margin-top:20px">
+      <label style="display:block;font-size:13.5px;font-weight:800;color:#4A5560;margin-bottom:8px">الجنس</label>
+      <div style="display:flex;gap:6px">
+        <sc-for list="{{ sexes }}" as="s" hint-placeholder-count="3">
+          <button onClick="{{ s.pick }}" style="{{ s.style }}">{{ s.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="margin-top:20px">
+      <label style="display:block;font-size:13.5px;font-weight:800;color:#4A5560;margin-bottom:8px">الحالة</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <sc-for list="{{ statuses }}" as="st" hint-placeholder-count="6">
+          <button onClick="{{ st.pick }}" style="{{ st.style }}">{{ st.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="margin-top:20px">
+      <label style="display:block;font-size:13.5px;font-weight:800;color:#4A5560;margin-bottom:8px">اللون والوصف</label>
+      <input value="{{ colorVal }}" onChange="{{ setColor }}" placeholder="مثال: أزرق مخطط" style="width:100%;border:2px solid #E4E9ED;border-radius:16px;padding:17px 16px;font-family:'Alexandria',sans-serif;font-size:16px;font-weight:600;background:#F5F7F8;color:#101820;outline:none;min-height:58px" />
+    </div>
+
+    <div style="margin-top:20px">
+      <label style="display:block;font-size:13.5px;font-weight:800;color:#4A5560;margin-bottom:8px">تاريخ التفقيس</label>
+      <input value="{{ dateVal }}" onChange="{{ setDate }}" placeholder="DD / MM / YYYY" style="{{ dateInputStyle }}" />
+      <sc-if value="{{ dateErr }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:13px;font-weight:700;color:#C43D2B;margin-top:8px">تاريخ غير صالح — استخدم اليوم / الشهر / السنة</div>
+      </sc-if>
+    </div>
+  </div>
+
+  <div style="font-size:22px;font-weight:900;margin:28px 0 14px">النسب</div>
+
+  <button style="width:100%;text-align:start;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:18px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;cursor:pointer;font-family:'Alexandria',sans-serif" style-hover="background:#E3F4EE">
+    <span style="flex:none;width:52px;height:52px;border-radius:16px;background:#E3F4EE;display:grid;place-items:center">
+      <svg viewBox="0 0 100 100" fill="#128C6E" style="width:30px;height:30px"><path d="M18 78c14 4 34 4 46-4 10-7 16-18 17-30 0-4-2-6-5-6-2 0-4 1-5 3l-4 8c-6 10-16 16-28 18-8 1-15 5-21 11z"></path><path d="M62 34c3-6 9-9 15-8 3 0 5 2 5 5 0 2-1 3-3 4l-6 2c-4 2-8 1-11-3z"></path><path d="M80 36l8 2-8 2z"></path></svg>
+    </span>
+    <span style="flex:1;min-width:0">
+      <span style="display:block;font-size:12px;font-weight:700;color:#8C97A2">الأب</span>
+      <span style="display:block;font-size:19px;font-weight:800;margin-top:2px">الصاعقة</span>
+      <span style="display:inline-flex;align-items:stretch;direction:ltr;border-radius:10px;overflow:hidden;background:#101820;margin-top:6px">
+        <span style="background:#C9971F;color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10px;padding:0 7px;display:grid;place-items:center">21</span>
+        <span style="color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px;letter-spacing:1px;padding:6px 10px">JOR 21 08841</span>
+      </span>
+    </span>
+    <span style="flex:none;font-size:13.5px;font-weight:800;color:#0E6F57">تغيير</span>
+  </button>
+
+  <sc-if value="{{ damFilled }}" hint-placeholder-val="{{ false }}">
+    <button style="width:100%;text-align:start;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:18px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;cursor:pointer;font-family:'Alexandria',sans-serif" style-hover="background:#E3F4EE">
+      <span style="flex:none;width:52px;height:52px;border-radius:16px;background:#E3F4EE;display:grid;place-items:center">
+        <svg viewBox="0 0 100 100" fill="#128C6E" style="width:30px;height:30px"><path d="M18 78c14 4 34 4 46-4 10-7 16-18 17-30 0-4-2-6-5-6-2 0-4 1-5 3l-4 8c-6 10-16 16-28 18-8 1-15 5-21 11z"></path><path d="M62 34c3-6 9-9 15-8 3 0 5 2 5 5 0 2-1 3-3 4l-6 2c-4 2-8 1-11-3z"></path><path d="M80 36l8 2-8 2z"></path></svg>
+      </span>
+      <span style="flex:1;min-width:0">
+        <span style="display:block;font-size:12px;font-weight:700;color:#8C97A2">الأم</span>
+        <span style="display:block;font-size:19px;font-weight:800;margin-top:2px">غيمة</span>
+        <span style="display:inline-flex;align-items:stretch;direction:ltr;border-radius:10px;overflow:hidden;background:#101820;margin-top:6px">
+          <span style="background:#C9971F;color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10px;padding:0 7px;display:grid;place-items:center">22</span>
+          <span style="color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px;letter-spacing:1px;padding:6px 10px">JOR 22 04117</span>
+        </span>
+      </span>
+      <span style="flex:none;font-size:13.5px;font-weight:800;color:#0E6F57">تغيير</span>
+    </button>
+  </sc-if>
+
+  <sc-if value="{{ damEmpty }}" hint-placeholder-val="{{ true }}">
+    <div style="background:#FFFFFF;border:1px solid #E4E9ED;border-radius:18px;padding:16px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="flex:none;width:52px;height:52px;border-radius:16px;background:#F5F7F8;display:grid;place-items:center">
+          <svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke:#8C97A2;stroke-width:2.6;fill:none;stroke-linecap:round"><path d="M12 5v14M5 12h14"></path></svg>
+        </span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700;color:#8C97A2">الأم</div>
+          <div style="font-size:19px;font-weight:800;margin-top:2px;color:#8C97A2">لم تُحدَّد</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button style="flex:1;border:2px solid #101820;background:transparent;color:#101820;border-radius:16px;padding:14px 8px;font-family:'Alexandria',sans-serif;font-size:15px;font-weight:800;cursor:pointer;min-height:50px" style-hover="background:#101820;color:#FFFFFF">اختيار من اللوفت</button>
+        <button style="flex:1;border:1px solid #E4E9ED;background:#F5F7F8;color:#4A5560;border-radius:16px;padding:14px 8px;font-family:'Alexandria',sans-serif;font-size:15px;font-weight:800;cursor:pointer;min-height:50px" style-hover="background:#E3F4EE;color:#0E6F57">إنشاء سريع</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="background:#FFFFFF;border:1px solid #E4E9ED;border-radius:18px;padding:18px;display:flex;align-items:center;gap:14px">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:16px;font-weight:800">سلف خارج اللوفت</div>
+      <p style="font-size:13.5px;font-weight:500;color:#4A5560;margin-top:4px;text-wrap:pretty">سجل مرجعي للنسب فقط — لا يظهر في قائمة الطيور ولا في السباقات.</p>
+    </div>
+    <button role="switch" aria-label="سلف خارج اللوفت" onClick="{{ toggleExternal }}" style="{{ switchTrack }}">
+      <span style="{{ switchKnob }}"></span>
+    </button>
+  </div>
+
+  <div style="font-size:22px;font-weight:900;margin:28px 0 14px">ملاحظات</div>
+  <textarea value="{{ notesVal }}" onChange="{{ setNotes }}" placeholder="سلالة، مصدر الطائر، ملاحظات التدريب…" style="width:100%;min-height:130px;border:2px solid #E4E9ED;border-radius:20px;padding:17px 16px;font-family:'Alexandria',sans-serif;font-size:16px;font-weight:600;background:#FFFFFF;color:#101820;outline:none;resize:vertical"></textarea>
+
+</div>
+</div>
+
+<div data-actions="1" style="position:fixed;bottom:0;inset-inline:0;margin-inline:auto;max-width:430px;background:#FFFFFF;border-top:1px solid #E4E9ED;padding:14px 20px 22px;z-index:10">
+  <div style="display:flex;gap:10px">
+    <button style="flex:none;border:2px solid #101820;background:transparent;color:#101820;border-radius:16px;padding:17px 24px;font-family:'Alexandria',sans-serif;font-size:16px;font-weight:800;cursor:pointer" style-hover="background:#101820;color:#FFFFFF">إلغاء</button>
+    <button onClick="{{ save }}" style="flex:1;border:none;border-radius:16px;padding:17px;background:#128C6E;color:#fff;font-family:'Alexandria',sans-serif;font-size:17px;font-weight:800;cursor:pointer" style-hover="background:#0E6F57">{{ saveLabel }}</button>
+  </div>
+</div>
+
+<nav data-rail="1" style="display:none;position:fixed;top:0;bottom:0;inset-inline-end:0;width:132px;background:#FFFFFF;border-inline-start:1px solid #E4E9ED;flex-direction:column;gap:4px;padding:24px 12px;z-index:11">
+  <button style="display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;color:#8C97A2;font-family:'Alexandria',sans-serif;font-size:13px;font-weight:700;padding:12px 10px;border-radius:14px;min-height:48px" style-hover="background:#E3F4EE;color:#0E6F57">
+    <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>الرئيسية
+  </button>
+  <button style="display:flex;align-items:center;gap:10px;border:none;background:#E3F4EE;cursor:pointer;color:#128C6E;font-family:'Alexandria',sans-serif;font-size:13px;font-weight:700;padding:12px 10px;border-radius:14px;min-height:48px">
+    <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><rect x="3" y="4" width="18" height="6" rx="2"></rect><rect x="3" y="14" width="18" height="6" rx="2"></rect></svg>الطيور
+  </button>
+  <button style="display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;color:#8C97A2;font-family:'Alexandria',sans-serif;font-size:13px;font-weight:700;padding:12px 10px;border-radius:14px;min-height:48px" style-hover="background:#E3F4EE;color:#0E6F57">
+    <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M12 3v6M6 21v-6M18 21v-6M6 15h12M12 9c-4 0-6 2-6 6M12 9c4 0 6 2 6 6"></path></svg>الأنساب
+  </button>
+  <button style="display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;color:#8C97A2;font-family:'Alexandria',sans-serif;font-size:13px;font-weight:700;padding:12px 10px;border-radius:14px;min-height:48px" style-hover="background:#E3F4EE;color:#0E6F57">
+    <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"></path></svg>السباقات
+  </button>
+  <button style="display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;color:#8C97A2;font-family:'Alexandria',sans-serif;font-size:13px;font-weight:700;padding:12px 10px;border-radius:14px;min-height:48px" style-hover="background:#E3F4EE;color:#0E6F57">
+    <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="1.5"></circle><circle cx="5" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle></svg>المزيد
+  </button>
+</nav>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;add&quot;,&quot;edit&quot;,&quot;sibling&quot;],&quot;default&quot;:&quot;add&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;showErrors&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;showDup&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  constructor(p){
+    super(p);
+    this.state = {
+      mode: p.mode || 'add',
+      showErrors: !!p.showErrors,
+      showDup: p.showDup !== false,
+      sex: 'ذكر',
+      status: 'نشط',
+      external: false,
+      name: 'رعد',
+      ring: 'JOR 24 17360',
+      color: 'أزرق مخطط',
+      date: '12 / 04 / 2026',
+      notes: ''
+    };
+  }
+  set(k){ return e => this.setState({ [k]: e.target.value }); }
+  chip(active, on, off){ return active ? on : off; }
+  renderVals(){
+    const s = this.state;
+    const sibling = s.mode === 'sibling';
+    const edit = s.mode === 'edit';
+    const nameErr = s.showErrors;
+    const dateErr = s.showErrors;
+
+    const fieldBase = "width:100%;border-radius:16px;padding:17px 16px;font-family:'Alexandria',sans-serif;font-size:16px;font-weight:600;outline:none;min-height:58px;";
+    const ok = "border:2px solid #E4E9ED;background:#F5F7F8;color:#101820;";
+    const bad = "border:2px solid #C43D2B;background:#FFFFFF;color:#101820;";
+    const mono = "font-family:'IBM Plex Mono',monospace;font-weight:600;direction:ltr;text-align:right;letter-spacing:1px;font-size:16px;";
+
+    const devOn = "border:none;border-radius:999px;padding:6px 12px;cursor:pointer;font-family:'Alexandria',sans-serif;font-size:11.5px;font-weight:800;background:#FFFFFF;color:#101820;";
+    const devOff = "border:1px solid #4A5560;border-radius:999px;padding:6px 12px;cursor:pointer;font-family:'Alexandria',sans-serif;font-size:11.5px;font-weight:800;background:transparent;color:#8C97A2;";
+
+    const pillOn = "flex:1;border:1px solid #101820;background:#101820;color:#fff;padding:15px 2px;cursor:pointer;font-family:'Alexandria',sans-serif;font-size:14.5px;font-weight:700;border-radius:999px;min-height:52px;";
+    const pillOff = "flex:1;border:1px solid #E4E9ED;background:#F5F7F8;color:#4A5560;padding:15px 2px;cursor:pointer;font-family:'Alexandria',sans-serif;font-size:14.5px;font-weight:700;border-radius:999px;min-height:52px;";
+
+    const stOn = "border:1px solid #128C6E;background:#128C6E;color:#fff;border-radius:999px;padding:12px 18px;cursor:pointer;font-family:'Alexandria',sans-serif;font-size:14px;font-weight:700;min-height:46px;";
+    const stOff = "border:1px solid #E4E9ED;background:#F5F7F8;color:#4A5560;border-radius:999px;padding:12px 18px;cursor:pointer;font-family:'Alexandria',sans-serif;font-size:14px;font-weight:700;min-height:46px;";
+
+    const modeList = [['add','إضافة'],['edit','تعديل'],['sibling','فرخ شقيق']].map(([k,l]) => ({
+      label: l, style: s.mode === k ? devOn : devOff,
+      pick: () => this.setState({ mode: k })
+    }));
+
+    const sexes = ['ذكر','أنثى','غير معروف'].map(l => ({
+      label: l, style: s.sex === l ? pillOn : pillOff,
+      pick: () => this.setState({ sex: l })
+    }));
+
+    const statuses = ['نشط','تربية','فريق السباق','ميت','مباع','مفقود'].map(l => ({
+      label: l, style: s.status === l ? stOn : stOff,
+      pick: () => this.setState({ status: l })
+    }));
+
+    return {
+      title: edit ? 'تعديل طائر' : sibling ? 'إضافة فرخ شقيق' : 'إضافة طائر',
+      subtitle: edit ? 'برق · JOR 24 17352' : 'لوفت الفحيص · موسم 2026 / 2027',
+      saveLabel: edit ? 'حفظ التعديلات' : 'حفظ الطائر',
+      isSibling: sibling,
+      damFilled: sibling || edit,
+      damEmpty: !(sibling || edit),
+      modes: modeList, sexes, statuses,
+      showDup: s.showDup,
+      nameErr, dateErr,
+      nameVal: nameErr ? '' : s.name,
+      ringVal: s.ring,
+      colorVal: s.color,
+      dateVal: dateErr ? '32 / 04 / 2026' : s.date,
+      notesVal: s.notes,
+      nameInputStyle: fieldBase + (nameErr ? bad : ok),
+      ringInputStyle: fieldBase + (s.showDup ? "border:2px solid #C9971F;background:#FFFFFF;color:#101820;" : ok) + mono,
+      dateInputStyle: fieldBase + (dateErr ? bad : ok) + mono,
+      switchTrack: "flex:none;width:56px;height:32px;border-radius:999px;border:none;cursor:pointer;padding:3px;display:flex;justify-content:" + (s.external ? 'flex-end' : 'flex-start') + ";background:" + (s.external ? '#101820' : '#E4E9ED') + ";",
+      switchKnob: "width:26px;height:26px;border-radius:999px;background:#FFFFFF;display:block;",
+      setName: this.set('name'), setRing: this.set('ring'), setColor: this.set('color'),
+      setDate: this.set('date'), setNotes: this.set('notes'),
+      toggleExternal: () => this.setState(st => ({ external: !st.external })),
+      toggleErrors: () => this.setState(st => ({ showErrors: !st.showErrors })),
+      toggleDup: () => this.setState(st => ({ showDup: !st.showDup })),
+      errStyle: s.showErrors ? devOn : devOff,
+      dupStyle: s.showDup ? devOn : devOff,
+      save: () => {}
+    };
+  }
+}
+</script>
+</body>
+</html>
