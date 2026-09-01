@@ -428,3 +428,48 @@ export async function applySyncDelete(store, recordId, at) {
   emitChange({ type: 'sync', store, id: recordId });
   return { applied: true, skipped: null, anomaly: null };
 }
+
+// ───────────────────── the pristine default loft (R4) ─────────────────────
+
+/**
+ * Is this loft untouched — created by `initDB()` and never used?
+ *
+ * "Pristine" means unnamed, unplaced, AND referenced by no record on this
+ * device. The reference check is the load-bearing half: a loft the fancier has
+ * actually filed birds under is theirs even if they never got round to naming
+ * it, and dropping it would take the birds' `loftId` with it.
+ */
+export function isPristineLoft(loft) {
+  if (!loft) return false;
+  if ((loft.name || '').trim() || (loft.location || '').trim()) return false;
+  for (const mirror of ['birds', 'pairs', 'raceResults', 'healthEvents']) {
+    for (const record of state[mirror].values()) {
+      if (record.loftId === loft.id) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Remove a pristine default loft when a real one has been adopted in its place.
+ *
+ * NO OP AND NO TOMBSTONE, deliberately, and this is the third exception in the
+ * op-enumeration matrix (§8). The other two are about pulled records; this one
+ * is different in kind: **the record never existed anywhere but this device.**
+ * It was never pushed — `enqueueFirstSyncOps` skips pristine lofts — so there
+ * is no server row for an op to describe and nothing for a tombstone to
+ * suppress. Logging either would be inventing history: a deletion that no other
+ * device can meaningfully receive, for a record none of them ever saw.
+ *
+ * Guarded by isPristineLoft() rather than trusting the caller, because a
+ * silent no-op-no-tombstone delete is exactly the primitive that must never be
+ * reachable for a record that HAS travelled.
+ */
+export async function dropPristineLoft(loftId) {
+  const loft = state.lofts.get(loftId);
+  if (!isPristineLoft(loft)) return false;
+  await idbDelete('lofts', loftId);
+  state.lofts.delete(loftId);
+  emitChange({ type: 'loft', id: loftId });
+  return true;
+}

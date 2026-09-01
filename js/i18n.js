@@ -394,6 +394,9 @@ const dict = {
   'set.dates.both': { ar: 'ميلادي + هجري', en: 'Gregorian + Hijri' },
   'set.highContrast': { ar: 'وضع التباين العالي (ضوء الشمس)', en: 'High contrast (sunlight) mode' },
   'set.loft': { ar: 'اللوفت', en: 'Loft' },
+  // A loft with no name still has to read as something. Blank fields look like
+  // a bug; an explicit placeholder reads as "you have not named this yet".
+  'loft.unnamed': { ar: 'لوفت بلا اسم', en: 'Unnamed loft' },
   'set.loftName': { ar: 'اسم اللوفت', en: 'Loft name' },
   'set.loftLocation': { ar: 'الموقع', en: 'Location' },
   'set.coiDepth': { ar: 'عمق حساب COI (أجيال)', en: 'COI depth (generations)' },

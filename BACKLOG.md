@@ -8,7 +8,7 @@ exhaustive.
 
 **20 open** (0 high · 10 medium · 10 low) ·
 **13 closed in v1.7** · **0 closed in v1.8** · **0 closed in v1.9** ·
-plus **3 open decisions**, **4 planned items**, a **v1.9.1 bundle**, and a
+plus **3 open decisions**, **6 planned items**, a **v1.9.1 bundle**, and a
 **release checklist**
 below.
 
@@ -54,7 +54,7 @@ R5 and B; R2 and R3 are already closed.
 | R1 | sign-in surface | **not started** — release-blocking for any real user |
 | R2 | `record_id` typed `uuid` | **fixed and verified** (server-side, live) |
 | R3 | error surfacing under a real failure | **resolved, no defect** |
-| R4 | an empty default loft per device | not started |
+| R4 | an empty default loft per device | **fixed** |
 | R5 | pulled-delete identity asymmetry | **fixed on `fix/v1.9.1-pulled-delete`**, held |
 | B | example datasets → real uuids | not started |
 
@@ -158,6 +158,36 @@ remote loft on first sync instead of pushing a local empty one; or let the user
 delete lofts (there is no delete-loft flow today). The first is smallest, the
 second is most correct, the third is needed regardless.
 
+### R4. Every device added an empty default loft — FIXED (v1.9.1)
+
+`initDB()` creates an empty loft on every fresh device and first-login sync
+pushed it, so the account gained one empty loft per device — and the fancier
+has no way to delete one.
+
+**The half that actually damaged data**, found while writing up the options:
+`currentLoftId` was set once at `initDB()` and only repaired when the current
+loft was *missing*, never when the user's real loft arrived beside it. So every
+device after the first showed a **blank loft name** and filed every new bird
+under its own empty default's id. One loft, silently split in two. It did not
+bite in the first-user session only because that second device was used to read,
+not to write.
+
+**Fixed:** a pristine loft — unnamed, unplaced, and referenced by no record —
+is never pushed. After the first pull, if this device is still on its pristine
+default and EXACTLY ONE remote loft arrived, it is adopted: `currentLoftId`
+switches and the local default is dropped. Zero or several remote lofts and
+nothing happens; which loft a fancier means is not a question this code answers
+by picking one, the same refusal §6 makes about duplicate birds.
+
+Dropping the pristine default logs no op and writes no tombstone — the third
+exception in the op-enumeration matrix (§8), and different in kind from the
+first two: that record was never anywhere but this device.
+
+> **KNOWN LIMITATION.** A device that created records under its own default
+> loft BEFORE first login is not pristine, so it keeps that loft and pushes it.
+> Meeting a named remote loft, the account legitimately ends with two. The
+> duplicate notice covers the birds; merging or deleting lofts is P6.
+
 ### R5. A pulled record was keyed on its body id, not the server's — FIXED ON BRANCH
 
 `applySyncPut` keyed the local write on `row.data.id` while `applySyncDelete`
@@ -244,6 +274,25 @@ v1.9 on the grounds that the failure mode is a single retried request, which
 push idempotency absorbs — and that storing an expiry means a settings key
 holding a number the server already tells the truth about. Recorded so the
 trade-off is not re-litigated from scratch.
+
+### P6. Deleting and merging lofts — the cascade question first
+
+**There is no delete-loft flow anywhere in the app.** `Lofts.remove()` exists
+via `makeGeneric` and no view calls it. A fancier can create and rename lofts
+and never remove one — which R4 made visible, and R4's known limitation leaves
+standing for anyone who used a device before signing in.
+
+Deliberately NOT rushed into v1.9.1. The blocker is not the UI, it is a
+question the codebase has no answer for: **what happens to records filed under
+a deleted loft?** `deleteBird` cascades because a bird's dependents are
+unambiguous; a loft's are not. Orphan them to no loft, reassign them to another,
+or refuse to delete a loft that holds records — each is defensible and each is a
+product decision, not an implementation detail. Getting it wrong loses data.
+
+Merging two lofts is the same question wearing a hat: it is a reassign-then-
+delete, and it needs the same answer.
+
+Decide the cascade rule first, then build it.
 
 ### P5. Real-time subscriptions — v2.x, when club mode needs them
 

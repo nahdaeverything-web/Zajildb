@@ -189,19 +189,19 @@ const FACADE = [
   'AUTH_SETTING_KEYS', 'AuthError', 'BACKOFF_MS', 'Health', 'Lofts', 'OPLOG_KEEP',
   'PULL_PAGE', 'PUSH_BATCH', 'Pairs', 'REFERENCE_STATUS', 'Races',
   'SENSITIVE_SETTING_PREFIXES', 'SOFT_FAIL_WINDOW_MS', 'STORES', 'SYNC_STORES',
-  'ValidationError', 'addMedia', 'allBirds', 'applySyncDelete', 'applySyncPut', 'authHeaders',
-  'authState', 'autoBackup', 'backoffDelay', 'checkBird', 'collapseOps', 'currentLoft',
-  'dataURLToBlob', 'deleteBird', 'deleteMedia', 'diffFields', 'duplicateRingCount',
-  'emitChange', 'enqueueFirstSyncOps', 'ensureAccessToken', 'exportAll',
-  'exportBirdWithAncestry', 'exportableSettings', 'getBird', 'getOpsSinceSeq', 'getTombstone',
-  'hasEverSynced', 'idbClear', 'idbDelete', 'idbGet', 'idbGetAll', 'idbPut', 'importAll',
-  'initDB', 'isSignedIn', 'listBackups', 'listOps', 'listSyncAnomalies', 'listTombstones',
-  'loftStatuses', 'makeGeneric', 'markOpsSuperseded', 'mediaForBird', 'newBird', 'nowISO',
-  'onChange', 'opRecord', 'opToRow', 'openDB', 'pruneOplog', 'pullAll', 'pullOnce', 'pushAll',
-  'pushOnce', 'refreshSession', 'refreshSyncStatus', 'remoteWins', 'restoreBird',
-  'restoreMedia', 'runSyncCycle', 'saveBird', 'setSetting', 'setSyncEnabled', 'signIn',
-  'signOut', 'startSyncLoop', 'state', 'syncConfig', 'syncNow', 'syncOnce', 'syncStatus',
-  'takeSyncDuplicateNotice', 'uuid',
+  'ValidationError', 'addMedia', 'adoptRemoteLoftIfPristine', 'allBirds', 'applySyncDelete',
+  'applySyncPut', 'authHeaders', 'authState', 'autoBackup', 'backoffDelay', 'checkBird',
+  'collapseOps', 'currentLoft', 'dataURLToBlob', 'deleteBird', 'deleteMedia', 'diffFields',
+  'dropPristineLoft', 'duplicateRingCount', 'emitChange', 'enqueueFirstSyncOps',
+  'ensureAccessToken', 'exportAll', 'exportBirdWithAncestry', 'exportableSettings', 'getBird',
+  'getOpsSinceSeq', 'getTombstone', 'hasEverSynced', 'idbClear', 'idbDelete', 'idbGet',
+  'idbGetAll', 'idbPut', 'importAll', 'initDB', 'isPristineLoft', 'isSignedIn', 'listBackups',
+  'listOps', 'listSyncAnomalies', 'listTombstones', 'loftStatuses', 'makeGeneric',
+  'markOpsSuperseded', 'mediaForBird', 'newBird', 'nowISO', 'onChange', 'opRecord', 'opToRow',
+  'openDB', 'pruneOplog', 'pullAll', 'pullOnce', 'pushAll', 'pushOnce', 'refreshSession',
+  'refreshSyncStatus', 'remoteWins', 'restoreBird', 'restoreMedia', 'runSyncCycle',
+  'saveBird', 'setSetting', 'setSyncEnabled', 'signIn', 'signOut', 'startSyncLoop', 'state',
+  'syncConfig', 'syncNow', 'syncOnce', 'syncStatus', 'takeSyncDuplicateNotice', 'uuid',
 ];
 
 test('guard: js/db.js exports exactly the pinned public surface', () => {
@@ -210,7 +210,7 @@ test('guard: js/db.js exports exactly the pinned public surface', () => {
   const extra = actual.filter((n) => !FACADE.includes(n));
   assertEq(missing.length + extra.length, 0,
     `the db facade drifted — missing: [${missing.join(', ')}] unexpected: [${extra.join(', ')}]`);
-  assertEq(actual.length, 88, `expected 88 exports, found ${actual.length}`);
+  assertEq(actual.length, 91, `expected 91 exports, found ${actual.length}`);
 });
 
 test('guard: js/db.js stays a facade — re-exports only, no logic', () => {

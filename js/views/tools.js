@@ -64,7 +64,8 @@ function settingsCard() {
 // ---------------------------------------------------------------------- loft
 function loftCard() {
   const loft = currentLoft();
-  const nameIn = h('input', { class: 'input', type: 'text', value: (loft && loft.name) || '' });
+  const nameIn = h('input', { class: 'input', type: 'text', value: (loft && loft.name) || '',
+                              placeholder: t('loft.unnamed') });
   const locIn = h('input', { class: 'input', type: 'text', value: (loft && loft.location) || '' });
   const save = h('button', {
     class: 'btn', onclick: async () => {
