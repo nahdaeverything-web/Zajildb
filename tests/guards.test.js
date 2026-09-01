@@ -387,6 +387,36 @@ test('guard: every id in every shipped dataset is a uuid', () => {
     + `tools/gen-*.js, which maps readable keys to uuids:\n  ${bad.slice(0, 8).join('\n  ')}`);
 });
 
+test('guard: only the sync card signs in or out', () => {
+  // signIn/signOut move the whole app between "syncing" and "local only". One
+  // surface owns that transition, so there is one place to reason about what a
+  // session change means — and so a second, subtly different sign-in flow
+  // cannot appear somewhere else and diverge.
+  //
+  // v1.9 had the opposite problem: signIn() existed and NOTHING called it, so
+  // the card showed an email the fancier could not acquire. This guard is the
+  // other half of that lesson — exactly one caller, named.
+  const hits = scan(FILES.filter((f) => f.rel.startsWith('js/views/')),
+    /\bsignIn\b|\bsignOut\b/,
+    { allow: (f) => f.rel === 'js/views/tools.js' });
+  assertEq(hits.length, 0,
+    `the المزامنة card in js/views/tools.js owns the session transition:\n  ${hits.join('\n  ')}`);
+});
+
+test('guard: the sign-in form offers no way to create an account', () => {
+  // Invite-only is a product decision enforced on the SERVER (public signups
+  // disabled, SPIKE §4f). A control here would be a dead end that looks like a
+  // feature, and the day someone re-enables signups it would silently become a
+  // real one.
+  const src = FILES.find((f) => f.rel === 'js/views/tools.js').src;
+  const hits = src.split('\n')
+    .map((line, n) => ({ line, n: n + 1 }))
+    .filter(({ line }) => !/^\s*(\/\/|\*)/.test(line))
+    .filter(({ line }) => /signUp|signup|createAccount|register\s*\(|\/auth\/v1\/signup/i.test(line));
+  assertEq(hits.length, 0,
+    `accounts are created through the admin API, never from the app:\n  ${hits.map((x) => `js/views/tools.js:${x.n}  ${x.line.trim()}`).join('\n  ')}`);
+});
+
 // ---------------------------------------------------------------- data level
 
 test('invariant: every bird from the factory satisfies ownership <-> status', () => {

@@ -1071,6 +1071,12 @@ export async function runSyncCycle({ manual = false } = {}) {
   if (result.ok) {
     attempt = 0;
     await setSetting('lastSyncError', null);
+    // A cycle that found nothing to exchange still SUCCEEDED — it reached the
+    // server and confirmed both sides agree. Leaving lastSyncAt untouched means
+    // a perfectly in-sync device shows a stale time, or "لم تتم بعد" forever,
+    // which reads as broken. Push and pull each set it when they move data;
+    // this is the case where neither did.
+    await setSetting('lastSyncAt', nowISO());
   } else {
     attempt++;
     const map = { network: 'sync.err.network', config: 'sync.err.config',
