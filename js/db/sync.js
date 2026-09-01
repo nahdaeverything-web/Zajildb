@@ -26,11 +26,14 @@
 
 import {
   state, setSetting, idbGet, idbGetAll, idbDelete, nowISO, allBirds, emitChange,
+  currentLoft,
 } from './storage.js';
 import { findDuplicateRings } from '../engine/rings.js';
 import { toISO } from '../dates.js';
 import { getOpsSinceSeq, logOp, markOpsSuperseded } from './oplog.js';
-import { applySyncPut, applySyncDelete } from './records.js';
+import {
+  applySyncPut, applySyncDelete, isPristineLoft, dropPristineLoft,
+} from './records.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../sync-config.js';
 
 /**
@@ -681,7 +684,7 @@ async function applyPage(rows) {
 
       const result = row.deleted
         ? await applySyncDelete(row.store, row.record_id, row.updated_at)
-        : await applySyncPut(row.store, row.data, row.updated_at);
+        : await applySyncPut(row.store, row.data, row.updated_at, row.record_id);
       if (result.applied) applied++; else skipped++;
       if (result.anomaly) {
         anomalies.push({ at: nowISO(), store: row.store, recordId: row.record_id,
@@ -824,6 +827,10 @@ export async function enqueueFirstSyncOps() {
                   ['raceResults', 'raceResults'], ['healthEvents', 'healthEvents']];
   for (const [store, mirror] of stores) {
     for (const record of state[mirror].values()) {
+      // An untouched default loft is not data. initDB() creates one on every
+      // fresh device, so pushing it would add an empty loft to the account per
+      // device, forever — and the fancier has no way to delete one.
+      if (store === 'lofts' && isPristineLoft(record)) continue;
       await logOp({ origin: 'user', store, op: 'put', recordId: record.id, record,
                     changed: Object.keys(record),
                     at: record.updatedAt || record.createdAt || nowISO() });
@@ -838,6 +845,36 @@ export async function enqueueFirstSyncOps() {
     count++;
   }
   return count;
+}
+
+/**
+ * After the first pull: if this device is still on its untouched default loft
+ * and EXACTLY ONE loft arrived from the server, adopt it.
+ *
+ * Without this, every device after the first keeps `currentLoftId` pointing at
+ * its own empty default — so الأدوات shows a blank loft, and every bird created
+ * there is filed under an id the rest of the loft knows nothing about. That is
+ * not clutter; it is one loft silently split in two.
+ *
+ * ZERO or SEVERAL remote lofts and it does nothing. Which loft a fancier means
+ * is not a question this code may answer by picking one — the same refusal §6
+ * makes about duplicate birds. With none, there is nothing to adopt; with
+ * several, club mode will one day make that legitimate and a guess would be
+ * wrong in a way nobody notices.
+ *
+ * @returns the adopted loft id, or null if nothing was adopted.
+ */
+export async function adoptRemoteLoftIfPristine() {
+  const local = currentLoft();
+  if (!isPristineLoft(local)) return null;
+  const remotes = [...state.lofts.values()].filter((l) => l.id !== local.id);
+  if (remotes.length !== 1) return null;
+
+  await setSetting('currentLoftId', remotes[0].id);
+  state.currentLoftId = remotes[0].id;
+  await dropPristineLoft(local.id);
+  emitChange({ type: 'loft', id: remotes[0].id });
+  return remotes[0].id;
 }
 
 /** Has this device ever completed a sync? */
@@ -884,10 +921,13 @@ export async function syncOnce() {
     const enqueued = await enqueueFirstSyncOps();
     const push = await pushAll();
     const pull = await pullAll();
+    // AFTER the pull, never before: the decision depends on what arrived.
+    const adopted = await adoptRemoteLoftIfPristine();
     const duplicates = duplicateRingCount();
     await setSetting('syncDuplicateNotice', duplicates || null);
     emitChange({ type: 'sync-complete', firstLogin: true, duplicates });
-    return { ok: Boolean(push.ok && pull.ok), firstLogin: true, enqueued, push, pull, duplicates };
+    return { ok: Boolean(push.ok && pull.ok), firstLogin: true, enqueued, push, pull,
+             duplicates, adopted };
   }
 
   const pull = await pullAll();
@@ -1031,6 +1071,12 @@ export async function runSyncCycle({ manual = false } = {}) {
   if (result.ok) {
     attempt = 0;
     await setSetting('lastSyncError', null);
+    // A cycle that found nothing to exchange still SUCCEEDED — it reached the
+    // server and confirmed both sides agree. Leaving lastSyncAt untouched means
+    // a perfectly in-sync device shows a stale time, or "لم تتم بعد" forever,
+    // which reads as broken. Push and pull each set it when they move data;
+    // this is the case where neither did.
+    await setSetting('lastSyncAt', nowISO());
   } else {
     attempt++;
     const map = { network: 'sync.err.network', config: 'sync.err.config',

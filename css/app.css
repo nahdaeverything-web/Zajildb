@@ -397,3 +397,7 @@ body.modal-open { overflow: hidden; }
   .sync-row.sync-syncing .sync-icon { animation: none; }
 }
 .sync-facts .row-inline { justify-content: space-between; gap: 1rem; }
+
+/* ── sign-in form in the المزامنة card (R1) ─────────────────────────────── */
+.sync-signin .field { display: block; margin-block-end: 0.6rem; }
+.sync-signin .warn { margin-block: 0.5rem 0.25rem; }

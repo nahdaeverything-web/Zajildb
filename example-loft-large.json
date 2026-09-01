@@ -5,7 +5,7 @@
  "exportedAt": "2026-08-01T09:00:00.000Z",
  "lofts": [
   {
-   "id": "loft-irbid-demo",
+   "id": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "name": "لوفت إربد التعليمي",
    "location": "إربد، الأردن",
    "statuses": [
@@ -23,7 +23,7 @@
  ],
  "birds": [
   {
-   "id": "x-remco",
+   "id": "0b3cea81-446b-5207-8893-29310735fb20",
    "rings": [
     {
      "country": "BE",
@@ -51,10 +51,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "x-anka",
+   "id": "a018aadb-f056-5bc1-b9ba-e3e8b011c6f3",
    "rings": [
     {
      "country": "BE",
@@ -82,10 +82,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "x-julius",
+   "id": "6534ffd5-501e-5287-9393-78b2bf13495a",
    "rings": [
     {
      "country": "NL",
@@ -113,10 +113,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "x-witpen",
+   "id": "841f9b7b-93c5-5310-91e4-c368d4bf42ed",
    "rings": [
     {
      "country": "NL",
@@ -144,10 +144,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "x-kasper",
+   "id": "63f54b7f-f676-52bc-8d2a-6d8340b489dd",
    "rings": [
     {
      "country": "BE",
@@ -175,10 +175,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "x-mieke",
+   "id": "c13cb329-b374-50af-9a25-e4183c6bfb30",
    "rings": [
     {
      "country": "BE",
@@ -206,10 +206,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "x-tarek",
+   "id": "968e64cb-3492-5bfa-ac87-0f90e4fefc2b",
    "rings": [
     {
      "country": "SY",
@@ -237,10 +237,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "x-najla",
+   "id": "217fbca0-53df-5416-872b-0f876c825295",
    "rings": [
     {
      "country": "JO",
@@ -268,10 +268,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g1-amir",
+   "id": "7ce23764-e6a4-5610-a3aa-6f37fb382894",
    "rings": [
     {
      "country": "JO",
@@ -289,8 +289,8 @@
    "strain": "فاندنابيل",
    "eyeSign": "برتقالية",
    "status": "breeder",
-   "sireId": "x-remco",
-   "damId": "x-anka",
+   "sireId": "0b3cea81-446b-5207-8893-29310735fb20",
+   "damId": "a018aadb-f056-5bc1-b9ba-e3e8b011c6f3",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -299,10 +299,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g1-zumurruda",
+   "id": "c0ce6bf9-8210-5f93-895c-a1a9984bd318",
    "rings": [
     {
      "country": "JO",
@@ -320,8 +320,8 @@
    "strain": "فاندنابيل",
    "eyeSign": "لؤلؤية",
    "status": "breeder",
-   "sireId": "x-remco",
-   "damId": "x-anka",
+   "sireId": "0b3cea81-446b-5207-8893-29310735fb20",
+   "damId": "a018aadb-f056-5bc1-b9ba-e3e8b011c6f3",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -330,10 +330,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g1-sultan",
+   "id": "e63a060b-c62f-5ae4-aa6d-1063895ca18e",
    "rings": [
     {
      "country": "JO",
@@ -351,8 +351,8 @@
    "strain": "يانسن",
    "eyeSign": "لؤلؤية",
    "status": "breeder",
-   "sireId": "x-julius",
-   "damId": "x-witpen",
+   "sireId": "6534ffd5-501e-5287-9393-78b2bf13495a",
+   "damId": "841f9b7b-93c5-5310-91e4-c368d4bf42ed",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -361,10 +361,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g1-yasmin",
+   "id": "c17db67a-b80d-5cf3-937c-2c97cf7d4bee",
    "rings": [
     {
      "country": "JO",
@@ -382,8 +382,8 @@
    "strain": "يانسن",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "x-julius",
-   "damId": "x-witpen",
+   "sireId": "6534ffd5-501e-5287-9393-78b2bf13495a",
+   "damId": "841f9b7b-93c5-5310-91e4-c368d4bf42ed",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -392,10 +392,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g1-faris",
+   "id": "1d2083c2-b460-5837-9fe3-130fc4912393",
    "rings": [
     {
      "country": "JO",
@@ -413,8 +413,8 @@
    "strain": "فان لون",
    "eyeSign": "برتقالية",
    "status": "breeder",
-   "sireId": "x-kasper",
-   "damId": "x-mieke",
+   "sireId": "63f54b7f-f676-52bc-8d2a-6d8340b489dd",
+   "damId": "c13cb329-b374-50af-9a25-e4183c6bfb30",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -423,10 +423,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g1-lama",
+   "id": "8a3d6bdd-d056-5007-8ca2-77b422f45104",
    "rings": [
     {
      "country": "JO",
@@ -444,8 +444,8 @@
    "strain": "فان لون",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "x-kasper",
-   "damId": "x-mieke",
+   "sireId": "63f54b7f-f676-52bc-8d2a-6d8340b489dd",
+   "damId": "c13cb329-b374-50af-9a25-e4183c6bfb30",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -454,10 +454,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g1-shahm",
+   "id": "c29a1304-1874-55f0-a8b8-c4062e13220b",
    "rings": [
     {
      "country": "JO",
@@ -475,8 +475,8 @@
    "strain": "شامي",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "x-tarek",
-   "damId": "x-najla",
+   "sireId": "968e64cb-3492-5bfa-ac87-0f90e4fefc2b",
+   "damId": "217fbca0-53df-5416-872b-0f876c825295",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -485,10 +485,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g1-ghazal",
+   "id": "3e5a24b8-7bfb-5dc1-950c-617664b97130",
    "rings": [
     {
      "country": "JO",
@@ -506,8 +506,8 @@
    "strain": "شامي",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "x-tarek",
-   "damId": "x-najla",
+   "sireId": "968e64cb-3492-5bfa-ac87-0f90e4fefc2b",
+   "damId": "217fbca0-53df-5416-872b-0f876c825295",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -516,10 +516,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g2-muhannad",
+   "id": "cad3ffaa-c998-5015-9a9a-7167249e027d",
    "rings": [
     {
      "country": "JO",
@@ -537,8 +537,8 @@
    "strain": "فاندنابيل × يانسن",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "g1-amir",
-   "damId": "g1-yasmin",
+   "sireId": "7ce23764-e6a4-5610-a3aa-6f37fb382894",
+   "damId": "c17db67a-b80d-5cf3-937c-2c97cf7d4bee",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -547,10 +547,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g2-dana",
+   "id": "e6912a86-d4b9-58de-9afc-f48073513109",
    "rings": [
     {
      "country": "JO",
@@ -568,8 +568,8 @@
    "strain": "يانسن × فاندنابيل",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "g1-sultan",
-   "damId": "g1-zumurruda",
+   "sireId": "e63a060b-c62f-5ae4-aa6d-1063895ca18e",
+   "damId": "c0ce6bf9-8210-5f93-895c-a1a9984bd318",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -578,10 +578,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g2-saqr",
+   "id": "75dcfd36-063a-5a2c-95e3-cc4a3b34a926",
    "rings": [
     {
      "country": "JO",
@@ -599,8 +599,8 @@
    "strain": "فان لون × شامي",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "g1-faris",
-   "damId": "g1-ghazal",
+   "sireId": "1d2083c2-b460-5837-9fe3-130fc4912393",
+   "damId": "3e5a24b8-7bfb-5dc1-950c-617664b97130",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -609,10 +609,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g2-nasma",
+   "id": "06ace477-3277-56a5-ae72-88ee440c2d02",
    "rings": [
     {
      "country": "JO",
@@ -630,8 +630,8 @@
    "strain": "شامي × فان لون",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "g1-shahm",
-   "damId": "g1-lama",
+   "sireId": "c29a1304-1874-55f0-a8b8-c4062e13220b",
+   "damId": "8a3d6bdd-d056-5007-8ca2-77b422f45104",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -640,10 +640,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g2-burhan",
+   "id": "993482b4-93c4-510d-96bd-f3870320099a",
    "rings": [
     {
      "country": "JO",
@@ -661,8 +661,8 @@
    "strain": "فاندنابيل × فان لون",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "g1-amir",
-   "damId": "g1-lama",
+   "sireId": "7ce23764-e6a4-5610-a3aa-6f37fb382894",
+   "damId": "8a3d6bdd-d056-5007-8ca2-77b422f45104",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -671,10 +671,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g2-rima",
+   "id": "0c116294-faf4-52ae-a585-f18cac9d3f40",
    "rings": [
     {
      "country": "JO",
@@ -692,8 +692,8 @@
    "strain": "فان لون × فاندنابيل",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "g1-faris",
-   "damId": "g1-zumurruda",
+   "sireId": "1d2083c2-b460-5837-9fe3-130fc4912393",
+   "damId": "c0ce6bf9-8210-5f93-895c-a1a9984bd318",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -702,10 +702,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g3-sheikh",
+   "id": "e457d963-c336-5a53-8531-129e31157968",
    "rings": [
     {
      "country": "JO",
@@ -731,8 +731,8 @@
    "strain": "فاندنابيل × يانسن",
    "eyeSign": "برتقالية غامقة",
    "status": "breeder",
-   "sireId": "g2-muhannad",
-   "damId": "g2-dana",
+   "sireId": "cad3ffaa-c998-5015-9a9a-7167249e027d",
+   "damId": "e6912a86-d4b9-58de-9afc-f48073513109",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -740,17 +740,17 @@
    "acquiredDate": "",
    "notes": [
     {
-     "id": "n-sheikh",
+     "id": "ad273145-be79-5602-811f-75ba97c2140a",
      "at": "2023-06-01T08:00:00.000Z",
      "text": "تزاوج أولاد عم مزدوج: أبواه مهنّد ودانة يعودان لنفس الجدّين من الطرفين — COI المتوقع ١٢٫٥٪. راقب الخصوبة في الأجيال القادمة."
     }
    ],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g3-khayal",
+   "id": "814e9869-dcf1-5366-bc92-5918a442df8d",
    "rings": [
     {
      "country": "JO",
@@ -768,8 +768,8 @@
    "strain": "فان لون × شامي",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "g2-saqr",
-   "damId": "g2-nasma",
+   "sireId": "75dcfd36-063a-5a2c-95e3-cc4a3b34a926",
+   "damId": "06ace477-3277-56a5-ae72-88ee440c2d02",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -778,10 +778,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g3-marwan",
+   "id": "230472a6-4589-5160-a971-a9bf4d81dc9f",
    "rings": [
     {
      "country": "JO",
@@ -799,8 +799,8 @@
    "strain": "مختلط",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "g2-burhan",
-   "damId": "g2-nasma",
+   "sireId": "993482b4-93c4-510d-96bd-f3870320099a",
+   "damId": "06ace477-3277-56a5-ae72-88ee440c2d02",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -809,10 +809,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g3-noor",
+   "id": "ff0cd5ab-e5a5-54fd-8c91-3877e4bf43eb",
    "rings": [
     {
      "country": "JO",
@@ -830,8 +830,8 @@
    "strain": "مختلط",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "g2-muhannad",
-   "damId": "g2-rima",
+   "sireId": "cad3ffaa-c998-5015-9a9a-7167249e027d",
+   "damId": "0c116294-faf4-52ae-a585-f18cac9d3f40",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -840,10 +840,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g3-jasur",
+   "id": "31008724-1c44-56ef-8d7c-e3fa43476fa4",
    "rings": [
     {
      "country": "JO",
@@ -869,8 +869,8 @@
    "strain": "مختلط",
    "eyeSign": "",
    "status": "race team",
-   "sireId": "g2-saqr",
-   "damId": "g2-dana",
+   "sireId": "75dcfd36-063a-5a2c-95e3-cc4a3b34a926",
+   "damId": "e6912a86-d4b9-58de-9afc-f48073513109",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -879,10 +879,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g3-asif",
+   "id": "c02bcf8d-8bc3-5c6c-805f-c604b4d2d40f",
    "rings": [
     {
      "country": "JO",
@@ -900,8 +900,8 @@
    "strain": "شامي",
    "eyeSign": "",
    "status": "stock",
-   "sireId": "g1-shahm",
-   "damId": "g2-nasma",
+   "sireId": "c29a1304-1874-55f0-a8b8-c4062e13220b",
+   "damId": "06ace477-3277-56a5-ae72-88ee440c2d02",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -909,17 +909,17 @@
    "acquiredDate": "",
    "notes": [
     {
-     "id": "n-asif",
+     "id": "2f261551-6ad6-5f15-bc50-9439ef9d0fc6",
      "at": "2023-07-01T08:00:00.000Z",
      "text": "تحذير: أبوه شهم هو أيضًا جدّ أمه نسمة — أب × ابنة، COI ٢٥٪. سُجّل للدراسة ولا يُستخدم للتربية."
     }
    ],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g4-malik",
+   "id": "967869ec-988a-5dc5-81b5-ac423393fa19",
    "rings": [
     {
      "country": "JO",
@@ -945,8 +945,8 @@
    "strain": "مختلط",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "g3-sheikh",
-   "damId": "g3-khayal",
+   "sireId": "e457d963-c336-5a53-8531-129e31157968",
+   "damId": "814e9869-dcf1-5366-bc92-5918a442df8d",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -955,10 +955,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g4-sadim",
+   "id": "cec01ba7-0441-5ba6-b591-5f61ed30c3a2",
    "rings": [
     {
      "country": "JO",
@@ -976,8 +976,8 @@
    "strain": "مختلط",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "g3-marwan",
-   "damId": "g3-noor",
+   "sireId": "230472a6-4589-5160-a971-a9bf4d81dc9f",
+   "damId": "ff0cd5ab-e5a5-54fd-8c91-3877e4bf43eb",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -986,10 +986,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g4-wisam",
+   "id": "c6cb0108-488c-5ca1-8e7b-8e0c8f743b6b",
    "rings": [
     {
      "country": "JO",
@@ -1015,8 +1015,8 @@
    "strain": "مختلط",
    "eyeSign": "",
    "status": "race team",
-   "sireId": "g3-jasur",
-   "damId": "g2-rima",
+   "sireId": "31008724-1c44-56ef-8d7c-e3fa43476fa4",
+   "damId": "0c116294-faf4-52ae-a585-f18cac9d3f40",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -1025,10 +1025,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g4-lulu",
+   "id": "d8cbf7fd-19ee-5195-b1b1-c921fc7fe5e0",
    "rings": [
     {
      "country": "JO",
@@ -1046,8 +1046,8 @@
    "strain": "مختلط",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "g3-sheikh",
-   "damId": "g3-noor",
+   "sireId": "e457d963-c336-5a53-8531-129e31157968",
+   "damId": "ff0cd5ab-e5a5-54fd-8c91-3877e4bf43eb",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -1056,10 +1056,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g4-shihab",
+   "id": "5f0364ea-51bd-52c0-9604-07df4143d893",
    "rings": [
     {
      "country": "JO",
@@ -1085,8 +1085,8 @@
    "strain": "مختلط",
    "eyeSign": "",
    "status": "race team",
-   "sireId": "g3-marwan",
-   "damId": "g3-khayal",
+   "sireId": "230472a6-4589-5160-a971-a9bf4d81dc9f",
+   "damId": "814e9869-dcf1-5366-bc92-5918a442df8d",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -1095,10 +1095,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g4-bushra",
+   "id": "c73e5138-1a6e-5ecf-a7f5-9d5d00361d07",
    "rings": [
     {
      "country": "JO",
@@ -1116,8 +1116,8 @@
    "strain": "مختلط",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "g3-asif",
-   "damId": "g2-dana",
+   "sireId": "c02bcf8d-8bc3-5c6c-805f-c604b4d2d40f",
+   "damId": "e6912a86-d4b9-58de-9afc-f48073513109",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -1126,10 +1126,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g5-faris26",
+   "id": "f1d1a304-faff-503a-97e1-5c50246139a9",
    "rings": [
     {
      "country": "JO",
@@ -1155,8 +1155,8 @@
    "strain": "مختلط",
    "eyeSign": "",
    "status": "young bird",
-   "sireId": "g4-malik",
-   "damId": "g4-sadim",
+   "sireId": "967869ec-988a-5dc5-81b5-ac423393fa19",
+   "damId": "cec01ba7-0441-5ba6-b591-5f61ed30c3a2",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -1165,10 +1165,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g5-najma26",
+   "id": "8e39a9f7-811b-5b13-8361-ee063d610624",
    "rings": [
     {
      "country": "JO",
@@ -1186,8 +1186,8 @@
    "strain": "مختلط",
    "eyeSign": "",
    "status": "young bird",
-   "sireId": "g4-malik",
-   "damId": "g4-sadim",
+   "sireId": "967869ec-988a-5dc5-81b5-ac423393fa19",
+   "damId": "cec01ba7-0441-5ba6-b591-5f61ed30c3a2",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -1196,10 +1196,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g5-sahm26",
+   "id": "a4565519-e1c5-5631-aa87-19013229b48b",
    "rings": [
     {
      "country": "JO",
@@ -1217,8 +1217,8 @@
    "strain": "مختلط",
    "eyeSign": "",
    "status": "young bird",
-   "sireId": "g4-wisam",
-   "damId": "g4-lulu",
+   "sireId": "c6cb0108-488c-5ca1-8e7b-8e0c8f743b6b",
+   "damId": "d8cbf7fd-19ee-5195-b1b1-c921fc7fe5e0",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -1227,10 +1227,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   },
   {
-   "id": "g5-ghaima26",
+   "id": "764706a0-db6f-5e7a-b9b7-301e99d5e33e",
    "rings": [
     {
      "country": "JO",
@@ -1248,8 +1248,8 @@
    "strain": "مختلط",
    "eyeSign": "",
    "status": "young bird",
-   "sireId": "g4-shihab",
-   "damId": "g4-bushra",
+   "sireId": "5f0364ea-51bd-52c0-9604-07df4143d893",
+   "damId": "c73e5138-1a6e-5ecf-a7f5-9d5d00361d07",
    "external": false,
    "breeder": "",
    "owner": "لوفت إربد التعليمي",
@@ -1258,41 +1258,41 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-irbid-demo"
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd"
   }
  ],
  "pairs": [
   {
-   "id": "lp-malik-sadim-26",
-   "sireId": "g4-malik",
-   "damId": "g4-sadim",
+   "id": "0962ca88-5afc-5a3d-80bc-4a3489453c67",
+   "sireId": "967869ec-988a-5dc5-81b5-ac423393fa19",
+   "damId": "cec01ba7-0441-5ba6-b591-5f61ed30c3a2",
    "season": "2026",
    "nestBox": "1",
    "status": "active",
    "startDate": "2026-01-25",
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z",
    "rounds": [
     {
-     "id": "lp1r1",
+     "id": "dfe0e607-0d06-5771-9f96-2697c727e784",
      "number": 1,
      "eggs": [
       {
-       "id": "lp1r1e1",
+       "id": "85e85437-0590-5d73-89bd-33fe2b6d15d5",
        "laidDate": "2026-02-21",
        "state": "hatched",
        "hatchDate": "2026-03-14",
-       "chickId": "g5-faris26",
+       "chickId": "f1d1a304-faff-503a-97e1-5c50246139a9",
        "ringed": true,
        "weaned": true,
        "weanDate": "2026-04-09"
       },
       {
-       "id": "lp1r1e2",
+       "id": "63eb1e64-fa1e-50dc-bafe-4691a04e6afe",
        "laidDate": "2026-02-23",
        "state": "hatched",
        "hatchDate": "2026-03-15",
-       "chickId": "g5-najma26",
+       "chickId": "8e39a9f7-811b-5b13-8361-ee063d610624",
        "ringed": true,
        "weaned": true,
        "weanDate": "2026-04-09"
@@ -1300,16 +1300,16 @@
      ]
     },
     {
-     "id": "lp1r2",
+     "id": "1d71c48d-68d3-5ad7-bf39-8c1872a1c06a",
      "number": 2,
      "eggs": [
       {
-       "id": "lp1r2e1",
+       "id": "03439ad0-5f54-52a7-9014-f151e759f5de",
        "laidDate": "2026-08-14",
        "state": "laid"
       },
       {
-       "id": "lp1r2e2",
+       "id": "3d38aed6-c323-5c3b-aff4-cb7fa3125a2d",
        "laidDate": "2026-08-16",
        "state": "laid"
       }
@@ -1318,32 +1318,32 @@
    ]
   },
   {
-   "id": "lp-wisam-lulu-26",
-   "sireId": "g4-wisam",
-   "damId": "g4-lulu",
+   "id": "234b5bad-a32c-5d71-8203-d91ec3f52d03",
+   "sireId": "c6cb0108-488c-5ca1-8e7b-8e0c8f743b6b",
+   "damId": "d8cbf7fd-19ee-5195-b1b1-c921fc7fe5e0",
    "season": "2026",
    "nestBox": "4",
    "status": "active",
    "startDate": "2026-02-10",
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z",
    "rounds": [
     {
-     "id": "lp2r1",
+     "id": "e694b9db-1286-54d5-9038-1c927339af6e",
      "number": 1,
      "eggs": [
       {
-       "id": "lp2r1e1",
+       "id": "371762a5-700e-5120-98ab-00555241285c",
        "laidDate": "2026-03-11",
        "state": "hatched",
        "hatchDate": "2026-04-02",
-       "chickId": "g5-sahm26",
+       "chickId": "a4565519-e1c5-5631-aa87-19013229b48b",
        "ringed": true,
        "weaned": true,
        "weanDate": "2026-04-28"
       },
       {
-       "id": "lp2r1e2",
+       "id": "3345487b-b6a3-5f79-9a85-f97d01c5965b",
        "laidDate": "2026-03-13",
        "state": "failed"
       }
@@ -1352,32 +1352,32 @@
    ]
   },
   {
-   "id": "lp-shihab-bushra-26",
-   "sireId": "g4-shihab",
-   "damId": "g4-bushra",
+   "id": "17a32b73-e188-5e30-8726-2c10b2ddde71",
+   "sireId": "5f0364ea-51bd-52c0-9604-07df4143d893",
+   "damId": "c73e5138-1a6e-5ecf-a7f5-9d5d00361d07",
    "season": "2026",
    "nestBox": "6",
    "status": "active",
    "startDate": "2026-03-01",
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z",
    "rounds": [
     {
-     "id": "lp3r1",
+     "id": "0c33e254-b542-5903-b2af-0948cd5b96fe",
      "number": 1,
      "eggs": [
       {
-       "id": "lp3r1e1",
+       "id": "ebeb95eb-7394-5c7f-bdd5-f91066d85a00",
        "laidDate": "2026-03-28",
        "state": "hatched",
        "hatchDate": "2026-04-19",
-       "chickId": "g5-ghaima26",
+       "chickId": "764706a0-db6f-5e7a-b9b7-301e99d5e33e",
        "ringed": true,
        "weaned": true,
        "weanDate": "2026-05-15"
       },
       {
-       "id": "lp3r1e2",
+       "id": "69fe1cbe-29e3-5fe7-9ebe-a0209c9fa8fc",
        "laidDate": "2026-03-30",
        "state": "hatched",
        "hatchDate": "2026-04-20",
@@ -1390,26 +1390,26 @@
    ]
   },
   {
-   "id": "lp-sheikh-khayal-24",
-   "sireId": "g3-sheikh",
-   "damId": "g3-khayal",
+   "id": "3ee329e5-207e-5890-a9a8-bd639e1a49f0",
+   "sireId": "e457d963-c336-5a53-8531-129e31157968",
+   "damId": "814e9869-dcf1-5366-bc92-5918a442df8d",
    "season": "2024",
    "nestBox": "1",
    "status": "separated",
    "startDate": "2024-01-20",
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z",
    "rounds": [
     {
-     "id": "lp4r1",
+     "id": "1a47e97a-073f-5fe6-9026-fd1e2f6e1975",
      "number": 1,
      "eggs": [
       {
-       "id": "lp4r1e1",
+       "id": "754aab53-2150-58fc-9605-767606b2a3e6",
        "laidDate": "2024-02-22",
        "state": "hatched",
        "hatchDate": "2024-03-15",
-       "chickId": "g4-malik",
+       "chickId": "967869ec-988a-5dc5-81b5-ac423393fa19",
        "ringed": true,
        "weaned": true,
        "weanDate": "2024-04-10"
@@ -1419,26 +1419,26 @@
    ]
   },
   {
-   "id": "lp-marwan-noor-24",
-   "sireId": "g3-marwan",
-   "damId": "g3-noor",
+   "id": "7947dc83-1885-56b2-bb0c-75012d56b5d3",
+   "sireId": "230472a6-4589-5160-a971-a9bf4d81dc9f",
+   "damId": "ff0cd5ab-e5a5-54fd-8c91-3877e4bf43eb",
    "season": "2024",
    "nestBox": "3",
    "status": "separated",
    "startDate": "2024-01-20",
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z",
    "rounds": [
     {
-     "id": "lp5r1",
+     "id": "baae4dab-bce1-5a93-98d4-6b576b0f0e97",
      "number": 1,
      "eggs": [
       {
-       "id": "lp5r1e1",
+       "id": "5ab35b9a-a43e-52b2-944c-3956943777e0",
        "laidDate": "2024-03-10",
        "state": "hatched",
        "hatchDate": "2024-04-02",
-       "chickId": "g4-sadim",
+       "chickId": "cec01ba7-0441-5ba6-b591-5f61ed30c3a2",
        "ringed": true,
        "weaned": true,
        "weanDate": "2024-04-29"
@@ -1450,8 +1450,8 @@
  ],
  "raceResults": [
   {
-   "id": "lr-1",
-   "birdId": "g3-jasur",
+   "id": "856f32fa-932a-591b-9171-2c49e3bf4c48",
+   "birdId": "31008724-1c44-56ef-8d7c-e3fa43476fa4",
    "date": "2025-03-29",
    "raceType": "club",
    "organisation": "نادي إربد للحمام الزاجل",
@@ -1473,12 +1473,12 @@
    "position": 5,
    "fanciersEntered": 16,
    "birdsEntered": 118,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-2",
-   "birdId": "g3-jasur",
+   "id": "0b3a235e-9718-5046-a294-315469186840",
+   "birdId": "31008724-1c44-56ef-8d7c-e3fa43476fa4",
    "date": "2025-04-19",
    "raceType": "club",
    "organisation": "نادي إربد للحمام الزاجل",
@@ -1500,12 +1500,12 @@
    "position": 2,
    "fanciersEntered": 16,
    "birdsEntered": 118,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-3",
-   "birdId": "g3-jasur",
+   "id": "58026d98-1124-5243-a338-6b9296947fe2",
+   "birdId": "31008724-1c44-56ef-8d7c-e3fa43476fa4",
    "date": "2025-05-24",
    "raceType": "national",
    "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
@@ -1527,12 +1527,12 @@
    "position": 6,
    "fanciersEntered": 46,
    "birdsEntered": 412,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-4",
-   "birdId": "g4-wisam",
+   "id": "0427f11f-ff93-5375-b605-7986e910dd13",
+   "birdId": "c6cb0108-488c-5ca1-8e7b-8e0c8f743b6b",
    "date": "2025-03-29",
    "raceType": "club",
    "organisation": "نادي إربد للحمام الزاجل",
@@ -1554,12 +1554,12 @@
    "position": 9,
    "fanciersEntered": 16,
    "birdsEntered": 118,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-5",
-   "birdId": "g4-wisam",
+   "id": "b594d9ec-c290-54c2-ba9c-28931097f8a1",
+   "birdId": "c6cb0108-488c-5ca1-8e7b-8e0c8f743b6b",
    "date": "2025-05-03",
    "raceType": "federation",
    "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
@@ -1581,12 +1581,12 @@
    "position": 1,
    "fanciersEntered": 24,
    "birdsEntered": 187,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-6",
-   "birdId": "g4-wisam",
+   "id": "7ba09347-551c-50b6-9e54-7b3183f7ec63",
+   "birdId": "c6cb0108-488c-5ca1-8e7b-8e0c8f743b6b",
    "date": "2025-05-24",
    "raceType": "national",
    "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
@@ -1608,12 +1608,12 @@
    "position": 14,
    "fanciersEntered": 46,
    "birdsEntered": 412,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-7",
-   "birdId": "g3-marwan",
+   "id": "b4638e2a-af9d-5fa2-ae36-462541148fb1",
+   "birdId": "230472a6-4589-5160-a971-a9bf4d81dc9f",
    "date": "2025-04-19",
    "raceType": "club",
    "organisation": "نادي إربد للحمام الزاجل",
@@ -1635,12 +1635,12 @@
    "position": 24,
    "fanciersEntered": 16,
    "birdsEntered": 118,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-8",
-   "birdId": "g4-shihab",
+   "id": "8a5ef203-ce0b-5f36-ae25-18739e28668e",
+   "birdId": "5f0364ea-51bd-52c0-9604-07df4143d893",
    "date": "2026-03-28",
    "raceType": "club",
    "organisation": "نادي إربد للحمام الزاجل",
@@ -1662,12 +1662,12 @@
    "position": 1,
    "fanciersEntered": 16,
    "birdsEntered": 118,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-9",
-   "birdId": "g4-shihab",
+   "id": "f87bb245-9471-5989-bbaa-ae633ae90c50",
+   "birdId": "5f0364ea-51bd-52c0-9604-07df4143d893",
    "date": "2026-04-25",
    "raceType": "federation",
    "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
@@ -1689,12 +1689,12 @@
    "position": 3,
    "fanciersEntered": 24,
    "birdsEntered": 187,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-10",
-   "birdId": "g4-shihab",
+   "id": "48c0491e-f7ae-535b-81ce-b1b4c2f7269f",
+   "birdId": "5f0364ea-51bd-52c0-9604-07df4143d893",
    "date": "2026-05-23",
    "raceType": "national",
    "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
@@ -1716,12 +1716,12 @@
    "position": 8,
    "fanciersEntered": 46,
    "birdsEntered": 412,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-11",
-   "birdId": "g4-wisam",
+   "id": "965584a3-6ae2-5423-b06f-f42462f92ba2",
+   "birdId": "c6cb0108-488c-5ca1-8e7b-8e0c8f743b6b",
    "date": "2026-04-25",
    "raceType": "federation",
    "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
@@ -1743,12 +1743,12 @@
    "position": 11,
    "fanciersEntered": 24,
    "birdsEntered": 187,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-12",
-   "birdId": "g5-faris26",
+   "id": "6ffd76ea-9c86-51a1-8481-049b918485c4",
+   "birdId": "f1d1a304-faff-503a-97e1-5c50246139a9",
    "date": "2026-06-13",
    "raceType": "club",
    "organisation": "نادي إربد للحمام الزاجل",
@@ -1770,12 +1770,12 @@
    "position": 4,
    "fanciersEntered": 16,
    "birdsEntered": 118,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-13",
-   "birdId": "g5-faris26",
+   "id": "cf5b1a26-c7be-59b0-9870-dadc32eddd3d",
+   "birdId": "f1d1a304-faff-503a-97e1-5c50246139a9",
    "date": "2026-07-04",
    "raceType": "club",
    "organisation": "نادي إربد للحمام الزاجل",
@@ -1797,12 +1797,12 @@
    "position": 2,
    "fanciersEntered": 16,
    "birdsEntered": 118,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-14",
-   "birdId": "g5-sahm26",
+   "id": "a10a2404-ba9c-5f66-ba34-cd2d939059fd",
+   "birdId": "a4565519-e1c5-5631-aa87-19013229b48b",
    "date": "2026-06-13",
    "raceType": "club",
    "organisation": "نادي إربد للحمام الزاجل",
@@ -1824,12 +1824,12 @@
    "position": 17,
    "fanciersEntered": 16,
    "birdsEntered": 118,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-15",
-   "birdId": "g5-najma26",
+   "id": "e6c218f8-84e1-5d45-b3e7-85a4782f2f1a",
+   "birdId": "8e39a9f7-811b-5b13-8361-ee063d610624",
    "date": "2026-06-13",
    "raceType": "club",
    "organisation": "نادي إربد للحمام الزاجل",
@@ -1851,12 +1851,12 @@
    "position": 31,
    "fanciersEntered": 16,
    "birdsEntered": 118,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-16",
-   "birdId": "g5-ghaima26",
+   "id": "3bfb6995-df59-56b2-9b43-05d40ebb9de6",
+   "birdId": "764706a0-db6f-5e7a-b9b7-301e99d5e33e",
    "date": "2026-06-06",
    "raceType": "training",
    "organisation": "نادي إربد للحمام الزاجل",
@@ -1878,12 +1878,12 @@
    "position": null,
    "fanciersEntered": 1,
    "birdsEntered": 24,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lr-17",
-   "birdId": "g5-faris26",
+   "id": "c0bc8ca4-4e81-5e5e-a5e7-6e0a6342fec6",
+   "birdId": "f1d1a304-faff-503a-97e1-5c50246139a9",
    "date": "2026-06-06",
    "raceType": "training",
    "organisation": "نادي إربد للحمام الزاجل",
@@ -1905,86 +1905,86 @@
    "position": null,
    "fanciersEntered": 1,
    "birdsEntered": 24,
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   }
  ],
  "healthEvents": [
   {
-   "id": "lh-1",
+   "id": "b5890722-02a3-5805-af62-e3059c592b4b",
    "eventType": "vaccination",
    "wholeLoft": true,
    "birdId": null,
    "date": "2026-01-15",
    "medication": "لقاح باراميكسو PMV — Colombovac",
    "notes": "كامل اللوفت قبل موسم التزاوج",
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lh-2",
+   "id": "f1871583-d131-5ff0-a9ec-cecfe9f9e793",
    "eventType": "treatment",
    "wholeLoft": true,
    "birdId": null,
    "date": "2026-03-02",
    "medication": "رونيدازول — وقاية من الترايكوموناس",
    "notes": "كورس ٥ أيام في ماء الشرب",
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lh-3",
+   "id": "f98266ed-7990-5803-ad36-71cf243bf6f4",
    "eventType": "vaccination",
    "wholeLoft": true,
    "birdId": null,
    "date": "2026-05-10",
    "medication": "لقاح الجدري",
    "notes": "للفراخ قبل موسم السباق",
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lh-4",
+   "id": "3b42a281-a8ef-54e5-8f39-8f7ab78fad11",
    "eventType": "illness",
    "wholeLoft": false,
-   "birdId": "g5-najma26",
+   "birdId": "8e39a9f7-811b-5b13-8361-ee063d610624",
    "date": "2026-06-20",
    "medication": "",
    "notes": "خمول بعد سباق الأزرق — عزل ٤ أيام، تعافت",
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lh-5",
+   "id": "fafc8c87-d1ac-56fb-b098-1a102a5e38e1",
    "eventType": "treatment",
    "wholeLoft": false,
-   "birdId": "g5-najma26",
+   "birdId": "8e39a9f7-811b-5b13-8361-ee063d610624",
    "date": "2026-06-21",
    "medication": "أمبروليوم — كوكسيديا",
    "notes": "",
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lh-6",
+   "id": "ed8e06c2-6fe3-57ac-9021-4a70794631a3",
    "eventType": "check",
    "wholeLoft": false,
-   "birdId": "g4-shihab",
+   "birdId": "5f0364ea-51bd-52c0-9604-07df4143d893",
    "date": "2026-03-20",
    "medication": "",
    "notes": "فحص ما قبل السباق — ريش وعضلات ممتازة",
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "lh-7",
+   "id": "2d740b88-5a4b-5fd2-9dd1-3c1b74ec0cc8",
    "eventType": "treatment",
    "wholeLoft": true,
    "birdId": null,
    "date": "2025-09-14",
    "medication": "علاج الديدان — فينبيندازول",
    "notes": "بعد موسم السباق",
-   "loftId": "loft-irbid-demo",
+   "loftId": "8f268d1b-3dbe-57be-8d77-ede52297a2cd",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   }
  ],

@@ -426,6 +426,68 @@ with sync_playwright() as p:
           tie['present'] is True and tie['tombKept'] is False,
           'the tombstone is not strictly newer, so the record applies and the tombstone clears')
 
+    # ── 12c. A ROW WHOSE BODY ID DISAGREES WITH ITS PRIMARY KEY ──
+    # Found by the first real user. applySyncPut keyed the local write on
+    # `data.id` while applySyncDelete keyed on `record_id`, so a mismatched row
+    # created a local record under a key THE SERVER DOES NOT KNOW — unreachable
+    # by every future sync, including its own deletion. Every layer reported
+    # success: applied: 1, ok: true, state: synced. The device simply held a
+    # record forever that no amount of syncing could remove.
+    #
+    # The server's identity for a row is `record_id`, the primary key. That is
+    # what the cursor, the upsert and the delete all key on, so it is what the
+    # client must key on too.
+    run(page, RESET)
+    srv['rows'] = [row(1, 'birds', 'server-identity-0001',
+                       {**REMOTE_BIRD, 'id': 'a-different-body-id', 'name': 'mismatched'},
+                       updated_at='2026-08-29T12:00:00.000Z')]
+    mm = run(page, """async (db) => {
+        const pull = await db.pullOnce();
+        return { pull, byRecordId: db.getBird('server-identity-0001') !== null,
+                 byBodyId: db.getBird('a-different-body-id') !== null,
+                 anomalies: db.listSyncAnomalies().length,
+                 anomaly: db.listSyncAnomalies()[0] || null };
+    }""")
+    check('a record is keyed on the SERVER\'s record_id, not on its body id',
+          mm['byRecordId'] is True, str(mm))
+    check('...and never under the body id, which the server does not know',
+          mm['byBodyId'] is False, str(mm))
+    check('...with the disagreement reported, not silently reconciled',
+          mm['anomalies'] == 1, str(mm['anomaly']))
+
+    # and the half that actually bit: the delete must reach it
+    srv['rows'].append(row(2, 'birds', 'server-identity-0001',
+                           {'id': 'server-identity-0001'}, deleted=True,
+                           updated_at='2026-08-29T13:00:00.000Z'))
+    gone = run(page, """async (db) => {
+        const pull = await db.pullAll();
+        return { pull: { ok: pull.ok, applied: pull.applied },
+                 present: db.getBird('server-identity-0001') !== null,
+                 stray: db.getBird('a-different-body-id') !== null,
+                 tomb: (await db.listTombstones()).some(t => t.id === 'birds:server-identity-0001') };
+    }""")
+    check('THE PULLED DELETE REACHES IT — no orphan survives the round trip',
+          gone['present'] is False and gone['stray'] is False, str(gone))
+    check('...and its tombstone is keyed the same way', gone['tomb'] is True, str(gone))
+
+    # And the resurrection protection must key the same way. This is window 1's
+    # exact state: a tombstone exists for the SERVER's identity, and a stale
+    # mismatched row for that same identity turns up again. Checking the
+    # tombstone under the body id would find nothing and bring the record back.
+    srv['rows'].append(row(3, 'birds', 'server-identity-0001',
+                           {**REMOTE_BIRD, 'id': 'a-different-body-id', 'name': 'zombie'},
+                           updated_at='2026-08-29T12:30:00.000Z'))   # older than the delete
+    zombie = run(page, """async (db) => {
+        await db.setSetting('syncCursor', 2);
+        const pull = await db.pullAll();
+        return { pull: { ok: pull.ok, applied: pull.applied, skipped: pull.skipped },
+                 resurrected: db.getBird('server-identity-0001') !== null,
+                 stray: db.getBird('a-different-body-id') !== null };
+    }""")
+    check('a stale mismatched row does NOT resurrect past its tombstone',
+          zombie['resurrected'] is False and zombie['stray'] is False, str(zombie))
+    check('...it is skipped, not applied', zombie['pull']['skipped'] == 1, str(zombie['pull']))
+
     # ── 13. still inert on an unconfigured build ──
     unc = run(page, """async (db) => {
         const saved = globalThis.ZAJIL_SYNC_CONFIG;

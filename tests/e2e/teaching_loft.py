@@ -1,5 +1,13 @@
 import os
 from playwright.sync_api import sync_playwright
+
+# The shipped datasets carry real uuids (v1.9.1). Python's uuid5 derives exactly
+# what tools/idmap.js derives from the same namespace and key, so these suites
+# keep naming birds by the readable key that documents what they are.
+import uuid as _uuid
+_ID_NS = _uuid.UUID('7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f')
+def bird_id(key):
+    return str(_uuid.uuid5(_ID_NS, key))
 ok = fail = 0
 def check(n, c, e=''):
     global ok, fail
@@ -22,7 +30,7 @@ with sync_playwright() as p:
     check('38 birds loaded', page.locator('.bird-row').count() == 38, str(page.locator('.bird-row').count()))
 
     # deepest pedigree renders 5 generations fully
-    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/pedigree/g5-faris26'); page.wait_for_timeout(900)
+    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/pedigree/'+bird_id('g5-faris26')); page.wait_for_timeout(900)
     page.locator('.seg-btn', has_text='5').click(); page.wait_for_timeout(800)
     known = page.locator('.ped-cell.ped-known').count()
     unknown = page.locator('.ped-cell.ped-unknown').count()
@@ -39,11 +47,11 @@ with sync_playwright() as p:
     check('full-sib pairing shows severe warning', 'أشقاء' in rel and page.locator('.warn-severe').count() == 1, rel[:90])
 
     # father × daughter bird
-    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/bird/g3-asif'); page.wait_for_timeout(800)
+    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/bird/'+bird_id('g3-asif')); page.wait_for_timeout(800)
     check('عاصف detail shows 25% COI', '25' in page.locator('.facts .coi-badge').first.inner_text())
 
     # progeny analysis on a foundation bird
-    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/bird/x-remco'); page.wait_for_timeout(900)
+    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/bird/'+bird_id('x-remco')); page.wait_for_timeout(900)
     stats = page.locator('.stat-value').all_inner_texts()
     check('Remco progeny analysis populated', len(stats) >= 6 and stats[1] not in ('0', '٠'), str(stats[:4]))
 

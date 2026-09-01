@@ -17,10 +17,19 @@ def check(n, c, e=''):
     if c: ok += 1; print(f'  ✓ {n}')
     else: fail += 1; print(f'  ✗ {n} {e}')
 
-srv = {'mode': 'ok', 'rows': [], 'seq': 0}
+srv = {'mode': 'ok', 'token_mode': 'ok', 'rows': [], 'seq': 0}
 
 def handler(route, request):
     if '/auth/v1/token' in request.url:
+        # a separate mode: signing in and syncing fail for different reasons,
+        # and the whole point of the form's error handling is telling them apart
+        tm = srv['token_mode']
+        if tm == 'abort':
+            route.abort('connectionfailed'); return
+        if tm == 'reject':
+            route.fulfill(status=400, content_type='application/json',
+                          body='{"error":"invalid_grant","error_description":"Invalid login credentials"}')
+            return
         route.fulfill(status=200, content_type='application/json', body=json.dumps({
             'access_token': 'ACCESS-1', 'refresh_token': 'REFRESH-1',
             'token_type': 'bearer', 'expires_in': 3600,
@@ -213,7 +222,131 @@ with sync_playwright() as p:
           f'{len(interrupts)} toasts: {interrupts}')
     srv['mode'] = 'ok'
 
+
+    # ── 12. THE SIGN-IN FORM (R1) ──
+    # v1.9 shipped a card that displayed an email the fancier had no way to
+    # acquire. These assertions are the path from "installed" to "signed in",
+    # walked end to end.
+    def open_tools(soft=False):
+        # `soft` re-renders through in-app routing instead of reloading. A reload
+        # re-runs the init script, which would put back a config we deleted on
+        # purpose — the test would then be checking the opposite of its name.
+        if soft:
+            page.evaluate("() => { location.hash = '#/birds'; }"); page.wait_for_timeout(400)
+            page.evaluate("() => { location.hash = '#/tools'; }"); page.wait_for_timeout(800)
+        else:
+            page.goto(BASE + '#/tools', wait_until='load'); page.wait_for_timeout(1200)
+
+    run(page, "async (db) => { await db.signOut(); await db.refreshSyncStatus(); }")
+    open_tools()
+    check('signed out, الأدوات offers a sign-in form',
+          page.locator('.sync-signin').count() == 1, str(page.locator('.sync-signin').count()))
+    check('...with an email field and a MASKED password field',
+          page.locator('.sync-signin input[type=email]').count() == 1
+          and page.locator('.sync-signin input[type=password]').count() == 1)
+    check('...and a «تسجيل الدخول» button',
+          'تسجيل الدخول' in page.locator('.sync-signin').inner_text())
+    body_txt = page.inner_text('body')
+    check('...and NO way to create an account — invite-only, permanently',
+          not any(w in body_txt for w in ['إنشاء حساب', 'Create account', 'Sign up', 'تسجيل جديد']),
+          'a create-account control would be a dead end that looks like a feature')
+
+    # wrong credentials
+    srv['token_mode'] = 'reject'
+    page.fill('.sync-signin input[type=email]', 'spike-a@zajil.test')
+    page.fill('.sync-signin input[type=password]', 'not-the-password')
+    page.click('.sync-signin .btn-primary'); page.wait_for_timeout(1200)
+    err = page.locator('.sync-signin').inner_text()
+    check('a wrong password says so, in its own words',
+          'غير صحيحة' in err, err.replace('\n', ' ')[:120])
+    # The MESSAGE element itself must be free of the status — checking only the
+    # text before the phrase would let a status appended after it slip through,
+    # which is exactly what a mutation showed.
+    msg = page.locator('.sync-signin .warn').inner_text()
+    check('...and the raw status is NOT in that sentence',
+          '400' not in msg and not any(c.isdigit() for c in msg), msg.replace('\n', ' ')[:120])
+    check('...though it is available underneath, for whoever is debugging',
+          'HTTP 400' in err, err.replace('\n', ' ')[:160])
+    check('...and the button is usable again', page.locator('.sync-signin .btn-primary').is_enabled())
+
+    # no connection — must NOT read like a wrong password
+    srv['token_mode'] = 'abort'
+    page.fill('.sync-signin input[type=password]', 'anything')
+    page.click('.sync-signin .btn-primary'); page.wait_for_timeout(1200)
+    err2 = page.locator('.sync-signin').inner_text()
+    check('no connection reads as a connection problem, not a wrong password',
+          'تعذّر الاتصال' in err2 and 'غير صحيحة' not in err2, err2.replace('\n', ' ')[:120])
+
+    # unconfigured build — the third distinct cause
+    srv['token_mode'] = 'ok'
+    run(page, "() => { globalThis.__saved = globalThis.ZAJIL_SYNC_CONFIG; delete globalThis.ZAJIL_SYNC_CONFIG; }")
+    open_tools(soft=True)
+    check('an unconfigured build explains itself and offers no pointless form',
+          page.locator('.sync-signin').count() == 0
+          and 'غير مهيأة' in page.inner_text('body'),
+          page.inner_text('body')[:120].replace('\n', ' '))
+    run(page, "() => { globalThis.ZAJIL_SYNC_CONFIG = globalThis.__saved; }")
+
+    # ENTER submits, from the password field
+    open_tools(soft=True)
+    page.fill('.sync-signin input[type=email]', 'spike-a@zajil.test')
+    page.fill('.sync-signin input[type=password]', 'pw')
+    page.press('.sync-signin input[type=password]', 'Enter')
+    page.wait_for_timeout(2000)
+    check('ENTER submits the form', run(page, "(db) => db.authState().signedIn") is True)
+    check('...and the card switches to the signed-in state',
+          page.locator('.sync-signin').count() == 0 and 'spike-a@zajil.test' in page.inner_text('body'))
+    check('...offering «تسجيل الخروج»', 'تسجيل الخروج' in page.inner_text('body'))
+    check('...and saying plainly that signing out is not deleting',
+          'بياناتك تبقى على هذا الجهاز' in page.inner_text('body'))
+
+    # the first-login flow ran, unchanged — no second code path for "just signed in"
+    check('signing in ran a real sync cycle',
+          run(page, "(db) => db.state.settings.lastSyncAt") is not None)
+
+    # SIGN OUT KEEPS THE DATA
+    birds_before = run(page, """async (db) => {
+        await db.saveBird(db.newBird({ name: 'survives-sign-out', sex: 'cock' }));
+        return db.allBirds().length;
+    }""")
+    page.click('text=تسجيل الخروج'); page.wait_for_timeout(1200)
+    after_out = run(page, """async (db) => ({
+        signedIn: db.authState().signedIn,
+        birds: db.allBirds().length,
+        tokens: db.AUTH_SETTING_KEYS.map(k => db.state.settings[k]).filter(Boolean).length,
+    })""")
+    check('signing out clears every token', after_out['tokens'] == 0, str(after_out))
+    check('SIGNING OUT IS NOT DELETING — the birds are still there',
+          after_out['birds'] == birds_before, f"{birds_before} -> {after_out['birds']}")
+    check('...and the form comes back', page.locator('.sync-signin').count() == 1)
+
+    # hand the next section the state it expects: signed in, with a sync behind
+    # it. Asserted, not assumed — a silent failure here would surface as six
+    # confusing failures in the next section instead of one clear one.
+    handoff = run(page, """async (db) => {
+        const st = await db.signIn('spike-a@zajil.test','pw');
+        await db.syncNow();
+        await db.refreshSyncStatus();
+        return { signedIn: st.signedIn, email: st.email, state: db.syncStatus().state };
+    }""")
+    check('handed the next section a signed-in device',
+          handoff['signedIn'] is True and handoff['state'] != 'hidden', str(handoff))
+
+    # Leave the page on a DIFFERENT route. The next section navigates to
+    # #/tools, and `page.goto` to the URL the browser is already on does not
+    # re-run the app — it would read a card rendered before this hand-off and
+    # report six confusing failures about state that is actually correct.
+    page.goto(BASE + '#/birds', wait_until='load'); page.wait_for_timeout(600)
+
     # ── 9. the الأدوات card ──
+    # Establish this section's own precondition rather than inheriting whatever
+    # the previous one happened to leave behind: the card must show an error
+    # WHEN THERE IS ONE, which is the actual claim.
+    run(page, """async (db) => {
+        await db.setSetting('lastSyncError', { key: 'sync.err.rejected', status: 400,
+            at: new Date().toISOString(),
+            since: new Date(Date.now() - 5 * 60 * 1000).toISOString() });
+    }""")
     page.goto(BASE + '#/tools', wait_until='load'); page.wait_for_timeout(1200)
     body = page.inner_text('body')
     check('الأدوات has a المزامنة card', 'المزامنة' in body)

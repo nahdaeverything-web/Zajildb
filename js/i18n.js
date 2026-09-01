@@ -124,6 +124,33 @@ const dict = {
   'sync.toggleOff':  { ar: 'إيقاف المزامنة', en: 'Turn sync off' },
   'sync.lastError':  { ar: 'آخر خطأ', en: 'Last error' },
   'sync.signedOut':  { ar: 'غير مسجّل الدخول', en: 'Not signed in' },
+
+  // ── R1: the sign-in form. Invite-only, permanently — there is deliberately
+  // no "create account" string here, and there must never be one: accounts are
+  // made through the admin API and public signups stay disabled (SPIKE §4f).
+  'sync.email':      { ar: 'البريد الإلكتروني', en: 'Email' },
+  'sync.password':   { ar: 'كلمة المرور', en: 'Password' },
+  'sync.signIn':     { ar: 'تسجيل الدخول', en: 'Sign in' },
+  'sync.signingIn':  { ar: 'جارٍ تسجيل الدخول…', en: 'Signing in…' },
+  'sync.signOut':    { ar: 'تسجيل الخروج', en: 'Sign out' },
+  'sync.signOutKeepsData': {
+    ar: 'تسجيل الخروج يوقف المزامنة فقط — بياناتك تبقى على هذا الجهاز.',
+    en: 'Signing out only stops syncing — your data stays on this device.',
+  },
+  // three distinct causes, three distinct messages. A wrong password and a
+  // dead connection are not the same problem and must never read the same.
+  'sync.signIn.badCredentials': {
+    ar: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+    en: 'That email or password is not right.',
+  },
+  'sync.signIn.noConnection': {
+    ar: 'تعذّر الاتصال بالخادم — تحقّق من الشبكة وحاول مجددًا.',
+    en: 'Could not reach the server — check your connection and try again.',
+  },
+  'sync.signIn.notConfigured': {
+    ar: 'المزامنة غير مهيأة على هذا الجهاز.',
+    en: 'Sync is not set up on this device.',
+  },
   'sync.notSetUp':   { ar: 'المزامنة غير مهيأة على هذا الجهاز', en: 'Sync is not set up on this device' },
   'sync.anomalies':  { ar: 'سجلات لم يقبلها الخادم: {n}', en: 'Records the server refused: {n}' },
 
@@ -394,6 +421,9 @@ const dict = {
   'set.dates.both': { ar: 'ميلادي + هجري', en: 'Gregorian + Hijri' },
   'set.highContrast': { ar: 'وضع التباين العالي (ضوء الشمس)', en: 'High contrast (sunlight) mode' },
   'set.loft': { ar: 'اللوفت', en: 'Loft' },
+  // A loft with no name still has to read as something. Blank fields look like
+  // a bug; an explicit placeholder reads as "you have not named this yet".
+  'loft.unnamed': { ar: 'لوفت بلا اسم', en: 'Unnamed loft' },
   'set.loftName': { ar: 'اسم اللوفت', en: 'Loft name' },
   'set.loftLocation': { ar: 'الموقع', en: 'Location' },
   'set.coiDepth': { ar: 'عمق حساب COI (أجيال)', en: 'COI depth (generations)' },

@@ -926,10 +926,26 @@ the rule loosened:
 | apply a pulled record (`origin: 'sync'`) | **ZERO** — mutation without an op, by design (echo prevention) |
 | apply a pulled delete (`origin: 'sync'`) | **ZERO** — the tombstone is written, no op |
 | first-login synthetic op | **one op, no mutation** — the record already exists locally; the op is enqueued to describe it |
+| dropping a pristine default loft (v1.9.1, R4) | **ZERO** — mutation without an op AND without a tombstone |
 
-These are the only two places in the codebase where mutations and ops do not
-correspond one-to-one, and both are deliberate. Naming them in the matrix means
-a *third* such case cannot appear by accident without failing a test.
+These are the only places in the codebase where mutations and ops do not
+correspond one-to-one, and all of them are deliberate. Naming them in the matrix
+means a *further* such case cannot appear by accident without failing a test.
+
+**The third case is different in kind from the first two**, which is why it is
+worth spelling out. Those are about records that came FROM the server. This one
+is about a record that was never anywhere but this device: `initDB()` creates an
+empty default loft on every fresh device, and `enqueueFirstSyncOps` skips
+pristine lofts, so it has no server row. An op would describe a deletion no
+other device can meaningfully receive; a tombstone would suppress a record none
+of them ever saw. Both would be inventing history.
+
+`dropPristineLoft()` therefore guards on `isPristineLoft()` itself rather than
+trusting its caller — a silent no-op-no-tombstone delete is exactly the
+primitive that must never be reachable for a record that HAS travelled. And
+"pristine" requires more than an empty name: a loft the fancier has filed birds
+under is theirs even unnamed, and dropping it would take those birds' `loftId`
+with it.
 
 A **new** guard is added with the sync layer:
 

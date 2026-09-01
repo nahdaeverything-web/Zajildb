@@ -340,7 +340,7 @@ export const SYNC_STORES = [...Object.keys(SYNC_MIRROR), 'media'];
  *   `skipped: 'tombstone'` when a newer local deletion wins (§3, the v1.8
  *   merge-import rule reused unchanged rather than re-derived).
  */
-export async function applySyncPut(store, record, at) {
+export async function applySyncPut(store, record, at, recordId) {
   if (!SYNC_STORES.includes(store)) {
     return { applied: false, skipped: 'unknown-store', anomaly: { reason: 'unknown-store', store } };
   }
@@ -348,40 +348,59 @@ export async function applySyncPut(store, record, at) {
     return { applied: false, skipped: 'no-id', anomaly: { reason: 'no-id', store } };
   }
 
+  // ── THE SERVER'S IDENTITY WINS ──
+  // `record_id` is the row's primary key: it is what the cursor, the upsert and
+  // the DELETE all key on. Keying the local write on the body's `id` instead
+  // means a row whose body disagrees lands under an identity the server does
+  // not know — and is then unreachable by every future sync, including its own
+  // deletion, which arrives keyed on `record_id`. The device holds it forever
+  // while every layer reports success.
+  //
+  // Found by the first real user, whose loft kept a record no amount of syncing
+  // could remove. Reconcile to the server's identity and REPORT, per §3: a
+  // remote record is applied and reported, never silently dropped.
+  const id = recordId || record.id;
+  let body = record;
+  let anomaly = null;
+  if (recordId && record.id !== recordId) {
+    body = { ...record, id: recordId };
+    anomaly = { reason: 'id-mismatch', store, recordId, bodyId: record.id };
+  }
+
   // A deletion newer than this version of the record wins, and the record stays
   // gone. Identical to what importAll does with a merge payload — reusing the
   // rule rather than writing a second, subtly different one.
-  const tomb = await getTombstone(store, record.id);
+  const tomb = await getTombstone(store, id);
   if (tomb && (tomb.at || '') > (at || '')) {
-    return { applied: false, skipped: 'tombstone', anomaly: null };
+    return { applied: false, skipped: 'tombstone', anomaly };
   }
 
   // Diagnose without force so the real verdict is available, then apply anyway.
-  let anomaly = null;
   if (store === 'birds') {
-    const verdict = classifySave(record, getBird, allBirds(), {});
+    const verdict = classifySave(body, getBird, allBirds(), {});
     if (!verdict.ok) {
-      anomaly = {
+      const invalid = {
         reason: 'validation',
         store,
-        recordId: record.id,
+        recordId: id,
         errors: (verdict.errors || []).map((e) => e.key),
         warnings: (verdict.warnings || []).map((w) => w.key),
       };
+      anomaly = anomaly ? { ...anomaly, alsoInvalid: invalid } : invalid;
     }
   }
 
-  await idbPut(store, record);
+  await idbPut(store, body);
   const mirror = SYNC_MIRROR[store];
-  if (mirror) state[mirror].set(record.id, record);
+  if (mirror) state[mirror].set(id, body);
 
   // THE COROLLARY (§2a): a winning record clears the tombstone. Leaving it
   // would let the record be re-suppressed by the next merge-import or
   // comparison, and the device would flip between states. restoreBird already
   // does this on undo; this is the same rule reached from the other direction.
-  if (tomb) await clearTombstone(store, record.id);
+  if (tomb) await clearTombstone(store, id);
 
-  emitChange({ type: 'sync', store, id: record.id });
+  emitChange({ type: 'sync', store, id });
   return { applied: true, skipped: null, anomaly };
 }
 
@@ -408,4 +427,49 @@ export async function applySyncDelete(store, recordId, at) {
   await writeTombstone(store, recordId, null, at);
   emitChange({ type: 'sync', store, id: recordId });
   return { applied: true, skipped: null, anomaly: null };
+}
+
+// ───────────────────── the pristine default loft (R4) ─────────────────────
+
+/**
+ * Is this loft untouched — created by `initDB()` and never used?
+ *
+ * "Pristine" means unnamed, unplaced, AND referenced by no record on this
+ * device. The reference check is the load-bearing half: a loft the fancier has
+ * actually filed birds under is theirs even if they never got round to naming
+ * it, and dropping it would take the birds' `loftId` with it.
+ */
+export function isPristineLoft(loft) {
+  if (!loft) return false;
+  if ((loft.name || '').trim() || (loft.location || '').trim()) return false;
+  for (const mirror of ['birds', 'pairs', 'raceResults', 'healthEvents']) {
+    for (const record of state[mirror].values()) {
+      if (record.loftId === loft.id) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Remove a pristine default loft when a real one has been adopted in its place.
+ *
+ * NO OP AND NO TOMBSTONE, deliberately, and this is the third exception in the
+ * op-enumeration matrix (§8). The other two are about pulled records; this one
+ * is different in kind: **the record never existed anywhere but this device.**
+ * It was never pushed — `enqueueFirstSyncOps` skips pristine lofts — so there
+ * is no server row for an op to describe and nothing for a tombstone to
+ * suppress. Logging either would be inventing history: a deletion that no other
+ * device can meaningfully receive, for a record none of them ever saw.
+ *
+ * Guarded by isPristineLoft() rather than trusting the caller, because a
+ * silent no-op-no-tombstone delete is exactly the primitive that must never be
+ * reachable for a record that HAS travelled.
+ */
+export async function dropPristineLoft(loftId) {
+  const loft = state.lofts.get(loftId);
+  if (!isPristineLoft(loft)) return false;
+  await idbDelete('lofts', loftId);
+  state.lofts.delete(loftId);
+  emitChange({ type: 'loft', id: loftId });
+  return true;
 }

@@ -2,6 +2,11 @@
 // (node-only: reads the file from disk).
 
 import { readFileSync } from 'node:fs';
+// The shipped datasets carry real uuids (v1.9.1). The READABLE key is what
+// documents the case — 'g3-sheikh' says double first cousins, an opaque uuid
+// says nothing — so the tests keep the key and derive the id the same way the
+// generator does. Same function, same namespace, so they cannot drift apart.
+import { uuidFor } from '../tools/idmap.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { test, assert, assertEq, assertClose } from './harness.js';
@@ -17,13 +22,13 @@ const byId = new Map(data.birds.map((b) => [b.id, b]));
 const getBird = (id) => byId.get(id) || null;
 
 test('sample data: hand-verified case — برق (full-sib mating) COI = 0.25', () => {
-  assertClose(inbreeding(getBird, 'b-barq', 10).coi, 0.25, 1e-15);
-  const br = coiBreakdown(getBird, byId.get('b-barq').sireId, byId.get('b-barq').damId, 10);
+  assertClose(inbreeding(getBird, uuidFor('b-barq'), 10).coi, 0.25, 1e-15);
+  const br = coiBreakdown(getBird, byId.get(uuidFor('b-barq')).sireId, byId.get(uuidFor('b-barq')).damId, 10);
   assertEq(br.contributions.length, 2, 'the two Belgian grandparents');
 });
 
 test('sample data: hand-verified case — سهم × شقراء hypothetical COI = 0.28125', () => {
-  assertClose(pairCOI(getBird, 'c-sahm', 'c-shaqra', 10).coi, 0.28125, 1e-15);
+  assertClose(pairCOI(getBird, uuidFor('c-sahm'), uuidFor('c-shaqra'), 10).coi, 0.28125, 1e-15);
 });
 
 test('sample data: every bird validates cleanly (no cycles, ages, sexes ok)', () => {
@@ -56,10 +61,10 @@ test('sample data: pairs reference real birds; chick links resolve', () => {
 
 test('sample data: FCI checker — نجم qualifies, وضاح does not', () => {
   const results = (id) => data.raceResults.filter((r) => r.birdId === id);
-  const najm = birdEligibility(byId.get('y-najm'), results('y-najm'));
+  const najm = birdEligibility(byId.get(uuidFor('y-najm')), results(uuidFor('y-najm')));
   assert(najm.hasRing, 'نجم carries an FCI ring');
   assertEq(najm.qualifyingResults.length, 1, 'the national Aqaba race qualifies');
-  const wadhah = birdEligibility(byId.get('y-wadhah'), results('y-wadhah'));
+  const wadhah = birdEligibility(byId.get(uuidFor('y-wadhah')), results(uuidFor('y-wadhah')));
   assert(!wadhah.hasRing);
   assertEq(wadhah.qualifyingResults.length, 0);
 });

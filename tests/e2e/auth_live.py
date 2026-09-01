@@ -98,6 +98,34 @@ with sync_playwright() as p:
     check('a spent refresh token is a rejection against the real server',
           dead['ok'] is False and dead['reason'] == 'rejected', str(dead))
 
+    # ── THE FORM, driven as a person drives it, against the real project ──
+    # Everything above calls signIn() directly. This types into the actual
+    # fields and presses Enter, because "the API works" and "a person can sign
+    # in" turned out to be different claims — v1.9 shipped with the first true
+    # and the second false.
+    run(page, "async (db) => { await db.signOut(); }")
+    page.goto(BASE + '#/birds', wait_until='load'); page.wait_for_timeout(600)
+    page.goto(BASE + '#/tools', wait_until='load'); page.wait_for_timeout(1200)
+    check('the form is offered when signed out', page.locator('.sync-signin').count() == 1)
+
+    page.fill('.sync-signin input[type=email]', EMAIL)
+    page.fill('.sync-signin input[type=password]', 'definitely-not-the-password')
+    page.click('.sync-signin .btn-primary'); page.wait_for_timeout(2500)
+    wrong = page.locator('.sync-signin').inner_text()
+    check('a real wrong password is reported as a wrong password',
+          'غير صحيحة' in wrong or 'not right' in wrong, wrong.replace('\n', ' ')[:120])
+
+    page.fill('.sync-signin input[type=email]', EMAIL)
+    page.fill('.sync-signin input[type=password]', PASSWORD)
+    page.press('.sync-signin input[type=password]', 'Enter')
+    page.wait_for_timeout(4000)
+    check('ENTER signs in against the REAL project',
+          run(page, "(db) => db.authState().signedIn") is True)
+    check('...and the card shows the account', EMAIL in page.inner_text('body'),
+          page.inner_text('body')[:160].replace('\n', ' '))
+    check('...having run a real first-login cycle',
+          run(page, "(db) => db.state.settings.lastSyncAt") is not None)
+
     check('sign out clears the real session',
           run(page, "async (db) => { await db.signOut(); return db.authState().signedIn; }") is False)
     check('zero page errors', not errs, '; '.join(errs[:2]))

@@ -1,5 +1,13 @@
 import os
 from playwright.sync_api import sync_playwright
+
+# The shipped datasets carry real uuids (v1.9.1). Python's uuid5 derives exactly
+# what tools/idmap.js derives from the same namespace and key, so these suites
+# keep naming birds by the readable key that documents what they are.
+import uuid as _uuid
+_ID_NS = _uuid.UUID('7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f')
+def bird_id(key):
+    return str(_uuid.uuid5(_ID_NS, key))
 BASE = os.environ.get('ZAJIL_URL', 'http://127.0.0.1:8123/')
 ok = fail = 0
 def check(n, c, e=''):
@@ -55,7 +63,7 @@ with sync_playwright() as p:
     check('scroll position preserved across an auto-refresh', abs(y1 - y0) < 80, f'{y0} -> {y1}')
 
     # 4. undo of a delete must put the bird back in the visible register
-    page.goto(BASE + '#/bird/g5-najma26'); page.wait_for_timeout(800)
+    page.goto(BASE + '#/bird/'+bird_id('g5-najma26')); page.wait_for_timeout(800)
     page.locator('.detail-actions button.btn-danger').click(); page.wait_for_timeout(400)
     page.locator('.modal-actions .btn-danger').click(); page.wait_for_timeout(900)
     gone = page.locator('.bird-row').count()

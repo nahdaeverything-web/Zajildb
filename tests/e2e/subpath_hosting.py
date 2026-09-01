@@ -1,6 +1,38 @@
 import os
 from playwright.sync_api import sync_playwright
-URL = 'http://127.0.0.1:8124/zajil/'
+
+# The shipped datasets carry real uuids (v1.9.1). Python's uuid5 derives exactly
+# what tools/idmap.js derives from the same namespace and key, so these suites
+# keep naming birds by the readable key that documents what they are.
+import uuid as _uuid
+_ID_NS = _uuid.UUID('7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f')
+def bird_id(key):
+    return str(_uuid.uuid5(_ID_NS, key))
+# GitHub Pages serves this project from a subdirectory, so the app must work
+# under one. This suite PROVISIONS ITS OWN SERVER rather than assuming one is
+# running: the document root was once a stale COPY of the repo made by hand, and
+# the suite passed against a week-old tree for eight days without saying so. A
+# test that depends on something it did not start can be green about the wrong
+# thing.
+#
+# The root is a temp directory holding a SYMLINK to the repo, so it is the live
+# tree by construction and cannot drift.
+import functools, http.server, os, socketserver, tempfile, threading
+
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_root = tempfile.mkdtemp(prefix='zajil-subpath-')
+os.symlink(REPO, os.path.join(_root, 'zajil'))
+
+class _Quiet(http.server.SimpleHTTPRequestHandler):
+    def log_message(self, *a): pass
+
+class _Server(socketserver.ThreadingTCPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+_httpd = _Server(('127.0.0.1', 0), functools.partial(_Quiet, directory=_root))
+threading.Thread(target=_httpd.serve_forever, daemon=True).start()
+URL = f'http://127.0.0.1:{_httpd.server_address[1]}/zajil/' 
 ok = fail = 0
 def check(n, c, e=''):
     global ok, fail
@@ -30,7 +62,7 @@ with sync_playwright() as p:
     }""")
     page.reload(); page.wait_for_timeout(1200)
     check('38 birds under subpath', page.locator('.bird-row').count() == 38)
-    page.goto(URL + '#/pedigree/g5-faris26'); page.wait_for_timeout(1000)
+    page.goto(URL + '#/pedigree/'+bird_id('g5-faris26')); page.wait_for_timeout(1000)
     check('pedigree + COI work under subpath', '12.5' in page.locator('.coi-headline .coi-badge').inner_text())
     # OFFLINE under the subpath — the real GitHub Pages payoff
     page.wait_for_timeout(1500)

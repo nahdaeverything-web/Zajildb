@@ -189,19 +189,19 @@ const FACADE = [
   'AUTH_SETTING_KEYS', 'AuthError', 'BACKOFF_MS', 'Health', 'Lofts', 'OPLOG_KEEP',
   'PULL_PAGE', 'PUSH_BATCH', 'Pairs', 'REFERENCE_STATUS', 'Races',
   'SENSITIVE_SETTING_PREFIXES', 'SOFT_FAIL_WINDOW_MS', 'STORES', 'SYNC_STORES',
-  'ValidationError', 'addMedia', 'allBirds', 'applySyncDelete', 'applySyncPut', 'authHeaders',
-  'authState', 'autoBackup', 'backoffDelay', 'checkBird', 'collapseOps', 'currentLoft',
-  'dataURLToBlob', 'deleteBird', 'deleteMedia', 'diffFields', 'duplicateRingCount',
-  'emitChange', 'enqueueFirstSyncOps', 'ensureAccessToken', 'exportAll',
-  'exportBirdWithAncestry', 'exportableSettings', 'getBird', 'getOpsSinceSeq', 'getTombstone',
-  'hasEverSynced', 'idbClear', 'idbDelete', 'idbGet', 'idbGetAll', 'idbPut', 'importAll',
-  'initDB', 'isSignedIn', 'listBackups', 'listOps', 'listSyncAnomalies', 'listTombstones',
-  'loftStatuses', 'makeGeneric', 'markOpsSuperseded', 'mediaForBird', 'newBird', 'nowISO',
-  'onChange', 'opRecord', 'opToRow', 'openDB', 'pruneOplog', 'pullAll', 'pullOnce', 'pushAll',
-  'pushOnce', 'refreshSession', 'refreshSyncStatus', 'remoteWins', 'restoreBird',
-  'restoreMedia', 'runSyncCycle', 'saveBird', 'setSetting', 'setSyncEnabled', 'signIn',
-  'signOut', 'startSyncLoop', 'state', 'syncConfig', 'syncNow', 'syncOnce', 'syncStatus',
-  'takeSyncDuplicateNotice', 'uuid',
+  'ValidationError', 'addMedia', 'adoptRemoteLoftIfPristine', 'allBirds', 'applySyncDelete',
+  'applySyncPut', 'authHeaders', 'authState', 'autoBackup', 'backoffDelay', 'checkBird',
+  'collapseOps', 'currentLoft', 'dataURLToBlob', 'deleteBird', 'deleteMedia', 'diffFields',
+  'dropPristineLoft', 'duplicateRingCount', 'emitChange', 'enqueueFirstSyncOps',
+  'ensureAccessToken', 'exportAll', 'exportBirdWithAncestry', 'exportableSettings', 'getBird',
+  'getOpsSinceSeq', 'getTombstone', 'hasEverSynced', 'idbClear', 'idbDelete', 'idbGet',
+  'idbGetAll', 'idbPut', 'importAll', 'initDB', 'isPristineLoft', 'isSignedIn', 'listBackups',
+  'listOps', 'listSyncAnomalies', 'listTombstones', 'loftStatuses', 'makeGeneric',
+  'markOpsSuperseded', 'mediaForBird', 'newBird', 'nowISO', 'onChange', 'opRecord', 'opToRow',
+  'openDB', 'pruneOplog', 'pullAll', 'pullOnce', 'pushAll', 'pushOnce', 'refreshSession',
+  'refreshSyncStatus', 'remoteWins', 'restoreBird', 'restoreMedia', 'runSyncCycle',
+  'saveBird', 'setSetting', 'setSyncEnabled', 'signIn', 'signOut', 'startSyncLoop', 'state',
+  'syncConfig', 'syncNow', 'syncOnce', 'syncStatus', 'takeSyncDuplicateNotice', 'uuid',
 ];
 
 test('guard: js/db.js exports exactly the pinned public surface', () => {
@@ -210,7 +210,7 @@ test('guard: js/db.js exports exactly the pinned public surface', () => {
   const extra = actual.filter((n) => !FACADE.includes(n));
   assertEq(missing.length + extra.length, 0,
     `the db facade drifted — missing: [${missing.join(', ')}] unexpected: [${extra.join(', ')}]`);
-  assertEq(actual.length, 88, `expected 88 exports, found ${actual.length}`);
+  assertEq(actual.length, 91, `expected 91 exports, found ${actual.length}`);
 });
 
 test('guard: js/db.js stays a facade — re-exports only, no logic', () => {
@@ -356,6 +356,65 @@ test('guard: only ONE place writes a sync error, so the silence window survives'
   assertEq(writes.length, 1,
     `a sync error must only be written by recordSyncError():\n  ${writes.map((w) => `js/db/sync.js:${w.n}  ${w.line.trim()}`).join('\n  ')}`);
   assert(/async function recordSyncError\(/.test(src), 'recordSyncError() is missing');
+});
+
+test('guard: every id in every shipped dataset is a uuid', () => {
+  // The shipped datasets used readable ids (`b-barq`, `g5-faris26`) while
+  // HANDOFF §14 said "UUIDs only". That contradiction sat there harmlessly
+  // until v1.9 typed the server's record_id column `uuid`, and then every push
+  // from a loft that had loaded the examples was rejected WHOLE — 22P02, a
+  // queue stalled silently for half an hour, found by the first real user.
+  //
+  // The column is `text` now, so this is no longer a sync failure. It is here
+  // because a convention the shipped data breaks is a convention that will
+  // mislead someone again. Checked at EVERY depth: notes, rounds and eggs carry
+  // ids too, and "every id" is easier to keep true than "every id that matters".
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const bad = [];
+  const walk = (value, file, path) => {
+    if (Array.isArray(value)) { value.forEach((v, i) => walk(v, file, `${path}[${i}]`)); return; }
+    if (!value || typeof value !== 'object') return;
+    if (typeof value.id === 'string' && !UUID.test(value.id)) {
+      bad.push(`${file} ${path}.id = ${JSON.stringify(value.id)}`);
+    }
+    for (const [k, v] of Object.entries(value)) walk(v, file, `${path}.${k}`);
+  };
+  for (const file of ['sample-data.json', 'example-loft-large.json']) {
+    walk(JSON.parse(readFileSync(join(ROOT, file), 'utf8')), file, '$');
+  }
+  assertEq(bad.length, 0,
+    `shipped data must obey the project's own id rule — regenerate with `
+    + `tools/gen-*.js, which maps readable keys to uuids:\n  ${bad.slice(0, 8).join('\n  ')}`);
+});
+
+test('guard: only the sync card signs in or out', () => {
+  // signIn/signOut move the whole app between "syncing" and "local only". One
+  // surface owns that transition, so there is one place to reason about what a
+  // session change means — and so a second, subtly different sign-in flow
+  // cannot appear somewhere else and diverge.
+  //
+  // v1.9 had the opposite problem: signIn() existed and NOTHING called it, so
+  // the card showed an email the fancier could not acquire. This guard is the
+  // other half of that lesson — exactly one caller, named.
+  const hits = scan(FILES.filter((f) => f.rel.startsWith('js/views/')),
+    /\bsignIn\b|\bsignOut\b/,
+    { allow: (f) => f.rel === 'js/views/tools.js' });
+  assertEq(hits.length, 0,
+    `the المزامنة card in js/views/tools.js owns the session transition:\n  ${hits.join('\n  ')}`);
+});
+
+test('guard: the sign-in form offers no way to create an account', () => {
+  // Invite-only is a product decision enforced on the SERVER (public signups
+  // disabled, SPIKE §4f). A control here would be a dead end that looks like a
+  // feature, and the day someone re-enables signups it would silently become a
+  // real one.
+  const src = FILES.find((f) => f.rel === 'js/views/tools.js').src;
+  const hits = src.split('\n')
+    .map((line, n) => ({ line, n: n + 1 }))
+    .filter(({ line }) => !/^\s*(\/\/|\*)/.test(line))
+    .filter(({ line }) => /signUp|signup|createAccount|register\s*\(|\/auth\/v1\/signup/i.test(line));
+  assertEq(hits.length, 0,
+    `accounts are created through the admin API, never from the app:\n  ${hits.map((x) => `js/views/tools.js:${x.n}  ${x.line.trim()}`).join('\n  ')}`);
 });
 
 // ---------------------------------------------------------------- data level

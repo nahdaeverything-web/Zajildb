@@ -1,5 +1,13 @@
 import os
 from playwright.sync_api import sync_playwright
+
+# The shipped datasets carry real uuids (v1.9.1). Python's uuid5 derives exactly
+# what tools/idmap.js derives from the same namespace and key, so these suites
+# keep naming birds by the readable key that documents what they are.
+import uuid as _uuid
+_ID_NS = _uuid.UUID('7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f')
+def bird_id(key):
+    return str(_uuid.uuid5(_ID_NS, key))
 BASE=os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')
 ok=fail=0
 def check(n,c,e=''):
@@ -14,7 +22,7 @@ with sync_playwright() as p:
         await db.importAll(await (await fetch('./example-loft-large.json')).json(),'merge');}""")
     page.wait_for_timeout(600)
 
-    r=page.evaluate("""async()=>{
+    r=page.evaluate("""async(a)=>{
         const db=await import('./js/db.js');
         const {checkIntegrity}=await import('./js/engine/integrity.js');
         const snap=()=>({birds:db.state.birds,pairs:db.state.pairs,
@@ -22,7 +30,7 @@ with sync_playwright() as p:
         const out={};
         out.beforeClean = checkIntegrity(snap()).length;
         // g4-malik: has race results? pairs? make sure the target has all four kinds
-        const target='g4-wisam';   // sire of a 2026 pair, has race results
+        const target = a;   // sire of a 2026 pair, has race results
         out.races  = [...db.state.raceResults.values()].filter(x=>x.birdId===target).length;
         out.pairs  = [...db.state.pairs.values()].filter(x=>x.sireId===target||x.damId===target).length;
         await db.Health.save({id:'ih-1',eventType:'check',birdId:target,date:'2026-01-01',wholeLoft:false});
@@ -37,7 +45,7 @@ with sync_playwright() as p:
                        h:db.state.healthEvents.size,p:db.state.pairs.size};
         out.restored = JSON.stringify(counts0)===JSON.stringify(counts1);
         out.counts0=counts0; out.counts1=counts1;
-        return out;}""")
+        return out;}""", bird_id('g4-wisam'))
     check('database starts referentially clean', r['beforeClean']==0, str(r['beforeClean']))
     check('target really had races/pairs/health to orphan',
           r['races']>0 and r['pairs']>0 and r['health']>0, str({k:r[k] for k in ('races','pairs','health')}))

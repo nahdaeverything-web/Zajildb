@@ -5,7 +5,7 @@
 import {
   state, setSetting, currentLoft, Lofts, exportAll, importAll,
   listBackups, autoBackup, allBirds, deleteBird, restoreBird, idbGetAll,
-  syncStatus, syncNow, setSyncEnabled, listSyncAnomalies,
+  syncStatus, syncNow, setSyncEnabled, listSyncAnomalies, syncConfig, signIn, signOut,
 } from '../db.js';
 import { t, fmtDate, fmtNum, getLang, ringHTML } from '../i18n.js';
 import {
@@ -64,7 +64,8 @@ function settingsCard() {
 // ---------------------------------------------------------------------- loft
 function loftCard() {
   const loft = currentLoft();
-  const nameIn = h('input', { class: 'input', type: 'text', value: (loft && loft.name) || '' });
+  const nameIn = h('input', { class: 'input', type: 'text', value: (loft && loft.name) || '',
+                              placeholder: t('loft.unnamed') });
   const locIn = h('input', { class: 'input', type: 'text', value: (loft && loft.location) || '' });
   const save = h('button', {
     class: 'btn', onclick: async () => {
@@ -166,8 +167,14 @@ function syncCard() {
     clear(body);
     const s = syncStatus();
     if (s.state === 'hidden') {
-      body.append(h('p', { class: 'muted' },
-        s.email ? t('sync.notSetUp') : t('sync.signedOut')));
+      // Two different reasons to be here, and only one of them is fixable from
+      // this screen. An unconfigured build cannot sign in to anything, so it
+      // gets an explanation and no form to fill in pointlessly.
+      if (!syncConfig().configured) {
+        body.append(h('p', { class: 'muted' }, t('sync.notSetUp')));
+        return;
+      }
+      body.append(signInForm(refresh));
       return;
     }
     const rows = h('div', { class: 'sync-facts' });
@@ -211,15 +218,89 @@ function syncCard() {
       }, t('sync.now')),
       h('button', {
         class: 'btn btn-small',
+        onclick: async () => { await signOut(); refresh(); },
+      }, t('sync.signOut')),
+      h('button', {
+        class: 'btn btn-small',
         onclick: async () => {
           await setSyncEnabled(state.settings.syncEnabled === false);
           refresh();
         },
       }, state.settings.syncEnabled === false ? t('sync.toggleOn') : t('sync.toggleOff'))));
+    // signing out is not deleting, and people reasonably fear that it is
+    body.append(h('p', { class: 'muted small' }, t('sync.signOutKeepsData')));
   }
 
   refresh();
   return card;
+}
+
+/**
+ * The sign-in form (R1).
+ *
+ * v1.9 shipped with `signIn()` working and nothing calling it: the المزامنة
+ * card displayed an email the fancier had no way to acquire. Every audit passed
+ * because §10 listed what the card must SHOW and nobody walked the path from
+ * installed to signed in.
+ *
+ * INVITE-ONLY, PERMANENTLY. There is no "create account" control here and there
+ * must never be one — accounts are made through the admin API and public
+ * signups stay disabled, which is what makes invite-only true rather than
+ * aspirational (SPIKE §4f).
+ */
+function signInForm(onDone) {
+  const email = h('input', { class: 'input', type: 'email', autocomplete: 'username',
+                             inputmode: 'email', dir: 'ltr' });
+  const password = h('input', { class: 'input', type: 'password',
+                                autocomplete: 'current-password', dir: 'ltr' });
+  const problem = h('div', {});
+  const button = h('button', { class: 'btn btn-primary' }, t('sync.signIn'));
+
+  async function submit() {
+    if (button.disabled) return;                 // a double tap is one sign-in
+    clear(problem);
+    button.disabled = true;
+    button.textContent = t('sync.signingIn');
+    try {
+      await signIn(email.value.trim(), password.value);
+      password.value = '';                        // never leave it in the DOM
+      // The existing first-login flow, unchanged: syncNow() runs the same
+      // cycle the background loop runs, which takes the §6 first-login branch
+      // on its own. No second code path for "just signed in".
+      await syncNow();
+      onDone();
+    } catch (err) {
+      // Three causes, three messages. A wrong password and a dead connection
+      // are not the same problem and must never read the same — that
+      // distinction is already made in js/db/sync.js, and this is where it
+      // finally reaches a person.
+      const KIND = {
+        rejected: 'sync.signIn.badCredentials',
+        network: 'sync.signIn.noConnection',
+        config: 'sync.signIn.notConfigured',
+      };
+      problem.append(h('p', { class: 'warn' }, t(KIND[err && err.kind] || 'sync.signIn.noConnection')));
+      // The status code belongs here, not in the sentence above: someone
+      // debugging wants it, and nobody signing in does.
+      if (err && err.status) {
+        problem.append(h('p', { class: 'muted small' }, `HTTP ${err.status}`));
+      }
+      button.disabled = false;
+      button.textContent = t('sync.signIn');
+      password.focus();
+    }
+  }
+
+  const onEnter = (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
+  email.addEventListener('keydown', onEnter);
+  password.addEventListener('keydown', onEnter);
+  button.addEventListener('click', submit);
+
+  return h('div', { class: 'sync-signin' },
+    field(t('sync.email'), email),
+    field(t('sync.password'), password),
+    problem,
+    h('div', { class: 'row-inline' }, button));
 }
 
 // ------------------------------------------------------ duplicate finder

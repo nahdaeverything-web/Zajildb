@@ -262,6 +262,105 @@ with sync_playwright() as p:
           (run(D, "(db) => db.allBirds().filter(b => (b.rings||[]).some(r => r.raw === 'JOR-JRPF-2025-01234')).length") or 0) == 2,
           'the duplicate finder reports, it never merges')
 
+    # ── 7. THE PRISTINE DEFAULT LOFT (R4) ──
+    # initDB() creates an empty loft on every fresh device. Pushing it added one
+    # empty loft to the account per device, and — the half that actually
+    # damages data — left currentLoftId pointing at it, so every bird created on
+    # a second device was filed under an id the rest of the loft knew nothing
+    # about. One loft, silently split in two.
+    # A deterministic fixture: exactly ONE loft on the server. The earlier
+    # devices in this suite each pushed their own, and with several present
+    # adoption correctly declines — which is the next case, not this one.
+    srv.rows.clear()
+    REAL_LOFT = 'the-real-loft-uuid'
+    srv.upsert({'store': 'lofts', 'record_id': REAL_LOFT,
+                'data': {'id': REAL_LOFT, 'name': 'لوفت الزرقاء', 'location': 'الزرقاء',
+                         'statuses': [], 'createdAt': '2026-01-01T00:00:00.000Z',
+                         'updatedAt': '2026-01-01T00:00:00.000Z'},
+                'deleted': False, 'updated_at': '2026-01-01T00:00:00.000Z',
+                'device_id': '33333333-3333-3333-3333-333333333333', 'op_seq': 1})
+
+    E = device('E')
+    run(E, "async (db) => await db.signIn('spike-a@zajil.test','pw')")
+    pristine = run(E, """(db) => ({
+        lofts: db.state.lofts.size,
+        currentIsPristine: db.isPristineLoft(db.currentLoft()),
+        name: (db.currentLoft() || {}).name })""")
+    check('a fresh device starts on an untouched default loft',
+          pristine['currentIsPristine'] is True and pristine['name'] == '', str(pristine))
+
+    srv_lofts_before = len([r for r in srv.rows.values() if r['store'] == 'lofts' and not r['deleted']])
+    run(E, """async (db) => {
+        await db.setSetting('lastSyncAt', null);
+        return await db.syncOnce();
+    }""")
+    after = run(E, """async (db) => {
+        const bird = await db.saveBird(db.newBird({ name: 'filed-after-adoption', sex: 'cock' }));
+        return { lofts: db.state.lofts.size, currentId: db.state.currentLoftId,
+                 currentName: (db.currentLoft() || {}).name, birdLoftId: bird.loftId };
+    }""")
+    srv_lofts_after = len([r for r in srv.rows.values() if r['store'] == 'lofts' and not r['deleted']])
+
+    check('the pristine default is NEVER pushed',
+          srv_lofts_after == srv_lofts_before,
+          f'server lofts {srv_lofts_before} -> {srv_lofts_after}')
+    check('...it is dropped once a remote loft is adopted', after['lofts'] == 1, str(after))
+    check('...and dropping it logs NO op and writes NO tombstone',
+          run(E, "async (db) => (await db.listOps()).filter(o => o.store === 'lofts' && o.op === 'delete').length") == 0
+          and run(E, "async (db) => (await db.listTombstones()).filter(t => t.store === 'lofts').length") == 0)
+    # THE assertion whose absence let this through — filed into the ADOPTED id
+    # specifically, not merely into whatever this device happens to call current.
+    check('THE SECOND DEVICE FILES NEW BIRDS INTO THE ADOPTED LOFT',
+          after['birdLoftId'] == REAL_LOFT and after['currentId'] == REAL_LOFT, str(after))
+    check('...and shows the real loft name, not a blank one',
+          after['currentName'] == 'لوفت الزرقاء', repr(after['currentName']))
+
+    # zero remote lofts: nothing to adopt, keep the local default, push nothing
+    F = device('F')
+    zero = run(F, """async (db) => {
+        // a device whose account has no lofts at all: adoption must not fire
+        const before = db.state.currentLoftId;
+        const adopted = await db.adoptRemoteLoftIfPristine();
+        return { adopted, unchanged: db.state.currentLoftId === before,
+                 lofts: db.state.lofts.size };
+    }""")
+    check('with ZERO remote lofts, nothing is adopted and the default stays',
+          zero['adopted'] is None and zero['unchanged'] is True and zero['lofts'] == 1, str(zero))
+
+    # several remote lofts: never guess
+    several = run(F, """async (db) => {
+        await db.applySyncPut('lofts', { id: 'remote-a', name: 'لوفت أ', location: '',
+            statuses: [], createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+            '2026-01-01T00:00:00.000Z', 'remote-a');
+        await db.applySyncPut('lofts', { id: 'remote-b', name: 'لوفت ب', location: '',
+            statuses: [], createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+            '2026-01-01T00:00:00.000Z', 'remote-b');
+        const before = db.state.currentLoftId;
+        const adopted = await db.adoptRemoteLoftIfPristine();
+        return { adopted, unchanged: db.state.currentLoftId === before, lofts: db.state.lofts.size };
+    }""")
+    check('with SEVERAL remote lofts, nothing is adopted — never guess',
+          several['adopted'] is None and several['unchanged'] is True, str(several))
+
+    # a default that already holds records is NOT pristine, and DOES push
+    G = device('G')
+    used = run(G, """async (db) => {
+        await db.saveBird(db.newBird({ name: 'filed-before-signin', sex: 'hen' }));
+        const loft = db.currentLoft();
+        return { pristine: db.isPristineLoft(loft), name: loft.name };
+    }""")
+    check('a default loft that already holds records is NOT pristine',
+          used['pristine'] is False and used['name'] == '',
+          'unnamed but used is still the fancier\'s loft')
+    pushed = run(G, """async (db) => {
+        await db.signIn('spike-a@zajil.test','pw');
+        await db.setSetting('lastSyncAt', null);
+        const enq = await db.enqueueFirstSyncOps();
+        const ops = await db.listOps();
+        return { enqueued: enq, loftOps: ops.filter(o => o.store === 'lofts').length };
+    }""")
+    check('...so it IS enqueued for the server', pushed['loftOps'] >= 1, str(pushed))
+
     check('zero page errors across all devices', not errs, '; '.join(errs[:2]))
     br.close()
 

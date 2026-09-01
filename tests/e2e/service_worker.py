@@ -1,5 +1,13 @@
 import os
 from playwright.sync_api import sync_playwright
+
+# The shipped datasets carry real uuids (v1.9.1). Python's uuid5 derives exactly
+# what tools/idmap.js derives from the same namespace and key, so these suites
+# keep naming birds by the readable key that documents what they are.
+import uuid as _uuid
+_ID_NS = _uuid.UUID('7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f')
+def bird_id(key):
+    return str(_uuid.uuid5(_ID_NS, key))
 ok = fail = 0
 def check(n, c, e=''):
     global ok, fail
@@ -23,7 +31,7 @@ with sync_playwright() as p:
     page.reload(wait_until='load'); page.wait_for_timeout(1500)
     check('OFFLINE still works after SW changes', page.locator('.bird-row').count() == 38,
           str(page.locator('.bird-row').count()))
-    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/pedigree/g5-faris26'); page.wait_for_timeout(1000)
+    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/pedigree/'+bird_id('g5-faris26')); page.wait_for_timeout(1000)
     check('OFFLINE pedigree + COI', '12.5' in page.locator('.coi-headline .coi-badge').inner_text())
     check('zero page errors', not errs, '; '.join(errs[:2]))
     b.close()
