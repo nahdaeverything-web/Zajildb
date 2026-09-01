@@ -9,6 +9,7 @@
 // Deterministic: no Date.now(), no randomness.
 
 import { writeFileSync } from 'node:fs';
+import { remapIds } from './idmap.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { haversineMetres, velocityMPM } from '../js/engine/velocity.js';
@@ -229,5 +230,12 @@ const payload = {
 };
 
 const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'example-loft-large.json');
-writeFileSync(out, JSON.stringify(payload, null, 1));
+// The readable keys above are documentation — `sireId: 'b-barq'` says what the
+// line means. They are turned into real uuids HERE, mechanically, with every
+// reference re-linked in the same pass, so the shipped data obeys the project's
+// own "UUIDs only" rule without the source becoming unreadable. Deterministic:
+// the same key always yields the same uuid, so regeneration does not churn.
+const { payload: shipped, map } = remapIds(payload);
+writeFileSync(out, JSON.stringify(shipped, null, 1));
+console.log(`  ${map.size} readable keys mapped to uuids`);
 console.log(`example-loft-large.json: ${birds.length} birds, ${pairs.length} pairs, ${raceResults.length} results, ${healthEvents.length} health events`);

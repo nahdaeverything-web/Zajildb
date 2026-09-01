@@ -1,5 +1,13 @@
 import os
 from playwright.sync_api import sync_playwright
+
+# The shipped datasets carry real uuids (v1.9.1). Python's uuid5 derives exactly
+# what tools/idmap.js derives from the same namespace and key, so these suites
+# keep naming records by the readable key that documents what they are.
+import uuid as _uuid
+_ID_NS = _uuid.UUID('7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f')
+def bird_id(key):
+    return str(_uuid.uuid5(_ID_NS, key))
 ok = fail = 0
 def check(name, cond, extra=''):
     global ok, fail
@@ -63,12 +71,12 @@ with sync_playwright() as p:
     page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/breeding'); page.wait_for_timeout(800)
     hatch_inputs = page.locator('.egg-row input[type=date]')
     check('egg rows expose date inputs', hatch_inputs.count() >= 4)
-    changed = page.evaluate('''async () => {
+    changed = page.evaluate('''async (a) => {
         const db = await import('./js/db.js');
-        const pair = db.state.pairs.get('p-barq-malika-26');
+        const pair = db.state.pairs.get(a);
         const egg = pair.rounds[0].eggs[0];
         return { chickId: egg.chickId, before: db.getBird(egg.chickId).hatchDate };
-    }''')
+    }''', bird_id('p-barq-malika-26'))
     # find the hatch input of that egg (second date input in first hatched row) and change it
     row = page.locator('.egg-row.egg-hatched').first
     row.locator('input[type=date]').nth(1).fill('2026-03-10'); page.wait_for_timeout(600)

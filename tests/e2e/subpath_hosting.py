@@ -1,5 +1,23 @@
 import os
 from playwright.sync_api import sync_playwright
+
+# The shipped datasets carry real uuids (v1.9.1). Python's uuid5 derives exactly
+# what tools/idmap.js derives from the same namespace and key, so these suites
+# keep naming birds by the readable key that documents what they are.
+import uuid as _uuid
+_ID_NS = _uuid.UUID('7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f')
+def bird_id(key):
+    return str(_uuid.uuid5(_ID_NS, key))
+# REQUIRES a static server on 8124 whose document root contains `zajil/`
+# pointing at the repo — it simulates GitHub Pages serving from a subdirectory.
+# Provision it as a SYMLINK, never a copy:
+#
+#   mkdir -p /tmp/pages-sim && ln -sfn /path/to/zajil /tmp/pages-sim/zajil
+#   cd /tmp/pages-sim && python3 -m http.server 8124 --bind 127.0.0.1
+#
+# It was a copy once, and this suite quietly tested a week-old tree until the
+# shipped datasets changed under it and the mismatch finally surfaced. A symlink
+# cannot go stale.
 URL = 'http://127.0.0.1:8124/zajil/'
 ok = fail = 0
 def check(n, c, e=''):
@@ -30,7 +48,7 @@ with sync_playwright() as p:
     }""")
     page.reload(); page.wait_for_timeout(1200)
     check('38 birds under subpath', page.locator('.bird-row').count() == 38)
-    page.goto(URL + '#/pedigree/g5-faris26'); page.wait_for_timeout(1000)
+    page.goto(URL + '#/pedigree/'+bird_id('g5-faris26')); page.wait_for_timeout(1000)
     check('pedigree + COI work under subpath', '12.5' in page.locator('.coi-headline .coi-badge').inner_text())
     # OFFLINE under the subpath — the real GitHub Pages payoff
     page.wait_for_timeout(1500)

@@ -1,6 +1,14 @@
 import os
 from playwright.sync_api import sync_playwright
 
+# The shipped datasets carry real uuids (v1.9.1). Python's uuid5 derives exactly
+# what tools/idmap.js derives from the same namespace and key, so these suites
+# keep naming birds by the readable key that documents what they are.
+import uuid as _uuid
+_ID_NS = _uuid.UUID('7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f')
+def bird_id(key):
+    return str(_uuid.uuid5(_ID_NS, key))
+
 BASE = os.environ.get('ZAJIL_URL',os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'')
 ok = fail = 0
 def check(name, cond, extra=''):
@@ -36,13 +44,13 @@ with sync_playwright() as p:
     page.fill('.search-input', ''); page.wait_for_timeout(400)
 
     # 3. bird detail — COI 25% for برق
-    page.goto(BASE + '#/bird/b-barq'); page.wait_for_timeout(700)
+    page.goto(BASE + '#/bird/'+bird_id('b-barq')); page.wait_for_timeout(700)
     badge = page.locator('.facts .coi-badge').first.inner_text()
     check('برق COI badge = 25%', '25' in badge, f'got {badge!r}')
     check('progeny analysis present', page.locator('.stat-grid').count() >= 1)
 
     # 4. pedigree RTL: subject must be RIGHTMOST in Arabic
-    page.goto(BASE + '#/pedigree/b-barq'); page.wait_for_timeout(700)
+    page.goto(BASE + '#/pedigree/'+bird_id('b-barq')); page.wait_for_timeout(700)
     subj = page.locator('.ped-cell.gen-0').first.bounding_box()
     anc = page.locator('.ped-grid .ped-cell').last.bounding_box()
     check('RTL: subject sits RIGHT of ancestors', subj and anc and subj['x'] > anc['x'],
@@ -67,7 +75,7 @@ with sync_playwright() as p:
 
     # 6. certificate — 5-gen Arabic, then PDF (print CSS)
     page.reload(); page.wait_for_timeout(800)
-    page.goto(BASE + '#/cert/y-najm'); page.wait_for_timeout(900)
+    page.goto(BASE + '#/cert/'+bird_id('y-najm')); page.wait_for_timeout(900)
     cells = page.locator('.cert-page .ped-cell').count()
     check('5-gen certificate has 63 slots', cells == 63, f'got {cells}')
     check('cert page is RTL', page.evaluate('document.querySelector(".cert-page").dir') == 'rtl')

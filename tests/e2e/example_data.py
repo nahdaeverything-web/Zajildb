@@ -1,5 +1,13 @@
 import os
 from playwright.sync_api import sync_playwright
+
+# The shipped datasets carry real uuids (v1.9.1). Python's uuid5 derives exactly
+# what tools/idmap.js derives from the same namespace and key, so these suites
+# keep naming birds by the readable key that documents what they are.
+import uuid as _uuid
+_ID_NS = _uuid.UUID('7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f')
+def bird_id(key):
+    return str(_uuid.uuid5(_ID_NS, key))
 ok = fail = 0
 def check(name, cond, extra=''):
     global ok, fail
@@ -35,14 +43,14 @@ with sync_playwright() as p:
     check('picker closes on outside click', not page.locator('.picker-list').first.is_visible())
 
     # 4. add-sibling: prefilled parents for سهم (has parents)
-    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/bird/c-sahm'); page.wait_for_timeout(700)
+    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/bird/'+bird_id('c-sahm')); page.wait_for_timeout(700)
     page.locator('button', has_text='👥').click(); page.wait_for_timeout(700)
-    check('add-sibling routes to prefilled form', '#/bird/new?sire=b-barq&dam=u-malika' in page.url)
+    check('add-sibling routes to prefilled form', f'#/bird/new?sire={bird_id("b-barq")}&dam={bird_id("u-malika")}' in page.url)
     vals = page.locator('.bird-picker input').evaluate_all('els => els.map(e => e.value)')
     check('sire+dam prefilled', any('برق' in v for v in vals) and any('الملكة' in v for v in vals), str(vals))
 
     # 5. add-sibling on a bird WITHOUT parents → placeholder dialog, creates parents
-    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/bird/o-asifa'); page.wait_for_timeout(700)
+    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/bird/'+bird_id('o-asifa')); page.wait_for_timeout(700)
     page.locator('button', has_text='👥').click(); page.wait_for_timeout(500)
     check('placeholder dialog shown', page.locator('.modal').count() == 1)
     page.locator('.modal-actions .btn-primary').click(); page.wait_for_timeout(900)
@@ -51,7 +59,7 @@ with sync_playwright() as p:
     # the parents to exist before the sibling did, which is exactly the
     # permanent re-parenting that abandoning the form used to cause.
     check('placeholder flow carries an intent, not a write', '#/bird/new?siblingOf=' in page.url, page.url)
-    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/bird/o-asifa'); page.wait_for_timeout(700)
+    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/bird/'+bird_id('o-asifa')); page.wait_for_timeout(700)
     facts = page.locator('.facts').inner_text()
     check('abandoning it leaves عاصفة with NO placeholder parents',
           'أب غير معروف' not in facts and 'أم غير معروفة' not in facts)
@@ -69,7 +77,7 @@ with sync_playwright() as p:
     check('mid-cycle pair shows hatch buttons', page.locator('.egg-row button').count() >= 4)
 
     # 8. legend under pedigree
-    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/pedigree/y-najm'); page.wait_for_timeout(700)
+    page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/pedigree/'+bird_id('y-najm')); page.wait_for_timeout(700)
     check('sex legend under tree', page.locator('.sex-legend .sex-chip').count() == 3)
     page.screenshot(path='/tmp/claude-1000/-home-samir/8788c756-998b-4a82-9d7a-2ebbad47d910/scratchpad/ped-v11.png', full_page=True)
 

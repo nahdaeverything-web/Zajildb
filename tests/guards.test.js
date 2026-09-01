@@ -358,6 +358,35 @@ test('guard: only ONE place writes a sync error, so the silence window survives'
   assert(/async function recordSyncError\(/.test(src), 'recordSyncError() is missing');
 });
 
+test('guard: every id in every shipped dataset is a uuid', () => {
+  // The shipped datasets used readable ids (`b-barq`, `g5-faris26`) while
+  // HANDOFF §14 said "UUIDs only". That contradiction sat there harmlessly
+  // until v1.9 typed the server's record_id column `uuid`, and then every push
+  // from a loft that had loaded the examples was rejected WHOLE — 22P02, a
+  // queue stalled silently for half an hour, found by the first real user.
+  //
+  // The column is `text` now, so this is no longer a sync failure. It is here
+  // because a convention the shipped data breaks is a convention that will
+  // mislead someone again. Checked at EVERY depth: notes, rounds and eggs carry
+  // ids too, and "every id" is easier to keep true than "every id that matters".
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const bad = [];
+  const walk = (value, file, path) => {
+    if (Array.isArray(value)) { value.forEach((v, i) => walk(v, file, `${path}[${i}]`)); return; }
+    if (!value || typeof value !== 'object') return;
+    if (typeof value.id === 'string' && !UUID.test(value.id)) {
+      bad.push(`${file} ${path}.id = ${JSON.stringify(value.id)}`);
+    }
+    for (const [k, v] of Object.entries(value)) walk(v, file, `${path}.${k}`);
+  };
+  for (const file of ['sample-data.json', 'example-loft-large.json']) {
+    walk(JSON.parse(readFileSync(join(ROOT, file), 'utf8')), file, '$');
+  }
+  assertEq(bad.length, 0,
+    `shipped data must obey the project's own id rule — regenerate with `
+    + `tools/gen-*.js, which maps readable keys to uuids:\n  ${bad.slice(0, 8).join('\n  ')}`);
+});
+
 // ---------------------------------------------------------------- data level
 
 test('invariant: every bird from the factory satisfies ownership <-> status', () => {

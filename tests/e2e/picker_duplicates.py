@@ -1,5 +1,13 @@
 import os
 from playwright.sync_api import sync_playwright
+
+# The shipped datasets carry real uuids (v1.9.1). Python's uuid5 derives exactly
+# what tools/idmap.js derives from the same namespace and key, so these suites
+# keep naming birds by the readable key that documents what they are.
+import uuid as _uuid
+_ID_NS = _uuid.UUID('7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f')
+def bird_id(key):
+    return str(_uuid.uuid5(_ID_NS, key))
 ok = fail = 0
 def check(n, c, e=''):
     global ok, fail
@@ -46,14 +54,14 @@ with sync_playwright() as p:
     page.keyboard.press('Escape'); page.wait_for_timeout(300)
 
     # duplicate finder: seed a real duplicate, confirm it is found, then delete it
-    page.evaluate("""async () => {
+    page.evaluate("""async (a) => {
         const db = await import('./js/db.js');
-        const src = db.getBird('g1-lama');
+        const src = db.getBird(a.lama);
         // deliberately seeding a duplicate ring to exercise the finder, so the
         // warning is acknowledged explicitly — saveBird refuses it otherwise,
         // which is the write boundary working as intended
         await db.saveBird(db.newBird({ name: src.name + ' (نسخة)', sex: 'hen', rings: JSON.parse(JSON.stringify(src.rings)) }), { allowWarnings: true });
-    }""")
+    }""", {'lama': bird_id('g1-lama')})
     page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/')+'#/tools'); page.reload(); page.wait_for_timeout(1200)
     check('duplicate finder lists the clone', page.locator('.dup-group').count() == 1,
           str(page.locator('.dup-group').count()))

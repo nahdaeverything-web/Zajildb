@@ -1,5 +1,13 @@
 import os
 from playwright.sync_api import sync_playwright
+
+# The shipped datasets carry real uuids (v1.9.1). Python's uuid5 derives exactly
+# what tools/idmap.js derives from the same namespace and key, so these suites
+# keep naming birds by the readable key that documents what they are.
+import uuid as _uuid
+_ID_NS = _uuid.UUID('7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f')
+def bird_id(key):
+    return str(_uuid.uuid5(_ID_NS, key))
 BASE = os.environ.get('ZAJIL_URL', 'http://127.0.0.1:8123/')
 ok = fail = 0
 def check(n, c, e=''):
@@ -32,9 +40,9 @@ with sync_playwright() as p:
     check('tombstone id is store:recordId', t['id'] == f"birds:{simple['id']}", t['id'])
 
     # ── A1: the CASCADE tombstones races, health, pairs AND MEDIA ──
-    casc = page.evaluate("""async () => {
+    casc = page.evaluate("""async (a) => {
         const db = await import('./js/db.js');
-        const target = 'g4-wisam';                       // has races + a pair
+        const target = a;                       // has races + a pair
         await db.Health.save({ id: 'ts-h', eventType: 'check', birdId: target, date: '2026-01-01', wholeLoft: false });
         const blob = new Blob([new Uint8Array(512)], { type: 'image/png' });
         const m = await db.addMedia(target, 'photo', 'body', 'ts.png', blob);
@@ -54,7 +62,7 @@ with sync_playwright() as p:
             eggPairsTombstoned: eggPairs.some(id => has('pairs', id)),   // must be FALSE: an unlink is a put
             snap,
         };
-    }""")
+    }""", bird_id('g4-wisam'))
     check('cascade: the bird itself is tombstoned', casc['bird'])
     check(f"cascade: all {casc['raceN']} race results tombstoned", casc['races'] and casc['raceN'] > 0)
     check('cascade: the health event is tombstoned', casc['health'])

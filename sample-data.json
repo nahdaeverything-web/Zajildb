@@ -5,7 +5,7 @@
  "exportedAt": "2026-08-01T09:00:00.000Z",
  "lofts": [
   {
-   "id": "loft-zarqa",
+   "id": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "name": "لوفت الزرقاء",
    "location": "الزرقاء، الأردن",
    "statuses": [
@@ -23,7 +23,7 @@
  ],
  "birds": [
   {
-   "id": "e-gouden",
+   "id": "bd265245-a1c7-5ed0-a9fa-9a2e25ef8899",
    "rings": [
     {
      "country": "BE",
@@ -51,10 +51,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "e-blauwe",
+   "id": "f5dde55c-ab75-522b-99f8-257b31d2d9ae",
    "rings": [
     {
      "country": "BE",
@@ -82,10 +82,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "f-saqr",
+   "id": "180905f7-fce1-5967-91e8-5bd5c6c41c6e",
    "rings": [
     {
      "country": "JO",
@@ -103,8 +103,8 @@
    "strain": "يانسن",
    "eyeSign": "برتقالية",
    "status": "breeder",
-   "sireId": "e-gouden",
-   "damId": "e-blauwe",
+   "sireId": "bd265245-a1c7-5ed0-a9fa-9a2e25ef8899",
+   "damId": "f5dde55c-ab75-522b-99f8-257b31d2d9ae",
    "external": false,
    "breeder": "",
    "owner": "لوفت الزرقاء",
@@ -113,10 +113,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "f-rih",
+   "id": "788e5a98-49ef-55a2-ad9c-a925d9dad783",
    "rings": [
     {
      "country": "JO",
@@ -134,8 +134,8 @@
    "strain": "يانسن",
    "eyeSign": "لؤلؤية",
    "status": "breeder",
-   "sireId": "e-gouden",
-   "damId": "e-blauwe",
+   "sireId": "bd265245-a1c7-5ed0-a9fa-9a2e25ef8899",
+   "damId": "f5dde55c-ab75-522b-99f8-257b31d2d9ae",
    "external": false,
    "breeder": "",
    "owner": "لوفت الزرقاء",
@@ -144,10 +144,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "b-barq",
+   "id": "0f8611fe-12c2-5bb5-8c91-a9e98c8c0102",
    "rings": [
     {
      "country": "JO",
@@ -173,8 +173,8 @@
    "strain": "يانسن",
    "eyeSign": "برتقالية غامقة",
    "status": "breeder",
-   "sireId": "f-saqr",
-   "damId": "f-rih",
+   "sireId": "180905f7-fce1-5967-91e8-5bd5c6c41c6e",
+   "damId": "788e5a98-49ef-55a2-ad9c-a925d9dad783",
    "external": false,
    "breeder": "",
    "owner": "لوفت الزرقاء",
@@ -182,17 +182,17 @@
    "acquiredDate": "",
    "notes": [
     {
-     "id": "n1",
+     "id": "e305e730-ec90-5e5d-9515-209b185d9d20",
      "at": "2023-11-05T10:00:00.000Z",
      "text": "حالة تحقق يدوي: أبوه وأمه أشقاء — معامل التربية الداخلية 25٪ بالضبط. الحلقة الدولية FCI-JO-2023-00871."
     }
    ],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "u-malika",
+   "id": "724618de-5496-5229-a765-20740583aa51",
    "rings": [
     {
      "country": "JO",
@@ -220,10 +220,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "c-sahm",
+   "id": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
    "rings": [
     {
      "country": "JO",
@@ -249,8 +249,8 @@
    "strain": "يانسن",
    "eyeSign": "",
    "status": "race team",
-   "sireId": "b-barq",
-   "damId": "u-malika",
+   "sireId": "0f8611fe-12c2-5bb5-8c91-a9e98c8c0102",
+   "damId": "724618de-5496-5229-a765-20740583aa51",
    "external": false,
    "breeder": "",
    "owner": "لوفت الزرقاء",
@@ -259,10 +259,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "c-shaqra",
+   "id": "d57ccebb-5119-58fa-9aff-4de7e4f02cef",
    "rings": [
     {
      "country": "JO",
@@ -280,8 +280,8 @@
    "strain": "يانسن",
    "eyeSign": "",
    "status": "race team",
-   "sireId": "b-barq",
-   "damId": "u-malika",
+   "sireId": "0f8611fe-12c2-5bb5-8c91-a9e98c8c0102",
+   "damId": "724618de-5496-5229-a765-20740583aa51",
    "external": false,
    "breeder": "",
    "owner": "لوفت الزرقاء",
@@ -290,10 +290,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "f-raad",
+   "id": "64a6330a-ee1b-5ef0-bfe7-8abc7c5e5b5e",
    "rings": [
     {
      "country": "SY",
@@ -321,10 +321,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "f-ghaima",
+   "id": "e8e60797-fb84-5289-9b4a-4550c7cc79db",
    "rings": [
     {
      "country": "JO",
@@ -352,10 +352,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "c-amal",
+   "id": "ff1b00a4-7bf6-5353-8564-1d84233d9e11",
    "rings": [
     {
      "country": "JO",
@@ -373,8 +373,8 @@
    "strain": "شامي",
    "eyeSign": "",
    "status": "breeder",
-   "sireId": "f-raad",
-   "damId": "f-ghaima",
+   "sireId": "64a6330a-ee1b-5ef0-bfe7-8abc7c5e5b5e",
+   "damId": "e8e60797-fb84-5289-9b4a-4550c7cc79db",
    "external": false,
    "breeder": "",
    "owner": "لوفت الزرقاء",
@@ -383,10 +383,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "c-fajr",
+   "id": "fe9751d3-560c-5278-95ac-68f4d26941a9",
    "rings": [
     {
      "country": "JO",
@@ -404,8 +404,8 @@
    "strain": "شامي",
    "eyeSign": "",
    "status": "race team",
-   "sireId": "f-raad",
-   "damId": "f-ghaima",
+   "sireId": "64a6330a-ee1b-5ef0-bfe7-8abc7c5e5b5e",
+   "damId": "e8e60797-fb84-5289-9b4a-4550c7cc79db",
    "external": false,
    "breeder": "",
    "owner": "لوفت الزرقاء",
@@ -414,10 +414,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "y-najm",
+   "id": "b591f98a-1dde-53b0-ab06-be5431de00f8",
    "rings": [
     {
      "country": "JO",
@@ -443,8 +443,8 @@
    "strain": "يانسن × شامي",
    "eyeSign": "",
    "status": "race team",
-   "sireId": "c-sahm",
-   "damId": "c-amal",
+   "sireId": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
+   "damId": "ff1b00a4-7bf6-5353-8564-1d84233d9e11",
    "external": false,
    "breeder": "",
    "owner": "لوفت الزرقاء",
@@ -453,10 +453,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "y-lulu",
+   "id": "914beb55-594d-5cfe-afde-ad6c05221233",
    "rings": [
     {
      "country": "JO",
@@ -474,8 +474,8 @@
    "strain": "يانسن × شامي",
    "eyeSign": "",
    "status": "young bird",
-   "sireId": "c-sahm",
-   "damId": "c-amal",
+   "sireId": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
+   "damId": "ff1b00a4-7bf6-5353-8564-1d84233d9e11",
    "external": false,
    "breeder": "",
    "owner": "لوفت الزرقاء",
@@ -484,10 +484,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "y-wadhah",
+   "id": "b2119a47-d5db-5e26-9071-757dc7b4e10b",
    "rings": [
     {
      "country": "JO",
@@ -505,8 +505,8 @@
    "strain": "يانسن × شامي",
    "eyeSign": "",
    "status": "young bird",
-   "sireId": "c-sahm",
-   "damId": "c-amal",
+   "sireId": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
+   "damId": "ff1b00a4-7bf6-5353-8564-1d84233d9e11",
    "external": false,
    "breeder": "",
    "owner": "لوفت الزرقاء",
@@ -515,10 +515,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "y-yaqut",
+   "id": "ef2e501a-f94e-578e-8648-1fb58f16175b",
    "rings": [
     {
      "country": "JO",
@@ -536,8 +536,8 @@
    "strain": "يانسن",
    "eyeSign": "",
    "status": "young bird",
-   "sireId": "b-barq",
-   "damId": "u-malika",
+   "sireId": "0f8611fe-12c2-5bb5-8c91-a9e98c8c0102",
+   "damId": "724618de-5496-5229-a765-20740583aa51",
    "external": false,
    "breeder": "",
    "owner": "لوفت الزرقاء",
@@ -546,10 +546,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "y-hudhud",
+   "id": "de9741f3-a078-592b-b0e9-a3192451c964",
    "rings": [
     {
      "country": "JO",
@@ -567,8 +567,8 @@
    "strain": "يانسن",
    "eyeSign": "",
    "status": "young bird",
-   "sireId": "b-barq",
-   "damId": "u-malika",
+   "sireId": "0f8611fe-12c2-5bb5-8c91-a9e98c8c0102",
+   "damId": "724618de-5496-5229-a765-20740583aa51",
    "external": false,
    "breeder": "",
    "owner": "لوفت الزرقاء",
@@ -577,10 +577,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "o-asifa",
+   "id": "2a382c6b-6d23-5121-9735-2f47c6653fa2",
    "rings": [
     {
      "country": "JO",
@@ -608,10 +608,10 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "o-tair",
+   "id": "ef2cf4c9-5034-55bf-a7a7-1bdcc00adf6f",
    "rings": [
     {
      "country": "JO",
@@ -638,17 +638,17 @@
    "acquiredDate": "",
    "notes": [
     {
-     "id": "n2",
+     "id": "bf82b292-114d-5e9a-9fa4-1308d067829a",
      "at": "2025-06-08T14:00:00.000Z",
      "text": "فُقد في سباق الجفر 2025-06-07، الرقم JO-2020-11602 — بلاغ للنادي."
     }
    ],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   },
   {
-   "id": "o-dura",
+   "id": "c986201d-7f6b-5099-af44-8f831a05d150",
    "rings": [
     {
      "country": "JO",
@@ -676,41 +676,41 @@
    "notes": [],
    "createdAt": "2026-08-01T09:00:00.000Z",
    "updatedAt": "2026-08-01T09:00:00.000Z",
-   "loftId": "loft-zarqa"
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
   }
  ],
  "pairs": [
   {
-   "id": "p-barq-malika-26",
-   "sireId": "b-barq",
-   "damId": "u-malika",
+   "id": "8f9b29ee-1499-52de-9166-6f675b0a8f27",
+   "sireId": "0f8611fe-12c2-5bb5-8c91-a9e98c8c0102",
+   "damId": "724618de-5496-5229-a765-20740583aa51",
    "season": "2026",
    "nestBox": "3",
    "status": "active",
    "startDate": "2026-01-20",
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z",
    "rounds": [
     {
-     "id": "p1r1",
+     "id": "46887358-a124-5c24-b1a0-c902cc1443ec",
      "number": 1,
      "eggs": [
       {
-       "id": "p1r1e1",
+       "id": "07b3634d-bac9-51e7-ae74-720fe8fd9487",
        "laidDate": "2026-02-19",
        "state": "hatched",
        "hatchDate": "2026-03-11",
-       "chickId": "y-yaqut",
+       "chickId": "ef2e501a-f94e-578e-8648-1fb58f16175b",
        "ringed": true,
        "weaned": true,
        "weanDate": "2026-04-06"
       },
       {
-       "id": "p1r1e2",
+       "id": "a20373bd-445f-5048-a2a6-e8509b97c95c",
        "laidDate": "2026-02-21",
        "state": "hatched",
        "hatchDate": "2026-03-12",
-       "chickId": "y-hudhud",
+       "chickId": "de9741f3-a078-592b-b0e9-a3192451c964",
        "ringed": true,
        "weaned": true,
        "weanDate": "2026-04-06"
@@ -718,16 +718,16 @@
      ]
     },
     {
-     "id": "p1r2",
+     "id": "36dc59f7-5820-5817-ab73-b606430a98ad",
      "number": 2,
      "eggs": [
       {
-       "id": "p1r2e1",
+       "id": "f31a5dd5-f4d9-5762-af53-a39eb7a0ea8d",
        "laidDate": "2026-08-14",
        "state": "laid"
       },
       {
-       "id": "p1r2e2",
+       "id": "2ffa867f-376b-5adb-b0ca-be76ee34b6ee",
        "laidDate": "2026-08-16",
        "state": "laid"
       }
@@ -736,27 +736,27 @@
    ]
   },
   {
-   "id": "p-sahm-amal-26",
-   "sireId": "c-sahm",
-   "damId": "c-amal",
+   "id": "6d9094f3-3984-5c3b-a48d-040ab7708733",
+   "sireId": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
+   "damId": "ff1b00a4-7bf6-5353-8564-1d84233d9e11",
    "season": "2026",
    "nestBox": "5",
    "status": "separated",
    "startDate": "2026-01-20",
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z",
    "rounds": [
     {
-     "id": "p2r1",
+     "id": "d8f03fb0-dddb-51b8-b73c-b1cdd41edff5",
      "number": 1,
      "eggs": [
       {
-       "id": "p2r1e1",
+       "id": "8d3b4612-a239-5393-8487-794d2f2997e6",
        "laidDate": "2026-02-25",
        "state": "failed"
       },
       {
-       "id": "p2r1e2",
+       "id": "047ccdd2-d631-5205-a635-b2510037e35b",
        "laidDate": "2026-02-27",
        "state": "hatched",
        "hatchDate": "2026-03-17",
@@ -769,27 +769,27 @@
    ]
   },
   {
-   "id": "p-wadhah-asifa-26",
-   "sireId": "y-wadhah",
-   "damId": "o-asifa",
+   "id": "a348ed6b-28a3-5696-aba7-3caca4f799c6",
+   "sireId": "b2119a47-d5db-5e26-9071-757dc7b4e10b",
+   "damId": "2a382c6b-6d23-5121-9735-2f47c6653fa2",
    "season": "2026",
    "nestBox": "7",
    "status": "active",
    "startDate": "2026-07-30",
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z",
    "rounds": [
     {
-     "id": "p4r1",
+     "id": "975105a7-73ae-515c-9268-12cd2a6ef1c5",
      "number": 1,
      "eggs": [
       {
-       "id": "p4r1e1",
+       "id": "7bb625db-20b8-5712-b975-64a4cc57a3c9",
        "laidDate": "2026-08-18",
        "state": "laid"
       },
       {
-       "id": "p4r1e2",
+       "id": "b2583b97-811e-58d2-b585-b242f31b19fe",
        "laidDate": "2026-08-20",
        "state": "laid"
       }
@@ -798,36 +798,36 @@
    ]
   },
   {
-   "id": "p-raad-ghaima-23",
-   "sireId": "f-raad",
-   "damId": "f-ghaima",
+   "id": "aa6f7eed-75ff-5269-8273-acacd9653bcb",
+   "sireId": "64a6330a-ee1b-5ef0-bfe7-8abc7c5e5b5e",
+   "damId": "e8e60797-fb84-5289-9b4a-4550c7cc79db",
    "season": "2023",
    "nestBox": "1",
    "status": "separated",
    "startDate": "2023-02-01",
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z",
    "rounds": [
     {
-     "id": "p3r1",
+     "id": "f8480c54-731f-5721-a4f5-5577cd02269a",
      "number": 1,
      "eggs": [
       {
-       "id": "p3r1e1",
+       "id": "19b46c6e-6763-5544-a387-899a8fa43b50",
        "laidDate": "2023-03-10",
        "state": "hatched",
        "hatchDate": "2023-04-02",
-       "chickId": "c-amal",
+       "chickId": "ff1b00a4-7bf6-5353-8564-1d84233d9e11",
        "ringed": true,
        "weaned": true,
        "weanDate": "2023-04-28"
       },
       {
-       "id": "p3r1e2",
+       "id": "1d1292b1-7b5c-57a2-bc0b-014ad38c4ea2",
        "laidDate": "2023-03-12",
        "state": "hatched",
        "hatchDate": "2023-04-02",
-       "chickId": "c-fajr",
+       "chickId": "fe9751d3-560c-5278-95ac-68f4d26941a9",
        "ringed": true,
        "weaned": true,
        "weanDate": "2023-04-28"
@@ -839,8 +839,8 @@
  ],
  "raceResults": [
   {
-   "id": "r-1",
-   "birdId": "c-sahm",
+   "id": "6fcb5b7a-2a40-5575-a0dd-1b9da74bb38e",
+   "birdId": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
    "date": "2025-04-12",
    "raceType": "club",
    "organisation": "نادي الزرقاء للحمام الزاجل",
@@ -862,12 +862,12 @@
    "position": 3,
    "fanciersEntered": 14,
    "birdsEntered": 96,
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "r-2",
-   "birdId": "c-sahm",
+   "id": "b19a1451-4563-5f5c-8aab-a93d219a8d42",
+   "birdId": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
    "date": "2025-04-26",
    "raceType": "club",
    "organisation": "نادي الزرقاء للحمام الزاجل",
@@ -889,12 +889,12 @@
    "position": 1,
    "fanciersEntered": 14,
    "birdsEntered": 96,
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "r-3",
-   "birdId": "c-sahm",
+   "id": "8fc1c38e-c4d6-50a8-8e01-b80e253b87f2",
+   "birdId": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
    "date": "2025-05-17",
    "raceType": "federation",
    "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
@@ -916,12 +916,12 @@
    "position": 2,
    "fanciersEntered": 27,
    "birdsEntered": 214,
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "r-4",
-   "birdId": "c-fajr",
+   "id": "b7afd7ee-2a22-5cb9-9762-fa379f39e335",
+   "birdId": "fe9751d3-560c-5278-95ac-68f4d26941a9",
    "date": "2025-04-12",
    "raceType": "club",
    "organisation": "نادي الزرقاء للحمام الزاجل",
@@ -943,12 +943,12 @@
    "position": 11,
    "fanciersEntered": 14,
    "birdsEntered": 96,
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "r-5",
-   "birdId": "c-fajr",
+   "id": "5973d061-363d-52f2-a52b-67898cbe7697",
+   "birdId": "fe9751d3-560c-5278-95ac-68f4d26941a9",
    "date": "2025-05-17",
    "raceType": "federation",
    "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
@@ -970,12 +970,12 @@
    "position": 19,
    "fanciersEntered": 27,
    "birdsEntered": 214,
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "r-6",
-   "birdId": "o-tair",
+   "id": "cbff5ea0-f474-5942-ba78-fbf3f11325be",
+   "birdId": "ef2cf4c9-5034-55bf-a7a7-1bdcc00adf6f",
    "date": "2025-06-07",
    "raceType": "club",
    "organisation": "نادي الزرقاء للحمام الزاجل",
@@ -997,12 +997,12 @@
    "position": null,
    "fanciersEntered": 14,
    "birdsEntered": 96,
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "r-7",
-   "birdId": "y-najm",
+   "id": "29e57c75-4c78-5617-ab84-87f0f9120ce4",
+   "birdId": "b591f98a-1dde-53b0-ab06-be5431de00f8",
    "date": "2026-04-04",
    "raceType": "club",
    "organisation": "نادي الزرقاء للحمام الزاجل",
@@ -1024,12 +1024,12 @@
    "position": 2,
    "fanciersEntered": 14,
    "birdsEntered": 96,
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "r-8",
-   "birdId": "y-najm",
+   "id": "e4c3fec1-2790-5162-8eea-bffaed899895",
+   "birdId": "b591f98a-1dde-53b0-ab06-be5431de00f8",
    "date": "2026-04-18",
    "raceType": "club",
    "organisation": "نادي الزرقاء للحمام الزاجل",
@@ -1051,12 +1051,12 @@
    "position": 1,
    "fanciersEntered": 14,
    "birdsEntered": 96,
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "r-9",
-   "birdId": "y-najm",
+   "id": "a862892b-d952-54ad-be96-ed429dfeec7d",
+   "birdId": "b591f98a-1dde-53b0-ab06-be5431de00f8",
    "date": "2026-05-09",
    "raceType": "national",
    "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
@@ -1078,12 +1078,12 @@
    "position": 4,
    "fanciersEntered": 41,
    "birdsEntered": 388,
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "r-10",
-   "birdId": "y-lulu",
+   "id": "44124c4f-277b-5b0f-9d5b-06b8d08974ed",
+   "birdId": "914beb55-594d-5cfe-afde-ad6c05221233",
    "date": "2026-04-04",
    "raceType": "club",
    "organisation": "نادي الزرقاء للحمام الزاجل",
@@ -1105,12 +1105,12 @@
    "position": 27,
    "fanciersEntered": 14,
    "birdsEntered": 96,
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "r-11",
-   "birdId": "y-wadhah",
+   "id": "c3797aec-0625-5b79-9534-248219508003",
+   "birdId": "b2119a47-d5db-5e26-9071-757dc7b4e10b",
    "date": "2026-03-20",
    "raceType": "training",
    "organisation": "نادي الزرقاء للحمام الزاجل",
@@ -1132,12 +1132,12 @@
    "position": null,
    "fanciersEntered": 1,
    "birdsEntered": 22,
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "r-12",
-   "birdId": "y-yaqut",
+   "id": "60c39890-2e27-52d6-95ef-3302075b1fa0",
+   "birdId": "ef2e501a-f94e-578e-8648-1fb58f16175b",
    "date": "2026-06-14",
    "raceType": "training",
    "organisation": "نادي الزرقاء للحمام الزاجل",
@@ -1159,75 +1159,75 @@
    "position": null,
    "fanciersEntered": 1,
    "birdsEntered": 18,
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   }
  ],
  "healthEvents": [
   {
-   "id": "h-1",
+   "id": "548c20e4-52ac-53b9-841f-0ad2af15dac9",
    "eventType": "vaccination",
    "wholeLoft": true,
    "birdId": null,
    "date": "2026-02-01",
    "medication": "لقاح باراميكسو (نيوكاسل الحمام) — Colombovac PMV",
    "notes": "قبل موسم التزاوج، كامل اللوفت",
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "h-2",
+   "id": "5fdcb825-1ea1-5476-82d8-d966f8de6d6d",
    "eventType": "vaccination",
    "wholeLoft": true,
    "birdId": null,
    "date": "2025-02-03",
    "medication": "لقاح باراميكسو PMV",
    "notes": "",
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "h-3",
+   "id": "afc9f0e1-8093-5843-8809-3a72770248fc",
    "eventType": "treatment",
    "wholeLoft": true,
    "birdId": null,
    "date": "2026-03-25",
    "medication": "رونيدازول — وقاية من الترايكوموناس",
    "notes": "كورس ٥ أيام في ماء الشرب",
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "h-4",
+   "id": "35801f90-4c12-54b5-85f3-fbfb9630f111",
    "eventType": "illness",
    "wholeLoft": false,
-   "birdId": "y-lulu",
+   "birdId": "914beb55-594d-5cfe-afde-ad6c05221233",
    "date": "2026-05-02",
    "medication": "",
    "notes": "إسهال أخضر بعد سباق القويرة — عزل ومتابعة، تعافت خلال أسبوع",
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "h-5",
+   "id": "538dbe78-dcce-55f9-8c25-d3e545ed007c",
    "eventType": "treatment",
    "wholeLoft": false,
-   "birdId": "y-lulu",
+   "birdId": "914beb55-594d-5cfe-afde-ad6c05221233",
    "date": "2026-05-03",
    "medication": "أمبروليوم — كوكسيديا",
    "notes": "",
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   },
   {
-   "id": "h-6",
+   "id": "bbb1152f-441b-5653-8588-24305709e5a5",
    "eventType": "check",
    "wholeLoft": false,
-   "birdId": "b-barq",
+   "birdId": "0f8611fe-12c2-5bb5-8c91-a9e98c8c0102",
    "date": "2026-01-10",
    "medication": "",
    "notes": "فحص ما قبل الموسم — وزن وريش ممتازان",
-   "loftId": "loft-zarqa",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
    "updatedAt": "2026-08-01T09:00:00.000Z"
   }
  ],

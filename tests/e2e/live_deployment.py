@@ -1,6 +1,14 @@
 import os
 """Verify the REAL deployment: secure context, SW install, PWA installability, offline."""
 from playwright.sync_api import sync_playwright
+
+# The shipped datasets carry real uuids (v1.9.1). Python's uuid5 derives exactly
+# what tools/idmap.js derives from the same namespace and key, so these suites
+# keep naming birds by the readable key that documents what they are.
+import uuid as _uuid
+_ID_NS = _uuid.UUID('7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f')
+def bird_id(key):
+    return str(_uuid.uuid5(_ID_NS, key))
 URL='https://nahdaeverything-web.github.io/Zajildb/'
 ok=fail=0
 def check(n,c,e=''):
@@ -40,7 +48,7 @@ with sync_playwright() as p:
     check('OFFLINE: app boots with no connection', page.locator('.nav-link').count()==6)
     check('OFFLINE: data intact', page.locator('.bird-row').count()==38,
           str(page.locator('.bird-row').count()))
-    page.goto(URL+'#/pedigree/g5-faris26'); page.wait_for_timeout(1500)
+    page.goto(URL+'#/pedigree/'+bird_id('g5-faris26')); page.wait_for_timeout(1500)
     badge=page.locator('.coi-headline .coi-badge').inner_text() if page.locator('.coi-headline .coi-badge').count() else 'none'
     check('OFFLINE: pedigree + COI compute', '12.5' in badge, badge)
     page.screenshot(path='/tmp/claude-1000/-home-samir/8788c756-998b-4a82-9d7a-2ebbad47d910/scratchpad/live-offline.png')
