@@ -8,17 +8,31 @@ import uuid as _uuid
 _ID_NS = _uuid.UUID('7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f')
 def bird_id(key):
     return str(_uuid.uuid5(_ID_NS, key))
-# REQUIRES a static server on 8124 whose document root contains `zajil/`
-# pointing at the repo — it simulates GitHub Pages serving from a subdirectory.
-# Provision it as a SYMLINK, never a copy:
+# GitHub Pages serves this project from a subdirectory, so the app must work
+# under one. This suite PROVISIONS ITS OWN SERVER rather than assuming one is
+# running: the document root was once a stale COPY of the repo made by hand, and
+# the suite passed against a week-old tree for eight days without saying so. A
+# test that depends on something it did not start can be green about the wrong
+# thing.
 #
-#   mkdir -p /tmp/pages-sim && ln -sfn /path/to/zajil /tmp/pages-sim/zajil
-#   cd /tmp/pages-sim && python3 -m http.server 8124 --bind 127.0.0.1
-#
-# It was a copy once, and this suite quietly tested a week-old tree until the
-# shipped datasets changed under it and the mismatch finally surfaced. A symlink
-# cannot go stale.
-URL = 'http://127.0.0.1:8124/zajil/'
+# The root is a temp directory holding a SYMLINK to the repo, so it is the live
+# tree by construction and cannot drift.
+import functools, http.server, os, socketserver, tempfile, threading
+
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_root = tempfile.mkdtemp(prefix='zajil-subpath-')
+os.symlink(REPO, os.path.join(_root, 'zajil'))
+
+class _Quiet(http.server.SimpleHTTPRequestHandler):
+    def log_message(self, *a): pass
+
+class _Server(socketserver.ThreadingTCPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+_httpd = _Server(('127.0.0.1', 0), functools.partial(_Quiet, directory=_root))
+threading.Thread(target=_httpd.serve_forever, daemon=True).start()
+URL = f'http://127.0.0.1:{_httpd.server_address[1]}/zajil/' 
 ok = fail = 0
 def check(n, c, e=''):
     global ok, fail

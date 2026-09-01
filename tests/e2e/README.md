@@ -44,6 +44,14 @@ Each suite prints `✓`/`✗` per assertion and exits non-zero on failure.
   runs `initDB()` first, which creates a current-version database and makes
   opening an older version block forever.
 
+### Suites provision what they depend on
+
+`subpath_hosting.py` starts its own server on an ephemeral port, with a temp
+directory holding a **symlink** to the repo. It used to assume a hand-started
+server on 8124 whose document root was a stale copy, and it passed against a
+week-old tree for eight days without saying so. A suite that depends on
+something it did not start can be green about the wrong thing.
+
 ### One suite is opt-in
 
 **`live_deployment.py` does not run by default.** It needs the internet, and it

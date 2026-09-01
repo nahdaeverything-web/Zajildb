@@ -56,7 +56,8 @@ R5 and B; R2 and R3 are already closed.
 | R3 | error surfacing under a real failure | **resolved, no defect** |
 | R4 | an empty default loft per device | **fixed** |
 | R5 | pulled-delete identity asymmetry | **fixed on `fix/v1.9.1-pulled-delete`**, held |
-| B | example datasets → real uuids | not started |
+| B | example datasets → real uuids | **done** |
+| R6 | a suite depended on a server it did not start | **fixed** |
 
 
 ### R1. There is no sign-in surface in the UI
@@ -187,6 +188,25 @@ first two: that record was never anywhere but this device.
 > loft BEFORE first login is not pristine, so it keeps that loft and pushes it.
 > Meeting a named remote loft, the account legitimately ends with two. The
 > duplicate notice covers the birds; merging or deleting lofts is P6.
+
+### R6. A suite depended on a server it did not start — FIXED (v1.9.1)
+
+`subpath_hosting.py` assumed a static server on :8124 that nothing in the suite
+provisioned. Its document root was a hand-made COPY of the repo, and the suite
+passed against a week-old tree for eight days — surfacing only when the shipped
+datasets changed under it in item B.
+
+> **A test that depends on something it did not start can be green about the
+> wrong thing.** It was not failing; it was passing, about a tree nobody was
+> shipping.
+
+Fixed: the suite starts its own threaded server on an **ephemeral port**, rooted
+at a temp directory holding a symlink to the repo — the live tree by
+construction, and no port to collide with. Verified with nothing external
+running on 8124.
+
+Worth generalising: this is the only suite that had such a dependency, but the
+class is easy to reintroduce. If a suite needs infrastructure, it starts it.
 
 ### R5. A pulled record was keyed on its body id, not the server's — FIXED ON BRANCH
 
