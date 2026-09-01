@@ -8,7 +8,7 @@ exhaustive.
 
 **20 open** (0 high · 10 medium · 10 low) ·
 **13 closed in v1.7** · **0 closed in v1.8** · **0 closed in v1.9** ·
-plus **3 open decisions**, **6 planned items**, a **v1.9.1 bundle**, and a
+plus **3 open decisions**, **7 planned items**, a **v1.9.1 bundle**, and a
 **release checklist**
 below.
 
@@ -297,6 +297,25 @@ v1.9 on the grounds that the failure mode is a single retried request, which
 push idempotency absorbs — and that storing an expiry means a settings key
 holding a number the server already tells the truth about. Recorded so the
 trade-off is not re-litigated from scratch.
+
+### P7. A guard that HANDOFF's stated version equals sw.js VERSION — v1.9.x
+
+Two rows of HANDOFF's status snapshot described the world before v1.9.0
+shipped, and were caught by eye during v1.9.1's release prep rather than by
+anything automatic. Nothing catches stale prose the way a guard catches stale
+code, and the status snapshot is the first thing a new session reads — a wrong
+version there sends someone looking at the wrong build.
+
+**The cheap, high-value slice:** assert that the version string HANDOFF claims
+to be current equals `sw.js`'s `VERSION`. That is a single fact, mechanically
+checkable, and it is the one most likely to mislead.
+
+Deliberately NOT "check every claim in HANDOFF" — most of it is prose that no
+guard can validate, and a guard that tries would either be noisy or would
+encourage writing only what a machine can check. One fact, checked exactly.
+
+Note the ordering it implies: bumping `sw.js` VERSION without updating HANDOFF
+would fail the build, which is the point.
 
 ### P6. Deleting and merging lofts — the cascade question first
 
