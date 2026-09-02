@@ -45,8 +45,8 @@ radius: cards 20px · buttons 16px · row-cards 18px · chips/pills 999px
   Full size on profiles, compact (`plate sm`) in lists.
 - **Solid color blocks** for key moments: the verified notice (brand), best result (gold).
 - **Pill segmented control**, active state solid ink (black), not brand.
-- **Bottom tab bar**: الرئيسية · الطيور · الأنساب · السباقات · المزيد — 26px line icons,
-  active in brand color.
+- **Bottom tab bar**: the app's six real destinations, ruled final — الطيور · التزاوج ·
+  السباقات · الصحة · الإحصائيات · الأدوات — 26px line icons, active in brand color.
 
 ## RTL rules (fixed)
 Everything right-to-left. Data values (rings, dates, speeds) are LTR islands. Back arrows
@@ -196,7 +196,7 @@ later pass.
 - Breakpoints: ≤700px phone (as designed) · 701–1099px content column centered, max
   720px · ≥1100px desktop layout.
 - ≥1100px: the bottom tab bar becomes a fixed side rail on the RIGHT (the RTL start
-  side) — same five items, icon + label, brand-colored active state. Content sits to
+  side) — the same six items, icon + label, brand-colored active state. Content sits to
   its left, max 960px, centered in the remaining space.
 - Cards may pair two-up on desktop where they are peers (stat tiles row widens to 3–6
   tiles; overview cards two columns). Never three-plus columns of prose.
@@ -224,6 +224,6 @@ in the codebase today. Screen 10 (الإحصائيات) verified to exist; its e
 contents are unconfirmed — verify before its session. Screen 11's base feature is
 verified in detail (cert view, depth toggle, AR/EN switch, print); the 9:16 image and
 QR slot are new additions. The real app nav (six destinations, no home, no sign-in
-destination) is verified; the redesign's final tab set is an open product decision.
+destination) is verified; the tab set is RULED (2026-09-02): all six kept as-is.
 If any control seems missing or extra during a session, the app is the truth — flag it
 rather than invent.
