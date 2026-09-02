@@ -36,35 +36,36 @@ If a proposed feature doesn't serve one of those three, it is out of scope.
 | | |
 |---|---|
 | App version (service worker) | `zajil-v1.9.1` |
-| Branch | `release/v1.9.1` — **not merged**; merge and deploy are a separate explicit go |
-| `main` at | `3a7bed7` — v1.9.0, tagged `v1.9.0` |
-| **Live** | **https://nahdaeverything-web.github.io/Zajildb/** — serving `zajil-v1.9.0`, SYNC-INERT by decision (`js/sync-config.js` ships empty) |
+| Branch | `main` — v1.9.1 merged and deployed; `release/v1.9.1` retained |
+| `main` at | `97a0b99` — "v1.9.1: sign-in form, identity fix, uuid datasets, loft adoption" · tagged `v1.9.1` (plus docs commits since) |
+| **Live** | **https://nahdaeverything-web.github.io/Zajildb/** — serving `zajil-v1.9.1`, verified · SYNC-INERT by decision (`js/sync-config.js` ships empty), so sync is present, inert and invisible until a release bundle injects config |
 | Node tests | **141 passing, 0 failing** — `node tests/run.js` |
 | Browser assertions | **544 passing, 0 failing** across **27 suites** — `python3 tests/e2e/run_all.py` |
 | Opt-in suites | 4, never silently absent — each printed as `[skip]` with its reason and the flag that lifts it: `live_deployment.py` (`--live`), `auth_live.py` (`--live-auth`, 18 passing), `push_live.py` (`--live-push`, 24 passing), `pull_live.py` (`--live-pull`, 12 passing). The three sync suites take every credential from the environment and commit none. |
 | Browser suites | committed under `tests/e2e/` with a runner and README, plus 6 diagnostic scripts |
 | Source | `js/` 6,912 lines · the db layer is **2,425** across a facade and five modules (§15.1) · `css/app.css` 403 · `sw.js` 107 |
-| Tests | node 1,873 lines · browser 4,623 lines |
+| Tests | node 1,873 lines · browser 4,905 lines (incl. `tests/e2e/diagnostics/`) |
 | Server | Supabase, schema in [docs/SYNC-DESIGN.md](docs/SYNC-DESIGN.md) §1 — **that block is the complete current schema**, guard-asserted, and is what a fresh project is created from |
 | Generators | `tools/` 716 lines |
 | Example datasets | 20-bird loft + 38-bird / 6-generation teaching loft |
-| Version control | git, pushed to **github.com/nahdaeverything-web/Zajildb** (public); `pre-v1.7-baseline` tagged, `hardening/v1.7` retained |
+| Version control | git, pushed to **github.com/nahdaeverything-web/Zajildb** (public); tags `pre-v1.7-baseline`, `pre-v1.8-baseline`, `v1.8.0`, `v1.8.1`, `v1.9.0`, `v1.9.1` |
+| Design specs | [design/](design/) — frozen approved screens, the v3 design kit, drafts. Not app code: nothing there is loaded, precached or imported |
 | Known issues | catalogued in [BACKLOG.md](BACKLOG.md) |
 
 Line counts recounted from source, not carried forward:
 
 ```
 $ find js -name "*.js" | xargs wc -l | tail -1
-   4587 total
+  6912 total
 $ wc -l css/app.css sw.js
-    372 css/app.css
-     89 sw.js
+  403 css/app.css
+  107 sw.js
 $ find tests -name "*.js" -not -path "*/e2e/*" | xargs wc -l | tail -1
-   1014 total
+ 1873 total
 $ find tests/e2e -name "*.py" | xargs wc -l | tail -1
-   1407 total
+  4905 total
 $ find tools -name "*.js" | xargs wc -l | tail -1
-    448 total
+  716 total
 ```
 
 ---
