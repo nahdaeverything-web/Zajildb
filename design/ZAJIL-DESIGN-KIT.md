@@ -143,21 +143,37 @@ The app's utility hub. ⚙ Cards, in order:
   list (rare; shows isolated records with reasons).
 - **About (حول التطبيق)**: version row (الإصدار zajil-v1.9.1).
 
-## 10. 🎨 Home / dashboard (الرئيسية) · 🖥 desktop layout too (Part 3)
-The tab exists; today it's minimal. Design the aspiration: season summary (birds,
-pairs, active eggs with days-to-hatch, next race), recent activity. Big numbers, calm.
+## 10. 🎨 Stats (الإحصائيات) · 🖥 desktop layout too (Part 3)
+A real destination in today's app (verified). Redesign it in the bold system — big
+numbers ARE this screen's native language. May evolve toward a dashboard (season
+summary, active eggs with days-to-hatch, next race, recent activity) as part of the
+redesign. Exact current contents: ask before the session if unsure.
+
+### ⚠ NAVIGATION NOTE (verified against the app, decision pending)
+The REAL app nav has SIX destinations: الطيور (#/birds) · التزاوج (#/breeding) ·
+السباقات (#/races) · الصحة (#/health) · الإحصائيات (#/stats) · الأدوات (#/tools).
+There is NO home tab and NO sign-in destination (auth lives inside the المزامنة card
+in الأدوات). RULED (2026-09-02): the redesign KEEPS all six tabs exactly as-is.
+Every screen's tab bar shows these six; the prototype's five-tab bar is superseded —
+treat it as placeholder until the prototype is regenerated.
 
 ## 11. 🎨 THE PEDIGREE CERTIFICATE (شهادة النسب) — special deliverable
-Not an app screen: a DOCUMENT the app generates. Two formats:
-- **A4 landscape** (print/PDF) and **a phone-shareable image** (story ratio 9:16).
+This is a REDESIGN of a live feature (verified): the app already has a printable
+certificate view (#/cert/<id>), reached via الشهادة buttons on the pedigree view and
+the bird detail. Its existing controls MUST survive the redesign:
+⚙ generation depth toggle (3 / 4 / 5 generations) · ⚙ Arabic / English content
+switch (independent of the UI language) · ⚙ print action (browser print, @media
+print styling that hides app chrome).
+Formats: the printable A4 landscape (today's mode, redesigned) and NEW: a
+phone-shareable image (story ratio 9:16).
 ⚙ Content: Zajil brand mark + «شهادة نسب» title; the bird: name huge, ring plate,
-photo slot, sex, hatch date, color; the loft & breeder; 5-generation tree (names +
-rings, mono); COI value; «سجل موثق في زاجل منذ …» verification line; issue date;
-a QR-code slot (links to the future public bird page).
-Design direction: THE BOLD SYSTEM ON PAPER — this replaces the ornate certificates of
-the old world with Gulf-modern confidence. It will be framed on walls and shared in
-WhatsApp groups; it is Zajil's single biggest marketing surface. Use the same tokens;
-gold is at home here.
+photo slot, sex, hatch date, color; the loft & breeder; the generation tree (names +
+rings, mono) at the chosen depth; COI value; «سجل موثق في زاجل منذ …» verification
+line; issue date; a QR-code slot (future public bird page — does not exist yet, design
+the slot, mark it coming-soon-capable).
+Design direction: THE BOLD SYSTEM ON PAPER — replaces the ornate certificates of the
+old world with Gulf-modern confidence. Framed on walls, forwarded in WhatsApp groups —
+Zajil's single biggest marketing surface. Same tokens; gold is at home here.
 
 ## 12. 🎨 Shared states (design once, reuse everywhere)
 - Sync status row: offline / syncing / pending / amber error (spec in Part 1).
@@ -204,7 +220,10 @@ The certificate (deliverable 11) is format-fixed (A4 + 9:16) and unaffected by t
 
 ## Verification note (for the record)
 Screens 1–9 and 12 are verified against the shipped app (v1.9.1) — every ⚙ item exists
-in the codebase today. Screen 10 is aspirational by declared intent. Screen 11 exists
-today only as a basic export; the certificate design is its intended replacement. If any
-control seems missing or extra during a session, the app is the truth — flag it rather
-than invent.
+in the codebase today. Screen 10 (الإحصائيات) verified to exist; its exact current
+contents are unconfirmed — verify before its session. Screen 11's base feature is
+verified in detail (cert view, depth toggle, AR/EN switch, print); the 9:16 image and
+QR slot are new additions. The real app nav (six destinations, no home, no sign-in
+destination) is verified; the redesign's final tab set is an open product decision.
+If any control seems missing or extra during a session, the app is the truth — flag it
+rather than invent.
