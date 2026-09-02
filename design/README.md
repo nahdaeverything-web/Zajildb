@@ -1,53 +1,46 @@
 # Design archive
 
-**These are specifications, not application code.** Nothing in this folder is
-loaded, precached, imported, or served by Zajil. `sw.js` does not list it,
-`index.html` does not reference it, and no module under `js/` imports from it.
-That isolation is checked, not assumed:
+**Design specs, not app code.** Nothing here is loaded, precached, or imported
+by the app. `sw.js` does not list it, `index.html` does not reference it, and no
+module under `js/` imports from it. That isolation is checked, not assumed:
 
 ```bash
 grep -rn "design/" sw.js js/ index.html      # expect no matches
 ```
 
-The app is vanilla ES modules with no build step. A design file here may use
-whatever it likes — inline styles, its own fonts, a support script — because it
-never runs alongside the app.
-
-## Layout
-
-| | |
-|---|---|
-| `approved/` | **Frozen.** The specification the app is measured against. |
-| `drafts/` | Working material and stateful references. Not authoritative. |
-| `ZAJIL-DESIGN-KIT.md` | The design contract: brief, inventory, responsive rules. |
+A design file may use whatever it likes — inline styles, its own fonts, a
+support script — because it never runs alongside the app.
 
 ## approved/ is frozen
 
-A file in `approved/` is the agreed answer to "what should this screen be?".
-Changing one is a design decision, not an edit.
+Changing a file in `approved/` is a design decision, not an edit.
 
-- **Changes need sign-off**, and a commit message saying *why* the design
-  changed — not just that it did.
-- **Never overwrite.** A new version is a new file: `<screen>-vN.html`.
-  `add-edit-bird-v1.html` stays exactly as it is when `add-edit-bird-v2.html`
-  arrives, so the two can be compared and so a decision already made is not
-  quietly replaced.
+- **Changes require explicit sign-off**, and a commit message saying **what
+  changed and why** — not just that it did.
+- **Naming: `<screen>-vN.html`. Never overwrite.** A revision is a new `-vN`
+  file, so `add-edit-bird-v1.html` still exists unchanged when
+  `add-edit-bird-v2.html` arrives and the two can be compared.
 - **Nothing here is edited in passing.** If a spec contradicts the app, or
-  contradicts another spec, that is raised as a question — it is not resolved by
-  changing the file.
+  another spec, that is raised as a question — never resolved by changing the
+  file.
 
 ## Versions
 
-| File | What it is |
-|---|---|
-| `approved/zajil-prototype.html` | **The v3 design system anchor** — brand `#128C6E`. Sign-in, loft home, bird profile. The reference for colour, type, spacing and component shape across every other screen. |
-| `approved/add-edit-bird-v1.html` | **The canonical add/edit bird spec.** Self-contained and corrected; this is the one to build against. |
+| Screen | File | Status |
+|---|---|---|
+| Design system (sign-in, loft home, bird profile) | `approved/zajil-prototype.html` | approved |
+| Add/edit bird | `approved/add-edit-bird-v1.html` | approved |
+
+**Design contract:** [`ZAJIL-DESIGN-KIT.md`](ZAJIL-DESIGN-KIT.md) — brief,
+inventory, responsive rules; brand `#128C6E`.
 
 ## drafts/
 
+Working material and stateful `.dc` references. Not authoritative.
+
 | File | What it is |
 |---|---|
-| `add-edit-bird-states.dc.html` | Interactive states reference: add / edit / sibling modes and validation states. **Depends on `support.js`** and is not the canonical spec — `approved/add-edit-bird-v1.html` is. Useful for seeing what each state looks like, not for deciding what it should be. |
+| `add-edit-bird-states.dc.html` | Interactive states reference: add / edit / sibling modes and validation states. **Depends on `support.js`**, and is **not** the canonical spec — `approved/add-edit-bird-v1.html` is. Useful for seeing what a state looks like, not for deciding what it should be. |
 | `support.js` | Required by the `.dc.html` reference above. |
 
 ## Not here, deliberately
