@@ -29,8 +29,13 @@ Changing a file in `approved/` is a design decision, not an edit.
 | Screen | File | Status |
 |---|---|---|
 | Design system (sign-in, loft home, bird profile) | `approved/zajil-prototype.html` | approved |
-| Add/edit bird | `approved/add-edit-bird-v1.html` | approved |
+| Add/edit bird | `approved/add-edit-bird-v2.html` | **approved — the file the React port implements** |
+| Add/edit bird | `approved/add-edit-bird-v1.html` | superseded by v2 (rail side fix) |
 | Pedigree tree | `approved/pedigree-tree-v1.html` | approved |
+
+Where two versions of a screen are listed, **the highest `-vN` is the one to
+build**. Earlier versions stay in place unchanged so a decision already made
+can still be read — that is what "never overwrite" is for.
 
 **Design contract:** [`ZAJIL-DESIGN-KIT.md`](ZAJIL-DESIGN-KIT.md) — brief,
 inventory, responsive rules; brand `#128C6E`.
