@@ -42,7 +42,8 @@ Working material and stateful `.dc` references. Not authoritative.
 | File | What it is |
 |---|---|
 | `add-edit-bird-states.dc.html` | Interactive states reference: add / edit / sibling modes and validation states. **Depends on `support.js`**, and is **not** the canonical spec — `approved/add-edit-bird-v1.html` is. Useful for seeing what a state looks like, not for deciding what it should be. |
-| `support.js` | Required by the `.dc.html` reference above. |
+| `pedigree-tree-states.dc.html` | Interactive states reference for the pedigree tree. **Depends on `support.js`**, and is **not** the canonical spec — `approved/pedigree-tree-v1.html` is. |
+| `support.js` | Required by both `.dc.html` references above. |
 
 ## Not here, deliberately
 

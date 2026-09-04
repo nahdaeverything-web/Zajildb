@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin" />
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet" />
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#E9EDF0;font-family:'Alexandria',system-ui,sans-serif;color:#101820;line-height:1.5;direction:rtl}
+a{color:#0E6F57}
+a:hover{color:#128C6E}
+[data-chartwrap]{scrollbar-width:thin}
+@media (min-width:701px){
+  [data-phone]{max-width:720px !important;border-inline:1px solid #E4E9ED}
+  [data-cta]{max-width:720px !important}
+}
+@media (min-width:1100px){
+  [data-rail]{display:flex !important}
+  [data-tabbar]{display:none !important}
+  [data-cta]{display:none !important}
+  [data-hint]{display:none !important}
+  [data-topicons]{display:none !important}
+  [data-actions]{display:flex !important}
+  [data-phone]{max-width:none !important;margin-inline-start:132px;border:none !important}
+  [data-head]{flex-direction:row !important;align-items:flex-end;justify-content:space-between;gap:40px}
+  [data-tiles]{width:400px;flex:none}
+  [data-chart]{min-width:0 !important}
+  [data-chartwrap]{overflow-x:visible !important;padding-inline:32px !important}
+  [data-body]{padding-bottom:40px !important}
+  [data-headwrap]{padding-inline:32px !important}
+}
+@media print{
+  @page{size:A4 landscape;margin:9mm}
+  body{background:#FFFFFF}
+  [data-phone]{max-width:none !important;margin:0 !important;border:none !important;background:#FFFFFF !important}
+  [data-rail],[data-tabbar],[data-cta],[data-hint],[data-topbar],[data-actions],[data-legend]{display:none !important}
+  [data-chartwrap]{overflow:visible !important;padding:0 !important}
+  [data-chart]{min-width:0 !important;height:590px !important}
+  [data-headwrap]{padding:0 0 10px !important;border-bottom:1px solid #E4E9ED !important}
+  [data-body]{padding:0 !important}
+  [data-tiles]{width:380px !important}
+  [data-n="1"]{padding:10px 12px !important;min-height:0 !important}
+  [data-n="1"] [data-nm]{font-size:22px !important}
+  [data-n="2"],[data-n="3"]{min-height:0 !important;padding:7px 10px !important}
+  [data-n="4"],[data-n="5"]{min-height:0 !important;padding:5px 9px !important}
+  [data-n="2"] [data-nm]{font-size:16px !important}
+  [data-n="3"] [data-nm]{font-size:14px !important}
+  [data-n="4"] [data-nm]{font-size:12.5px !important}
+  [data-n="5"] [data-nm]{font-size:11px !important}
+  [data-n="4"] [data-rg]{font-size:9.5px !important}
+  [data-n="5"] [data-rg]{font-size:9px !important}
+  [data-print-only]{display:block !important}
+}
+</style>
+</helmet>
+<div dir="rtl" data-screen-label="شجرة النسب" style="min-height:100vh;display:flex;justify-content:center;background:#E9EDF0">
+<div data-phone="1" style="width:100%;max-width:430px;min-height:100vh;background:#F5F7F8;position:relative">
+
+<div data-topbar="1" style="background:#FFFFFF;padding:16px 20px 0">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+    <button aria-label="رجوع" style="width:46px;height:46px;border:none;border-radius:14px;cursor:pointer;background:#F5F7F8;color:#101820;display:grid;place-items:center" style-hover="background:#E3F4EE">
+      <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M9 6l6 6-6 6"></path></svg>
+    </button>
+    <span style="font-size:15px;font-weight:700;color:#8C97A2">برق</span>
+    <span data-topicons="1" style="display:flex;gap:8px">
+      <button aria-label="مشاركة" style="width:46px;height:46px;border:none;border-radius:14px;cursor:pointer;background:#F5F7F8;color:#101820;display:grid;place-items:center" style-hover="background:#E3F4EE">
+        <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;stroke-width:2.3;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M12 15V4M8 8l4-4 4 4M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"></path></svg>
+      </button>
+      <button aria-label="طباعة" style="width:46px;height:46px;border:none;border-radius:14px;cursor:pointer;background:#F5F7F8;color:#101820;display:grid;place-items:center" style-hover="background:#E3F4EE">
+        <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;stroke-width:2.3;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M7 9V4h10v5M7 18H5a1 1 0 0 1-1-1v-6h16v6a1 1 0 0 1-1 1h-2M7 15h10v5H7z"></path></svg>
+      </button>
+    </span>
+  </div>
+</div>
+
+<div data-headwrap="1" style="background:#FFFFFF;border-bottom:1px solid #E4E9ED;padding:14px 20px 22px">
+  <div data-head="1" style="display:flex;flex-direction:column;gap:22px">
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#8C97A2">لوفت الفحيص · موسم 2026 / 2027</div>
+      <h1 style="font-size:40px;font-weight:900;line-height:1.05;margin-top:4px">شجرة النسب</h1>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap">
+        <span style="font-size:20px;font-weight:800">برق</span>
+        <span style="display:inline-flex;align-items:stretch;direction:ltr;border-radius:10px;overflow:hidden;background:#101820">
+          <span style="background:#C9971F;color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10px;padding:0 7px;display:grid;place-items:center">24</span>
+          <span style="color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px;letter-spacing:1px;padding:6px 10px">JOR 24 17352</span>
+        </span>
+        <span style="font-size:13.5px;font-weight:700;padding:6px 14px;border-radius:999px;background:#E3F4EE;color:#0E6F57">ذكر</span>
+      </div>
+    </div>
+
+    <div data-tiles="1" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+      <div style="background:#FFFFFF;border:1px solid #E4E9ED;border-radius:20px;padding:16px 10px 14px;text-align:center">
+        <div style="font-size:34px;font-weight:900;color:#128C6E;direction:ltr;line-height:1;font-variant-numeric:tabular-nums">3.1%</div>
+        <div style="font-size:12.5px;color:#4A5560;font-weight:600;margin-top:6px">التربية الداخلية</div>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E4E9ED;border-radius:20px;padding:16px 10px 14px;text-align:center">
+        <div style="font-size:34px;font-weight:900;color:#128C6E;direction:ltr;line-height:1;font-variant-numeric:tabular-nums">25</div>
+        <div style="font-size:12.5px;color:#4A5560;font-weight:600;margin-top:6px">سلفًا من 30</div>
+      </div>
+      <div style="background:#FFFFFF;border:1px solid #E4E9ED;border-radius:20px;padding:16px 10px 14px;text-align:center">
+        <div style="font-size:34px;font-weight:900;color:#128C6E;direction:ltr;line-height:1;font-variant-numeric:tabular-nums">4</div>
+        <div style="font-size:12.5px;color:#4A5560;font-weight:600;margin-top:6px">أجيال مكتملة</div>
+      </div>
+    </div>
+
+    <div data-actions="1" style="display:none;gap:10px;flex:none">
+      <button style="border:2px solid #101820;background:transparent;color:#101820;border-radius:16px;padding:15px 22px;font-family:'Alexandria',sans-serif;font-size:15.5px;font-weight:800;cursor:pointer;min-height:50px" style-hover="background:#101820;color:#FFFFFF">طباعة</button>
+      <button style="border:2px solid #101820;background:transparent;color:#101820;border-radius:16px;padding:15px 22px;font-family:'Alexandria',sans-serif;font-size:15.5px;font-weight:800;cursor:pointer;min-height:50px" style-hover="background:#101820;color:#FFFFFF">مشاركة</button>
+      <button style="border:none;background:#128C6E;color:#fff;border-radius:16px;padding:15px 26px;font-family:'Alexandria',sans-serif;font-size:15.5px;font-weight:800;cursor:pointer;min-height:50px" style-hover="background:#0E6F57">شهادة النسب</button>
+    </div>
+  </div>
+</div>
+
+<div data-body="1" style="padding-bottom:170px">
+
+  <div data-legend="1" style="display:flex;flex-wrap:wrap;gap:8px 18px;padding:16px 20px 4px">
+    <span style="font-size:12.5px;font-weight:700;color:#8C97A2">الأب أعلى · الأم أسفل</span>
+    <span style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:#8C97A2">
+      <span style="width:8px;height:8px;border-radius:999px;background:#C9971F"></span>سلف مشترك
+    </span>
+    <span style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:#8C97A2">
+      <span style="width:16px;height:0;border-top:1px dashed #8C97A2"></span>غير مسجل
+    </span>
+  </div>
+
+  <div data-hint="1" style="display:flex;align-items:center;gap:8px;padding:8px 20px 12px;font-size:12.5px;font-weight:700;color:#8C97A2">
+    <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M15 6l-6 6 6 6"></path></svg>
+    اسحب لرؤية الأجيال الأقدم
+  </div>
+
+  <div data-chartwrap="1" style="overflow-x:auto;padding:0 20px 8px">
+    <div data-chart="1" style="min-width:836px">
+
+      <div style="display:flex;padding-bottom:10px">
+        <div style="flex:1.2;min-width:190px;font-size:11.5px;font-weight:800;color:#8C97A2">الطائر</div>
+        <div style="flex:1;min-width:172px;padding-inline-start:20px;font-size:11.5px;font-weight:800;color:#8C97A2">الوالدان</div>
+        <div style="flex:1;min-width:166px;padding-inline-start:20px;font-size:11.5px;font-weight:800;color:#8C97A2">الأجداد</div>
+        <div style="flex:1;min-width:158px;padding-inline-start:20px;font-size:11.5px;font-weight:800;color:#8C97A2">الأجداد الكبار</div>
+        <div style="flex:1;min-width:150px;padding-inline-start:20px;font-size:11.5px;font-weight:800;color:#8C97A2">الجيل الخامس</div>
+      </div>
+
+      <div style="display:flex;height:800px">
+
+        <div style="flex:1.2;min-width:190px;display:flex;align-items:center">
+          <button data-n="1" style="width:100%;background:#FFFFFF;border:2px solid #101820;border-radius:20px;padding:16px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif" style-hover="background:#E3F4EE">
+            <span data-nm="1" style="display:block;font-size:28px;font-weight:900;line-height:1.1">برق</span>
+            <span style="display:inline-flex;align-items:stretch;direction:ltr;border-radius:10px;overflow:hidden;background:#101820;margin-top:10px">
+              <span style="background:#C9971F;color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10px;padding:0 7px;display:grid;place-items:center">24</span>
+              <span style="color:#fff;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px;letter-spacing:1px;padding:6px 10px">JOR 24 17352</span>
+            </span>
+            <span style="display:block;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;color:#4A5560;direction:ltr;text-align:right;margin-top:8px">18 / 03 / 2024</span>
+          </button>
+        </div>
+
+        <div style="flex:1;min-width:172px;padding-inline-start:20px;display:flex;flex-direction:column">
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="2" style="width:100%;min-height:56px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:18px;padding:12px 14px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:4px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:20px;font-weight:800;line-height:1.15">الصاعقة</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px;color:#4A5560;direction:ltr;text-align:right">JOR 21 08841</span>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="2" style="width:100%;min-height:56px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:18px;padding:12px 14px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:4px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:20px;font-weight:800;line-height:1.15">غيمة</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:12px;color:#4A5560;direction:ltr;text-align:right">JOR 22 04117</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:1;min-width:166px;padding-inline-start:20px;display:flex;flex-direction:column">
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="3" style="width:100%;min-height:52px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:16px;padding:10px 13px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:3px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:17px;font-weight:800;line-height:1.15">النشمي</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11.5px;color:#4A5560;direction:ltr;text-align:right">JOR 18 02290</span>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="3" style="width:100%;min-height:52px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:16px;padding:10px 13px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:3px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:17px;font-weight:800;line-height:1.15">فيروز</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11.5px;color:#4A5560;direction:ltr;text-align:right">NL 19 1447206</span>
+              </button>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="3" style="width:100%;min-height:52px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:16px;padding:10px 13px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:3px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:17px;font-weight:800;line-height:1.15">سلطان</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11.5px;color:#4A5560;direction:ltr;text-align:right">JOR 19 05512</span>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="3" style="width:100%;min-height:52px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:16px;padding:10px 13px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:3px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:17px;font-weight:800;line-height:1.15">ياقوت</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11.5px;color:#4A5560;direction:ltr;text-align:right">BE 20 6034981</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:1;min-width:158px;padding-inline-start:20px;display:flex;flex-direction:column">
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="4" style="width:100%;min-height:46px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:8px 12px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:15px;font-weight:800;line-height:1.15">عنتر</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;color:#4A5560;direction:ltr;text-align:right">JOR 15 03318</span>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="4" style="width:100%;min-height:46px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:8px 12px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:15px;font-weight:800;line-height:1.15">جوهرة</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;color:#4A5560;direction:ltr;text-align:right">JOR 16 01102</span>
+              </button>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="4" style="width:100%;min-height:46px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:8px 12px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:15px;font-weight:800;line-height:1.15">ذهب</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;color:#4A5560;direction:ltr;text-align:right">NL 16 1338705</span>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="4" style="width:100%;min-height:46px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:8px 12px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:15px;font-weight:800;line-height:1.15">أنيسة</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;color:#4A5560;direction:ltr;text-align:right">NL 17 1402884</span>
+              </button>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="4" style="width:100%;min-height:46px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:8px 12px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:15px;font-weight:800;line-height:1.15">مهند</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;color:#4A5560;direction:ltr;text-align:right">JOR 16 04471</span>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="4" style="width:100%;min-height:46px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:8px 12px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:15px;font-weight:800;line-height:1.15">نجمة</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;color:#4A5560;direction:ltr;text-align:right">JOR 17 02845</span>
+              </button>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="4" style="width:100%;min-height:46px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:8px 12px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:15px;font-weight:800;line-height:1.15">عاصف</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;color:#4A5560;direction:ltr;text-align:right">BE 17 6011240</span>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="4" style="width:100%;min-height:46px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:8px 12px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:15px;font-weight:800;line-height:1.15">مسك</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;color:#4A5560;direction:ltr;text-align:right">BE 18 6027113</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:1;min-width:150px;padding-inline-start:20px;display:flex;flex-direction:column">
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" style="width:100%;min-height:44px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span style="display:flex;align-items:center;gap:6px"><span style="flex:none;width:7px;height:7px;border-radius:999px;background:#C9971F"></span><span data-nm="1" style="font-size:13.5px;font-weight:800;line-height:1.15">الفاتح</span></span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10.5px;color:#4A5560;direction:ltr;text-align:right">JOR 12 00874</span>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" style="width:100%;min-height:44px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:13.5px;font-weight:800;line-height:1.15">خنساء</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10.5px;color:#4A5560;direction:ltr;text-align:right">JOR 13 01560</span>
+              </button>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" style="width:100%;min-height:44px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:13.5px;font-weight:800;line-height:1.15">سيف</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10.5px;color:#4A5560;direction:ltr;text-align:right">JOR 13 02201</span>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" style="width:100%;min-height:44px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:13.5px;font-weight:800;line-height:1.15">دلال</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10.5px;color:#4A5560;direction:ltr;text-align:right">JOR 14 00933</span>
+              </button>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" style="width:100%;min-height:44px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:13.5px;font-weight:800;line-height:1.15">برنس</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10.5px;color:#4A5560;direction:ltr;text-align:right">NL 13 1201884</span>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" aria-label="سلف غير مسجل — إضافة" style="width:100%;min-height:44px;background:#F5F7F8;border:1px dashed #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;align-items:center;justify-content:space-between;gap:6px" style-hover="border-color:#128C6E;background:#E3F4EE">
+                <span style="font-size:13px;font-weight:700;color:#8C97A2">غير معروف</span>
+                <svg viewBox="0 0 24 24" style="flex:none;width:14px;height:14px;stroke:#8C97A2;stroke-width:2.8;fill:none;stroke-linecap:round"><path d="M12 5v14M5 12h14"></path></svg>
+              </button>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" aria-label="سلف غير مسجل — إضافة" style="width:100%;min-height:44px;background:#F5F7F8;border:1px dashed #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;align-items:center;justify-content:space-between;gap:6px" style-hover="border-color:#128C6E;background:#E3F4EE">
+                <span style="font-size:13px;font-weight:700;color:#8C97A2">غير معروف</span>
+                <svg viewBox="0 0 24 24" style="flex:none;width:14px;height:14px;stroke:#8C97A2;stroke-width:2.8;fill:none;stroke-linecap:round"><path d="M12 5v14M5 12h14"></path></svg>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" aria-label="سلف غير مسجل — إضافة" style="width:100%;min-height:44px;background:#F5F7F8;border:1px dashed #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;align-items:center;justify-content:space-between;gap:6px" style-hover="border-color:#128C6E;background:#E3F4EE">
+                <span style="font-size:13px;font-weight:700;color:#8C97A2">غير معروف</span>
+                <svg viewBox="0 0 24 24" style="flex:none;width:14px;height:14px;stroke:#8C97A2;stroke-width:2.8;fill:none;stroke-linecap:round"><path d="M12 5v14M5 12h14"></path></svg>
+              </button>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" style="width:100%;min-height:44px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span style="display:flex;align-items:center;gap:6px"><span style="flex:none;width:7px;height:7px;border-radius:999px;background:#C9971F"></span><span data-nm="1" style="font-size:13.5px;font-weight:800;line-height:1.15">الفاتح</span></span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10.5px;color:#4A5560;direction:ltr;text-align:right">JOR 12 00874</span>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" style="width:100%;min-height:44px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:13.5px;font-weight:800;line-height:1.15">سمراء</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10.5px;color:#4A5560;direction:ltr;text-align:right">JOR 13 04012</span>
+              </button>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" style="width:100%;min-height:44px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:13.5px;font-weight:800;line-height:1.15">مارد</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10.5px;color:#4A5560;direction:ltr;text-align:right">JOR 14 06621</span>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" style="width:100%;min-height:44px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:13.5px;font-weight:800;line-height:1.15">لؤلؤة</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10.5px;color:#4A5560;direction:ltr;text-align:right">JOR 15 03980</span>
+              </button>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" style="width:100%;min-height:44px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:13.5px;font-weight:800;line-height:1.15">هيبة</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10.5px;color:#4A5560;direction:ltr;text-align:right">BE 14 6100392</span>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" aria-label="سلف غير مسجل — إضافة" style="width:100%;min-height:44px;background:#F5F7F8;border:1px dashed #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;align-items:center;justify-content:space-between;gap:6px" style-hover="border-color:#128C6E;background:#E3F4EE">
+                <span style="font-size:13px;font-weight:700;color:#8C97A2">غير معروف</span>
+                <svg viewBox="0 0 24 24" style="flex:none;width:14px;height:14px;stroke:#8C97A2;stroke-width:2.8;fill:none;stroke-linecap:round"><path d="M12 5v14M5 12h14"></path></svg>
+              </button>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;top:25%;height:50%;border-inline-start:1px solid #E4E9ED">
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" style="width:100%;min-height:44px;background:#FFFFFF;border:1px solid #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;flex-direction:column;justify-content:center;gap:2px" style-hover="background:#E3F4EE;border-color:#128C6E">
+                <span data-nm="1" style="font-size:13.5px;font-weight:800;line-height:1.15">الوسمي</span>
+                <span data-rg="1" style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:10.5px;color:#4A5560;direction:ltr;text-align:right">BE 15 6208774</span>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;position:relative" style-before="content:'';position:absolute;inset-inline-start:-20px;width:20px;top:50%;border-top:1px solid #E4E9ED">
+              <button data-n="5" aria-label="سلف غير مسجل — إضافة" style="width:100%;min-height:44px;background:#F5F7F8;border:1px dashed #E4E9ED;border-radius:14px;padding:7px 11px;text-align:start;cursor:pointer;font-family:'Alexandria',sans-serif;display:flex;align-items:center;justify-content:space-between;gap:6px" style-hover="border-color:#128C6E;background:#E3F4EE">
+                <span style="font-size:13px;font-weight:700;color:#8C97A2">غير معروف</span>
+                <svg viewBox="0 0 24 24" style="flex:none;width:14px;height:14px;stroke:#8C97A2;stroke-width:2.8;fill:none;stroke-linecap:round"><path d="M12 5v14M5 12h14"></path></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div data-cta="1" style="position:fixed;bottom:84px;inset-inline:0;margin-inline:auto;max-width:430px;padding:0 20px;z-index:9">
+  <button style="width:100%;border:none;border-radius:16px;padding:18px;cursor:pointer;background:#128C6E;color:#fff;font-family:'Alexandria',sans-serif;font-size:17px;font-weight:800" style-hover="background:#0E6F57">شهادة النسب</button>
+</div>
+
+<nav data-tabbar="1" style="position:fixed;bottom:0;inset-inline:0;margin-inline:auto;max-width:430px;background:#FFFFFF;border-top:1px solid #E4E9ED;display:flex;padding:10px 4px 14px;z-index:10">
+  <button style="flex:1;min-width:0;border:none;background:none;cursor:pointer;color:#128C6E;font-family:'Alexandria',sans-serif;font-size:10.5px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:5px;white-space:nowrap">
+    <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><rect x="3" y="4" width="18" height="6" rx="2"></rect><rect x="3" y="14" width="18" height="6" rx="2"></rect></svg>الطيور
+  </button>
+  <button style="flex:1;min-width:0;border:none;background:none;cursor:pointer;color:#8C97A2;font-family:'Alexandria',sans-serif;font-size:10.5px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:5px;white-space:nowrap" style-hover="color:#0E6F57">
+    <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><circle cx="9" cy="12" r="5"></circle><circle cx="15" cy="12" r="5"></circle></svg>التزاوج
+  </button>
+  <button style="flex:1;min-width:0;border:none;background:none;cursor:pointer;color:#8C97A2;font-family:'Alexandria',sans-serif;font-size:10.5px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:5px;white-space:nowrap" style-hover="color:#0E6F57">
+    <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"></path></svg>السباقات
+  </button>
+  <button style="flex:1;min-width:0;border:none;background:none;cursor:pointer;color:#8C97A2;font-family:'Alexandria',sans-serif;font-size:10.5px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:5px;white-space:nowrap" style-hover="color:#0E6F57">
+    <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M3 12h4l2-5 3 10 2-5h7"></path></svg>الصحة
+  </button>
+  <button style="flex:1;min-width:0;border:none;background:none;cursor:pointer;color:#8C97A2;font-family:'Alexandria',sans-serif;font-size:10.5px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:5px;white-space:nowrap" style-hover="color:#0E6F57">
+    <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M5 20V10M12 20V4M19 20v-7"></path></svg>الإحصائيات
+  </button>
+  <button style="flex:1;min-width:0;border:none;background:none;cursor:pointer;color:#8C97A2;font-family:'Alexandria',sans-serif;font-size:10.5px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:5px;white-space:nowrap" style-hover="color:#0E6F57">
+    <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"></path><circle cx="12" cy="8" r="2"></circle><circle cx="16" cy="16" r="2"></circle></svg>الأدوات
+  </button>
+</nav>
+
+<nav data-rail="1" style="display:none;position:fixed;top:0;bottom:0;inset-inline-start:0;width:132px;background:#FFFFFF;border-inline-end:1px solid #E4E9ED;flex-direction:column;gap:4px;padding:24px 12px;z-index:11">
+  <button style="display:flex;align-items:center;gap:10px;border:none;background:#E3F4EE;cursor:pointer;color:#128C6E;font-family:'Alexandria',sans-serif;font-size:13px;font-weight:700;padding:12px 10px;border-radius:14px;min-height:48px">
+    <svg viewBox="0 0 24 24" style="flex:none;width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><rect x="3" y="4" width="18" height="6" rx="2"></rect><rect x="3" y="14" width="18" height="6" rx="2"></rect></svg>الطيور
+  </button>
+  <button style="display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;color:#8C97A2;font-family:'Alexandria',sans-serif;font-size:13px;font-weight:700;padding:12px 10px;border-radius:14px;min-height:48px" style-hover="background:#E3F4EE;color:#0E6F57">
+    <svg viewBox="0 0 24 24" style="flex:none;width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><circle cx="9" cy="12" r="5"></circle><circle cx="15" cy="12" r="5"></circle></svg>التزاوج
+  </button>
+  <button style="display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;color:#8C97A2;font-family:'Alexandria',sans-serif;font-size:13px;font-weight:700;padding:12px 10px;border-radius:14px;min-height:48px" style-hover="background:#E3F4EE;color:#0E6F57">
+    <svg viewBox="0 0 24 24" style="flex:none;width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"></path></svg>السباقات
+  </button>
+  <button style="display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;color:#8C97A2;font-family:'Alexandria',sans-serif;font-size:13px;font-weight:700;padding:12px 10px;border-radius:14px;min-height:48px" style-hover="background:#E3F4EE;color:#0E6F57">
+    <svg viewBox="0 0 24 24" style="flex:none;width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M3 12h4l2-5 3 10 2-5h7"></path></svg>الصحة
+  </button>
+  <button style="display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;color:#8C97A2;font-family:'Alexandria',sans-serif;font-size:13px;font-weight:700;padding:12px 10px;border-radius:14px;min-height:48px" style-hover="background:#E3F4EE;color:#0E6F57">
+    <svg viewBox="0 0 24 24" style="flex:none;width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M5 20V10M12 20V4M19 20v-7"></path></svg>الإحصائيات
+  </button>
+  <button style="display:flex;align-items:center;gap:10px;border:none;background:none;cursor:pointer;color:#8C97A2;font-family:'Alexandria',sans-serif;font-size:13px;font-weight:700;padding:12px 10px;border-radius:14px;min-height:48px" style-hover="background:#E3F4EE;color:#0E6F57">
+    <svg viewBox="0 0 24 24" style="flex:none;width:26px;height:26px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"></path><circle cx="12" cy="8" r="2"></circle><circle cx="16" cy="16" r="2"></circle></svg>الأدوات
+  </button>
+</nav>
+
+</div>
+</div>
+</x-dc>
+</body>
+</html>
