@@ -30,6 +30,7 @@ Changing a file in `approved/` is a design decision, not an edit.
 |---|---|---|
 | Design system (sign-in, loft home, bird profile) | `approved/zajil-prototype.html` | approved |
 | Add/edit bird | `approved/add-edit-bird-v1.html` | approved |
+| Pedigree tree | `approved/pedigree-tree-v1.html` | approved |
 
 **Design contract:** [`ZAJIL-DESIGN-KIT.md`](ZAJIL-DESIGN-KIT.md) — brief,
 inventory, responsive rules; brand `#128C6E`.

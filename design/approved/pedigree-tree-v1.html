@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>زاجل — شجرة النسب</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brand:#128C6E; --brand-deep:#0E6F57; --brand-tint:#E3F4EE;
+    --ink:#101820; --ink-2:#4A5560; --ink-3:#8C97A2;
+    --page:#F5F7F8; --surface:#FFFFFF; --line:#E4E9ED;
+    --gold:#C9971F; --gold-tint:#FBF3DF; --danger:#C43D2B;
+    --r:20px; --r-btn:16px;
+    --f:'Alexandria', system-ui, sans-serif;
+    --f-mono:'IBM Plex Mono', monospace;
+    --gap:20px; /* column gap = connector stub length */
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:var(--f); color:var(--ink); background:#E9EDF0;
+        min-height:100vh; display:flex; justify-content:center; line-height:1.5; }
+  a{ color:var(--brand-deep); } a:hover{ color:var(--brand); }
+  .phone{ width:100%; max-width:430px; min-height:100vh; background:var(--page); position:relative; }
+
+  .top{ background:var(--surface); padding:16px 20px 0; }
+  .top .bar{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .icon-btn{ width:46px; height:46px; border:none; border-radius:14px; cursor:pointer;
+             background:var(--page); color:var(--ink); display:grid; place-items:center; }
+  .icon-btn svg{ width:22px; height:22px; stroke:currentColor; stroke-width:2.3; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .crumb{ font-size:15px; font-weight:700; color:var(--ink-3); }
+  .topicons{ display:flex; gap:8px; }
+
+  .headwrap{ background:var(--surface); border-bottom:1px solid var(--line); padding:14px 20px 22px; }
+  .head{ display:flex; flex-direction:column; gap:22px; }
+  .eyebrow{ font-size:13px; font-weight:700; color:var(--ink-3); }
+  h1{ font-size:40px; font-weight:900; line-height:1.05; margin-top:4px; }
+  .subject{ display:flex; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap; }
+  .subject .nm{ font-size:20px; font-weight:800; }
+  .sex{ font-size:13.5px; font-weight:700; padding:6px 14px; border-radius:999px; background:var(--brand-tint); color:var(--brand-deep); }
+
+  .plate{ display:inline-flex; align-items:stretch; direction:ltr; border-radius:10px; overflow:hidden; background:var(--ink); }
+  .plate .yr{ background:var(--gold); color:#fff; font-family:var(--f-mono); font-weight:600; font-size:10px; padding:0 7px; display:grid; place-items:center; }
+  .plate .no{ color:#fff; font-family:var(--f-mono); font-weight:600; font-size:12px; letter-spacing:1px; padding:6px 10px; }
+
+  .tiles{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .tile{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px 10px 14px; text-align:center; }
+  .tile .n{ font-size:34px; font-weight:900; color:var(--brand); direction:ltr; line-height:1; font-variant-numeric:tabular-nums; }
+  .tile .l{ font-size:12.5px; color:var(--ink-2); font-weight:600; margin-top:6px; }
+
+  .actions{ display:none; gap:10px; flex:none; }
+  .btn{ border-radius:var(--r-btn); font-family:var(--f); font-weight:800; cursor:pointer; min-height:50px; }
+  .btn-outline{ border:2px solid var(--ink); background:transparent; color:var(--ink); padding:15px 22px; font-size:15.5px; }
+  .btn-primary{ border:none; background:var(--brand); color:#fff; padding:15px 26px; font-size:15.5px; }
+
+  .body{ padding-bottom:170px; }
+  .legend{ display:flex; flex-wrap:wrap; gap:8px 18px; padding:16px 20px 4px; }
+  .legend span{ display:flex; align-items:center; gap:7px; font-size:12.5px; font-weight:700; color:var(--ink-3); }
+  .legend .dot{ width:8px; height:8px; border-radius:999px; background:var(--gold); }
+  .legend .dash{ width:16px; height:0; border-top:1px dashed var(--ink-3); }
+  .hint{ display:flex; align-items:center; gap:8px; padding:8px 20px 12px; font-size:12.5px; font-weight:700; color:var(--ink-3); }
+  .hint svg{ width:16px; height:16px; stroke:currentColor; stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+
+  .chartwrap{ overflow-x:auto; padding:0 20px 8px; scrollbar-width:thin; }
+  .chart{ min-width:836px; }
+  .ruler{ display:flex; padding-bottom:10px; }
+  .ruler > div{ flex:1; padding-inline-start:var(--gap); font-size:11.5px; font-weight:800; color:var(--ink-3); }
+  .ruler > div:first-child{ flex:1.2; padding-inline-start:0; }
+  .gens{ display:flex; height:800px; }
+  .gen{ flex:1; padding-inline-start:var(--gap); display:flex; flex-direction:column; }
+  .gen.g1{ flex:1.2; padding-inline-start:0; align-items:center; justify-content:center; }
+  .g1{ min-width:190px; } .g2{ min-width:172px; } .g3{ min-width:166px; } .g4{ min-width:158px; } .g5{ min-width:150px; }
+
+  /* connectors: each pair draws a vertical bracket in the column gap; each slot draws a stub from the bracket to its node */
+  .pair{ flex:1; display:flex; flex-direction:column; position:relative; }
+  .pair::before{ content:''; position:absolute; inset-inline-start:calc(-1 * var(--gap)); top:25%; height:50%; border-inline-start:1px solid var(--line); }
+  .slot{ flex:1; display:flex; align-items:center; position:relative; }
+  .slot::before{ content:''; position:absolute; inset-inline-start:calc(-1 * var(--gap)); width:var(--gap); top:50%; border-top:1px solid var(--line); }
+
+  .node{ width:100%; background:var(--surface); border:1px solid var(--line); text-align:start; cursor:pointer; font-family:var(--f);
+         display:flex; flex-direction:column; justify-content:center; color:var(--ink); }
+  .node .nm{ font-weight:800; line-height:1.15; }
+  .node .rg{ font-family:var(--f-mono); font-weight:600; color:var(--ink-2); direction:ltr; text-align:right; }
+  .node .ci{ display:flex; align-items:center; gap:6px; }
+  .node .ci .dot{ flex:none; width:7px; height:7px; border-radius:999px; background:var(--gold); }
+  .n1{ border:2px solid var(--ink); border-radius:var(--r); padding:16px; }
+  .n1 .nm{ font-size:28px; font-weight:900; line-height:1.1; }
+  .n1 .plate{ margin-top:10px; align-self:flex-start; }
+  .n1 .dt{ font-family:var(--f-mono); font-weight:600; font-size:11px; color:var(--ink-2); direction:ltr; text-align:right; margin-top:8px; }
+  .n2{ min-height:56px; border-radius:18px; padding:12px 14px; gap:4px; } .n2 .nm{ font-size:20px; } .n2 .rg{ font-size:12px; }
+  .n3{ min-height:52px; border-radius:16px; padding:10px 13px; gap:3px; } .n3 .nm{ font-size:17px; } .n3 .rg{ font-size:11.5px; }
+  .n4{ min-height:46px; border-radius:14px; padding:8px 12px; gap:2px; } .n4 .nm{ font-size:15px; } .n4 .rg{ font-size:11px; }
+  .n5{ min-height:44px; border-radius:14px; padding:7px 11px; gap:2px; } .n5 .nm{ font-size:13.5px; } .n5 .rg{ font-size:10.5px; }
+  .node.unknown{ background:var(--page); border:1px dashed var(--line); flex-direction:row; align-items:center; justify-content:space-between; gap:6px; }
+  .node.unknown span{ font-size:13px; font-weight:700; color:var(--ink-3); }
+  .node.unknown svg{ flex:none; width:14px; height:14px; stroke:var(--ink-3); stroke-width:2.8; fill:none; stroke-linecap:round; }
+
+  .cta{ position:fixed; bottom:84px; inset-inline:0; margin-inline:auto; max-width:430px; padding:0 20px; z-index:9; }
+  .cta button{ width:100%; border:none; border-radius:var(--r-btn); padding:18px; cursor:pointer; background:var(--brand); color:#fff;
+               font-family:var(--f); font-size:17px; font-weight:800; }
+
+  .tabbar{ position:fixed; bottom:0; inset-inline:0; margin-inline:auto; max-width:430px; background:var(--surface);
+           border-top:1px solid var(--line); display:flex; padding:10px 4px 14px; z-index:10; }
+  .tabbar button{ flex:1; min-width:0; border:none; background:none; cursor:pointer; color:var(--ink-3); font-family:var(--f);
+                  font-size:10.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:5px; white-space:nowrap; }
+  .tabbar button svg, .rail button svg{ width:26px; height:26px; stroke:currentColor; stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .tabbar button.on{ color:var(--brand); }
+
+  .rail{ display:none; position:fixed; top:0; bottom:0; inset-inline-start:0; width:132px; background:var(--surface);
+         border-inline-end:1px solid var(--line); flex-direction:column; gap:4px; padding:24px 12px; z-index:11; }
+  .rail button{ display:flex; align-items:center; gap:10px; border:none; background:none; cursor:pointer; color:var(--ink-3);
+                font-family:var(--f); font-size:13px; font-weight:700; padding:12px 10px; border-radius:14px; min-height:48px; }
+  .rail button.on{ background:var(--brand-tint); color:var(--brand); }
+
+  @media (hover:hover){
+    .icon-btn:hover, .rail button:hover{ background:var(--brand-tint); }
+    .rail button:hover{ color:var(--brand-deep); }
+    .tabbar button:hover{ color:var(--brand-deep); }
+    .node:hover{ background:var(--brand-tint); border-color:var(--brand); }
+    .btn-outline:hover{ background:var(--ink); color:#fff; }
+    .btn-primary:hover, .cta button:hover{ background:var(--brand-deep); }
+  }
+  .icon-btn:focus-visible, .node:focus-visible, .btn:focus-visible, .cta button:focus-visible,
+  .tabbar button:focus-visible, .rail button:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
+
+  /* Part 3 — tablet */
+  @media (min-width:701px){
+    .phone{ max-width:720px; border-inline:1px solid var(--line); }
+    .cta{ max-width:720px; }
+  }
+  /* Part 3 — desktop: rail on the RTL start (right) edge, wall chart uncapped */
+  @media (min-width:1100px){
+    .rail{ display:flex; }
+    .tabbar, .cta, .hint, .topicons{ display:none; }
+    .actions{ display:flex; }
+    .phone{ max-width:none; margin-inline-start:132px; border:none; }
+    .head{ flex-direction:row; align-items:flex-end; justify-content:space-between; gap:40px; }
+    .tiles{ width:400px; flex:none; }
+    .chart{ min-width:0; }
+    .chartwrap{ overflow-x:visible; padding-inline:32px; }
+    .headwrap{ padding-inline:32px; }
+    .body{ padding-bottom:40px; }
+  }
+  /* wall chart print */
+  @media print{
+    @page{ size:A4 landscape; margin:9mm; }
+    body{ background:#fff; }
+    .phone{ max-width:none; margin:0; border:none; background:#fff; }
+    .rail, .tabbar, .cta, .hint, .top, .actions, .legend{ display:none; }
+    .head{ flex-direction:row; align-items:flex-end; justify-content:space-between; gap:40px; }
+    .tiles{ width:380px; flex:none; }
+    .headwrap{ padding:0 0 10px; border-bottom:1px solid var(--line); }
+    .body{ padding:0; }
+    .chartwrap{ overflow:visible; padding:0; }
+    .chart{ min-width:0; } .gens{ height:590px; }
+    .n1{ padding:10px 12px; } .n1 .nm{ font-size:22px; }
+    .n2, .n3{ min-height:0; padding:7px 10px; } .n4, .n5{ min-height:0; padding:5px 9px; }
+    .n2 .nm{ font-size:16px; } .n3 .nm{ font-size:14px; } .n4 .nm{ font-size:12.5px; } .n5 .nm{ font-size:11px; }
+    .n4 .rg{ font-size:9.5px; } .n5 .rg{ font-size:9px; }
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <div class="top"><div class="bar">
+    <button class="icon-btn" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+    <span class="crumb">برق</span>
+    <span class="topicons">
+      <button class="icon-btn" aria-label="مشاركة"><svg viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"/></svg></button>
+      <button class="icon-btn" aria-label="طباعة" onclick="window.print()"><svg viewBox="0 0 24 24"><path d="M7 9V4h10v5M7 18H5a1 1 0 0 1-1-1v-6h16v6a1 1 0 0 1-1 1h-2M7 15h10v5H7z"/></svg></button>
+    </span>
+  </div></div>
+
+  <div class="headwrap"><div class="head">
+    <div>
+      <div class="eyebrow">لوفت الفحيص · موسم 2026 / 2027</div>
+      <h1>شجرة النسب</h1>
+      <div class="subject">
+        <span class="nm">برق</span>
+        <span class="plate"><span class="yr">24</span><span class="no">JOR 24 17352</span></span>
+        <span class="sex">ذكر</span>
+      </div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><div class="n">3.1%</div><div class="l">التربية الداخلية</div></div>
+      <div class="tile"><div class="n">25</div><div class="l">سلفًا من 30</div></div>
+      <div class="tile"><div class="n">4</div><div class="l">أجيال مكتملة</div></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-outline" onclick="window.print()">طباعة</button>
+      <button class="btn btn-outline">مشاركة</button>
+      <button class="btn btn-primary">شهادة النسب</button>
+    </div>
+  </div></div>
+
+  <div class="body">
+    <div class="legend">
+      <span>الأب أعلى · الأم أسفل</span>
+      <span><i class="dot"></i>سلف مشترك</span>
+      <span><i class="dash"></i>غير مسجل</span>
+    </div>
+    <div class="hint"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>اسحب لرؤية الأجيال الأقدم</div>
+
+    <div class="chartwrap"><div class="chart">
+      <div class="ruler">
+        <div>الطائر</div><div>الوالدان</div><div>الأجداد</div><div>الأجداد الكبار</div><div>الجيل الخامس</div>
+      </div>
+      <div class="gens">
+
+        <div class="gen g1">
+          <button class="node n1">
+            <span class="nm">برق</span>
+            <span class="plate"><span class="yr">24</span><span class="no">JOR 24 17352</span></span>
+            <span class="dt">18 / 03 / 2024</span>
+          </button>
+        </div>
+
+        <div class="gen g2">
+          <div class="pair">
+            <div class="slot"><button class="node n2"><span class="nm">الصاعقة</span><span class="rg">JOR 21 08841</span></button></div>
+            <div class="slot"><button class="node n2"><span class="nm">غيمة</span><span class="rg">JOR 22 04117</span></button></div>
+          </div>
+        </div>
+
+        <div class="gen g3">
+          <div class="pair">
+            <div class="slot"><button class="node n3"><span class="nm">النشمي</span><span class="rg">JOR 18 02290</span></button></div>
+            <div class="slot"><button class="node n3"><span class="nm">فيروز</span><span class="rg">NL 19 1447206</span></button></div>
+          </div>
+          <div class="pair">
+            <div class="slot"><button class="node n3"><span class="nm">سلطان</span><span class="rg">JOR 19 05512</span></button></div>
+            <div class="slot"><button class="node n3"><span class="nm">ياقوت</span><span class="rg">BE 20 6034981</span></button></div>
+          </div>
+        </div>
+
+        <div class="gen g4">
+          <div class="pair">
+            <div class="slot"><button class="node n4"><span class="nm">عنتر</span><span class="rg">JOR 15 03318</span></button></div>
+            <div class="slot"><button class="node n4"><span class="nm">جوهرة</span><span class="rg">JOR 16 01102</span></button></div>
+          </div>
+          <div class="pair">
+            <div class="slot"><button class="node n4"><span class="nm">ذهب</span><span class="rg">NL 16 1338705</span></button></div>
+            <div class="slot"><button class="node n4"><span class="nm">أنيسة</span><span class="rg">NL 17 1402884</span></button></div>
+          </div>
+          <div class="pair">
+            <div class="slot"><button class="node n4"><span class="nm">مهند</span><span class="rg">JOR 16 04471</span></button></div>
+            <div class="slot"><button class="node n4"><span class="nm">نجمة</span><span class="rg">JOR 17 02845</span></button></div>
+          </div>
+          <div class="pair">
+            <div class="slot"><button class="node n4"><span class="nm">عاصف</span><span class="rg">BE 17 6011240</span></button></div>
+            <div class="slot"><button class="node n4"><span class="nm">مسك</span><span class="rg">BE 18 6027113</span></button></div>
+          </div>
+        </div>
+
+        <div class="gen g5">
+          <div class="pair">
+            <div class="slot"><button class="node n5"><span class="ci"><i class="dot"></i><span class="nm">الفاتح</span></span><span class="rg">JOR 12 00874</span></button></div>
+            <div class="slot"><button class="node n5"><span class="nm">خنساء</span><span class="rg">JOR 13 01560</span></button></div>
+          </div>
+          <div class="pair">
+            <div class="slot"><button class="node n5"><span class="nm">سيف</span><span class="rg">JOR 13 02201</span></button></div>
+            <div class="slot"><button class="node n5"><span class="nm">دلال</span><span class="rg">JOR 14 00933</span></button></div>
+          </div>
+          <div class="pair">
+            <div class="slot"><button class="node n5"><span class="nm">برنس</span><span class="rg">NL 13 1201884</span></button></div>
+            <div class="slot"><button class="node n5 unknown" aria-label="سلف غير مسجل — إضافة"><span>غير معروف</span><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          </div>
+          <div class="pair">
+            <div class="slot"><button class="node n5 unknown" aria-label="سلف غير مسجل — إضافة"><span>غير معروف</span><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>
+            <div class="slot"><button class="node n5 unknown" aria-label="سلف غير مسجل — إضافة"><span>غير معروف</span><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          </div>
+          <div class="pair">
+            <div class="slot"><button class="node n5"><span class="ci"><i class="dot"></i><span class="nm">الفاتح</span></span><span class="rg">JOR 12 00874</span></button></div>
+            <div class="slot"><button class="node n5"><span class="nm">سمراء</span><span class="rg">JOR 13 04012</span></button></div>
+          </div>
+          <div class="pair">
+            <div class="slot"><button class="node n5"><span class="nm">مارد</span><span class="rg">JOR 14 06621</span></button></div>
+            <div class="slot"><button class="node n5"><span class="nm">لؤلؤة</span><span class="rg">JOR 15 03980</span></button></div>
+          </div>
+          <div class="pair">
+            <div class="slot"><button class="node n5"><span class="nm">هيبة</span><span class="rg">BE 14 6100392</span></button></div>
+            <div class="slot"><button class="node n5 unknown" aria-label="سلف غير مسجل — إضافة"><span>غير معروف</span><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          </div>
+          <div class="pair">
+            <div class="slot"><button class="node n5"><span class="nm">الوسمي</span><span class="rg">BE 15 6208774</span></button></div>
+            <div class="slot"><button class="node n5 unknown" aria-label="سلف غير مسجل — إضافة"><span>غير معروف</span><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          </div>
+        </div>
+
+      </div>
+    </div></div>
+  </div>
+
+  <div class="cta"><button>شهادة النسب</button></div>
+
+  <nav class="tabbar">
+    <button class="on"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>الطيور</button>
+    <button><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>التزاوج</button>
+    <button><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>السباقات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>الصحة</button>
+    <button><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>الإحصائيات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg>الأدوات</button>
+  </nav>
+
+  <nav class="rail">
+    <button class="on"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>الطيور</button>
+    <button><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>التزاوج</button>
+    <button><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>السباقات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>الصحة</button>
+    <button><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>الإحصائيات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg>الأدوات</button>
+  </nav>
+
+</div>
+</body>
+</html>
