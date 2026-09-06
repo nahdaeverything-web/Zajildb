@@ -33,6 +33,7 @@ Changing a file in `approved/` is a design decision, not an edit.
 | Add/edit bird | `approved/add-edit-bird-v2.html` | **approved — the file the React port implements** |
 | Add/edit bird | `approved/add-edit-bird-v1.html` | superseded by v2 (rail side fix) |
 | Pedigree tree | `approved/pedigree-tree-v1.html` | approved |
+| Races | `approved/races-v1.html` | approved |
 
 Where two versions of a screen are listed, **the highest `-vN` is the one to
 build**. Earlier versions stay in place unchanged so a decision already made
@@ -44,6 +45,15 @@ the spec shows the request and the `وصلنا طلبك` acknowledgement without
 where the request goes. And its `box-shadow` rules are **focus rings**
 (`0 0 0 3px var(--brand-tint)` on `:focus`), a sanctioned accessibility pattern
 — not the decorative shadow the design kit rules out.
+
+**Races (`races-v1.html`) — the spec DELIBERATELY departs from the app.**
+Today the races modal **fails silently**: `js/views/races.js:178` returns
+`false` with no message when no bird is chosen, and `:142` returns with no
+message when the coordinates will not parse. The spec replaces both with
+**visible inline errors** — a `.field.err` state, a per-field `.msg`, a modal
+alert banner, and a scroll back to the first bad field. **Implement the spec,
+not the current behaviour.** Note it fixes *two* silent failures, not one: the
+required-bird case and the unparseable-coordinates case.
 
 **Design contract:** [`ZAJIL-DESIGN-KIT.md`](ZAJIL-DESIGN-KIT.md) — brief,
 inventory, responsive rules; brand `#128C6E`.
