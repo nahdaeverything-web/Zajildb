@@ -28,6 +28,7 @@ Changing a file in `approved/` is a design decision, not an edit.
 
 | Screen | File | Status |
 |---|---|---|
+| Sign-in | `approved/sign-in-v1.html` | approved |
 | Design system (sign-in, loft home, bird profile) | `approved/zajil-prototype.html` | approved |
 | Add/edit bird | `approved/add-edit-bird-v2.html` | **approved — the file the React port implements** |
 | Add/edit bird | `approved/add-edit-bird-v1.html` | superseded by v2 (rail side fix) |
@@ -36,6 +37,13 @@ Changing a file in `approved/` is a design decision, not an edit.
 Where two versions of a screen are listed, **the highest `-vN` is the one to
 build**. Earlier versions stay in place unchanged so a decision already made
 can still be read — that is what "never overwrite" is for.
+
+**Sign-in (`sign-in-v1.html`) — two notes.** The early-access form's
+**submission target is not wired**: it is a design placeholder until launch, so
+the spec shows the request and the `وصلنا طلبك` acknowledgement without saying
+where the request goes. And its `box-shadow` rules are **focus rings**
+(`0 0 0 3px var(--brand-tint)` on `:focus`), a sanctioned accessibility pattern
+— not the decorative shadow the design kit rules out.
 
 **Design contract:** [`ZAJIL-DESIGN-KIT.md`](ZAJIL-DESIGN-KIT.md) — brief,
 inventory, responsive rules; brand `#128C6E`.
