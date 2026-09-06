@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>زاجل — الصحة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brand:#128C6E; --brand-deep:#0E6F57; --brand-tint:#E3F4EE;
+    --ink:#101820; --ink-2:#4A5560; --ink-3:#8C97A2;
+    --page:#F5F7F8; --surface:#FFFFFF; --line:#E4E9ED;
+    --gold:#C9971F; --gold-tint:#FBF3DF; --danger:#C43D2B; --danger-tint:#F8E6E3;
+    --r:20px; --r-btn:16px;
+    --f:'Alexandria', system-ui, sans-serif;
+    --f-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  button, input, select, textarea{ font-family:var(--f); }
+  body{ font-family:var(--f); color:var(--ink); background:#E9EDF0; min-height:100vh; display:flex; justify-content:center; line-height:1.5; }
+  .phone{ width:100%; max-width:430px; min-height:100vh; background:var(--page); position:relative; }
+  [hidden]{ display:none !important; }
+  .mono, .num{ font-family:var(--f-mono); font-weight:600; direction:ltr; font-variant-numeric:tabular-nums; }
+
+  /* ── header ── */
+  .lofthead{ background:var(--surface); border-bottom:1px solid var(--line); padding:20px; }
+  .headrow{ display:flex; flex-direction:column; gap:14px; }
+  .lofthead .season{ font-size:13px; font-weight:700; color:var(--ink-3); }
+  .lofthead h1{ font-size:34px; font-weight:900; line-height:1.1; }
+  .lofthead .count{ font-size:15px; font-weight:700; color:var(--brand-deep); margin-top:4px; }
+  .btn-add{ display:none; align-items:center; gap:10px; border:none; border-radius:var(--r-btn); background:var(--brand); color:#fff; font-size:16px; font-weight:800; min-height:56px; padding:0 22px; cursor:pointer; white-space:nowrap; }
+  .btn-add svg, .fab svg{ width:20px; height:20px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; }
+
+  .panel{ padding:16px 20px 170px; }
+
+  /* ── next vaccination block (brand solid, like the verified notice) ── */
+  .next{ background:var(--brand); color:#fff; border-radius:var(--r); padding:20px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  .next .k{ font-size:13px; font-weight:700; opacity:.9; display:flex; align-items:center; gap:8px; }
+  .next .k svg{ width:18px; height:18px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .next .t{ font-size:20px; font-weight:900; margin-top:4px; line-height:1.2; }
+  .next .s{ font-size:13.5px; font-weight:500; opacity:.92; margin-top:4px; }
+  .next .s b{ font-family:var(--f-mono); font-weight:600; direction:ltr; unicode-bidi:isolate; }
+  .next .days{ flex:none; text-align:center; }
+  .next .days .n{ font-size:52px; font-weight:900; line-height:1; direction:ltr; }
+  .next .days .u{ font-size:12.5px; font-weight:700; opacity:.9; margin-top:2px; }
+  .next.due{ background:var(--gold); }
+
+  /* ── filter pills ── */
+  .filters{ display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; margin:0 -20px 14px; padding:0 20px; }
+  .filters::-webkit-scrollbar{ display:none; }
+  .filters button{ flex:none; border:1px solid var(--line); background:var(--surface); padding:11px 16px; cursor:pointer; font-size:14px; font-weight:700; color:var(--ink-2); border-radius:999px; display:inline-flex; align-items:center; gap:8px; min-height:44px; }
+  .filters button[aria-pressed="true"]{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .filters button[aria-pressed="true"] .dot{ outline:2px solid rgba(255,255,255,.7); }
+
+  /* ── type dots / chips ── */
+  .dot{ width:10px; height:10px; border-radius:50%; flex:none; display:inline-block; }
+  .dot.vac{ background:var(--brand); }
+  .dot.trt{ background:var(--danger); }
+  .dot.ill{ background:var(--gold); }
+  .dot.chk{ background:var(--ink-3); }
+  .chip{ display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:800; padding:5px 10px; border-radius:999px; white-space:nowrap; }
+  .chip.vac{ background:var(--brand-tint); color:var(--brand-deep); }
+  .chip.trt{ background:var(--danger-tint); color:var(--danger); }
+  .chip.ill{ background:var(--gold-tint); color:#8A6410; }
+  .chip.chk{ background:var(--page); color:var(--ink-2); border:1px solid var(--line); }
+  .scope{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:800; padding:5px 10px; border-radius:999px; background:var(--ink); color:#fff; white-space:nowrap; }
+  .scope svg{ width:13px; height:13px; stroke:#fff; stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .birdlink{ font-size:15px; font-weight:800; background:none; border:none; cursor:pointer; color:var(--ink); padding:0; text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:4px; }
+  .birdlink:hover{ text-decoration-color:var(--brand); color:var(--brand-deep); }
+
+  /* ── phone rows ── */
+  .datelbl{ font-size:13px; font-weight:800; color:var(--ink-3); padding:6px 0 8px; direction:ltr; text-align:right; font-family:var(--f-mono); }
+  .hrow{ background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:14px 16px; margin-bottom:10px; }
+  .hrow .l1{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .hrow .l1 > div:first-child{ flex:1; min-width:0; }
+  .hrow .med{ font-size:18px; font-weight:800; line-height:1.3; }
+  .hrow .meta{ display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .hrow .note{ font-size:14px; font-weight:500; color:var(--ink-2); margin-top:8px; }
+  .hrow .l2{ display:flex; align-items:center; justify-content:flex-start; gap:6px; margin-top:12px; padding-top:12px; border-top:1px solid var(--line); }
+  .acts{ display:flex; gap:6px; }
+  .act{ border:1px solid var(--line); background:var(--surface); color:var(--ink-2); border-radius:12px; min-height:44px; min-width:44px; padding:0 14px; font-size:13.5px; font-weight:700; cursor:pointer; }
+  .act.x{ color:var(--danger); font-size:16px; }
+  .confirm{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; padding:12px 14px; border-radius:14px; background:var(--danger-tint); color:var(--danger); font-size:14.5px; font-weight:800; }
+  .confirm .b{ display:flex; gap:6px; }
+  .confirm .go{ border:none; background:var(--danger); color:#fff; border-radius:12px; min-height:44px; padding:0 16px; font-size:14px; font-weight:800; cursor:pointer; }
+  .confirm .no{ border:none; background:transparent; color:var(--ink-2); border-radius:12px; min-height:44px; padding:0 14px; font-size:14px; font-weight:700; cursor:pointer; }
+
+  /* ── desktop table ── */
+  .table{ display:none; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:8px 20px 12px; }
+  table{ width:100%; border-collapse:collapse; }
+  th{ font-size:12.5px; font-weight:700; color:var(--ink-3); text-align:right; padding:14px 8px 10px; border-bottom:2px solid var(--line); white-space:nowrap; }
+  td{ padding:12px 8px; font-size:15px; font-weight:600; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tr:last-child td{ border-bottom:none; }
+  td.note{ color:var(--ink-2); font-weight:500; max-width:320px; }
+  td.med{ font-weight:800; font-size:15.5px; }
+  td .confirm{ margin-top:0; padding:8px 12px; }
+  tr.cf td{ background:var(--danger-tint); }
+
+  /* ── empty ── */
+  .empty{ text-align:center; padding:56px 20px; }
+  .empty .ico{ width:84px; height:84px; border-radius:26px; background:var(--brand-tint); display:grid; place-items:center; margin:0 auto 16px; }
+  .empty .ico svg{ width:40px; height:40px; stroke:var(--brand); stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .empty h3{ font-size:24px; font-weight:900; }
+  .empty p{ font-size:15px; font-weight:500; color:var(--ink-2); margin-top:6px; }
+
+  /* ── fab ── */
+  .fab{ position:fixed; bottom:96px; inset-inline-start:calc(50% - 215px + 20px); z-index:9; }
+  @media (max-width:470px){ .fab{ inset-inline-start:20px; } }
+  .fab button{ border:none; border-radius:18px; background:var(--ink); color:#fff; font-size:16px; font-weight:800; min-height:58px; padding:0 24px; cursor:pointer; display:flex; align-items:center; gap:10px; }
+
+  /* ── toast ── */
+  .toast{ position:fixed; bottom:96px; inset-inline:0; margin-inline:auto; width:max-content; max-width:390px; z-index:30; background:var(--ink); color:#fff; border-radius:16px; padding:14px 18px; display:flex; align-items:center; gap:18px; font-size:15px; font-weight:700; }
+  .toast button{ border:none; background:none; color:#fff; font-size:15px; font-weight:900; cursor:pointer; text-decoration:underline; text-underline-offset:4px; min-height:44px; }
+
+  /* ── nav ── */
+  .tabbar{ position:fixed; bottom:0; inset-inline:0; margin-inline:auto; max-width:430px; background:var(--surface); border-top:1px solid var(--line); display:flex; padding:10px 4px 14px; z-index:10; }
+  .tabbar button{ flex:1; min-width:0; border:none; background:none; cursor:pointer; color:var(--ink-3); font-size:10.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:5px; white-space:nowrap; }
+  .tabbar button svg, .rail button svg{ width:26px; height:26px; stroke:currentColor; stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .tabbar button.on{ color:var(--brand); }
+  .rail{ display:none; position:fixed; top:0; bottom:0; inset-inline-start:0; width:132px; background:var(--surface); border-inline-end:1px solid var(--line); flex-direction:column; gap:4px; padding:24px 12px; z-index:11; }
+  .rail button{ display:flex; align-items:center; gap:10px; border:none; background:none; cursor:pointer; color:var(--ink-3); font-size:13px; font-weight:700; padding:12px 10px; border-radius:14px; min-height:48px; }
+  .rail button.on{ background:var(--brand-tint); color:var(--brand); }
+
+  /* ── modal ── */
+  .scrim{ position:fixed; inset:0; background:rgba(16,24,32,.55); z-index:40; display:flex; align-items:flex-end; justify-content:center; }
+  .modal{ background:var(--surface); width:100%; max-width:430px; max-height:94vh; overflow:auto; border-radius:28px 28px 0 0; padding:20px 20px 28px; }
+  .mhead{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .mhead h2{ font-size:28px; font-weight:900; }
+  .icon-btn{ width:46px; height:46px; border:none; border-radius:14px; cursor:pointer; background:var(--page); color:var(--ink); display:grid; place-items:center; }
+  .icon-btn svg{ width:22px; height:22px; stroke:currentColor; stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .alert{ background:var(--danger-tint); color:var(--danger); border-radius:var(--r-btn); padding:14px 16px; font-size:14.5px; font-weight:800; display:flex; gap:10px; align-items:flex-start; margin-top:12px; }
+  .alert svg{ width:22px; height:22px; flex:none; stroke:currentColor; stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .fields{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:18px; }
+  .field label{ display:block; font-size:13.5px; font-weight:800; color:var(--ink-2); margin-bottom:8px; }
+  .field input, .field select, .field textarea, .field .pick{ width:100%; border:2px solid var(--line); border-radius:var(--r-btn); min-height:58px; padding:0 16px; font-size:16px; font-weight:600; background:var(--page); color:var(--ink); outline:none; -webkit-appearance:none; appearance:none; }
+  .field textarea{ padding:14px 16px; min-height:104px; resize:vertical; line-height:1.5; }
+  .field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--brand); background:#fff; }
+  .field input.ltr{ direction:ltr; text-align:right; font-family:var(--f-mono); letter-spacing:.5px; }
+  .field input::placeholder, .field textarea::placeholder{ color:var(--ink-3); font-weight:500; }
+  .field .pick{ display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; text-align:start; }
+  .field .pick .ph{ color:var(--ink-3); font-weight:500; }
+  .field .pick svg{ width:20px; height:20px; stroke:var(--ink-3); stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .field .pick .val{ display:inline-flex; align-items:center; gap:10px; }
+  .plate{ display:inline-flex; align-items:stretch; direction:ltr; border-radius:10px; overflow:hidden; background:var(--ink); }
+  .plate .season{ background:var(--gold); color:#fff; font-family:var(--f-mono); font-weight:600; font-size:10px; padding:0 7px; display:grid; place-items:center; }
+  .plate .num{ color:#fff; font-family:var(--f-mono); font-weight:600; font-size:12px; letter-spacing:1px; padding:6px 10px; }
+  .field.err input, .field.err select, .field.err .pick{ border-color:var(--danger); background:#fff; }
+  .field .msg{ display:none; margin-top:8px; font-size:13.5px; font-weight:700; color:var(--danger); }
+  .field.err .msg{ display:flex; align-items:center; gap:6px; }
+  .field .msg svg{ width:16px; height:16px; stroke:currentColor; stroke-width:2.8; fill:none; stroke-linecap:round; }
+  .selwrap{ position:relative; }
+  .selwrap::after{ content:""; position:absolute; inset-inline-end:18px; top:50%; width:9px; height:9px; border-inline-end:2.4px solid var(--ink-3); border-bottom:2.4px solid var(--ink-3); transform:translateY(-70%) rotate(45deg); pointer-events:none; }
+  .selwrap .dot{ position:absolute; inset-inline-start:16px; top:50%; transform:translateY(-50%); pointer-events:none; }
+  .selwrap.hasdot select{ padding-inline-start:36px; }
+  .mact{ display:flex; gap:10px; margin-top:26px; }
+  .mact .cancel{ flex:1; border:2px solid var(--line); background:var(--surface); color:var(--ink); border-radius:var(--r-btn); min-height:58px; font-size:16px; font-weight:800; cursor:pointer; }
+  .mact .save{ flex:2; border:none; background:var(--brand); color:#fff; border-radius:var(--r-btn); min-height:58px; font-size:17px; font-weight:800; cursor:pointer; }
+
+  @media (hover:hover){
+    .hrow:hover{ border-color:var(--brand); }
+    tbody tr:not(.cf):hover td{ background:var(--brand-tint); }
+    .btn-add:hover, .fab button:hover, .mact .save:hover{ background:var(--brand-deep); }
+    .act:hover{ border-color:var(--ink); color:var(--ink); }
+    .act.x:hover{ border-color:var(--danger); color:var(--danger); background:var(--danger-tint); }
+    .rail button:hover{ background:var(--brand-tint); color:var(--brand-deep); }
+    .tabbar button:hover{ color:var(--brand-deep); }
+    .filters button:not([aria-pressed="true"]):hover{ border-color:var(--ink); color:var(--ink); }
+  }
+  button:focus-visible, .field :focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
+
+  /* ── demo switcher (design review only) ── */
+  .demo{ position:fixed; top:14px; inset-inline-end:14px; z-index:50; display:flex; gap:4px; background:var(--ink); border-radius:999px; padding:4px; }
+  .demo button{ border:none; background:none; color:#fff; opacity:.6; font-size:12px; font-weight:700; padding:8px 12px; border-radius:999px; cursor:pointer; }
+  .demo button.on{ opacity:1; background:rgba(255,255,255,.16); }
+
+  @media (min-width:701px){ .phone{ max-width:720px; border-inline:1px solid var(--line); } }
+  @media (min-width:1100px){
+    .rail{ display:flex; }
+    .tabbar, .fab, .list{ display:none !important; }
+    .demo{ inset-inline-end:152px; }
+    .phone{ max-width:none; margin-inline-start:132px; border:none; }
+    .lofthead{ padding:32px 32px 24px; }
+    .lofthead .in{ margin-inline:auto; max-width:1024px; }
+    .headrow{ flex-direction:row; align-items:flex-end; justify-content:space-between; }
+    .btn-add{ display:inline-flex; }
+    .panel{ margin-inline:auto; max-width:1024px; padding:20px 32px 80px; }
+    .next{ padding:24px 28px; }
+    .next .t{ font-size:24px; }
+    .next .days .n{ font-size:64px; }
+    .filters{ margin:0 0 16px; padding:0; flex-wrap:wrap; }
+    .table{ display:block; }
+    .scrim{ align-items:center; padding:24px; }
+    .modal{ max-width:560px; border-radius:28px; padding:28px 32px 32px; }
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <div class="demo" aria-label="عرض النموذج">
+    <button class="on" data-v="log">السجل</button>
+    <button data-v="empty">فارغ</button>
+    <button data-v="new">حدث جديد</button>
+    <button data-v="edit">تعديل</button>
+    <button data-v="error">خطأ الطير</button>
+  </div>
+
+  <header class="lofthead"><div class="in">
+    <div class="headrow">
+      <div>
+        <div class="season">موسم 2026 / 2027 · لوفت الفحيص</div>
+        <h1>السجل الصحي والعلاجات</h1>
+        <div class="count" id="count">8 أحداث · آخرها 04 / 09 / 2026</div>
+      </div>
+      <button class="btn-add" onclick="openModal()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>حدث جديد</button>
+    </div>
+  </div></header>
+
+  <section class="panel">
+    <!-- next vaccination -->
+    <div class="next" id="next">
+      <div>
+        <div class="k"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/></svg>التطعيم القادم</div>
+        <div class="t">تطعيم PMV السنوي — اللوفت كامل</div>
+        <div class="s">آخر جرعة <b>02 / 08 / 2026</b> · يُستحق <b>02 / 08 / 2027</b></div>
+      </div>
+      <div class="days"><div class="n">330</div><div class="u">يومًا حتى الموعد</div></div>
+    </div>
+
+    <!-- filters -->
+    <div class="filters" id="filters" role="group" aria-label="تصفية">
+      <button aria-pressed="true" data-f="all">الكل</button>
+      <button aria-pressed="false" data-f="vac"><span class="dot vac"></span>تطعيم</button>
+      <button aria-pressed="false" data-f="trt"><span class="dot trt"></span>علاج</button>
+      <button aria-pressed="false" data-f="ill"><span class="dot ill"></span>مرض</button>
+      <button aria-pressed="false" data-f="chk"><span class="dot chk"></span>فحص</button>
+      <button aria-pressed="false" data-f="loft">اللوفت كامل</button>
+    </div>
+
+    <div id="content">
+      <div class="list" id="rows"></div>
+      <div class="table">
+        <table>
+          <thead><tr>
+            <th class="num">التاريخ</th><th>النوع</th><th>النطاق</th><th>الدواء/اللقاح</th><th>ملاحظات</th><th></th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="empty" id="empty" hidden>
+      <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg></div>
+      <h3 id="empty-t">لا أحداث صحية مسجلة.</h3>
+      <p id="empty-p">سجّل أول تطعيم أو علاج من «حدث جديد».</p>
+    </div>
+  </section>
+
+  <div class="fab" id="fab"><button onclick="openModal()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>حدث جديد</button></div>
+
+  <div class="toast" id="toast" hidden><span>تم الحذف</span><button onclick="undo()">تراجع</button></div>
+
+  <nav class="tabbar">
+    <button><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>الطيور</button>
+    <button><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>التزاوج</button>
+    <button><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>السباقات</button>
+    <button class="on"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>الصحة</button>
+    <button><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>الإحصائيات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg>الأدوات</button>
+  </nav>
+  <nav class="rail">
+    <button><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>الطيور</button>
+    <button><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>التزاوج</button>
+    <button><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>السباقات</button>
+    <button class="on"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>الصحة</button>
+    <button><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>الإحصائيات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg>الأدوات</button>
+  </nav>
+
+  <!-- ═══ EVENT DIALOG ═══ -->
+  <div class="scrim" id="scrim" hidden onclick="if(event.target===this)closeModal()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mtitle">
+      <div class="mhead">
+        <h2 id="mtitle">حدث جديد</h2>
+        <button class="icon-btn" aria-label="إغلاق" onclick="closeModal()"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="alert" id="m-alert" hidden><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg><span>لم يُحفظ الحدث. راجع الحقل المحدد بالأحمر.</span></div>
+
+      <div class="fields">
+        <div class="field"><label>النوع</label>
+          <div class="selwrap hasdot"><span class="dot vac" id="type-dot"></span>
+            <select id="f-type" onchange="typeChanged()"><option value="vac" selected>تطعيم</option><option value="trt">علاج</option><option value="ill">مرض</option><option value="chk">فحص</option></select>
+          </div>
+        </div>
+        <div class="field"><label>النطاق</label>
+          <div class="selwrap"><select id="f-scope" onchange="scopeChanged()"><option value="bird" selected>طير واحد</option><option value="loft">اللوفت كامل</option></select></div>
+        </div>
+        <div class="field" id="f-bird">
+          <label>الطير</label>
+          <button class="pick" onclick="pickBird()"><span class="ph" id="bird-val">اختر طيرًا من اللوفت</span><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+          <div class="msg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>الطير مطلوب — اختر طيرًا أو غيّر النطاق إلى «اللوفت كامل».</div>
+        </div>
+        <div class="field"><label>التاريخ</label><input class="ltr" id="f-date" value="2026-09-06"></div>
+        <div class="field"><label>الدواء/اللقاح</label><input id="f-med" placeholder="مثل: أمبروليوم — كوكسيديا"></div>
+        <div class="field"><label>ملاحظات</label><textarea id="f-note" placeholder="الجرعة، المدة، ما لاحظته…"></textarea></div>
+      </div>
+
+      <div class="mact">
+        <button class="cancel" onclick="closeModal()">إلغاء</button>
+        <button class="save" onclick="save()">حفظ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const TYPES = { vac:'تطعيم', trt:'علاج', ill:'مرض', chk:'فحص' };
+  const BIRDS = { 'برق':'JOR 24 17352', 'شقراء':'JOR 24 17360', 'غيمة':'JOR 22 04117', 'الصاعقة':'JOR 21 08841', 'النشمي':'JOR 18 02290' };
+  // date · type · bird (null = loft) · med · note
+  const DATA = [
+    ['2026-09-04','trt','برق','أمبروليوم — كوكسيديا','5 أيام في الماء، إعادة الفحص بعد أسبوع'],
+    ['2026-09-01','chk',null,'فحص براز جماعي','عيّنة مجمّعة قبل الموسم — سليمة'],
+    ['2026-08-27','ill','شقراء','—','عطاس وإفرازات أنفية، عُزلت في قفص منفرد'],
+    ['2026-08-27','trt','شقراء','دوكسيسايكلين','7 أيام، تحسّن من اليوم الثالث'],
+    ['2026-08-02','vac',null,'تطعيم PMV السنوي','قبل تجهيز الموسم'],
+    ['2026-07-14','trt',null,'ديكلازوريل — برنامج وقائي','يومان، اللوفت كامل قبل التدريب'],
+    ['2026-05-19','trt','غيمة','رونيدازول — ترايكوموناس','خمسة أيام، تعافٍ كامل'],
+    ['2026-03-10','vac',null,'تطعيم الجدري (Pox)','فراخ الموسم + طيور السنة الأولى'],
+  ];
+  let rows = DATA.map((r,i)=>({id:i, d:r[0], type:r[1], bird:r[2], med:r[3], note:r[4]}));
+  let removed=null, confirmId=null, filter='all', editId=null, pickedBird=null, demoEmpty=false;
+
+  const fmtD = d => d.split('-').reverse().join(' / ');
+  const chip = t => `<span class="chip ${t}"><span class="dot ${t}"></span>${TYPES[t]}</span>`;
+  const scope = b => b ? `<button class="birdlink">${b}</button>` : `<span class="scope"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9H3z"/></svg>اللوفت كامل</span>`;
+  const confirmHtml = id => `<div class="confirm"><span>تأكيد الحذف؟</span><div class="b"><button class="go" onclick="del(${id})">حذف</button><button class="no" onclick="cancelDel()">إلغاء</button></div></div>`;
+  const actsHtml = id => `<div class="acts"><button class="act" onclick="openModal(${id})">تعديل</button><button class="act x" aria-label="حذف" onclick="askDel(${id})">✕</button></div>`;
+
+  function visible(){
+    if(demoEmpty) return [];
+    return rows.filter(r => filter==='all' ? true : filter==='loft' ? r.bird===null : r.type===filter);
+  }
+
+  function render(){
+    const vis = visible();
+    const empty = vis.length===0;
+    document.getElementById('content').hidden = empty;
+    document.getElementById('empty').hidden = !empty;
+    document.getElementById('empty-t').textContent = (rows.length===0||demoEmpty) ? 'لا أحداث صحية مسجلة.' : 'لا أحداث تطابق التصفية.';
+    document.getElementById('empty-p').hidden = !(rows.length===0||demoEmpty);
+    document.getElementById('next').hidden = demoEmpty || rows.length===0;
+    document.getElementById('count').textContent = (demoEmpty||rows.length===0) ? 'لا أحداث بعد' : `${rows.length} أحداث · آخرها ${fmtD(rows[0].d)}`;
+
+    let html='', lastD=null;
+    vis.forEach(r=>{
+      if(r.d!==lastD){ html+=`<div class="datelbl">${fmtD(r.d)}</div>`; lastD=r.d; }
+      html+=`<div class="hrow">
+        <div class="l1"><div><div class="med">${r.med}</div><div class="meta">${chip(r.type)}${scope(r.bird)}</div>${r.note?`<div class="note">${r.note}</div>`:''}</div></div>
+        <div class="l2">${confirmId===r.id ? '' : actsHtml(r.id)}</div>
+        ${confirmId===r.id ? confirmHtml(r.id) : ''}
+      </div>`;
+    });
+    document.getElementById('rows').innerHTML = html;
+
+    document.getElementById('tbody').innerHTML = vis.map(r=>`<tr class="${confirmId===r.id?'cf':''}">
+      <td class="num">${fmtD(r.d)}</td><td>${chip(r.type)}</td><td>${scope(r.bird)}</td><td class="med">${r.med}</td><td class="note">${r.note||''}</td>
+      <td>${confirmId===r.id ? confirmHtml(r.id) : actsHtml(r.id)}</td></tr>`).join('');
+  }
+
+  // filters
+  document.getElementById('filters').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    filter = b.dataset.f;
+    document.querySelectorAll('#filters button').forEach(x=>x.setAttribute('aria-pressed', x===b));
+    confirmId=null; render();
+  });
+
+  // delete flow
+  function askDel(id){ confirmId=id; render(); }
+  function cancelDel(){ confirmId=null; render(); }
+  function del(id){
+    const i = rows.findIndex(r=>r.id===id);
+    removed = {row:rows[i], i}; rows.splice(i,1); confirmId=null; render();
+    const t=document.getElementById('toast'); t.hidden=false;
+    clearTimeout(t._h); t._h=setTimeout(()=>{ t.hidden=true; removed=null; }, 6000);
+  }
+  function undo(){ if(removed){ rows.splice(removed.i,0,removed.row); removed=null; render(); } document.getElementById('toast').hidden=true; }
+
+  // dialog
+  const $ = id => document.getElementById(id);
+  function typeChanged(){ $('type-dot').className = 'dot '+$('f-type').value; }
+  function scopeChanged(){ $('f-bird').hidden = $('f-scope').value==='loft'; clearErr(); }
+  function setBird(name){
+    pickedBird = name;
+    $('bird-val').innerHTML = name ? `<span class="val"><b>${name}</b><span class="plate"><span class="season">${BIRDS[name].split(' ')[1]}</span><span class="num">${BIRDS[name].split(' ').slice(2).join(' ')}</span></span></span>` : 'اختر طيرًا من اللوفت';
+    $('bird-val').classList.toggle('ph', !name);
+  }
+  function pickBird(){ setBird(pickedBird ? null : 'برق'); clearErr(); }  // prototype: toggles a sample bird
+  function clearErr(){ $('f-bird').classList.remove('err'); $('m-alert').hidden=true; }
+  function openModal(id){
+    editId = (typeof id==='number') ? id : null;
+    const r = editId!==null ? rows.find(x=>x.id===editId) : null;
+    $('mtitle').textContent = r ? 'تعديل' : 'حدث جديد';
+    $('f-type').value = r ? r.type : 'vac'; typeChanged();
+    $('f-scope').value = r ? (r.bird ? 'bird':'loft') : 'bird';
+    setBird(r ? r.bird : null);
+    $('f-date').value = r ? r.d : '2026-09-06';
+    $('f-med').value = r ? (r.med==='—' ? '' : r.med) : '';
+    $('f-note').value = r ? r.note : '';
+    clearErr(); scopeChanged();
+    $('scrim').hidden=false;
+  }
+  function closeModal(){ $('scrim').hidden=true; }
+  function save(){
+    if($('f-scope').value==='bird' && !pickedBird){ $('f-bird').classList.add('err'); $('m-alert').hidden=false; return; }
+    const v = { d:$('f-date').value, type:$('f-type').value, bird:$('f-scope').value==='loft'?null:pickedBird, med:$('f-med').value||'—', note:$('f-note').value };
+    if(editId!==null){ Object.assign(rows.find(x=>x.id===editId), v); }
+    else { rows.unshift({id:Date.now(), ...v}); rows.sort((a,b)=>b.d.localeCompare(a.d)); }
+    closeModal(); render();
+  }
+
+  // demo switcher
+  document.querySelector('.demo').addEventListener('click', e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    document.querySelectorAll('.demo button').forEach(x=>x.classList.toggle('on', x===b));
+    const v=b.dataset.v; demoEmpty = v==='empty'; closeModal(); confirmId=null; render();
+    if(v==='new') openModal();
+    if(v==='edit') openModal(0);
+    if(v==='error'){ openModal(); save(); }
+  });
+
+  render();
+</script>
+</body>
+</html>

@@ -34,6 +34,7 @@ Changing a file in `approved/` is a design decision, not an edit.
 | Add/edit bird | `approved/add-edit-bird-v1.html` | superseded by v2 (rail side fix) |
 | Pedigree tree | `approved/pedigree-tree-v1.html` | approved |
 | Races | `approved/races-v1.html` | approved |
+| Health | `approved/health-v1.html` | approved |
 
 Where two versions of a screen are listed, **the highest `-vN` is the one to
 build**. Earlier versions stay in place unchanged so a decision already made
@@ -54,6 +55,25 @@ message when the coordinates will not parse. The spec replaces both with
 alert banner, and a scroll back to the first bad field. **Implement the spec,
 not the current behaviour.** Note it fixes *two* silent failures, not one: the
 required-bird case and the unparseable-coordinates case.
+
+**Health (`health-v1.html`) — the spec DELIBERATELY departs from the app, in
+three places.** Two are ruled and intended: it adds an **edit path** for health
+events (today the row offers only ✕ — `js/views/health.js:39-46` has no edit
+button, and `eventDialog` mints a fresh `id: uuid()` at
+`js/views/health.js:88`, so the dialog can only ever create), and it adds
+**visible inline errors** where the dialog fails silently today
+(`js/views/health.js:86` returns `false` with no message). **Implement the
+spec, not the current behaviour.**
+
+The third is raised, not resolved: the **التطعيم القادم** panel. It has **no
+counterpart in the app and no data to compute it from**. A `healthEvent`
+carries only `id, eventType, wholeLoft, birdId, date, medication, notes` — no
+interval, no due date — and `medication` is free text, so "the annual PMV" is
+not derivable from a record. In the spec the panel is static markup; its only
+script is `document.getElementById('next').hidden = …`. Building it needs a
+data-model decision (a recurrence interval on the event, or a convention over
+`medication`) that has not been made. Flagged for a ruling — not designed
+around.
 
 **Design contract:** [`ZAJIL-DESIGN-KIT.md`](ZAJIL-DESIGN-KIT.md) — brief,
 inventory, responsive rules; brand `#128C6E`.
