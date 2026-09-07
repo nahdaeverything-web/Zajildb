@@ -31,7 +31,7 @@ Changing a file in `approved/` is a design decision, not an edit.
 | Sign-in | `approved/sign-in-v1.html` | approved |
 | Loft home | `approved/loft-home-v1.html` | approved |
 | Bird profile | `approved/bird-profile-v1.html` | approved |
-| Design system | `approved/zajil-prototype.html` | design system reference; loft home and bird profile superseded by their own specs |
+| Design system | `approved/zajil-prototype.html` | Design system reference — loft home, bird profile and sign-in are each superseded by their own approved specs; use the prototype only for tokens, type scale and shared component style. |
 | Add/edit bird | `approved/add-edit-bird-v2.html` | **approved — the file the React port implements** |
 | Add/edit bird | `approved/add-edit-bird-v1.html` | superseded by v2 (rail side fix) |
 | Pedigree tree | `approved/pedigree-tree-v1.html` | approved |
