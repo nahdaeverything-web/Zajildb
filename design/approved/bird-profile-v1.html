@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>زاجل — ملف الطائر · برق</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brand:#128C6E; --brand-deep:#0E6F57; --brand-tint:#E3F4EE;
+    --ink:#101820; --ink-2:#4A5560; --ink-3:#8C97A2;
+    --page:#F5F7F8; --surface:#FFFFFF; --line:#E4E9ED;
+    --gold:#C9971F; --gold-tint:#FBF3DF; --danger:#C43D2B;
+    --r:20px; --r-btn:16px;
+    --f:'Alexandria', system-ui, sans-serif;
+    --f-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:var(--f); color:var(--ink); background:#E9EDF0; min-height:100vh; display:flex; justify-content:center; line-height:1.5; }
+  button{ font-family:var(--f); }
+  .phone{ width:100%; max-width:430px; min-height:100vh; background:var(--page); position:relative; }
+
+  .top{ background:var(--surface); padding:16px 20px 0; }
+  .top .bar{ display:flex; align-items:center; justify-content:space-between; }
+  .icon-btn{ width:46px; height:46px; border:none; border-radius:14px; cursor:pointer; background:var(--page); color:var(--ink); display:grid; place-items:center; }
+  .icon-btn svg{ width:22px; height:22px; stroke:currentColor; stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .crumb{ font-size:15px; font-weight:700; color:var(--ink-3); }
+
+  .hero{ background:var(--surface); padding:18px 20px 24px; border-bottom:1px solid var(--line); }
+  .hero-row{ display:flex; align-items:center; gap:16px; }
+  .avatar{ flex:none; width:84px; height:84px; border-radius:26px; background:var(--brand); display:grid; place-items:center; }
+  .avatar svg{ width:52px; height:52px; }
+  h1{ font-size:42px; font-weight:900; line-height:1.05; }
+  .meta{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .tag{ font-size:13.5px; font-weight:700; padding:6px 14px; border-radius:999px; background:var(--page); color:var(--ink-2); }
+  .tag.on{ background:var(--brand-tint); color:var(--brand-deep); }
+  .plate{ display:inline-flex; align-items:stretch; direction:ltr; margin-top:18px; border-radius:14px; overflow:hidden; background:var(--ink); }
+  .plate .season{ background:var(--gold); color:#fff; font-family:var(--f-mono); font-weight:600; font-size:14px; padding:0 12px; display:grid; place-items:center; }
+  .plate .num{ color:#fff; font-family:var(--f-mono); font-weight:600; font-size:20px; letter-spacing:2px; padding:12px 18px; }
+  .plate.sm{ border-radius:10px; margin:0; }
+  .plate.sm .season{ font-size:10px; padding:0 7px; }
+  .plate.sm .num{ font-size:12px; letter-spacing:1px; padding:6px 10px; }
+  .hero-actions{ display:none; gap:10px; }
+  .btn{ border-radius:var(--r-btn); padding:15px 22px; font-size:15.5px; font-weight:800; cursor:pointer; min-height:48px; }
+  .btn-outline{ border:2px solid var(--ink); background:transparent; color:var(--ink); }
+  .btn-primary{ border:none; background:var(--brand); color:#fff; }
+
+  .tiles{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; padding:16px 20px 0; }
+  .tile{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px 10px 14px; text-align:center; }
+  .tile .v{ font-size:34px; font-weight:900; color:var(--brand); direction:ltr; line-height:1; font-variant-numeric:tabular-nums; }
+  .tile .k{ font-size:12.5px; color:var(--ink-2); font-weight:600; margin-top:6px; }
+
+  .seg{ display:flex; gap:6px; margin:16px 20px 0; }
+  .seg button{ flex:1; border:1px solid var(--line); background:var(--surface); padding:13px 2px; cursor:pointer; font-size:14.5px; font-weight:700; color:var(--ink-2); border-radius:999px; min-height:48px; }
+  .seg button[aria-selected="true"]{ background:var(--ink); border-color:var(--ink); color:#fff; }
+
+  .panel{ padding:16px 20px 170px; }
+  .panel[hidden]{ display:none; }
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:20px; margin-bottom:14px; }
+  .card h2{ font-size:19px; font-weight:800; margin-bottom:14px; }
+  .card h2 .cnt{ font-size:13px; font-weight:700; color:var(--ink-3); margin-inline-start:8px; direction:ltr; display:inline-block; }
+  .rows .row{ display:flex; justify-content:space-between; align-items:center; padding:13px 0; border-bottom:1px solid var(--line); font-size:15.5px; gap:12px; }
+  .rows .row:last-child{ border-bottom:none; padding-bottom:0; }
+  .rows .row:first-child{ padding-top:0; }
+  .rows .k{ color:var(--ink-2); font-weight:500; }
+  .rows .v{ font-weight:700; text-align:left; }
+  .rows .v.data{ direction:ltr; font-variant-numeric:tabular-nums; }
+  .rows .v.link{ display:inline-flex; align-items:center; gap:8px; color:var(--brand-deep); font-weight:800; border:none; background:none; cursor:pointer; font-size:15.5px; padding:0; }
+  .rows .v.link svg{ width:14px; height:14px; stroke:currentColor; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .notice{ background:var(--brand); border-radius:var(--r); padding:18px 20px; margin-bottom:14px; color:#fff; }
+  .notice .t{ font-size:17px; font-weight:800; display:flex; align-items:center; gap:10px; }
+  .notice .t svg{ width:22px; height:22px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .notice p{ font-size:13.5px; font-weight:500; opacity:.92; margin-top:6px; }
+  .prose{ font-size:15px; font-weight:500; color:var(--ink-2); }
+
+  /* gallery */
+  .gal{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .ph{ aspect-ratio:1; border-radius:18px; overflow:hidden; position:relative; border:none; padding:0; cursor:pointer; background:var(--page); text-align:center; }
+  .ph.img{ background:var(--brand-tint); border:1px solid var(--line); }
+  .ph.img span{ position:absolute; bottom:8px; inset-inline-start:8px; font-family:var(--f-mono); font-size:10px; color:var(--ink-2); direction:ltr; }
+  .ph.cover::after{ content:'الرئيسية'; position:absolute; top:8px; inset-inline-start:8px; font-size:11px; font-weight:800; background:var(--ink); color:#fff; border-radius:999px; padding:3px 9px; }
+  .ph.remote{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:10px; border:1px solid var(--line); }
+  .ph.remote svg{ width:24px; height:24px; stroke:var(--ink-3); stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .ph.remote span{ font-size:11.5px; font-weight:700; color:var(--ink-3); line-height:1.3; }
+
+  /* pedigree preview — same node grammar as screen 5 */
+  .pnote{ font-size:15px; font-weight:600; color:var(--ink-2); margin-bottom:14px; }
+  .pnote strong{ color:var(--brand); font-weight:900; font-size:18px; direction:ltr; display:inline-block; }
+  .mini{ --gap:14px; display:grid; grid-template-columns:1.15fr 1fr 1fr; gap:var(--gap); }
+  .gen{ display:flex; flex-direction:column; justify-content:space-around; min-width:0; }
+  .pair{ position:relative; display:flex; flex-direction:column; justify-content:space-around; flex:1; }
+  .pair::before{ content:''; position:absolute; inset-inline-start:calc(-1 * var(--gap) / 2); top:25%; bottom:25%; border-inline-start:1px solid var(--line); }
+  .pair::after{ content:''; position:absolute; inset-inline-start:calc(-1 * var(--gap)); width:calc(var(--gap) / 2); top:50%; border-top:1px solid var(--line); }
+  .slot{ position:relative; display:flex; align-items:center; padding:5px 0; }
+  .slot::before{ content:''; position:absolute; inset-inline-start:calc(-1 * var(--gap) / 2); width:calc(var(--gap) / 2); top:50%; border-top:1px solid var(--line); }
+  .node{ width:100%; background:var(--surface); border:1px solid var(--line); text-align:start; cursor:pointer; display:flex; flex-direction:column; justify-content:center; color:var(--ink); min-width:0; }
+  .node .role{ font-size:10.5px; font-weight:700; color:var(--ink-3); }
+  .node .nm{ font-weight:800; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .node .rg{ font-family:var(--f-mono); font-weight:600; color:var(--ink-2); direction:ltr; text-align:right; white-space:nowrap; }
+  .n1{ border:2px solid var(--ink); border-radius:var(--r); padding:14px 12px; gap:4px; }
+  .n1 .nm{ font-size:24px; font-weight:900; }
+  .n1 .plate{ margin-top:6px; align-self:flex-start; }
+  .n2{ min-height:64px; border-radius:16px; padding:10px 12px; gap:3px; } .n2 .nm{ font-size:16.5px; } .n2 .rg{ font-size:10.5px; }
+  .n3{ min-height:52px; border-radius:14px; padding:8px 10px; gap:2px; } .n3 .nm{ font-size:14px; } .n3 .rg{ font-size:10px; }
+  .pbtn{ width:100%; margin-top:16px; border:2px solid var(--ink); background:transparent; color:var(--ink); border-radius:var(--r-btn); padding:15px; font-size:15.5px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; }
+  .pbtn svg{ width:18px; height:18px; stroke:currentColor; stroke-width:2.8; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+
+  /* races */
+  .best{ background:var(--gold); border-radius:var(--r); padding:18px 20px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; color:#fff; }
+  .best .t{ font-size:13px; font-weight:700; opacity:.9; }
+  .best .r{ font-size:20px; font-weight:900; margin-top:2px; }
+  .best .m{ font-family:var(--f-mono); font-weight:600; font-size:12.5px; opacity:.9; margin-top:6px; direction:ltr; text-align:right; }
+  .best .rank{ font-size:44px; font-weight:900; direction:ltr; line-height:1; }
+  .best .rank small{ font-size:14px; font-weight:700; opacity:.85; display:block; text-align:center; margin-top:2px; font-family:var(--f-mono); }
+  table{ width:100%; border-collapse:collapse; }
+  th{ font-size:12.5px; font-weight:700; color:var(--ink-3); text-align:right; padding:0 4px 10px; border-bottom:2px solid var(--line); white-space:nowrap; }
+  td{ padding:13px 4px; font-size:15px; font-weight:600; border-bottom:1px solid var(--line); }
+  tr:last-child td{ border-bottom:none; padding-bottom:0; }
+  td .d{ display:block; font-family:var(--f-mono); font-size:11px; color:var(--ink-3); direction:ltr; text-align:right; margin-top:2px; }
+  .num{ direction:ltr; text-align:right; font-variant-numeric:tabular-nums; font-family:var(--f-mono); font-size:14px; }
+  th.num{ font-family:var(--f); }
+  .pill{ display:inline-block; min-width:44px; text-align:center; font-weight:800; font-size:14px; padding:6px 10px; border-radius:12px; background:var(--page); color:var(--ink-2); direction:ltr; }
+  .pill.top{ background:var(--brand); color:#fff; }
+  .pill.gold{ background:var(--gold); color:#fff; }
+
+  /* health timeline */
+  .tl{ position:relative; padding-inline-start:26px; }
+  .tl::before{ content:''; position:absolute; inset-inline-start:7px; top:10px; bottom:10px; border-inline-start:2px solid var(--line); }
+  .ev{ position:relative; padding:0 0 22px; }
+  .ev:last-child{ padding-bottom:0; }
+  .ev::before{ content:''; position:absolute; inset-inline-start:-26px; top:6px; width:16px; height:16px; border-radius:999px; background:var(--surface); border:4px solid var(--brand); }
+  .ev.treat::before{ border-color:var(--danger); }
+  .ev.vit::before{ border-color:var(--gold); }
+  .ev.note::before{ border-color:var(--ink-3); }
+  .ev .h{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .ev .t{ font-size:16px; font-weight:800; }
+  .ev .d{ flex:none; font-family:var(--f-mono); font-size:12.5px; font-weight:600; color:var(--ink-3); direction:ltr; margin-top:3px; }
+  .ev .n{ font-size:14px; color:var(--ink-2); margin-top:3px; font-weight:500; }
+  .kind{ display:inline-block; font-size:11.5px; font-weight:800; border-radius:999px; padding:3px 10px; margin-top:8px; background:var(--brand-tint); color:var(--brand-deep); }
+  .kind.treat{ background:#F8E6E3; color:var(--danger); }
+  .kind.vit{ background:var(--gold-tint); color:#8A6410; }
+  .kind.note{ background:var(--page); color:var(--ink-2); }
+  .nxt{ display:flex; justify-content:space-between; align-items:center; gap:12px; border:1px solid var(--line); border-radius:var(--r); padding:16px 20px; margin-bottom:14px; background:var(--surface); }
+  .nxt .k{ font-size:12.5px; font-weight:700; color:var(--ink-3); }
+  .nxt .t{ font-size:17px; font-weight:800; margin-top:2px; }
+  .nxt .d{ font-family:var(--f-mono); font-weight:600; font-size:15px; direction:ltr; color:var(--ink); }
+
+  .cta-wrap{ position:fixed; bottom:84px; inset-inline:0; margin-inline:auto; max-width:430px; padding:0 20px; z-index:9; }
+  .cta{ width:100%; border:none; border-radius:var(--r-btn); padding:18px; cursor:pointer; background:var(--brand); color:#fff; font-size:17px; font-weight:800; }
+
+  .tabbar{ position:fixed; bottom:0; inset-inline:0; margin-inline:auto; max-width:430px; background:var(--surface); border-top:1px solid var(--line); display:flex; padding:10px 4px 14px; z-index:10; }
+  .tabbar button{ flex:1; min-width:0; border:none; background:none; cursor:pointer; color:var(--ink-3); font-size:10.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:5px; white-space:nowrap; min-height:44px; }
+  .tabbar button svg, .rail button svg{ width:26px; height:26px; stroke:currentColor; stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .tabbar button.on{ color:var(--brand); }
+  .rail{ display:none; position:fixed; top:0; bottom:0; inset-inline-start:0; width:132px; background:var(--surface); border-inline-end:1px solid var(--line); flex-direction:column; gap:4px; padding:24px 12px; z-index:11; }
+  .rail button{ display:flex; align-items:center; gap:10px; border:none; background:none; cursor:pointer; color:var(--ink-3); font-size:13px; font-weight:700; padding:12px 10px; border-radius:14px; min-height:48px; }
+  .rail button.on{ background:var(--brand-tint); color:var(--brand); }
+
+  @media (hover:hover){
+    .icon-btn:hover, .rail button:hover{ background:var(--brand-tint); }
+    .rail button:hover, .tabbar button:hover{ color:var(--brand-deep); }
+    .node:hover{ background:var(--brand-tint); border-color:var(--brand); }
+    .pbtn:hover, .btn-outline:hover{ background:var(--ink); color:#fff; }
+    .btn-primary:hover, .cta:hover{ background:var(--brand-deep); }
+    .seg button:not([aria-selected="true"]):hover{ background:var(--brand-tint); color:var(--brand-deep); }
+    .rows .v.link:hover{ text-decoration:underline; }
+    tbody tr:hover td{ background:var(--brand-tint); }
+    .ph:hover{ outline:2px solid var(--brand); }
+  }
+  button:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
+
+  /* Part 3 — tablet */
+  @media (min-width:701px){
+    .phone{ max-width:720px; border-inline:1px solid var(--line); }
+    .cta-wrap, .tabbar{ max-width:720px; }
+    .gal{ grid-template-columns:repeat(4,1fr); }
+  }
+  /* Part 3 — desktop: rail on the RTL start (right) edge */
+  @media (min-width:1100px){
+    .rail{ display:flex; }
+    .tabbar, .cta-wrap{ display:none; }
+    .phone{ max-width:none; margin-inline-start:132px; border:none; }
+    .wrap{ max-width:960px; margin:0 auto; }
+    .top, .hero{ padding-inline:0; }
+    .top, .herobg{ background:var(--surface); }
+    .hero{ display:flex; align-items:flex-end; justify-content:space-between; gap:32px; border-bottom:none; }
+    .herobg{ border-bottom:1px solid var(--line); }
+    .hero-actions{ display:flex; }
+    .tiles, .seg, .panel{ padding-inline:0; margin-inline:0; }
+    .tiles{ grid-template-columns:repeat(3, 200px); }
+    .seg{ max-width:560px; }
+    .panel{ padding-bottom:60px; }
+    .two{ display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
+    .two > *{ margin-bottom:0; }
+    .gal{ grid-template-columns:repeat(3,1fr); }
+    .mini{ --gap:24px; grid-template-columns:1.1fr 1fr 1fr; }
+    .n1 .nm{ font-size:30px; } .n2 .nm{ font-size:19px; } .n3 .nm{ font-size:16px; } .n2 .rg, .n3 .rg{ font-size:11.5px; }
+    .pbtn{ width:auto; padding-inline:28px; }
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <div class="herobg"><div class="wrap">
+    <div class="top"><div class="bar">
+      <button class="icon-btn" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      <span class="crumb">الطيور</span>
+      <button class="icon-btn" aria-label="خيارات"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg></button>
+    </div></div>
+    <header class="hero">
+      <div>
+        <div class="hero-row">
+          <div class="avatar"><svg viewBox="0 0 100 100" fill="#fff"><path d="M18 78c14 4 34 4 46-4 10-7 16-18 17-30 0-4-2-6-5-6-2 0-4 1-5 3l-4 8c-6 10-16 16-28 18-8 1-15 5-21 11z"/><path d="M62 34c3-6 9-9 15-8 3 0 5 2 5 5 0 2-1 3-3 4l-6 2c-4 2-8 1-11-3z"/><path d="M80 36l8 2-8 2z"/></svg></div>
+          <div><h1>برق</h1>
+            <div class="meta"><span class="tag on">ذكر</span><span class="tag on">نشط</span><span class="tag">فريق السباق</span></div>
+          </div>
+        </div>
+        <div class="plate"><span class="season">24</span><span class="num">JOR 24 17352</span></div>
+      </div>
+      <div class="hero-actions">
+        <button class="btn btn-outline">تعديل</button>
+        <button class="btn btn-primary">شهادة النسب</button>
+      </div>
+    </header>
+  </div></div>
+
+  <div class="wrap">
+    <section class="tiles">
+      <div class="tile"><div class="v">3.1%</div><div class="k">التربية الداخلية</div></div>
+      <div class="tile"><div class="v">12</div><div class="k">سباقًا</div></div>
+      <div class="tile"><div class="v">2024</div><div class="k">التفقيس</div></div>
+    </section>
+
+    <nav class="seg" role="tablist">
+      <button role="tab" id="t-over" aria-selected="true" aria-controls="p-over">عام</button>
+      <button role="tab" id="t-ped" aria-selected="false" aria-controls="p-ped">النسب</button>
+      <button role="tab" id="t-race" aria-selected="false" aria-controls="p-race">السباقات</button>
+      <button role="tab" id="t-hlth" aria-selected="false" aria-controls="p-hlth">الصحة</button>
+    </nav>
+
+    <!-- عام -->
+    <section class="panel" id="p-over" role="tabpanel">
+      <div class="notice"><div class="t"><svg viewBox="0 0 24 24"><path d="M5 12l4 4L19 7"/></svg>سجل موثق</div>
+        <p>في زاجل منذ آذار 2025. كل تعديل محفوظ بتاريخه وجهازه، والشهادة تُبنى من السجل نفسه.</p></div>
+      <div class="two">
+        <div class="card"><h2>الصور<span class="cnt">3</span></h2>
+          <div class="gal">
+            <button class="ph img cover" aria-label="الصورة الرئيسية"><span>IMG_4471</span></button>
+            <button class="ph img" aria-label="صورة"><span>IMG_4488</span></button>
+            <button class="ph remote" aria-label="الصورة على جهاز آخر">
+              <svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/></svg>
+              <span>الصورة على جهاز آخر</span>
+            </button>
+          </div>
+        </div>
+        <div class="card"><h2>البيانات الأساسية</h2><div class="rows">
+          <div class="row"><span class="k">اللوفت</span><span class="v">لوفت الفحيص</span></div>
+          <div class="row"><span class="k">اللون</span><span class="v">أزرق مخطط</span></div>
+          <div class="row"><span class="k">تاريخ التفقيس</span><span class="v data">18 / 03 / 2024</span></div>
+          <div class="row"><span class="k">الأب</span><button class="v link">الصاعقة<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button></div>
+          <div class="row"><span class="k">الأم</span><button class="v link">غيمة<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button></div>
+          <div class="row"><span class="k">أُضيف</span><span class="v data">09 / 03 / 2025</span></div>
+        </div></div>
+      </div>
+      <div class="card" style="margin-top:14px"><h2>ملاحظات</h2><p class="prose">عائد قوي في الطقس الغائم. مرشح أساسي لموسم 2026 / 2027. يُفضَّل تزويجه مع شقراء في الجولة الأولى.</p></div>
+    </section>
+
+    <!-- النسب -->
+    <section class="panel" id="p-ped" role="tabpanel" hidden>
+      <p class="pnote">التربية الداخلية <strong>3.1%</strong> من خمسة أجيال · أربعة مكتملة</p>
+      <div class="card">
+        <div class="mini">
+          <div class="gen">
+            <button class="node n1"><span class="nm">برق</span><span class="plate sm"><span class="season">24</span><span class="num">JOR 24 17352</span></span></button>
+          </div>
+          <div class="gen"><div class="pair">
+            <div class="slot"><button class="node n2"><span class="role">الأب</span><span class="nm">الصاعقة</span><span class="rg">JOR 21 08841</span></button></div>
+            <div class="slot"><button class="node n2"><span class="role">الأم</span><span class="nm">غيمة</span><span class="rg">JOR 22 04117</span></button></div>
+          </div></div>
+          <div class="gen">
+            <div class="pair">
+              <div class="slot"><button class="node n3"><span class="nm">النشمي</span><span class="rg">JOR 18 02290</span></button></div>
+              <div class="slot"><button class="node n3"><span class="nm">فيروز</span><span class="rg">NL 19 1447206</span></button></div>
+            </div>
+            <div class="pair">
+              <div class="slot"><button class="node n3"><span class="nm">سلطان</span><span class="rg">JOR 19 05512</span></button></div>
+              <div class="slot"><button class="node n3"><span class="nm">ياقوت</span><span class="rg">BE 20 6034981</span></button></div>
+            </div>
+          </div>
+        </div>
+        <button class="pbtn">شجرة النسب الكاملة<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      </div>
+    </section>
+
+    <!-- السباقات -->
+    <section class="panel" id="p-race" role="tabpanel" hidden>
+      <div class="best">
+        <div><div class="t">أفضل نتيجة</div><div class="r">سباق معان الكبير</div><div class="m">288 km · 1342 m/min</div></div>
+        <div class="rank">3<small>/ 412</small></div>
+      </div>
+      <div class="card"><h2>موسم 2025 / 2026<span class="cnt">5</span></h2>
+        <table><thead><tr><th>الإطلاق</th><th class="num">كم</th><th class="num">م/د</th><th>الترتيب</th></tr></thead>
+        <tbody>
+          <tr><td>معان<span class="d">14 / 03 / 2026</span></td><td class="num">288</td><td class="num">1342</td><td><span class="pill gold">3</span></td></tr>
+          <tr><td>الجفر<span class="d">28 / 02 / 2026</span></td><td class="num">254</td><td class="num">1401</td><td><span class="pill top">5</span></td></tr>
+          <tr><td>القويرة<span class="d">14 / 02 / 2026</span></td><td class="num">341</td><td class="num">1287</td><td><span class="pill top">7</span></td></tr>
+          <tr><td>العقبة<span class="d">31 / 01 / 2026</span></td><td class="num">326</td><td class="num">1195</td><td><span class="pill">18</span></td></tr>
+          <tr><td>الحسينية<span class="d">17 / 01 / 2026</span></td><td class="num">212</td><td class="num">1226</td><td><span class="pill">24</span></td></tr>
+        </tbody></table>
+      </div>
+      <div class="card"><h2>موسم 2024 / 2025<span class="cnt">7</span></h2>
+        <table><thead><tr><th>الإطلاق</th><th class="num">كم</th><th class="num">م/د</th><th>الترتيب</th></tr></thead>
+        <tbody>
+          <tr><td>معان<span class="d">15 / 03 / 2025</span></td><td class="num">288</td><td class="num">1218</td><td><span class="pill">31</span></td></tr>
+          <tr><td>الجفر<span class="d">01 / 03 / 2025</span></td><td class="num">254</td><td class="num">1304</td><td><span class="pill top">9</span></td></tr>
+          <tr><td>القطرانة<span class="d">15 / 02 / 2025</span></td><td class="num">142</td><td class="num">1355</td><td><span class="pill top">6</span></td></tr>
+        </tbody></table>
+      </div>
+    </section>
+
+    <!-- الصحة -->
+    <section class="panel" id="p-hlth" role="tabpanel" hidden>
+      <div class="nxt"><div><div class="k">التطعيم القادم</div><div class="t">PMV السنوي</div></div><span class="d">08 / 2027</span></div>
+      <div class="card"><h2>السجل الصحي<span class="cnt">5</span></h2>
+        <div class="tl">
+          <div class="ev"><div class="h"><div class="t">تطعيم PMV السنوي</div><span class="d">02 / 08 / 2026</span></div><div class="n">قبل تجهيز الموسم. كامل فريق السباق.</div><span class="kind">تطعيم</span></div>
+          <div class="ev treat"><div class="h"><div class="t">علاج ترايكوموناس</div><span class="d">19 / 05 / 2026</span></div><div class="n">خمسة أيام رونيدازول، تعافٍ كامل.</div><span class="kind treat">علاج</span></div>
+          <div class="ev note"><div class="h"><div class="t">خسارة وزن خفيفة</div><span class="d">11 / 05 / 2026</span></div><div class="n">بعد سباق معان. مراقبة الشرب.</div><span class="kind note">ملاحظة</span></div>
+          <div class="ev vit"><div class="h"><div class="t">فيتامينات ومعادن</div><span class="d">11 / 02 / 2026</span></div><div class="n">أسبوع القلش.</div><span class="kind vit">فيتامينات</span></div>
+          <div class="ev"><div class="h"><div class="t">تطعيم PMV + جدري</div><span class="d">27 / 07 / 2025</span></div><div class="n">أول تطعيم بعد الانتقال لفريق السباق.</div><span class="kind">تطعيم</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="cta-wrap"><button class="cta">شهادة النسب</button></div>
+
+  <nav class="tabbar">
+    <button class="on"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>الطيور</button>
+    <button><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>التزاوج</button>
+    <button><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>السباقات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>الصحة</button>
+    <button><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>الإحصائيات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg>الأدوات</button>
+  </nav>
+
+  <nav class="rail">
+    <button class="on"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>الطيور</button>
+    <button><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>التزاوج</button>
+    <button><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>السباقات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>الصحة</button>
+    <button><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>الإحصائيات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg>الأدوات</button>
+  </nav>
+
+</div>
+<script>
+  const tabs = document.querySelectorAll('.seg [role="tab"]');
+  function select(tab){
+    tabs.forEach(t => {
+      const on = t === tab;
+      t.setAttribute('aria-selected', String(on));
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+    });
+  }
+  tabs.forEach(tab => tab.addEventListener('click', () => select(tab)));
+  const want = new URLSearchParams(location.search).get('tab');
+  if (want && document.getElementById('t-' + want)) select(document.getElementById('t-' + want));
+</script>
+</body>
+</html>

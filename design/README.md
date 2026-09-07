@@ -29,7 +29,9 @@ Changing a file in `approved/` is a design decision, not an edit.
 | Screen | File | Status |
 |---|---|---|
 | Sign-in | `approved/sign-in-v1.html` | approved |
-| Design system (sign-in, loft home, bird profile) | `approved/zajil-prototype.html` | approved |
+| Loft home | `approved/loft-home-v1.html` | approved |
+| Bird profile | `approved/bird-profile-v1.html` | approved |
+| Design system | `approved/zajil-prototype.html` | design system reference; loft home and bird profile superseded by their own specs |
 | Add/edit bird | `approved/add-edit-bird-v2.html` | **approved — the file the React port implements** |
 | Add/edit bird | `approved/add-edit-bird-v1.html` | superseded by v2 (rail side fix) |
 | Pedigree tree | `approved/pedigree-tree-v1.html` | approved |
@@ -101,6 +103,15 @@ Unchanged, and worth knowing before porting: pairs still have **no edit
 path** — `تعديل` does not appear in the spec, so `season`, `nestBox`,
 `startDate`, `acquiredFrom` and `acquiredDate` remain write-once at creation
 (`js/views/breeding.js:97-105`), exactly as today.
+
+**Bird profile (`bird-profile-v1.html`) — the flat placeholder fill is
+deliberate.** An earlier draft used a gradient on the photo placeholder; this
+file **fixes** that, so zero `gradient` is the correct state, not an omission.
+Two other copies of this screen exist in the design drops and neither is
+archived: the 29,137-byte `zajil-screen-3-bird-profile.html` is identical
+apart from three injected lines (a `<template id="__bundler_thumbnail">`
+block from the design tool), and the 271,521-byte "standalone" file is a
+bundler-wrapped preview.
 
 **Design contract:** [`ZAJIL-DESIGN-KIT.md`](ZAJIL-DESIGN-KIT.md) — brief,
 inventory, responsive rules; brand `#128C6E`.

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>زاجل — الطيور</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brand:#128C6E; --brand-deep:#0E6F57; --brand-tint:#E3F4EE;
+    --ink:#101820; --ink-2:#4A5560; --ink-3:#8C97A2;
+    --page:#F5F7F8; --surface:#FFFFFF; --line:#E4E9ED;
+    --gold:#C9971F; --gold-tint:#FBF3DF; --danger:#C43D2B;
+    --r:20px; --r-btn:16px;
+    --f:'Alexandria', system-ui, sans-serif;
+    --f-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:var(--f); color:var(--ink); background:#E9EDF0; min-height:100vh; display:flex; justify-content:center; line-height:1.5; }
+  a{ color:var(--brand-deep); font-weight:700; } a:hover{ color:var(--brand); }
+  button{ font-family:var(--f); }
+  .phone{ width:100%; max-width:430px; min-height:100vh; background:var(--page); position:relative; }
+  [hidden]{ display:none !important; }
+
+  /* ── loft header ── */
+  .lofthead{ background:var(--surface); border-bottom:1px solid var(--line); padding:22px 20px 20px; }
+  .headrow{ display:flex; flex-direction:column; gap:18px; }
+  .eyebrow{ font-size:13px; font-weight:700; color:var(--ink-3); }
+  h1{ font-size:40px; font-weight:900; line-height:1.05; margin-top:4px; }
+  .count{ font-size:15px; font-weight:700; color:var(--ink-2); margin-top:10px; display:flex; gap:6px; align-items:baseline; flex-wrap:wrap; }
+  .count b{ font-size:24px; font-weight:900; color:var(--brand); direction:ltr; line-height:1; font-variant-numeric:tabular-nums; }
+  .count .sep{ color:var(--ink-3); margin-inline:4px; }
+  .tools{ display:flex; flex-direction:column; gap:12px; }
+  .search{ display:flex; align-items:center; gap:10px; background:var(--page); border:2px solid var(--line); border-radius:var(--r-btn); padding:0 16px; min-height:56px; }
+  .search:focus-within{ border-color:var(--brand); background:var(--surface); }
+  .search svg{ flex:none; width:22px; height:22px; stroke:var(--ink-3); stroke-width:2.4; fill:none; stroke-linecap:round; }
+  .search input{ border:none; outline:none; flex:1; min-width:0; font-family:var(--f); font-size:16px; font-weight:600; background:transparent; color:var(--ink); }
+  .search input::placeholder{ color:var(--ink-3); }
+  .btn-add{ display:none; border:none; background:var(--brand); color:#fff; border-radius:var(--r-btn); min-height:56px; padding:0 24px;
+            font-size:16px; font-weight:800; cursor:pointer; align-items:center; gap:10px; white-space:nowrap; }
+  .btn-add svg{ width:20px; height:20px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; }
+
+  /* ── filters ── */
+  .filters{ display:flex; gap:8px; padding:14px 20px 0; overflow-x:auto; scrollbar-width:none; }
+  .filters::-webkit-scrollbar{ display:none; }
+  .fp{ flex:none; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:0 18px; min-height:44px;
+       font-size:14px; font-weight:700; color:var(--ink-2); cursor:pointer; white-space:nowrap; }
+  .fp[data-year]{ font-variant-numeric:tabular-nums; }
+  .fp.on{ background:var(--brand); border-color:var(--brand); color:#fff; }
+  .fp .gap{ flex:none; width:1px; }
+  .fdiv{ flex:none; width:1px; background:var(--line); margin:8px 4px; }
+
+  /* ── sync status row (above the list) ── */
+  .sync{ display:flex; align-items:center; gap:10px; margin:14px 20px 0; min-height:40px; padding:0 14px; border-radius:12px;
+         font-size:13.5px; font-weight:600; color:var(--ink-2); }
+  .sync .n{ font-variant-numeric:tabular-nums; direction:ltr; font-weight:800; color:var(--ink); }
+  .sync.offline{ font-style:italic; color:var(--ink-3); }
+  .sync.offline i{ flex:none; width:8px; height:8px; border-radius:999px; border:2px solid var(--ink-3); }
+  .sync.syncing{ color:var(--ink-3); }
+  .sync.syncing i{ flex:none; width:14px; height:14px; border-radius:999px; border:2.5px solid var(--line); border-top-color:var(--brand); animation:spin .9s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+  .sync.pending{ background:var(--surface); border:1px solid var(--line); }
+  .sync.pending i{ flex:none; width:8px; height:8px; border-radius:999px; background:var(--brand); }
+  .sync.error{ background:var(--gold-tint); color:#7A5A0E; font-weight:700; }
+  .sync.error i{ flex:none; width:8px; height:8px; border-radius:999px; background:var(--gold); }
+  .sync.error a{ margin-inline-start:auto; color:#7A5A0E; text-decoration:underline; text-underline-offset:3px; }
+  .sync.error a:hover{ color:var(--ink); }
+  .sync.synced{ border:1px dashed var(--line); color:var(--ink-3); font-size:12px; min-height:34px; justify-content:center; }
+  .spec{ margin:16px 20px 0; font-family:var(--f-mono); direction:ltr; text-align:right; font-size:10.5px; font-weight:500; color:var(--ink-3); letter-spacing:.5px; }
+  .spec + .sync{ margin-top:6px; }
+
+  /* ── list ── */
+  .list{ padding:6px 20px 190px; }
+  .yearlbl{ position:sticky; top:0; z-index:2; background:var(--page); display:flex; align-items:baseline; gap:8px; padding:20px 4px 10px; }
+  .yearlbl .y{ font-size:15px; font-weight:800; }
+  .yearlbl .y b{ direction:ltr; font-variant-numeric:tabular-nums; }
+  .yearlbl .c{ font-size:12.5px; font-weight:700; color:var(--ink-3); direction:ltr; }
+  .yearlbl::after{ content:''; flex:1; border-top:1px solid var(--line); align-self:center; margin-inline-start:6px; }
+  .brow{ width:100%; text-align:start; background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:16px 18px; margin-bottom:10px;
+         display:flex; align-items:center; gap:14px; cursor:pointer; color:var(--ink); min-height:88px; }
+  .brow .mid{ flex:1; min-width:0; display:flex; flex-direction:column; gap:9px; }
+  .brow .nm{ font-size:21px; font-weight:900; line-height:1.15; }
+  .brow .sub{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .brow .chev{ flex:none; width:18px; height:18px; stroke:var(--ink-3); stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .brow.gone .nm{ color:var(--ink-3); }
+
+  .plate{ display:inline-flex; align-items:stretch; direction:ltr; border-radius:10px; overflow:hidden; background:var(--ink); flex:none; }
+  .plate .yr{ background:var(--gold); color:#fff; font-family:var(--f-mono); font-weight:600; font-size:10px; padding:0 7px; display:grid; place-items:center; }
+  .plate .no{ color:#fff; font-family:var(--f-mono); font-weight:600; font-size:12px; letter-spacing:1px; padding:6px 10px; white-space:nowrap; }
+
+  .sx{ display:inline-flex; align-items:center; justify-content:center; gap:4px; min-width:30px; height:30px; padding:0 8px; border-radius:9px;
+       font-size:12.5px; font-weight:800; line-height:1; }
+  .sx.m{ background:var(--ink); color:#fff; }
+  .sx.f{ background:var(--surface); color:var(--ink); border:2px solid var(--ink); }
+  .sx.u{ background:var(--page); color:var(--ink-3); border:1px solid var(--line); }
+  .sx .g{ font-size:15px; font-weight:700; }
+  .st{ display:inline-flex; align-items:center; height:30px; padding:0 12px; border-radius:999px; font-size:12.5px; font-weight:800; white-space:nowrap; }
+  .st.race{ background:var(--brand-tint); color:var(--brand-deep); }
+  .st.active{ background:var(--page); color:var(--ink-2); border:1px solid var(--line); }
+  .st.breed{ background:var(--gold-tint); color:#7A5A0E; }
+  .st.gone{ background:var(--page); color:var(--ink-3); border:1px solid var(--line); }
+
+  /* ── desktop table (hidden on phone) ── */
+  .table{ display:none; margin:18px 20px 60px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; }
+  table{ width:100%; border-collapse:collapse; }
+  th{ text-align:start; font-size:12.5px; font-weight:800; color:var(--ink-3); padding:14px 16px; border-bottom:2px solid var(--line); white-space:nowrap; cursor:pointer; user-select:none; }
+  th .sort{ display:inline-flex; align-items:center; gap:5px; }
+  th .sort svg{ width:12px; height:12px; stroke:currentColor; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; opacity:0; }
+  th.on{ color:var(--ink); } th.on .sort svg{ opacity:1; }
+  th.desc .sort svg{ transform:rotate(180deg); }
+  th:hover{ color:var(--ink); background:var(--page); }
+  td{ padding:12px 16px; border-bottom:1px solid var(--line); font-size:15px; font-weight:600; vertical-align:middle; height:60px; }
+  tr:last-child td{ border-bottom:none; }
+  tbody tr{ cursor:pointer; }
+  tbody tr:hover td{ background:var(--brand-tint); }
+  td.nm{ font-size:17px; font-weight:800; }
+  td.ltr{ direction:ltr; text-align:right; font-variant-numeric:tabular-nums; }
+  td.yr{ font-weight:700; color:var(--ink-2); }
+  .res{ display:inline-flex; align-items:center; gap:8px; }
+  .res .pl{ display:inline-block; min-width:36px; text-align:center; font-weight:800; font-size:13.5px; padding:4px 8px; border-radius:10px; background:var(--page); color:var(--ink-2); direction:ltr; }
+  .res .pl.top{ background:var(--brand); color:#fff; }
+  .res .w{ font-weight:600; color:var(--ink-2); }
+  .res.none{ color:var(--ink-3); font-weight:600; }
+  tr.gone td.nm{ color:var(--ink-3); }
+
+  /* ── empty state ── */
+  .empty{ padding:36px 24px 190px; display:flex; flex-direction:column; align-items:center; text-align:center; }
+  .empty .mark{ width:92px; height:92px; border-radius:28px; background:var(--brand); display:grid; place-items:center; }
+  .empty .mark svg{ width:56px; height:56px; }
+  .empty h2{ font-size:34px; font-weight:900; line-height:1.1; margin-top:22px; }
+  .empty p{ font-size:15px; font-weight:500; color:var(--ink-2); margin-top:10px; max-width:320px; text-wrap:pretty; }
+  .empty .cta{ width:100%; max-width:360px; border:none; border-radius:var(--r-btn); padding:18px; margin-top:28px; cursor:pointer;
+               background:var(--brand); color:#fff; font-size:17px; font-weight:800; }
+  .empty .alt{ width:100%; max-width:360px; border:2px solid var(--ink); background:transparent; color:var(--ink); border-radius:var(--r-btn);
+               padding:15px; margin-top:12px; cursor:pointer; font-size:15.5px; font-weight:800; }
+  .empty .hint{ font-size:12.5px; font-weight:600; color:var(--ink-3); margin-top:12px; }
+
+  /* ── add bird (phone) ── */
+  .fab{ position:fixed; bottom:96px; inset-inline-start:calc(50% - 215px + 20px); z-index:9; }
+  @media (max-width:470px){ .fab{ inset-inline-start:20px; } }
+  .fab button{ border:none; border-radius:18px; background:var(--ink); color:#fff; font-size:16px; font-weight:800; min-height:58px; padding:0 24px;
+               cursor:pointer; display:flex; align-items:center; gap:10px; }
+  .fab svg{ width:22px; height:22px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; }
+
+  /* ── nav ── */
+  .tabbar{ position:fixed; bottom:0; inset-inline:0; margin-inline:auto; max-width:430px; background:var(--surface);
+           border-top:1px solid var(--line); display:flex; padding:10px 4px 14px; z-index:10; }
+  .tabbar button{ flex:1; min-width:0; border:none; background:none; cursor:pointer; color:var(--ink-3);
+                  font-size:10.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:5px; white-space:nowrap; }
+  .tabbar button svg, .rail button svg{ width:26px; height:26px; stroke:currentColor; stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .tabbar button.on{ color:var(--brand); }
+  .rail{ display:none; position:fixed; top:0; bottom:0; inset-inline-start:0; width:132px; background:var(--surface);
+         border-inline-end:1px solid var(--line); flex-direction:column; gap:4px; padding:24px 12px; z-index:11; }
+  .rail button{ display:flex; align-items:center; gap:10px; border:none; background:none; cursor:pointer; color:var(--ink-3);
+                font-size:13px; font-weight:700; padding:12px 10px; border-radius:14px; min-height:48px; }
+  .rail button.on{ background:var(--brand-tint); color:var(--brand); }
+
+  @media (hover:hover){
+    .brow:hover{ background:var(--brand-tint); border-color:var(--brand); }
+    .fp:hover:not(.on){ border-color:var(--brand); color:var(--brand-deep); }
+    .fab button:hover{ background:var(--brand-deep); }
+    .btn-add:hover, .empty .cta:hover{ background:var(--brand-deep); }
+    .empty .alt:hover{ background:var(--ink); color:#fff; }
+    .rail button:hover{ background:var(--brand-tint); color:var(--brand-deep); }
+    .tabbar button:hover{ color:var(--brand-deep); }
+  }
+  button:focus-visible, .search:has(input:focus-visible), tbody tr:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
+
+  /* ── demo switcher (design review only) ── */
+  .demo{ position:fixed; top:14px; inset-inline-end:14px; z-index:20; display:flex; gap:4px; background:var(--ink); border-radius:999px; padding:4px; }
+  .demo button{ border:none; background:none; color:#fff; opacity:.6; font-size:12px; font-weight:700; padding:8px 12px; border-radius:999px; cursor:pointer; }
+  .demo button.on{ opacity:1; background:rgba(255,255,255,.16); }
+
+  /* Part 3 — tablet */
+  @media (min-width:701px){
+    .phone{ max-width:720px; border-inline:1px solid var(--line); }
+  }
+  /* Part 3 — desktop: rail on the RTL start (right) edge, table replaces cards */
+  @media (min-width:1100px){
+    .rail{ display:flex; }
+    .tabbar, .fab, .list, .spec, .sync.synced{ display:none !important; }
+    .phone{ max-width:none; margin-inline-start:132px; border:none; }
+    .lofthead{ padding:32px 0 24px; }
+    .lofthead, .filters, .sync, .table, .empty{ margin-inline:auto; max-width:960px; }
+    .lofthead{ padding-inline:32px; max-width:1024px; }
+    .headrow{ flex-direction:row; align-items:flex-end; justify-content:space-between; gap:32px; }
+    .tools{ flex-direction:row; align-items:center; flex:none; }
+    .search{ width:340px; }
+    .btn-add{ display:inline-flex; }
+    .filters{ padding-inline:32px; max-width:1024px; }
+    .sync{ margin-inline:auto; max-width:960px; margin-top:16px; }
+    .table{ display:block; }
+    .empty{ padding-top:64px; }
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <div class="demo" aria-label="عرض النموذج">
+    <button class="on" data-v="full">22 طائرًا</button>
+    <button data-v="small">8 طيور</button>
+    <button data-v="empty">لوفت فارغ</button>
+  </div>
+
+  <div class="lofthead"><div class="headrow">
+    <div>
+      <div class="eyebrow">موسم 2026 / 2027</div>
+      <h1>لوفت الفحيص</h1>
+      <div class="count" id="count"></div>
+    </div>
+    <div class="tools" id="tools">
+      <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" placeholder="بحث بالاسم أو رقم الحلقة" autocomplete="off"></label>
+      <button class="btn-add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>إضافة طائر</button>
+    </div>
+  </div></div>
+
+  <div id="main">
+    <div class="filters" id="filters">
+      <button class="fp on" data-f="all">الكل</button>
+      <button class="fp" data-f="m">ذكور</button>
+      <button class="fp" data-f="f">إناث</button>
+      <button class="fp" data-f="race">فريق السباق</button>
+      <button class="fp" data-f="breed">تربية</button>
+      <span class="fdiv"></span>
+      <button class="fp" data-year="2025">2025</button>
+      <button class="fp" data-year="2024">2024</button>
+      <button class="fp" data-year="2023">2023</button>
+      <button class="fp" data-year="2022">2022</button>
+      <button class="fp" data-year="2021">2021</button>
+      <button class="fp" data-year="2020">2020</button>
+    </div>
+
+    <!-- sync status row — five states stacked for review; the app shows one at a time -->
+    <div class="spec">sync · synced</div>
+    <div class="sync synced">متزامن — لا يظهر شيء</div>
+    <div class="spec">sync · offline</div>
+    <div class="sync offline"><i></i>دون اتصال — يعمل محليًا</div>
+    <div class="spec">sync · syncing</div>
+    <div class="sync syncing"><i></i>جارٍ المزامنة…</div>
+    <div class="spec">sync · pending</div>
+    <div class="sync pending"><i></i><span class="n">3</span>تغييرات بانتظار المزامنة</div>
+    <div class="spec">sync · error</div>
+    <div class="sync error"><i></i>تعذّرت المزامنة<a href="#">إعادة المحاولة</a></div>
+
+    <div class="list" id="list"></div>
+
+    <div class="table"><table>
+      <thead><tr>
+        <th data-k="ring"><span class="sort">الحلقة<svg viewBox="0 0 24 24"><path d="M6 14l6-6 6 6"/></svg></span></th>
+        <th data-k="name"><span class="sort">الاسم<svg viewBox="0 0 24 24"><path d="M6 14l6-6 6 6"/></svg></span></th>
+        <th data-k="sex"><span class="sort">الجنس<svg viewBox="0 0 24 24"><path d="M6 14l6-6 6 6"/></svg></span></th>
+        <th data-k="status"><span class="sort">الحالة<svg viewBox="0 0 24 24"><path d="M6 14l6-6 6 6"/></svg></span></th>
+        <th data-k="year" class="on desc"><span class="sort">الجيل<svg viewBox="0 0 24 24"><path d="M6 14l6-6 6 6"/></svg></span></th>
+        <th data-k="res"><span class="sort">آخر نتيجة<svg viewBox="0 0 24 24"><path d="M6 14l6-6 6 6"/></svg></span></th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="empty" id="empty" hidden>
+    <div class="mark"><svg viewBox="0 0 100 100" fill="#fff"><path d="M18 78c14 4 34 4 46-4 10-7 16-18 17-30 0-4-2-6-5-6-2 0-4 1-5 3l-4 8c-6 10-16 16-28 18-8 1-15 5-21 11z"/><path d="M62 34c3-6 9-9 15-8 3 0 5 2 5 5 0 2-1 3-3 4l-6 2c-4 2-8 1-11-3z"/><path d="M80 36l8 2-8 2z"/></svg></div>
+    <h2>أضف أول طائر</h2>
+    <p>اسم، رقم حلقة، وجنس — وتبدأ شجرة نسب لوفتك من هنا. كل ما تسجّله يُحفظ على جهازك ويُزامَن حين يتوفر اتصال.</p>
+    <button class="cta">أضف أول طائر</button>
+    <button class="alt">تحميل سرب تعليمي</button>
+    <div class="hint">12 طائرًا بأنسابهم ونتائجهم للتجربة — يمكن حذفهم لاحقًا</div>
+  </div>
+
+  <div class="fab" id="fab"><button><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>إضافة طائر</button></div>
+
+  <nav class="tabbar">
+    <button class="on"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>الطيور</button>
+    <button><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>التزاوج</button>
+    <button><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>السباقات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>الصحة</button>
+    <button><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>الإحصائيات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg>الأدوات</button>
+  </nav>
+  <nav class="rail">
+    <button class="on"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>الطيور</button>
+    <button><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>التزاوج</button>
+    <button><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>السباقات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>الصحة</button>
+    <button><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>الإحصائيات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg>الأدوات</button>
+  </nav>
+</div>
+
+<script>
+  // name · ring · sex (m/f/u) · status · hatch year · latest result [release, rank] or null
+  const BIRDS = [
+    ['برق','JOR 24 17352','m','race',2024,['معان',3]],
+    ['شقراء','JOR 24 17360','f','race',2024,['القويرة',11]],
+    ['فارس','JOR 24 17371','m','active',2024,['الجفر',26]],
+    ['نجمة','JOR 24 17388','f','active',2024,null],
+    ['الوسمي','JOR 24 17402','m','race',2024,['العقبة',7]],
+    ['مسك','JOR 25 02116','f','active',2025,null],
+    ['هيبة','JOR 25 02120','f','active',2025,null],
+    ['عاصف','JOR 25 02131','m','active',2025,null],
+    ['لؤلؤة','JOR 23 09044','f','breed',2023,['معان',19]],
+    ['مارد','JOR 23 09051','m','race',2023,['القويرة',2]],
+    ['أنيسة','NL 23 1502771','f','breed',2023,null],
+    ['غيمة','JOR 22 04117','f','breed',2022,['الجفر',14]],
+    ['سمراء','JOR 22 04125','f','breed',2022,null],
+    ['ذهب','JOR 22 04139','m','lost',2022,['العقبة',41]],
+    ['الصاعقة','JOR 21 08841','m','breed',2021,['معان',1]],
+    ['مهند','JOR 21 08856','m','race',2021,['القويرة',9]],
+    ['جوهرة','BE 21 6084417','f','breed',2021,null],
+    ['ياقوت','BE 20 6034981','f','breed',2020,null],
+    ['سلطان','JOR 20 05512','m','breed',2020,['الجفر',5]],
+    ['فيروز','NL 20 1447206','f','breed',2020,null],
+    ['النشمي','JOR 20 05530','m','sold',2020,['معان',12]],
+    ['عنتر','JOR 20 05547','m','breed',2020,null],
+  ];
+  const SEX = { m:['ذكر','♂','m'], f:['أنثى','♀','f'], u:['غير معروف','?','u'] };
+  const STATUS = { race:['فريق السباق','race'], active:['نشط','active'], breed:['تربية','breed'], lost:['مفقود','gone'], sold:['مباع','gone'], dead:['ميت','gone'] };
+
+  let variant='full', filter='all', year=null, sortK='year', sortDesc=true;
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const plate = r => `<span class="plate"><span class="yr">${r.split(' ')[1]}</span><span class="no">${r}</span></span>`;
+  const sx = s => `<span class="sx ${SEX[s][2]}" aria-label="${SEX[s][0]}"><span class="g">${SEX[s][1]}</span>${SEX[s][0]}</span>`;
+  const st = s => `<span class="st ${STATUS[s][1]}">${STATUS[s][0]}</span>`;
+  const res = r => r ? `<span class="res"><span class="pl ${r[1]<=10?'top':''}">${r[1]}</span><span class="w">${r[0]}</span></span>` : `<span class="res none">لا سباقات</span>`;
+
+  function data(){
+    let rows = variant==='small' ? BIRDS.filter(b=>b[4]>=2024).slice(0,8) : BIRDS.slice();
+    const q = document.getElementById('q').value.trim().toLowerCase();
+    if(q) rows = rows.filter(b => b[0].includes(q) || b[1].toLowerCase().replace(/\s/g,'').includes(q.replace(/\s/g,'')));
+    if(filter==='m'||filter==='f') rows = rows.filter(b=>b[2]===filter);
+    if(filter==='race'||filter==='breed') rows = rows.filter(b=>b[3]===filter);
+    if(year) rows = rows.filter(b=>b[4]===year);
+    return rows;
+  }
+  function render(){
+    const all = variant==='small' ? BIRDS.filter(b=>b[4]>=2024).slice(0,8) : BIRDS;
+    const empty = variant==='empty';
+    document.getElementById('main').hidden = empty;
+    document.getElementById('tools').hidden = empty;
+    document.getElementById('fab').hidden = empty;
+    document.getElementById('empty').hidden = !empty;
+    const m = all.filter(b=>b[2]==='m').length, f = all.filter(b=>b[2]==='f').length;
+    document.getElementById('count').innerHTML = empty
+      ? `لا طيور بعد`
+      : `<b>${all.length}</b> طائرًا <span class="sep">·</span> <b>${m}</b> ذكرًا <span class="sep">·</span> <b>${f}</b> أنثى`;
+    if(empty) return;
+    const rows = data();
+    // phone: grouped by generation, newest first
+    const groups = {};
+    rows.forEach(b => (groups[b[4]] ||= []).push(b));
+    document.getElementById('list').innerHTML = Object.keys(groups).sort((a,b)=>b-a).map(y => `
+      <div class="yearlbl"><span class="y">جيل <b>${y}</b></span><span class="c">${groups[y].length}</span></div>
+      ${groups[y].map(b => `
+        <button class="brow ${STATUS[b[3]][1]==='gone'?'gone':''}">
+          <span class="mid">
+            <span class="nm">${esc(b[0])}</span>
+            <span class="sub">${plate(b[1])}${sx(b[2])}${st(b[3])}</span>
+          </span>
+          <svg class="chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>`).join('')}`).join('') || `<div class="yearlbl"><span class="y">لا نتائج</span></div>`;
+    // desktop: flat sortable table
+    const key = { ring:b=>b[1], name:b=>b[0], sex:b=>b[2], status:b=>STATUS[b[3]][0], year:b=>b[4], res:b=>b[5]?b[5][1]:999 }[sortK];
+    const sorted = rows.slice().sort((a,b)=>{ const x=key(a), y=key(b); return (x>y?1:x<y?-1:0) * (sortDesc?-1:1); });
+    document.getElementById('tbody').innerHTML = sorted.map(b => `
+      <tr tabindex="0" class="${STATUS[b[3]][1]==='gone'?'gone':''}">
+        <td class="ltr">${plate(b[1])}</td>
+        <td class="nm">${esc(b[0])}</td>
+        <td>${sx(b[2])}</td>
+        <td>${st(b[3])}</td>
+        <td class="yr ltr">${b[4]}</td>
+        <td>${res(b[5])}</td>
+      </tr>`).join('');
+  }
+  document.getElementById('filters').addEventListener('click', e => {
+    const b = e.target.closest('.fp'); if(!b) return;
+    if(b.dataset.year){ year = year===+b.dataset.year ? null : +b.dataset.year; }
+    else { filter = b.dataset.f; }
+    document.querySelectorAll('.fp').forEach(p => p.classList.toggle('on', p.dataset.f ? p.dataset.f===filter : +p.dataset.year===year));
+    render();
+  });
+  document.getElementById('q').addEventListener('input', render);
+  document.querySelector('thead').addEventListener('click', e => {
+    const th = e.target.closest('th'); if(!th) return;
+    if(sortK===th.dataset.k) sortDesc=!sortDesc; else { sortK=th.dataset.k; sortDesc = sortK==='year'; }
+    document.querySelectorAll('th').forEach(t => { t.classList.toggle('on', t===th); t.classList.toggle('desc', t===th && sortDesc); });
+    render();
+  });
+  document.querySelector('.demo').addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    variant = b.dataset.v;
+    document.querySelectorAll('.demo button').forEach(x => x.classList.toggle('on', x===b));
+    render();
+  });
+  render();
+</script>
+</body>
+</html>
