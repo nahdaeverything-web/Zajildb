@@ -35,6 +35,7 @@ Changing a file in `approved/` is a design decision, not an edit.
 | Pedigree tree | `approved/pedigree-tree-v1.html` | approved |
 | Races | `approved/races-v1.html` | approved |
 | Health | `approved/health-v1.html` | approved |
+| Breeding | `approved/breeding-v1.html` | approved |
 
 Where two versions of a screen are listed, **the highest `-vN` is the one to
 build**. Earlier versions stay in place unchanged so a decision already made
@@ -74,6 +75,32 @@ script is `document.getElementById('next').hidden = …`. Building it needs a
 data-model decision (a recurrence interval on the event, or a convention over
 `medication`) that has not been made. Flagged for a ruling — not designed
 around.
+
+**Breeding (`breeding-v1.html`) — the spec DELIBERATELY differs from today's
+app, in three ways. Implement the spec, not the current behaviour.**
+
+1. **Restructured into two levels** — a flat pair **list**, and a pair
+   **detail** view holding that pair's rounds and eggs. Today `renderBreeding`
+   puts everything on one screen: every pair is a card with its rounds and
+   eggs expanded inline (`js/views/breeding.js:113-184`). **This implies a new
+   sub-route (e.g. `#/pair/<id>`) that does not exist today** — the app
+   resolves only `#/birds`, `#/breeding`, `#/races`, `#/health`, `#/stats`,
+   `#/tools` plus `#/bird/`, `#/pedigree/` and `#/cert/`, and there is no
+   `#/pair` anywhere in `js/`. Intentional. Note the spec itself models the
+   two levels as in-page state (`openPair(id)` / `back()` switching a `view`
+   variable), so the routing is the port's to add.
+2. **Adds delete for eggs and for rounds** (**حذف البيضة**, **حذف البطن**,
+   each with an undo toast). Today both are permanent: there is no delete
+   control for either, and the mark-hatched / mark-failed buttons render only
+   while `egg.state === 'laid'` (`js/views/breeding.js:209-224`), so a
+   mis-tap cannot be walked back.
+3. **Adds a visible label to the wean-date input** (**تاريخ الفطام**). Today
+   that input renders with no label at all (`js/views/breeding.js:256`).
+
+Unchanged, and worth knowing before porting: pairs still have **no edit
+path** — `تعديل` does not appear in the spec, so `season`, `nestBox`,
+`startDate`, `acquiredFrom` and `acquiredDate` remain write-once at creation
+(`js/views/breeding.js:97-105`), exactly as today.
 
 **Design contract:** [`ZAJIL-DESIGN-KIT.md`](ZAJIL-DESIGN-KIT.md) — brief,
 inventory, responsive rules; brand `#128C6E`.

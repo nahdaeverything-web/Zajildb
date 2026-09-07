@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>زاجل — التزاوج</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brand:#128C6E; --brand-deep:#0E6F57; --brand-tint:#E3F4EE;
+    --ink:#101820; --ink-2:#4A5560; --ink-3:#8C97A2;
+    --page:#F5F7F8; --surface:#FFFFFF; --line:#E4E9ED;
+    --gold:#C9971F; --gold-tint:#FBF3DF; --danger:#C43D2B; --danger-tint:#F8E6E3;
+    --r:20px; --r-btn:16px;
+    --f:'Alexandria', system-ui, sans-serif;
+    --f-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  button, input, select, textarea{ font-family:var(--f); }
+  body{ font-family:var(--f); color:var(--ink); background:#E9EDF0; min-height:100vh; display:flex; justify-content:center; line-height:1.5; }
+  a{ color:var(--brand-deep); } a:hover{ color:var(--brand); }
+  .phone{ width:100%; max-width:430px; min-height:100vh; background:var(--page); position:relative; }
+  [hidden]{ display:none !important; }
+  .mono, .num{ font-family:var(--f-mono); font-weight:600; direction:ltr; font-variant-numeric:tabular-nums; }
+
+  /* ── header ── */
+  .lofthead{ background:var(--surface); border-bottom:1px solid var(--line); padding:64px 20px 20px; }
+  .headrow{ display:flex; flex-direction:column; gap:14px; }
+  .lofthead .loft{ font-size:13px; font-weight:700; color:var(--ink-3); }
+  .lofthead h1{ font-size:34px; font-weight:900; line-height:1.1; }
+  .seasonrow{ display:flex; align-items:center; gap:10px; margin-top:12px; }
+  .seasonrow .k{ font-size:14px; font-weight:800; color:var(--ink-2); }
+  .selwrap{ position:relative; display:inline-block; }
+  .selwrap select{ border:2px solid var(--line); border-radius:12px; background:var(--page); color:var(--ink); min-height:44px; padding:0 40px 0 16px; font-size:15px; font-weight:800; font-family:var(--f-mono); direction:ltr; -webkit-appearance:none; appearance:none; cursor:pointer; outline:none; }
+  .selwrap select:focus{ border-color:var(--brand); background:#fff; }
+  .selwrap::after{ content:""; position:absolute; inset-inline-end:16px; top:50%; width:8px; height:8px; border-inline-end:2.4px solid var(--ink-3); border-bottom:2.4px solid var(--ink-3); transform:translateY(-70%) rotate(45deg); pointer-events:none; }
+  .btn-add{ display:none; align-items:center; gap:10px; border:none; border-radius:var(--r-btn); background:var(--brand); color:#fff; font-size:16px; font-weight:800; min-height:56px; padding:0 22px; cursor:pointer; white-space:nowrap; }
+  .btn-add svg, .fab svg{ width:20px; height:20px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; }
+
+  .panel{ padding:16px 20px 170px; }
+  .grid{ display:grid; grid-template-columns:1fr; gap:14px; align-items:start; }
+
+  /* ── level 1: pair list rows (bird-list style) ── */
+  .rows{ display:flex; flex-direction:column; gap:10px; }
+  .row{ width:100%; background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:14px 16px; cursor:pointer; text-align:start; color:var(--ink); display:flex; align-items:center; gap:12px; font-family:var(--f); }
+  .row.off{ background:var(--page); }
+  .row .body{ flex:1; min-width:0; }
+  .row .names{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:19px; font-weight:900; line-height:1.15; }
+  .row .names .x{ font-size:18px; margin:0; }
+  .row .plates{ display:flex; align-items:center; gap:6px; margin-top:6px; flex-wrap:wrap; }
+  .row .plates .x{ font-size:12px; margin:0; }
+  .row .meta{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:10px; }
+  .row .sum{ font-size:13px; font-weight:700; color:var(--ink-2); }
+  .row .sum .h{ color:var(--brand-deep); font-weight:800; }
+  .row .chev{ width:20px; height:20px; stroke:var(--ink-3); stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .table{ display:none; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:8px 20px 12px; }
+  table{ width:100%; border-collapse:collapse; }
+  th{ font-size:12.5px; font-weight:700; color:var(--ink-3); text-align:right; padding:14px 8px 10px; border-bottom:2px solid var(--line); white-space:nowrap; }
+  td{ padding:12px 8px; font-size:15px; font-weight:600; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tbody tr{ cursor:pointer; } tr:last-child td{ border-bottom:none; }
+  td .names{ display:flex; align-items:center; gap:8px; font-size:16px; font-weight:800; }
+  td .plates{ display:flex; align-items:center; gap:6px; margin-top:5px; }
+  td .sum{ color:var(--ink-2); font-size:14px; } td .sum .h{ color:var(--brand-deep); font-weight:800; }
+  td.nest{ font-family:var(--f-mono); font-weight:600; direction:ltr; text-align:right; }
+  td .chev{ width:18px; height:18px; stroke:var(--ink-3); stroke-width:2.6; fill:none; stroke-linecap:round; }
+
+  /* ── level 2: detail ── */
+  .back{ display:inline-flex; align-items:center; gap:6px; border:none; background:none; color:var(--brand-deep); font-size:14.5px; font-weight:800; cursor:pointer; padding:0; min-height:44px; margin-bottom:6px; }
+  .back svg{ width:18px; height:18px; stroke:currentColor; stroke-width:2.8; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .detail{ max-width:760px; margin-inline:auto; }
+  .detail .pair{ border:none; padding:0; background:transparent; }
+  .detail .pair.off{ background:transparent; }
+  .detail .phead{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:20px; }
+  .detail .pair.off .phead{ background:var(--page); }
+  .detail .divider{ display:none; }
+  .detail .rounds{ margin-top:16px; gap:10px; }
+  .detail .round{ background:var(--surface); border:1px solid var(--line); }
+  .detail .egg{ background:var(--page); box-shadow:none; }
+  .detail .pair.off .egg{ background:var(--page); }
+  .detail .off-block{ border-top:none; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px 20px; }
+
+  /* ── pair card ── */
+  .pair{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:20px 20px 18px; }
+  .pair.off{ background:var(--page); }
+  .ptop{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .parents{ display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap; flex:1; min-width:0; }
+  .parent{ display:inline-flex; flex-direction:column; align-items:flex-start; gap:7px; background:none; border:none; cursor:pointer; padding:0; text-align:start; color:var(--ink); }
+  .parent .nm{ display:inline-flex; align-items:center; gap:7px; font-size:24px; font-weight:900; line-height:1.1; text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:5px; }
+  .parent:hover .nm{ text-decoration-color:var(--brand); color:var(--brand-deep); }
+  .sex{ font-size:18px; font-weight:900; line-height:1; }
+  .sex.m{ color:var(--brand); } .sex.f{ color:var(--gold); }
+  .x{ font-size:22px; font-weight:900; color:var(--ink-3); margin-top:2px; }
+  .plate{ display:inline-flex; align-items:stretch; direction:ltr; border-radius:10px; overflow:hidden; background:var(--ink); }
+  .plate .yr{ background:var(--gold); color:#fff; font-family:var(--f-mono); font-weight:600; font-size:10px; padding:0 7px; display:grid; place-items:center; }
+  .plate .no{ color:#fff; font-family:var(--f-mono); font-weight:600; font-size:12px; letter-spacing:1px; padding:6px 10px; }
+  .pair.off .plate{ background:var(--ink-3); } .pair.off .plate .yr{ background:var(--gold); }
+
+  .chips{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:16px; }
+  .chip{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:800; padding:5px 10px; border-radius:999px; white-space:nowrap; background:var(--page); color:var(--ink-2); border:1px solid var(--line); }
+  .pair.off .chip{ background:var(--surface); }
+  .chip b{ font-family:var(--f-mono); font-weight:600; direction:ltr; }
+  .chip.on{ background:var(--brand-tint); color:var(--brand-deep); border-color:transparent; }
+  .chip.off{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .chip.wean{ background:var(--brand-tint); color:var(--brand-deep); border-color:transparent; }
+  .chip.laid{ background:var(--gold-tint); color:#8A6410; border-color:transparent; }
+  .chip.hatch{ background:var(--brand-tint); color:var(--brand-deep); border-color:transparent; }
+  .chip.fail{ background:transparent; color:var(--ink-3); border:1px solid var(--line); }
+  .chip.fail .t{ text-decoration:line-through; }
+  .chip .ico{ font-size:13px; line-height:1; display:inline-block; }
+  .stat{ font-size:12.5px; font-weight:800; color:var(--brand-deep); }
+
+  .pacts{ display:flex; align-items:center; gap:6px; margin-top:16px; }
+  .act{ border:1px solid var(--line); background:var(--surface); color:var(--ink-2); border-radius:12px; min-height:44px; min-width:44px; padding:0 14px; font-size:13.5px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .act.x{ color:var(--danger); }
+  .act.q{ border-color:transparent; background:transparent; color:var(--ink-3); font-size:18px; letter-spacing:1px; }
+  .act.p{ border:none; background:var(--brand); color:#fff; font-weight:800; }
+  .act.dk{ border:none; background:var(--ink); color:#fff; font-weight:800; }
+  .act.toggle{ margin-inline-start:auto; }
+  .confirm{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:14px; background:var(--danger-tint); color:var(--danger); font-size:14px; font-weight:800; flex:1; }
+  .confirm .b{ display:flex; gap:4px; }
+  .confirm .go{ border:none; background:var(--danger); color:#fff; border-radius:12px; min-height:44px; padding:0 16px; font-size:14px; font-weight:800; cursor:pointer; }
+  .confirm .no{ border:none; background:transparent; color:var(--ink-2); border-radius:12px; min-height:44px; padding:0 12px; font-size:14px; font-weight:700; cursor:pointer; }
+  .confirm.sm{ padding:6px 8px 6px 12px; font-size:13.5px; }
+
+  /* ── rounds (collapsible, no borders: tint + inset line) ── */
+  .divider{ height:1px; background:var(--line); margin:18px -20px 0; }
+  .rounds{ margin-top:14px; display:flex; flex-direction:column; gap:8px; }
+  .round{ background:var(--page); border-radius:16px; }
+  .pair.off .round{ background:var(--surface); }
+  .rsum{ display:flex; align-items:center; gap:10px; width:100%; min-height:56px; padding:0 14px; border:none; background:none; cursor:pointer; text-align:start; color:var(--ink); border-radius:16px; }
+  .rsum .chev{ width:18px; height:18px; stroke:var(--ink-3); stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; transition:transform .15s; }
+  .round.open .rsum .chev{ transform:rotate(-90deg); }
+  .rsum h3{ font-size:16px; font-weight:900; }
+  .rsum .m{ font-size:13px; font-weight:700; color:var(--ink-2); flex:1; }
+  .rsum .m .h{ color:var(--brand-deep); }
+  .rsum .m .n{ color:var(--ink-3); }
+  .rbody{ padding:0 12px 12px; }
+  .round:not(.open) .rbody{ display:none; }
+  .eggs{ display:flex; flex-direction:column; gap:6px; }
+  .egg{ background:var(--surface); border-radius:12px; padding:8px 8px 8px 12px; box-shadow:inset 0 0 0 1px rgba(16,24,32,.05); position:relative; }
+  .pair.off .egg{ background:var(--page); }
+  .egg .l1{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .egg .l1 .more{ margin-inline-start:auto; }
+  .egg .l2{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:8px; padding-top:8px; border-top:1px solid var(--line); }
+  .egg .l2:empty{ display:none; }
+  .df{ display:inline-flex; align-items:center; gap:6px; }
+  .df label{ font-size:12.5px; font-weight:800; color:var(--ink-2); white-space:nowrap; }
+  .df input{ border:1.5px solid transparent; border-bottom-color:var(--line); border-radius:8px 8px 0 0; background:transparent; color:var(--ink); min-height:44px; padding:0 6px; font-family:var(--f-mono); font-weight:600; font-size:13.5px; direction:ltr; width:118px; outline:none; }
+  .df input:hover{ background:var(--page); }
+  .df input:focus{ border-color:var(--brand); background:#fff; border-radius:8px; }
+  .chick{ display:inline-flex; align-items:center; gap:6px; font-size:15px; font-weight:800; color:var(--ink); background:none; border:none; cursor:pointer; padding:0 4px; min-height:44px; text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:4px; }
+  .chick:hover{ text-decoration-color:var(--brand); color:var(--brand-deep); }
+  .chick .bird{ font-size:14px; }
+  /* ⋯ menu */
+  .more{ position:relative; }
+  .menu{ position:absolute; top:calc(100% + 4px); inset-inline-end:0; z-index:20; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:6px; min-width:220px; display:flex; flex-direction:column; gap:2px; }
+  .menu button, .menu .df{ width:100%; border:none; background:none; border-radius:10px; min-height:44px; padding:0 12px; text-align:start; font-size:14px; font-weight:700; color:var(--ink); cursor:pointer; display:flex; align-items:center; gap:8px; }
+  .menu .df{ cursor:default; justify-content:space-between; }
+  .menu .df input{ width:126px; }
+  .menu button:hover{ background:var(--page); }
+  .menu button.del{ color:var(--danger); }
+  .menu button.del:hover{ background:var(--danger-tint); }
+  .menu .sep{ height:1px; background:var(--line); margin:4px 6px; }
+  .addrow{ display:flex; margin-top:8px; }
+  .ghost{ border:1.5px dashed var(--line); background:transparent; color:var(--brand-deep); border-radius:12px; min-height:44px; padding:0 14px; font-size:13.5px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+  .ghost:hover{ border-color:var(--brand); background:var(--brand-tint); }
+  .ghost.wide{ width:100%; justify-content:center; min-height:48px; font-size:14.5px; }
+  .ghost svg{ width:16px; height:16px; stroke:currentColor; stroke-width:3; fill:none; stroke-linecap:round; }
+
+  /* ── offspring ── */
+  .off-block{ margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
+  .off-block .k{ font-size:12.5px; font-weight:800; color:var(--ink-3); margin-bottom:8px; }
+  .off-block .list{ display:flex; gap:6px; flex-wrap:wrap; }
+  .birdpill{ display:inline-flex; align-items:center; gap:8px; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:5px 6px 5px 12px; min-height:40px; font-size:14px; font-weight:800; color:var(--ink); cursor:pointer; }
+  .birdpill:hover{ border-color:var(--brand); color:var(--brand-deep); }
+  .birdpill .plate{ border-radius:999px; } .birdpill .plate .no{ padding:4px 9px; font-size:11px; }
+
+  /* ── empty ── */
+  .empty{ text-align:center; padding:56px 20px; }
+  .empty .ico{ width:84px; height:84px; border-radius:26px; background:var(--brand-tint); display:grid; place-items:center; margin:0 auto 16px; }
+  .empty .ico svg{ width:40px; height:40px; stroke:var(--brand); stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .empty h3{ font-size:24px; font-weight:900; }
+  .empty p{ font-size:15px; font-weight:500; color:var(--ink-2); margin-top:6px; }
+
+  /* ── fab / toast ── */
+  .fab{ position:fixed; bottom:96px; inset-inline-start:calc(50% - 215px + 20px); z-index:9; }
+  @media (max-width:470px){ .fab{ inset-inline-start:20px; } }
+  .fab button{ border:none; border-radius:18px; background:var(--ink); color:#fff; font-size:16px; font-weight:800; min-height:58px; padding:0 24px; cursor:pointer; display:flex; align-items:center; gap:10px; }
+  .toast{ position:fixed; bottom:96px; inset-inline:0; margin-inline:auto; width:max-content; max-width:390px; z-index:30; background:var(--ink); color:#fff; border-radius:16px; padding:14px 18px; display:flex; align-items:center; gap:18px; font-size:15px; font-weight:700; }
+  .toast button{ border:none; background:none; color:#fff; font-size:15px; font-weight:900; cursor:pointer; text-decoration:underline; text-underline-offset:4px; min-height:44px; }
+
+  /* ── nav ── */
+  .tabbar{ position:fixed; bottom:0; inset-inline:0; margin-inline:auto; max-width:430px; background:var(--surface); border-top:1px solid var(--line); display:flex; padding:10px 4px 14px; z-index:10; }
+  .tabbar button{ flex:1; min-width:0; border:none; background:none; cursor:pointer; color:var(--ink-3); font-size:10.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:5px; white-space:nowrap; }
+  .tabbar button svg, .rail button svg{ width:26px; height:26px; stroke:currentColor; stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .tabbar button.on{ color:var(--brand); }
+  .rail{ display:none; position:fixed; top:0; bottom:0; inset-inline-start:0; width:132px; background:var(--surface); border-inline-end:1px solid var(--line); flex-direction:column; gap:4px; padding:24px 12px; z-index:11; }
+  .rail button{ display:flex; align-items:center; gap:10px; border:none; background:none; cursor:pointer; color:var(--ink-3); font-size:13px; font-weight:700; padding:12px 10px; border-radius:14px; min-height:48px; }
+  .rail button.on{ background:var(--brand-tint); color:var(--brand); }
+
+  /* ── modals ── */
+  .scrim{ position:fixed; inset:0; background:rgba(16,24,32,.55); z-index:40; display:flex; align-items:flex-end; justify-content:center; }
+  .modal{ background:var(--surface); width:100%; max-width:430px; max-height:94vh; overflow:auto; border-radius:28px 28px 0 0; padding:20px 20px 28px; }
+  .mhead{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .mhead h2{ font-size:28px; font-weight:900; }
+  .icon-btn{ width:46px; height:46px; border:none; border-radius:14px; cursor:pointer; background:var(--page); color:var(--ink); display:grid; place-items:center; flex:none; }
+  .icon-btn svg{ width:22px; height:22px; stroke:currentColor; stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .hintline{ font-size:14px; font-weight:500; color:var(--ink-2); line-height:1.6; margin-top:8px; }
+  .alert{ background:var(--danger-tint); color:var(--danger); border-radius:var(--r-btn); padding:14px 16px; font-size:14.5px; font-weight:800; display:flex; gap:10px; align-items:flex-start; margin-top:12px; }
+  .alert svg{ width:22px; height:22px; flex:none; stroke:currentColor; stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .alert ul{ margin:6px 0 0; padding-inline-start:18px; font-weight:600; font-size:14px; }
+  .alert.warn{ background:var(--gold-tint); color:#8A6410; }
+  .alert.warn svg{ stroke:var(--gold); }
+  .alert.blocked{ margin-top:14px; }
+  /* relationship / COI box (pedigree treatment) */
+  .kin{ margin-top:14px; border-radius:var(--r); border:1px solid var(--line); background:var(--page); padding:16px; display:flex; gap:16px; align-items:center; }
+  .kin .tile{ flex:none; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px 12px; text-align:center; min-width:112px; }
+  .kin .tile .n{ font-size:34px; font-weight:900; color:var(--brand); direction:ltr; line-height:1; font-variant-numeric:tabular-nums; }
+  .kin .tile .l{ font-size:12.5px; color:var(--ink-2); font-weight:600; margin-top:6px; }
+  .kin.hi .tile .n{ color:var(--gold); }
+  .kin .k{ font-size:13px; font-weight:800; color:var(--ink-3); display:flex; align-items:center; gap:6px; }
+  .kin .k svg{ width:16px; height:16px; stroke:currentColor; stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .kin .t{ font-size:16px; font-weight:800; margin-top:4px; line-height:1.3; }
+  .kin .s{ font-size:13.5px; font-weight:500; color:var(--ink-2); margin-top:4px; }
+  .kin .s b{ font-weight:800; color:var(--ink); }
+  .kin.wait{ color:var(--ink-3); font-size:14px; font-weight:600; justify-content:center; min-height:72px; }
+  .fields{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:18px; }
+  .fields .two{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .field label{ display:block; font-size:13.5px; font-weight:800; color:var(--ink-2); margin-bottom:8px; }
+  .field label .opt{ font-weight:600; color:var(--ink-3); }
+  .field input, .field select, .field .pick{ width:100%; border:2px solid var(--line); border-radius:var(--r-btn); min-height:58px; padding:0 16px; font-size:16px; font-weight:600; background:var(--page); color:var(--ink); outline:none; -webkit-appearance:none; appearance:none; }
+  .field input:focus, .field select:focus{ border-color:var(--brand); background:#fff; }
+  .field input.ltr{ direction:ltr; text-align:right; font-family:var(--f-mono); letter-spacing:.5px; }
+  .field input::placeholder{ color:var(--ink-3); font-weight:500; }
+  .field .pick{ display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; text-align:start; }
+  .field .pick .ph{ color:var(--ink-3); font-weight:500; }
+  .field .pick svg{ width:20px; height:20px; stroke:var(--ink-3); stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .field .pick .val{ display:inline-flex; align-items:center; gap:10px; font-weight:800; }
+  .field.err input, .field.err select, .field.err .pick{ border-color:var(--danger); background:#fff; }
+  .field .fsel{ position:relative; } .field .fsel select{ padding-inline-end:44px; }
+  .field .fsel::after{ content:""; position:absolute; inset-inline-end:18px; top:50%; width:9px; height:9px; border-inline-end:2.4px solid var(--ink-3); border-bottom:2.4px solid var(--ink-3); transform:translateY(-70%) rotate(45deg); pointer-events:none; }
+  .seg{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .seg button{ border:2px solid var(--line); background:var(--page); color:var(--ink-2); border-radius:14px; min-height:54px; font-size:15px; font-weight:800; cursor:pointer; }
+  .seg button[aria-pressed="true"]{ border-color:var(--ink); background:var(--ink); color:#fff; }
+  .mact{ display:flex; gap:10px; margin-top:26px; }
+  .mact .cancel{ flex:1; border:2px solid var(--line); background:var(--surface); color:var(--ink); border-radius:var(--r-btn); min-height:58px; font-size:16px; font-weight:800; cursor:pointer; }
+  .mact .save{ flex:2; border:none; background:var(--brand); color:#fff; border-radius:var(--r-btn); min-height:58px; font-size:17px; font-weight:800; cursor:pointer; }
+  .mact .save:disabled{ background:var(--line); color:var(--ink-3); cursor:not-allowed; }
+  .mact .save.warn{ background:var(--gold); }
+
+  @media (hover:hover){
+    .pair:hover{ border-color:var(--brand); }
+    .rsum:hover{ background:rgba(16,24,32,.04); }
+    .btn-add:hover, .fab button:hover, .act.p:hover, .mact .save:hover:not(:disabled){ background:var(--brand-deep); }
+    .mact .save.warn:hover{ background:#8A6410; }
+    .act:hover{ border-color:var(--ink); color:var(--ink); }
+    .act.x:hover{ border-color:var(--danger); color:var(--danger); background:var(--danger-tint); }
+    .act.q:hover{ background:var(--page); color:var(--ink); }
+    .act.dk:hover{ background:#000; }
+    .rail button:hover{ background:var(--brand-tint); color:var(--brand-deep); }
+    .tabbar button:hover{ color:var(--brand-deep); }
+    .seg button:not([aria-pressed="true"]):hover{ border-color:var(--ink); color:var(--ink); }
+  }
+  button:focus-visible, input:focus-visible, select:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
+
+  /* ── demo switcher (design review only) ── */
+  .demo{ position:fixed; top:14px; inset-inline-end:14px; z-index:50; display:flex; gap:4px; background:var(--ink); border-radius:999px; padding:4px; flex-wrap:wrap; max-width:calc(100% - 28px); }
+  .demo button{ border:none; background:none; color:#fff; opacity:.6; font-size:12px; font-weight:700; padding:8px 12px; border-radius:999px; cursor:pointer; }
+  .demo button.on{ opacity:1; background:rgba(255,255,255,.16); }
+
+  @media (min-width:701px){ .phone{ max-width:720px; border-inline:1px solid var(--line); } }
+  @media (min-width:1100px){
+    .rail{ display:flex; }
+    .tabbar, .fab{ display:none !important; }
+    .demo{ inset-inline-end:152px; }
+    .phone{ max-width:none; margin-inline-start:132px; border:none; }
+    .lofthead{ padding:72px 32px 24px; }
+    .lofthead .in{ margin-inline:auto; max-width:1024px; }
+    .headrow{ flex-direction:row; align-items:flex-end; justify-content:space-between; }
+    .btn-add{ display:inline-flex; }
+    .panel{ margin-inline:auto; max-width:1024px; padding:20px 32px 80px; }
+    .rows{ display:none; }
+    .table{ display:block; }
+    .detail .phead{ padding:24px 28px; }
+    .detail .parent .nm{ font-size:28px; }
+    .scrim{ align-items:center; padding:24px; }
+    .modal{ max-width:560px; border-radius:28px; padding:28px 32px 32px; }
+    .modal.wide{ max-width:720px; }
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <div class="demo" aria-label="عرض النموذج">
+    <button class="on" data-v="list">الأزواج</button>
+    <button data-v="detail">تفاصيل زوج</button>
+    <button data-v="empty">فارغ</button>
+    <button data-v="new">زوج جديد</button>
+    <button data-v="newerr">أخطاء</button>
+    <button data-v="link">ربط طير</button>
+    <button data-v="linkblk">ربط ممنوع</button>
+    <button data-v="ring">تركيب الحلقة</button>
+    <button data-v="ringwarn">تحذيرات</button>
+  </div>
+
+  <header class="lofthead"><div class="in">
+    <div class="headrow">
+      <div>
+        <div class="loft" id="crumb">لوفت الفحيص</div>
+        <h1 id="title">إدارة موسم التربية</h1>
+        <div class="seasonrow" id="seasonrow">
+          <span class="k">الموسم:</span>
+          <span class="selwrap"><select id="season" onchange="render()"><option>2026</option><option>2025</option><option>2024</option></select></span>
+          <span class="k" id="count" style="color:var(--ink-3)"></span>
+        </div>
+      </div>
+      <button class="btn-add" onclick="openNew()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>زوج جديد</button>
+    </div>
+  </div></header>
+
+  <section class="panel">
+    <div class="rows" id="rows"></div>
+    <div class="table" id="table"><table><thead><tr><th>الزوج</th><th>العش</th><th>الحالة</th><th>التقدم</th><th></th></tr></thead><tbody id="tbody"></tbody></table></div>
+    <div class="detail" id="detail" hidden></div>
+    <div class="empty" id="empty" hidden>
+      <div class="ico"><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg></div>
+      <h3>لا أزواج في هذا الموسم بعد.</h3>
+      <p>أنشئ أول زوج من «زوج جديد».</p>
+    </div>
+  </section>
+
+  <div class="fab"><button onclick="openNew()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>زوج جديد</button></div>
+  <div class="toast" id="toast" hidden><span id="toast-t">تم الحذف</span><button onclick="undo()">تراجع</button></div>
+
+  <nav class="tabbar">
+    <button><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>الطيور</button>
+    <button class="on"><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>التزاوج</button>
+    <button><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>السباقات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>الصحة</button>
+    <button><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>الإحصائيات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg>الأدوات</button>
+  </nav>
+  <nav class="rail">
+    <button><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>الطيور</button>
+    <button class="on"><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>التزاوج</button>
+    <button><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>السباقات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>الصحة</button>
+    <button><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>الإحصائيات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg>الأدوات</button>
+  </nav>
+
+  <!-- ═══ 1 · زوج جديد ═══ -->
+  <div class="scrim" id="m-new" hidden onclick="if(event.target===this)closeAll()">
+    <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="t-new">
+      <div class="mhead"><h2 id="t-new">زوج جديد</h2><button class="icon-btn" aria-label="إغلاق" onclick="closeAll()"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div id="kin"></div>
+      <div class="alert" id="new-errs" hidden><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg><div>لم يُحفظ الزوج. صحّح ما يلي:<ul id="new-errs-l"></ul></div></div>
+      <div class="fields">
+        <div class="two">
+          <div class="field" id="f-sire"><label>الأب <span class="sex m">♂</span></label>
+            <button class="pick" onclick="pickParent('sire')"><span id="v-sire" class="ph">اختر ذكرًا</span><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button></div>
+          <div class="field" id="f-dam"><label>الأم <span class="sex f">♀</span></label>
+            <button class="pick" onclick="pickParent('dam')"><span id="v-dam" class="ph">اختر أنثى</span><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button></div>
+        </div>
+        <div class="two">
+          <div class="field" id="f-nest"><label>العش</label><input class="ltr" id="i-nest" inputmode="numeric" placeholder="4"></div>
+          <div class="field"><label>الموسم</label><div class="fsel"><select id="i-season" class="ltr"><option>2026</option><option>2025</option><option>2024</option></select></div></div>
+        </div>
+        <div class="field"><label>تاريخ التزويج</label><input class="ltr" type="date" id="i-mated" value="2026-09-06"></div>
+        <div class="two">
+          <div class="field"><label>مصدر الزوج <span class="opt">(إن كان مشترى)</span></label><input id="i-source" placeholder="مثل: لوفت أبو خالد — الزرقاء"></div>
+          <div class="field"><label>تاريخ الشراء <span class="opt">(اختياري)</span></label><input class="ltr" type="date" id="i-bought"></div>
+        </div>
+      </div>
+      <p class="hintline">اشتريت زوجًا مع بيض أو فراخ؟ سجّل الزوج، ثم أضف البيض وصحّح تواريخه — أو اربط فرخًا مسجَّلًا مسبقًا بالبيضة.</p>
+      <div class="mact"><button class="cancel" onclick="closeAll()">إلغاء</button><button class="save" onclick="saveNew()">حفظ الزوج</button></div>
+    </div>
+  </div>
+
+  <!-- ═══ 2 · ربط طير مسجَّل ═══ -->
+  <div class="scrim" id="m-link" hidden onclick="if(event.target===this)closeAll()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="t-link">
+      <div class="mhead"><h2 id="t-link">ربط طير مسجَّل</h2><button class="icon-btn" aria-label="إغلاق" onclick="closeAll()"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <p class="hintline">اختر طيرًا مسجَّلًا بالفعل ليصبح فرخ هذه البيضة. سيُضبط أبواه على هذا الزوج.</p>
+      <div class="fields">
+        <div class="field"><label>الطير</label>
+          <button class="pick" onclick="pickLink()"><span id="v-link" class="ph">اختر طيرًا من اللوفت</span><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button></div>
+      </div>
+      <div class="alert blocked" id="link-blk" hidden><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg><span id="link-blk-t"></span></div>
+      <div class="mact"><button class="cancel" onclick="closeAll()">إلغاء</button><button class="save" id="link-ok" onclick="saveLink()">تأكيد</button></div>
+    </div>
+  </div>
+
+  <!-- ═══ 3 · تركيب الحلقة ═══ -->
+  <div class="scrim" id="m-ring" hidden onclick="if(event.target===this)closeAll()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="t-ring">
+      <div class="mhead"><h2 id="t-ring">تركيب الحلقة</h2><button class="icon-btn" aria-label="إغلاق" onclick="closeAll()"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <p class="hintline" id="ring-ctx"></p>
+      <div class="alert warn" id="ring-warn" hidden><svg viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5h.01"/></svg><div>تحذيرات — راجع قبل الحفظ:<ul id="ring-warn-l"></ul></div></div>
+      <div class="fields">
+        <div class="field"><label>رقم الحلقة</label><input class="ltr" id="i-ring" placeholder="JO-2026-12345" oninput="ringChanged()"></div>
+        <div class="field"><label>الاسم</label><input id="i-name" placeholder="مثل: برق"></div>
+        <div class="field"><label>الجنس</label>
+          <div class="seg" id="i-sex">
+            <button aria-pressed="true" data-s="u">غير معروف</button><button aria-pressed="false" data-s="m">ذكر</button><button aria-pressed="false" data-s="f">أنثى</button>
+          </div></div>
+      </div>
+      <div class="mact"><button class="cancel" onclick="closeAll()">إلغاء</button><button class="save" id="ring-ok" onclick="saveRing()">حفظ وربط بالبيضة</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const BIRDS = {
+    'الصاعقة':'JOR 21 08841', 'غيمة':'JOR 22 04117', 'النشمي':'JOR 18 02290', 'ريم':'JOR 23 11204',
+    'سيف':'JOR 20 05512', 'ندى':'JOR 24 17371', 'برق':'JOR 26 17352', 'شقراء':'JOR 26 17360', 'هيثم':'JOR 26 17361', 'الأمير':'JOR 25 09920'
+  };
+  const AR = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+  const arN = n => String(n).replace(/\d/g, d=>AR[d]);
+  let uid = 100;
+  const E = (st, laid, hatched=null, chick=null, wean=null) => ({id:uid++, st, laid, hatched, chick, wean});
+  let pairs = [
+    { id:1, sire:'الصاعقة', dam:'غيمة', nest:1, active:true, source:null, season:'2026',
+      rounds:[
+        { id:uid++, eggs:[ E('hatched','2026-02-14','2026-03-03','برق','2026-03-28'), E('hatched','2026-02-16','2026-03-04','شقراء'), E('failed','2026-02-16') ] },
+        { id:uid++, eggs:[ E('laid','2026-04-20'), E('laid','2026-04-22') ] }
+      ] },
+    { id:2, sire:'النشمي', dam:'ريم', nest:2, active:true, source:'لوفت أبو خالد — الزرقاء', season:'2026',
+      rounds:[
+        { id:uid++, eggs:[ E('hatched','2026-03-02','2026-03-20'), E('failed','2026-03-04') ] }
+      ] },
+    { id:3, sire:'سيف', dam:'ندى', nest:3, active:false, source:null, season:'2026', rounds:[] }
+  ];
+  // newest round of each pair starts open
+  const open = new Set(pairs.map(p=>p.rounds.at(-1)?.id).filter(Boolean));
+  let removed=null, confirmKey=null, menuKey=null, demoEmpty=false;
+
+  const plate = n => { const [,yr,no]=BIRDS[n].split(' '); return `<span class="plate"><span class="yr">${yr}</span><span class="no">${no}</span></span>`; };
+  const parent = (n, sex) => `<button class="parent" title="${BIRDS[n]}"><span class="nm"><span class="sex ${sex}">${sex==='m'?'♂':'♀'}</span>${n}</span>${plate(n)}</button>`;
+  const stateChip = st => ({
+    laid:   `<span class="chip laid"><span class="ico">🥚</span>بيضة</span>`,
+    hatched:`<span class="chip hatch"><span class="ico">🐣</span>فقست</span>`,
+    failed: `<span class="chip fail"><span class="ico">✕</span><span class="t">لم تفقس</span></span>`
+  })[st];
+  const date = (lbl, val, on) => `<span class="df"><label>${lbl}</label><input type="date" value="${val||''}" onchange="${on}"></span>`;
+  const confirmHtml = (fn, sm) => `<div class="confirm ${sm?'sm':''}"><span>تأكيد الحذف؟</span><div class="b"><button class="go" onclick="${fn}">حذف</button><button class="no" onclick="cancelDel()">إلغاء</button></div></div>`;
+
+  function eggHtml(p, r, e){
+    const k = `e${e.id}`, path = `${p.id},${r.id},${e.id}`;
+    if(confirmKey===k) return `<div class="egg"><div class="l1">${stateChip(e.st)}${confirmHtml(`delEgg(${path})`, true)}</div></div>`;
+    // ⋯ menu: secondary actions only
+    let items = '';
+    if(e.st==='hatched' && e.chick){
+      items += `<button onclick="unlink(${path})" title="إلغاء الربط"><span>⛓</span>إلغاء الربط</button>`;
+      if(e.wean) items += `<div class="df"><label>تاريخ الفطام:</label><input type="date" value="${e.wean}" onchange="setEgg(${path},'wean',this.value)"></div>`;
+      items += `<div class="sep"></div>`;
+    }
+    items += `<button class="del" onclick="askDel('${k}')">حذف البيضة</button>`;
+    const more = `<span class="more"><button class="act q" aria-label="المزيد" aria-expanded="${menuKey===k}" onclick="toggleMenu('${k}')">⋯</button>${menuKey===k?`<div class="menu">${items}</div>`:''}</span>`;
+
+    let l1 = stateChip(e.st) + date('تاريخ الوضع:', e.laid, `setEgg(${path},'laid',this.value)`) + more;
+    let l2 = '';
+    if(e.st==='laid'){
+      l2 = `<button class="act p" onclick="hatch(${path})">تسجيل الفقس</button><button class="act" onclick="fail(${path})">لم تفقس</button>`;
+    } else if(e.st==='hatched'){
+      l2 = date('فقس:', e.hatched, `setEgg(${path},'hatched',this.value)`);
+      if(!e.chick) l2 += `<button class="act p" onclick="openRing(${path})">تركيب الحلقة</button><button class="act" onclick="openLink(${path})">ربط طير مسجَّل</button>`;
+      else {
+        l2 += `<button class="chick" title="${BIRDS[e.chick]}"><span class="bird">🐦</span>${e.chick}${plate(e.chick)}</button>`;
+        l2 += e.wean ? `<span class="chip wean">مفطوم</span>` : `<button class="act dk" onclick="wean(${path})">فطام</button>`;
+      }
+    }
+    return `<div class="egg"><div class="l1">${l1}</div><div class="l2">${l2}</div></div>`;
+  }
+
+  function roundHtml(p, r, i){
+    const k = `r${r.id}`, isOpen = open.has(r.id);
+    const h = r.eggs.filter(e=>e.st==='hatched').length, f = r.eggs.filter(e=>e.st==='failed').length;
+    const meta = r.eggs.length
+      ? `${arN(r.eggs.length)} بيض · <span class="h">${arN(h)} فقست</span>${f?` · <span class="n">${arN(f)} لم تفقس</span>`:''}`
+      : `<span class="n">بلا بيض</span>`;
+    return `<div class="round ${isOpen?'open':''}">
+      <button class="rsum" aria-expanded="${isOpen}" onclick="toggleRound(${r.id})"><svg class="chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg><h3>البطن ${arN(i+1)}</h3><span class="m">${meta}</span></button>
+      <div class="rbody">
+        <div class="eggs">${r.eggs.map(e=>eggHtml(p,r,e)).join('')}</div>
+        <div class="addrow" style="justify-content:space-between;align-items:center">
+          <button class="ghost" onclick="addEgg(${p.id},${r.id})"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>إضافة بيضة</button>
+          ${confirmKey===k ? confirmHtml(`delRound(${p.id},${r.id})`, true) : `<button class="act q" style="font-size:13px;letter-spacing:0;color:var(--ink-3)" onclick="askDel('${k}')">حذف البطن</button>`}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function pairHtml(p){
+    const k = `p${p.id}`;
+    const eggs = p.rounds.flatMap(r=>r.eggs), h = eggs.filter(e=>e.st==='hatched').length;
+    const kids = eggs.filter(e=>e.chick).map(e=>e.chick);
+    return `<article class="pair ${p.active?'':'off'}">
+      <div class="phead">
+      <div class="ptop">
+        <div class="parents">${parent(p.sire,'m')}<span class="x">×</span>${parent(p.dam,'f')}</div>
+        ${p.active ? `<span class="chip on">نشط</span>` : `<span class="chip off">مفصول</span>`}
+      </div>
+      <div class="chips">
+        <span class="chip">العش <b>${arN(p.nest)}</b></span>
+        ${p.source ? `<span class="chip">مشترى: ${p.source}</span>` : ''}
+        ${eggs.length ? `<span class="stat">🐣 ${arN(h)} من ${arN(eggs.length)} فقست</span>` : ''}
+      </div>
+      <div class="pacts">
+        ${confirmKey===k ? confirmHtml(`delPair(${p.id})`) : `<button class="act x" onclick="askDel('${k}')">حذف</button>`}
+        <button class="act toggle" onclick="toggle(${p.id})" title="${p.active?'فصل الزوج':'إعادة تنشيط الزوج'}">${p.active?'مفصول':'نشط'}</button>
+      </div>
+      </div>
+      <div class="divider"></div>
+      ${p.rounds.length ? `<div class="rounds">${p.rounds.map((r,i)=>roundHtml(p,r,i)).join('')}</div>` : ''}
+      <div class="addrow" style="margin-top:${p.rounds.length?10:14}px"><button class="ghost wide" onclick="addRound(${p.id})"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>بطن جديد</button></div>
+      ${kids.length ? `<div class="off-block"><div class="k">نسل هذا الزوج</div><div class="list">${kids.map(n=>`<button class="birdpill">${n}${plate(n)}</button>`).join('')}</div></div>` : ''}
+    </article>`;
+  }
+
+  const summary = p => {
+    const eggs = p.rounds.flatMap(r=>r.eggs), h = eggs.filter(e=>e.st==='hatched').length;
+    if(!p.rounds.length) return 'لا بطون بعد';
+    return `${arN(p.rounds.length)} بطون · ${arN(eggs.length)} بيض · <span class="h">${arN(h)} فقست</span>`;
+  };
+  const miniPlates = p => `<div class="plates">${plate(p.sire)}<span class="x">×</span>${plate(p.dam)}</div>`;
+  const namesHtml = p => `<div class="names"><span class="sex m">♂</span>${p.sire}<span class="x">×</span><span class="sex f">♀</span>${p.dam}</div>`;
+  const statusChip = p => p.active ? `<span class="chip on">نشط</span>` : `<span class="chip off">مفصول</span>`;
+  const rowHtml = p => `<button class="row ${p.active?'':'off'}" onclick="openPair(${p.id})">
+      <div class="body">${namesHtml(p)}${miniPlates(p)}
+        <div class="meta"><span class="chip">العش <b>${arN(p.nest)}</b></span>${statusChip(p)}<span class="sum">${summary(p)}</span></div></div>
+      <svg class="chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>`;
+  const trHtml = p => `<tr onclick="openPair(${p.id})"><td>${namesHtml(p)}${miniPlates(p)}</td><td class="nest">${p.nest}</td><td>${statusChip(p)}</td><td><span class="sum">${summary(p)}</span></td><td><svg class="chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></td></tr>`;
+
+  let view = null; // null = list · pair id = detail
+  function openPair(id){ view=id; confirmKey=null; menuKey=null; render(); window.scrollTo(0,0); }
+  function back(){ view=null; confirmKey=null; menuKey=null; render(); }
+
+  function render(){
+    const s = $('season').value;
+    const vis = demoEmpty ? [] : pairs.filter(p=>p.season===s).sort((a,b)=>a.nest-b.nest);
+    const p = view!==null ? pairs.find(x=>x.id===view) : null;
+    if(view!==null && !p) view=null;
+    const inDetail = !!p;
+    $('rows').hidden = inDetail; $('table').hidden = inDetail; $('detail').hidden = !inDetail;
+    $('seasonrow').hidden = inDetail; $('empty').hidden = inDetail || vis.length>0;
+    document.querySelector('.btn-add').hidden = inDetail; document.querySelector('.fab').hidden = inDetail;
+    if(inDetail){
+      $('crumb').innerHTML = `<button class="back" onclick="back()"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>الأزواج · موسم <span class="num">${p.season}</span></button>`;
+      $('title').textContent = `${p.sire} × ${p.dam}`;
+      $('detail').innerHTML = pairHtml(p);
+    } else {
+      $('crumb').textContent = 'لوفت الفحيص'; $('title').textContent = 'إدارة موسم التربية';
+      $('rows').innerHTML = vis.map(rowHtml).join('');
+      $('tbody').innerHTML = vis.map(trHtml).join('');
+      if(!vis.length) $('table').hidden = true;
+      $('count').textContent = vis.length ? `· ${arN(vis.length)} أزواج · ${arN(vis.filter(x=>x.active).length)} نشط` : '';
+    }
+  }
+  const $ = id => document.getElementById(id);
+
+  const P = id => pairs.find(p=>p.id===id);
+  const R = (pid,rid) => P(pid).rounds.find(r=>r.id===rid);
+  const EG = (pid,rid,eid) => R(pid,rid).eggs.find(e=>e.id===eid);
+
+  function toggleRound(rid){ open.has(rid) ? open.delete(rid) : open.add(rid); menuKey=null; render(); }
+  function toggleMenu(k){ menuKey = menuKey===k ? null : k; render(); }
+  document.addEventListener('click', e=>{ if(menuKey && !e.target.closest('.more')){ menuKey=null; render(); } });
+
+  function setEgg(pid,rid,eid,f,v){ EG(pid,rid,eid)[f]=v||null; render(); }
+  function hatch(pid,rid,eid){ const e=EG(pid,rid,eid); e.st='hatched'; e.hatched='2026-09-06'; render(); }
+  function fail(pid,rid,eid){ EG(pid,rid,eid).st='failed'; render(); }
+  function unlink(pid,rid,eid){ const e=EG(pid,rid,eid); e.chick=null; e.wean=null; menuKey=null; render(); }
+  function wean(pid,rid,eid){ EG(pid,rid,eid).wean='2026-09-06'; render(); }
+  function addEgg(pid,rid){ R(pid,rid).eggs.push(E('laid','2026-09-06')); open.add(rid); render(); }
+  function addRound(pid){ const r={id:uid++, eggs:[]}; P(pid).rounds.push(r); open.add(r.id); render(); }
+  function toggle(pid){ const p=P(pid); p.active=!p.active; render(); }
+
+  function askDel(k){ confirmKey=k; menuKey=null; render(); }
+  function cancelDel(){ confirmKey=null; render(); }
+  function toast(t){ document.getElementById('toast-t').textContent=t; const el=document.getElementById('toast'); el.hidden=false; clearTimeout(el._h); el._h=setTimeout(()=>{ el.hidden=true; removed=null; },6000); }
+  function delPair(pid){ const i=pairs.findIndex(p=>p.id===pid), p=pairs.splice(i,1)[0]; removed={undo:()=>pairs.splice(i,0,p)}; confirmKey=null; view=null; render(); toast('تم حذف الزوج'); }
+  function delRound(pid,rid){ const rs=P(pid).rounds, i=rs.findIndex(r=>r.id===rid), r=rs.splice(i,1)[0]; removed={undo:()=>rs.splice(i,0,r)}; confirmKey=null; render(); toast('تم حذف البطن'); }
+  function delEgg(pid,rid,eid){ const es=R(pid,rid).eggs, i=es.findIndex(e=>e.id===eid), e=es.splice(i,1)[0]; removed={undo:()=>es.splice(i,0,e)}; confirmKey=null; render(); toast('تم حذف البيضة'); }
+  function undo(){ if(removed){ removed.undo(); removed=null; render(); } document.getElementById('toast').hidden=true; }
+
+  /* ── dialogs ── */
+  const pickVal = (el, name, ph) => { el.innerHTML = name ? `<span class="val">${name}${plate(name)}</span>` : ph; el.classList.toggle('ph', !name); };
+  function closeAll(){ ['m-new','m-link','m-ring'].forEach(id=>$(id).hidden=true); }
+
+  // 1 · زوج جديد
+  const KIN = { 'الصاعقة|غيمة':{coi:'3.1%', t:'قرابة بعيدة', s:'يشتركان في <b>النشمي</b> كجدّ من جهة الأب (الجيل الثالث).', hi:false},
+                'الصاعقة|ندى':{coi:'12.5%', t:'قرابة قريبة — عمّ وابنة أخ', s:'<b>الصاعقة</b> شقيق أب <b>ندى</b>. راجع قبل الحفظ.', hi:true} };
+  let nw = { sire:null, dam:null };
+  function renderKin(){
+    const k = $('kin');
+    if(!nw.sire || !nw.dam){ k.innerHTML = `<div class="kin wait">تنبيه القرابة يظهر بعد اختيار الأب والأم</div>`; return; }
+    const r = KIN[`${nw.sire}|${nw.dam}`] || {coi:'0.0%', t:'لا قرابة معروفة', s:'لا أسلاف مشتركين في خمسة أجيال.', hi:false};
+    k.innerHTML = `<div class="kin ${r.hi?'hi':''}">
+      <div class="tile"><div class="n">${r.coi}</div><div class="l">التربية الداخلية</div></div>
+      <div><div class="k"><svg viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5h.01"/></svg>تنبيه قرابة عند إنشاء الزوج</div><div class="t">${r.t}</div><div class="s">${r.s}</div></div>
+    </div>`;
+  }
+  function pickParent(which){ // prototype: cycles a sample bird
+    const opts = which==='sire' ? ['الصاعقة','النشمي',null] : ['غيمة','ندى',null];
+    nw[which] = opts[(opts.indexOf(nw[which])+1)%opts.length];
+    pickVal($('v-'+which), nw[which], which==='sire'?'اختر ذكرًا':'اختر أنثى');
+    $('f-'+which).classList.remove('err'); $('new-errs').hidden=true; renderKin();
+  }
+  function openNew(preset){
+    nw = { sire:preset?.sire||null, dam:preset?.dam||null };
+    pickVal($('v-sire'), nw.sire, 'اختر ذكرًا'); pickVal($('v-dam'), nw.dam, 'اختر أنثى');
+    $('i-nest').value = preset?.nest ?? ''; $('i-source').value=''; $('i-bought').value=''; $('i-mated').value='2026-09-06';
+    ['f-sire','f-dam','f-nest'].forEach(id=>$(id).classList.remove('err')); $('new-errs').hidden=true;
+    renderKin(); $('m-new').hidden=false;
+  }
+  function saveNew(){
+    const errs=[];
+    if(!nw.sire){ errs.push('اختر الأب.'); $('f-sire').classList.add('err'); }
+    if(!nw.dam){ errs.push('اختر الأم.'); $('f-dam').classList.add('err'); }
+    const nest=$('i-nest').value.trim();
+    if(!nest){ errs.push('رقم العش مطلوب.'); $('f-nest').classList.add('err'); }
+    else if(pairs.some(p=>p.season===$('i-season').value && p.active && String(p.nest)===nest)){ errs.push(`العش ${arN(nest)} مشغول بزوج نشط في هذا الموسم.`); $('f-nest').classList.add('err'); }
+    if(errs.length){ $('new-errs-l').innerHTML = errs.map(e=>`<li>${e}</li>`).join(''); $('new-errs').hidden=false; $('m-new').querySelector('.modal').scrollTop=0; return; }
+    pairs.push({ id:uid++, sire:nw.sire, dam:nw.dam, nest:+nest, active:true, source:$('i-source').value||null, season:$('i-season').value, rounds:[] });
+    closeAll(); render();
+  }
+
+  // 2 · ربط طير مسجَّل
+  let lk = { path:null, bird:null };
+  const BLOCK = { 'الصاعقة':'الطير أحد أبوي هذا الزوج.', 'برق':'الطير مرتبط ببيضة أخرى في هذا الموسم.' };
+  function openLink(pid,rid,eid,preBird){
+    lk = { path:[pid,rid,eid], bird:preBird||null };
+    pickVal($('v-link'), lk.bird, 'اختر طيرًا من اللوفت'); linkCheck(); $('m-link').hidden=false;
+  }
+  function pickLink(){ const opts=['هيثم','برق',null]; lk.bird=opts[(opts.indexOf(lk.bird)+1)%opts.length]; pickVal($('v-link'), lk.bird, 'اختر طيرًا من اللوفت'); linkCheck(); }
+  function linkCheck(){
+    const why = lk.bird && BLOCK[lk.bird];
+    $('link-blk').hidden = !why; if(why) $('link-blk-t').textContent = `لا يمكن الربط: ${why}`;
+    $('link-ok').disabled = !lk.bird || !!why;
+  }
+  function saveLink(){ if(lk.path){ EG(...lk.path).chick = lk.bird; } closeAll(); render(); }
+
+  // 3 · تركيب الحلقة
+  let rg = { path:null, sex:'u' };
+  const USED = ['JO-2026-17352','JO-2026-17360'];
+  $('i-sex').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; rg.sex=b.dataset.s; [...$('i-sex').children].forEach(x=>x.setAttribute('aria-pressed', x===b)); });
+  function openRing(pid,rid,eid,pre){
+    rg = { path:[pid,rid,eid], sex:'u', force:false };
+    const p=P(pid), i=p.rounds.findIndex(r=>r.id===rid)+1;
+    $('ring-ctx').textContent = `فرخ ${p.sire} × ${p.dam} · البطن ${arN(i)} · فقس ${(EG(pid,rid,eid).hatched||'').split('-').reverse().join(' / ')}`;
+    $('i-ring').value = pre?.ring||''; $('i-name').value = pre?.name||'';
+    [...$('i-sex').children].forEach(x=>x.setAttribute('aria-pressed', x.dataset.s==='u'));
+    ringChanged(); $('m-ring').hidden=false;
+  }
+  function ringWarnings(){
+    const v=$('i-ring').value.trim().toUpperCase(), w=[];
+    if(!v) return w;
+    if(!/^JO-\d{4}-\d{5}$/.test(v)) w.push('صيغة الحلقة غير معتادة — المتوقع JO-2026-12345.');
+    else if(v.split('-')[1]!=='2026') w.push(`سنة الحلقة ${v.split('-')[1]} تختلف عن موسم الفقس 2026.`);
+    if(USED.includes(v)) w.push('رقم الحلقة مسجَّل لطير آخر في اللوفت.');
+    return w;
+  }
+  function ringChanged(){
+    const w = ringWarnings(), ok=$('ring-ok');
+    $('ring-warn').hidden = !w.length; $('ring-warn-l').innerHTML = w.map(x=>`<li>${x}</li>`).join('');
+    ok.classList.toggle('warn', w.length>0); ok.textContent = w.length ? 'حفظ رغم التحذيرات' : 'حفظ وربط بالبيضة';
+    ok.disabled = !$('i-ring').value.trim();
+  }
+  function saveRing(){
+    const name = $('i-name').value.trim() || $('i-ring').value.trim().toUpperCase();
+    if(!BIRDS[name]) BIRDS[name] = 'JOR '+$('i-ring').value.trim().split('-')[1].slice(2)+' '+($('i-ring').value.trim().split('-')[2]||'');
+    if(rg.path) EG(...rg.path).chick = name;
+    closeAll(); render();
+  }
+
+  /* ── demo switcher ── */
+  document.querySelector('.demo').addEventListener('click', e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    document.querySelectorAll('.demo button').forEach(x=>x.classList.toggle('on', x===b));
+    const v=b.dataset.v; demoEmpty = v==='empty'; closeAll(); confirmKey=null; menuKey=null; view = (v==='list'||v==='empty'||v==='new'||v==='newerr') ? null : 1; if(v==='link'||v==='linkblk'||v==='ring'||v==='ringwarn') view=2; render();
+    const hatchedNoChick = [2, pairs[1].rounds[0].id, pairs[1].rounds[0].eggs[0].id];
+    if(v==='new') openNew({sire:'الصاعقة', dam:'غيمة'});
+    if(v==='newerr'){ openNew({sire:'الصاعقة', dam:'ندى', nest:'1'}); saveNew(); }
+    if(v==='link') openLink(...hatchedNoChick, 'هيثم');
+    if(v==='linkblk') openLink(...hatchedNoChick, 'برق');
+    if(v==='ring') openRing(...hatchedNoChick);
+    if(v==='ringwarn') openRing(...hatchedNoChick, {ring:'JO-2025-17352', name:'مها'});
+  });
+  render();
+</script>
+</body>
+</html>
