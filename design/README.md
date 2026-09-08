@@ -38,6 +38,7 @@ Changing a file in `approved/` is a design decision, not an edit.
 | Races | `approved/races-v1.html` | approved |
 | Health | `approved/health-v1.html` | approved |
 | Breeding | `approved/breeding-v1.html` | approved |
+| Stats | `approved/stats-v1.html` | approved |
 
 Where two versions of a screen are listed, **the highest `-vN` is the one to
 build**. Earlier versions stay in place unchanged so a decision already made
@@ -112,6 +113,29 @@ archived: the 29,137-byte `zajil-screen-3-bird-profile.html` is identical
 apart from three injected lines (a `<template id="__bundler_thumbnail">`
 block from the design tool), and the 271,521-byte "standalone" file is a
 bundler-wrapped preview.
+
+**Stats (`stats-v1.html`) — the spec DELIBERATELY differs from today's app in
+five ways. Implement the spec, not the current behaviour.**
+
+1. **COI honesty.** Birds missing a parent get their own **«نسب غير معروف»**
+   band, are **excluded from both the average and the distribution**, and the
+   count is stated outright. Today they are silently counted as COI 0
+   (`js/engine/coi.js:70` returns `{coi: 0}` when either parent is missing),
+   which puts unknown-parentage birds in the «صفر» band and drags the average
+   down — in a young loft, where most birds have no recorded parents, that
+   makes «متوسط COI» actively misleading.
+2. **«حسب السلالة» shows «غير محددة»** rather than dropping strain-less birds.
+   Today `js/views/stats.js:61` filters them out before grouping, so the card
+   silently totals less than «عدد الطيور» with nothing saying by how much.
+   Both breakdown cards now show a total.
+3. **A fifth headline tile «غير معروف»**, so the sex tiles reconcile. Today
+   there are four tiles and cocks + hens need not equal the total.
+4. **A whole-view empty state.** Today an empty loft renders four zeros, six
+   zero-height bars and «متوسط COI: 0.00%» with no explanation and no call to
+   action.
+5. **Two new season cards** — **أداء السباقات** and **التربية** — which have
+   no counterpart in the app at all, including a **نسبة الفقس** figure and the
+   rule **«لا تُحتسب نتائج التدريب»**.
 
 **Design contract:** [`ZAJIL-DESIGN-KIT.md`](ZAJIL-DESIGN-KIT.md) — brief,
 inventory, responsive rules; brand `#128C6E`.

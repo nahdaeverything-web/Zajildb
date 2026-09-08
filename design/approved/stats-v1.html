@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>زاجل — الإحصائيات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brand:#128C6E; --brand-deep:#0E6F57; --brand-tint:#E3F4EE;
+    --ink:#101820; --ink-2:#4A5560; --ink-3:#8C97A2;
+    --page:#F5F7F8; --surface:#FFFFFF; --line:#E4E9ED;
+    --gold:#C9971F; --gold-tint:#FBF3DF; --danger:#C43D2B; --danger-tint:#F8E6E3;
+    --r:20px; --r-btn:16px;
+    --f:'Alexandria', system-ui, sans-serif;
+    --f-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  button{ font-family:var(--f); }
+  body{ font-family:var(--f); color:var(--ink); background:#E9EDF0; min-height:100vh; display:flex; justify-content:center; line-height:1.5; }
+  .phone{ width:100%; max-width:430px; min-height:100vh; background:var(--page); position:relative; }
+  [hidden]{ display:none !important; }
+  .num{ font-family:var(--f-mono); font-weight:600; direction:ltr; unicode-bidi:isolate; font-variant-numeric:tabular-nums; }
+  a{ color:var(--ink); }
+
+  /* ── header ── */
+  .lofthead{ background:var(--surface); border-bottom:1px solid var(--line); padding:20px; }
+  .lofthead .season{ font-size:13px; font-weight:700; color:var(--ink-3); }
+  .lofthead h1{ font-size:34px; font-weight:900; line-height:1.1; }
+  .lofthead .count{ font-size:15px; font-weight:700; color:var(--brand-deep); margin-top:4px; }
+
+  .panel{ padding:16px 20px 110px; display:grid; gap:14px; }
+
+  /* ── A. tiles ── */
+  .tiles{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  .tile{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:18px 18px 16px; }
+  .tile .n{ font-family:var(--f-mono); font-weight:600; font-size:40px; line-height:1; color:var(--brand); direction:ltr; text-align:right; font-variant-numeric:tabular-nums; }
+  .tile.total .n{ font-size:52px; }
+  .tile .l{ font-size:13px; font-weight:800; color:var(--ink-2); margin-top:8px; }
+  .tile.muted .n{ color:var(--ink-3); }
+  .tile.total{ grid-column:1 / -1; background:var(--ink); border-color:var(--ink); }
+  .tile.total .n{ color:#fff; }
+  .tile.total .l{ color:rgba(255,255,255,.85); }
+  .tile.total .sub{ font-size:12.5px; font-weight:600; color:rgba(255,255,255,.7); margin-top:2px; }
+
+  /* ── cards ── */
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:20px; }
+  .card h2{ font-size:19px; font-weight:800; line-height:1.3; }
+  .card .sub{ font-size:13px; font-weight:700; color:var(--ink-3); margin-top:2px; }
+  .card .sub b{ font-family:var(--f-mono); font-weight:600; direction:ltr; unicode-bidi:isolate; }
+
+  /* ── bar rows (label · bar · count) ── */
+  .bars{ display:grid; gap:10px; margin-top:16px; }
+  .brow{ display:grid; grid-template-columns:minmax(88px,auto) 1fr 36px; align-items:center; gap:12px; min-height:28px; }
+  .brow .lbl{ font-size:14px; font-weight:700; color:var(--ink-2); white-space:nowrap; }
+  .brow .lbl.num{ font-size:13px; text-align:right; }
+  .brow .trk{ height:22px; background:var(--page); border-radius:6px; overflow:hidden; }
+  .brow .fill{ height:100%; background:var(--brand); border-radius:6px; }
+  .brow .cnt{ font-family:var(--f-mono); font-weight:600; font-size:16px; direction:ltr; text-align:left; }
+  .brow.zero .cnt{ color:var(--ink-3); }
+  .brow.unk .fill{ background:var(--ink-3); }
+  .brow.unk .lbl{ color:var(--ink-3); }
+  .brow.unk .cnt{ color:var(--ink-3); }
+  .brow.unk{ margin-top:8px; padding-top:10px; border-top:1px dashed var(--line); }
+
+  /* ── COI summary ── */
+  .coistat{ display:flex; align-items:baseline; gap:10px; margin-top:20px; padding-top:18px; border-top:1px solid var(--line); }
+  .coistat .k{ flex:none; white-space:nowrap; font-size:14px; font-weight:800; color:var(--ink-2); }
+  .coistat .v{ font-family:var(--f-mono); font-weight:600; font-size:34px; line-height:1; color:var(--brand); direction:ltr; }
+  .note{ display:flex; gap:8px; align-items:flex-start; margin-top:10px; font-size:13px; font-weight:600; color:var(--ink-2); }
+  .note svg{ width:16px; height:16px; flex:none; margin-top:3px; stroke:var(--ink-3); stroke-width:2.6; fill:none; stroke-linecap:round; }
+  .note b{ font-family:var(--f-mono); font-weight:600; direction:ltr; unicode-bidi:isolate; }
+  .toplist{ margin-top:18px; }
+  .toplist .k{ font-size:14px; font-weight:800; color:var(--ink-2); margin-bottom:8px; }
+  .toplist ol{ list-style:none; display:grid; }
+  .toplist li{ display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:48px; border-top:1px solid var(--line); }
+  .toplist li:first-child{ border-top:none; }
+  .toplist a{ font-size:15.5px; font-weight:800; color:var(--ink); text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:4px; display:flex; align-items:center; gap:10px; min-width:0; }
+  .toplist a .rk{ font-family:var(--f-mono); font-weight:600; font-size:13px; color:var(--ink-3); width:16px; text-align:center; }
+  .toplist .pct{ font-family:var(--f-mono); font-weight:600; font-size:17px; direction:ltr; }
+  .toplist .pct.hi{ color:var(--gold); }
+
+  .empty-card{ font-size:15px; font-weight:600; color:var(--ink-3); margin-top:16px; }
+
+  /* ── season cards ── */
+  .kpis{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px 18px; margin-top:16px; }
+  .kpi .n{ font-family:var(--f-mono); font-weight:600; font-size:34px; line-height:1; color:var(--brand); direction:ltr; text-align:right; font-variant-numeric:tabular-nums; }
+  .kpi .n small{ font-family:var(--f); font-size:13px; font-weight:800; color:var(--ink-3); margin-inline-start:4px; }
+  .kpi .l{ font-size:12.5px; font-weight:800; color:var(--ink-2); margin-top:6px; }
+  .kpi.wide{ grid-column:1 / -1; }
+  .pill{ display:inline-block; min-width:44px; text-align:center; font-weight:800; font-size:14px; padding:6px 10px; border-radius:12px; background:var(--page); color:var(--ink-2); direction:ltr; }
+  .pill.top{ background:var(--brand); color:#fff; }
+  .rtab{ width:100%; border-collapse:collapse; margin-top:18px; font-size:14px; }
+  .rtab th{ text-align:start; font-size:12px; font-weight:800; color:var(--ink-3); padding:0 6px 8px; border-bottom:1px solid var(--line); }
+  .rtab td{ padding:10px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  .rtab tr:last-child td{ border-bottom:none; }
+  .rtab td.bird a{ font-weight:800; color:var(--ink); text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:4px; }
+  .rtab td.race{ font-weight:600; color:var(--ink-2); }
+  .rtab td.num{ font-size:14px; }
+  .rtab tr.best td{ background:var(--gold-tint); }
+  .rtab tr.best td:first-child{ border-start-start-radius:10px; border-end-start-radius:10px; }
+  .rtab tr.best td:last-child{ border-start-end-radius:10px; border-end-end-radius:10px; }
+  .rtab tr.best td.bird a{ color:#8A6410; }
+
+  /* ── D. whole-view empty ── */
+  .empty{ text-align:center; padding:64px 20px 40px; }
+  .empty .ico{ width:84px; height:84px; border-radius:26px; background:var(--brand-tint); display:grid; place-items:center; margin:0 auto 16px; }
+  .empty .ico svg{ width:40px; height:40px; stroke:var(--brand); stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .empty h3{ font-size:26px; font-weight:900; line-height:1.2; }
+  .empty p{ font-size:15px; font-weight:500; color:var(--ink-2); margin-top:8px; max-width:360px; margin-inline:auto; text-wrap:pretty; }
+  .empty .acts{ display:flex; flex-direction:column; gap:10px; margin:24px auto 0; max-width:360px; }
+  .empty .primary{ border:none; border-radius:var(--r-btn); background:var(--brand); color:#fff; font-size:16px; font-weight:800; min-height:58px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; }
+  .empty .primary svg{ width:20px; height:20px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; }
+  .empty .secondary{ border:2px solid var(--line); background:var(--surface); color:var(--ink); border-radius:var(--r-btn); font-size:16px; font-weight:800; min-height:58px; cursor:pointer; }
+
+  /* ── nav ── */
+  .tabbar{ position:fixed; bottom:0; inset-inline:0; margin-inline:auto; max-width:430px; background:var(--surface); border-top:1px solid var(--line); display:flex; padding:10px 4px 14px; z-index:10; }
+  .tabbar button{ flex:1; min-width:0; border:none; background:none; cursor:pointer; color:var(--ink-3); font-size:10.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:5px; white-space:nowrap; }
+  .tabbar button svg, .rail button svg{ width:26px; height:26px; stroke:currentColor; stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .tabbar button.on{ color:var(--brand); }
+  .rail{ display:none; position:fixed; top:0; bottom:0; inset-inline-start:0; width:132px; background:var(--surface); border-inline-end:1px solid var(--line); flex-direction:column; gap:4px; padding:24px 12px; z-index:11; }
+  .rail button{ display:flex; align-items:center; gap:10px; border:none; background:none; cursor:pointer; color:var(--ink-3); font-size:13px; font-weight:700; padding:12px 10px; border-radius:14px; min-height:48px; }
+  .rail button.on{ background:var(--brand-tint); color:var(--brand); }
+
+  @media (hover:hover){
+    .toplist a:hover{ text-decoration-color:var(--brand); color:var(--brand-deep); }
+    .empty .primary:hover{ background:var(--brand-deep); }
+    .empty .secondary:hover{ border-color:var(--ink); }
+    .rail button:hover{ background:var(--brand-tint); color:var(--brand-deep); }
+    .tabbar button:hover{ color:var(--brand-deep); }
+  }
+  button:focus-visible, a:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
+
+  /* ── demo switcher (design review only) ── */
+  .demo{ position:fixed; top:14px; inset-inline-end:14px; z-index:50; display:flex; gap:4px; background:var(--ink); border-radius:999px; padding:4px; }
+  .demo button{ border:none; background:none; color:#fff; opacity:.6; font-size:12px; font-weight:700; padding:8px 12px; border-radius:999px; cursor:pointer; }
+  .demo button.on{ opacity:1; background:rgba(255,255,255,.16); }
+
+  @media (min-width:701px){
+    .phone{ max-width:720px; border-inline:1px solid var(--line); }
+    .tiles{ grid-template-columns:repeat(5,1fr); }
+    .tile.total{ grid-column:auto; }
+  }
+  @media (min-width:1100px){
+    .rail{ display:flex; }
+    .tabbar{ display:none !important; }
+    .demo{ inset-inline-end:152px; }
+    .phone{ max-width:none; margin-inline-start:132px; border:none; }
+    .lofthead{ padding:32px 32px 24px; }
+    .lofthead .in{ margin-inline:auto; max-width:1024px; }
+    .panel{ margin-inline:auto; max-width:1024px; width:100%; padding:20px 32px 80px; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start; }
+    .tiles{ grid-column:1 / -1; gap:12px; }
+    .tile{ padding:22px 22px 20px; }
+    .tile .n{ font-size:48px; }
+    .tile.total .n{ font-size:48px; }
+    .coi{ grid-column:1 / -1; display:grid; grid-template-columns:3fr 2fr; gap:0 40px; }
+    .coi .head{ grid-column:1 / -1; }
+    .coi .aside{ grid-row:2; border-inline-start:1px solid var(--line); padding-inline-start:40px; }
+    .coi .aside .coistat{ margin-top:0; padding-top:0; border-top:none; }
+    .brow{ grid-template-columns:minmax(120px,auto) 1fr 40px; }
+    .brow .trk{ height:26px; }
+    .kpis{ grid-template-columns:repeat(4,1fr); }
+    .kpi.wide{ grid-column:auto; }
+    .kpis.five{ grid-template-columns:repeat(5,1fr); }
+    .kpi .n{ font-size:38px; }
+    .rtab td.race{ white-space:nowrap; }
+    .empty{ grid-column:1 / -1; padding:96px 20px 60px; }
+    .empty .acts{ flex-direction:row; max-width:520px; }
+    .empty .acts button{ flex:1; }
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <div class="demo" aria-label="عرض النموذج">
+    <button class="on" data-v="data">بيانات</button>
+    <button data-v="empty">لوفت فارغ</button>
+  </div>
+
+  <header class="lofthead"><div class="in">
+    <div class="season">موسم 2026 / 2027 · لوفت الفحيص</div>
+    <h1>إحصائيات اللوفت</h1>
+    <div class="count" id="count">34 طيرًا · محدّثة 07 / 09 / 2026</div>
+  </div></header>
+
+  <section class="panel" id="content">
+
+    <!-- A. headline tiles -->
+    <div class="tiles">
+      <div class="tile total"><div class="n">34</div><div class="l">عدد الطيور</div><div class="sub">15 + 14 + 5</div></div>
+      <div class="tile"><div class="n">15</div><div class="l">ذكر</div></div>
+      <div class="tile"><div class="n">14</div><div class="l">أنثى</div></div>
+      <div class="tile muted"><div class="n">5</div><div class="l">غير معروف</div></div>
+      <div class="tile"><div class="n">31</div><div class="l">طيور بحلقة FCI</div></div>
+    </div>
+
+    <!-- B. COI distribution -->
+    <div class="card coi">
+      <div class="head">
+        <h2>توزيع معامل التربية الداخلية — حتى 10 أجيال</h2>
+        <div class="sub">محسوب لـ <b>25</b> طيرًا بنسب مسجل من أصل <b>34</b></div>
+      </div>
+      <div class="main">
+        <div class="bars">
+          <div class="brow"><div class="lbl">صفر</div><div class="trk"><div class="fill" style="width:100%"></div></div><div class="cnt">11</div></div>
+          <div class="brow"><div class="lbl num">0 – 3.125%</div><div class="trk"><div class="fill" style="width:54.5%"></div></div><div class="cnt">6</div></div>
+          <div class="brow"><div class="lbl num">3.125 – 6.25%</div><div class="trk"><div class="fill" style="width:36.4%"></div></div><div class="cnt">4</div></div>
+          <div class="brow"><div class="lbl num">6.25 – 12.5%</div><div class="trk"><div class="fill" style="width:18.2%"></div></div><div class="cnt">2</div></div>
+          <div class="brow"><div class="lbl num">12.5 – 25%</div><div class="trk"><div class="fill" style="width:18.2%"></div></div><div class="cnt">2</div></div>
+          <div class="brow zero"><div class="lbl num">≥ 25%</div><div class="trk"></div><div class="cnt">0</div></div>
+          <div class="brow unk"><div class="lbl">نسب غير معروف</div><div class="trk"><div class="fill" style="width:81.8%"></div></div><div class="cnt">9</div></div>
+        </div>
+        <div class="note"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg><span><b>9</b> طيور بلا نسب مسجل (أحد الأبوين مجهول) — غير محتسبة في المتوسط ولا في التوزيع.</span></div>
+      </div>
+      <div class="aside">
+        <div class="coistat"><span class="k">متوسط COI:</span><span class="v">3.42%</span></div>
+        <div class="toplist">
+          <div class="k">أعلى COI:</div>
+          <ol>
+            <li><a href="#"><span class="rk">1</span>النشمي</a><span class="pct hi">18.75%</span></li>
+            <li><a href="#"><span class="rk">2</span>غيمة</a><span class="pct hi">12.50%</span></li>
+            <li><a href="#"><span class="rk">3</span>برق</a><span class="pct">6.25%</span></li>
+            <li><a href="#"><span class="rk">4</span>الصاعقة</a><span class="pct">6.25%</span></li>
+            <li><a href="#"><span class="rk">5</span>شقراء</a><span class="pct">3.13%</span></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- C. breakdowns -->
+    <div class="card">
+      <h2>حسب الحالة</h2>
+      <div class="sub">المجموع <b>34</b></div>
+      <div class="bars">
+        <div class="brow"><div class="lbl">فريق السباق</div><div class="trk"><div class="fill" style="width:100%"></div></div><div class="cnt">12</div></div>
+        <div class="brow"><div class="lbl">تربية</div><div class="trk"><div class="fill" style="width:66.7%"></div></div><div class="cnt">8</div></div>
+        <div class="brow"><div class="lbl">فرخ</div><div class="trk"><div class="fill" style="width:50%"></div></div><div class="cnt">6</div></div>
+        <div class="brow"><div class="lbl">احتياط</div><div class="trk"><div class="fill" style="width:33.3%"></div></div><div class="cnt">4</div></div>
+        <div class="brow"><div class="lbl">مباع</div><div class="trk"><div class="fill" style="width:16.7%"></div></div><div class="cnt">2</div></div>
+        <div class="brow"><div class="lbl">مفقود</div><div class="trk"><div class="fill" style="width:8.3%"></div></div><div class="cnt">1</div></div>
+        <div class="brow"><div class="lbl">نافق</div><div class="trk"><div class="fill" style="width:8.3%"></div></div><div class="cnt">1</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>حسب السلالة</h2>
+      <div class="sub">المجموع <b>34</b></div>
+      <div class="bars">
+        <div class="brow"><div class="lbl">يانسن</div><div class="trk"><div class="fill" style="width:100%"></div></div><div class="cnt">10</div></div>
+        <div class="brow"><div class="lbl">فان لون</div><div class="trk"><div class="fill" style="width:70%"></div></div><div class="cnt">7</div></div>
+        <div class="brow"><div class="lbl">هيرمانز</div><div class="trk"><div class="fill" style="width:50%"></div></div><div class="cnt">5</div></div>
+        <div class="brow"><div class="lbl">مولمانس</div><div class="trk"><div class="fill" style="width:40%"></div></div><div class="cnt">4</div></div>
+        <div class="brow unk"><div class="lbl">غير محددة</div><div class="trk"><div class="fill" style="width:80%"></div></div><div class="cnt">8</div></div>
+      </div>
+    </div>
+
+    <!-- E. season performance -->
+    <div class="card">
+      <h2>أداء السباقات — الموسم</h2>
+      <div class="sub">موسم 2026 / 2027 · <b>7</b> سباقات</div>
+      <div class="kpis">
+        <div class="kpi"><div class="n">41</div><div class="l">عدد المشاركات</div></div>
+        <div class="kpi"><div class="n">1284<small>م/د</small></div><div class="l">متوسط السرعة</div></div>
+        <div class="kpi"><div class="n">1</div><div class="l">أفضل مركز</div></div>
+        <div class="kpi"><div class="n">6</div><div class="l">المراكز العشرة الأولى</div></div>
+      </div>
+      <table class="rtab">
+        <thead><tr><th>الطير</th><th>السباق</th><th>السرعة</th><th>المركز</th></tr></thead>
+        <tbody>
+          <tr class="best"><td class="bird"><a href="#">النشمي</a></td><td class="race">العقبة 320 كم</td><td class="num">1412.6</td><td><span class="pill top">1</span></td></tr>
+          <tr><td class="bird"><a href="#">برق</a></td><td class="race">معان 210 كم</td><td class="num">1367.2</td><td><span class="pill top">3</span></td></tr>
+          <tr><td class="bird"><a href="#">غيمة</a></td><td class="race">العقبة 320 كم</td><td class="num">1388.9</td><td><span class="pill top">4</span></td></tr>
+          <tr><td class="bird"><a href="#">الصاعقة</a></td><td class="race">الأزرق 150 كم</td><td class="num">1305.4</td><td><span class="pill top">7</span></td></tr>
+          <tr><td class="bird"><a href="#">شقراء</a></td><td class="race">معان 210 كم</td><td class="num">1291.8</td><td><span class="pill">12</span></td></tr>
+        </tbody>
+      </table>
+      <div class="note"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg><span>لا تُحتسب نتائج التدريب.</span></div>
+    </div>
+
+    <div class="card">
+      <h2>التربية — الموسم</h2>
+      <div class="sub">موسم 2026 / 2027</div>
+      <div class="kpis five">
+        <div class="kpi"><div class="n">6</div><div class="l">أزواج نشطة</div></div>
+        <div class="kpi"><div class="n">22</div><div class="l">بيض</div></div>
+        <div class="kpi"><div class="n">17</div><div class="l">فقس</div></div>
+        <div class="kpi"><div class="n">14</div><div class="l">فراخ مفطومة</div></div>
+        <div class="kpi wide"><div class="n">77.3%</div><div class="l">نسبة الفقس</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- D. empty state -->
+  <section class="panel" id="empty" hidden>
+    <div class="empty">
+      <div class="ico"><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg></div>
+      <h3>لا توجد بيانات كافية بعد</h3>
+      <p>تظهر الإحصائيات بعد إضافة أول طيورك. يمكنك أيضًا تحميل اللوفت التعليمي لتجربة الشاشة ببيانات حقيقية.</p>
+      <div class="acts">
+        <button class="primary"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>أضف أول طائر</button>
+        <button class="secondary">تحميل اللوفت التعليمي</button>
+      </div>
+    </div>
+  </section>
+
+  <nav class="tabbar">
+    <button><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>الطيور</button>
+    <button><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>التزاوج</button>
+    <button><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>السباقات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>الصحة</button>
+    <button class="on"><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>الإحصائيات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg>الأدوات</button>
+  </nav>
+  <nav class="rail">
+    <button><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>الطيور</button>
+    <button><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>التزاوج</button>
+    <button><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>السباقات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>الصحة</button>
+    <button class="on"><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>الإحصائيات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg>الأدوات</button>
+  </nav>
+</div>
+
+<script>
+  document.querySelector('.demo').addEventListener('click', e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    document.querySelectorAll('.demo button').forEach(x=>x.classList.toggle('on', x===b));
+    const empty = b.dataset.v==='empty';
+    document.getElementById('content').hidden = empty;
+    document.getElementById('empty').hidden = !empty;
+    document.getElementById('count').textContent = empty ? 'لا طيور بعد' : '34 طيرًا · محدّثة 07 / 09 / 2026';
+  });
+</script>
+</body>
+</html>
