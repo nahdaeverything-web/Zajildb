@@ -39,6 +39,7 @@ Changing a file in `approved/` is a design decision, not an edit.
 | Health | `approved/health-v1.html` | approved |
 | Breeding | `approved/breeding-v1.html` | approved |
 | Stats | `approved/stats-v1.html` | approved |
+| Shared states (component gallery) | `approved/shared-states-v1.html` | approved |
 
 Where two versions of a screen are listed, **the highest `-vN` is the one to
 build**. Earlier versions stay in place unchanged so a decision already made
@@ -136,6 +137,33 @@ five ways. Implement the spec, not the current behaviour.**
 5. **Two new season cards** — **أداء السباقات** and **التربية** — which have
    no counterpart in the app at all, including a **نسبة الفقس** figure and the
    rule **«لا تُحتسب نتائج التدريب»**.
+
+**Shared states (`shared-states-v1.html`) — NOT a screen.** It is the
+canonical spec for the components used across every screen: the sync status
+row, toasts, confirm dialogs, validation, the notice banner, empty states,
+loading, and the offline media placeholder. **Where any screen spec and this
+file disagree about a shared component, THIS file wins.**
+
+Two deliberate differences from today's app:
+
+1. **The delete-bird confirm names the affected relations** («علاقات
+   مرتبطة»). Today it names only the bird: `confirm.deleteBird` reads
+   «حذف الطير «{name}»؟ سيُفصل عن أبنائه وتُحذف صوره.» The count the spec
+   wants is already computable, and is in fact already computed elsewhere —
+   `js/views/tools.js:333-338` sums offspring + pairs + race results + health
+   events + media for the duplicate finder. The same sum belongs in the
+   confirm.
+2. **«دون اتصال» is the common failure presentation; the amber «تعذّرت
+   المزامنة» is the exception.** This matches how the app actually behaves
+   rather than how a naive reading would suggest: `js/db/sync.js:1023-1025`
+   maps `sync.err.network` and `sync.err.config` to the calm `offline` state,
+   and everything else stays quiet until it outlives `SOFT_FAIL_WINDOW_MS`.
+   Only an expired session goes straight to `error`.
+
+**Sanctioned palette extensions:** `#2FBF95` and `#A83223` — solid fills that
+need more contrast than the card tints provide. Both appear exactly once, and
+they are the only inline colour literals in the file; everything else comes
+from the tokens.
 
 **Design contract:** [`ZAJIL-DESIGN-KIT.md`](ZAJIL-DESIGN-KIT.md) — brief,
 inventory, responsive rules; brand `#128C6E`.

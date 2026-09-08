@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>زاجل — الحالات المشتركة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brand:#128C6E; --brand-deep:#0E6F57; --brand-tint:#E3F4EE;
+    --ink:#101820; --ink-2:#4A5560; --ink-3:#8C97A2;
+    --page:#F5F7F8; --surface:#FFFFFF; --line:#E4E9ED;
+    --gold:#C9971F; --gold-tint:#FBF3DF; --danger:#C43D2B;
+    --gold-ink:#7A5A0E; --danger-tint:#F8E6E3; /* sanctioned extensions (loft-home-v1, bird-profile-v1) */
+    --r:20px; --r-btn:16px;
+    --f:'Alexandria', system-ui, sans-serif;
+    --f-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:var(--f); color:var(--ink); background:var(--page); line-height:1.5; }
+  button{ font-family:var(--f); cursor:pointer; }
+  a{ color:var(--brand-deep); }
+  button:focus-visible, a:focus-visible, input:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--brand-tint), 0 0 0 5px var(--brand); }
+
+  /* ── sheet chrome ── */
+  .sheet{ max-width:1180px; margin:0 auto; padding:28px 20px 96px; }
+  .sheethead{ padding:12px 0 28px; border-bottom:1px solid var(--line); margin-bottom:8px; }
+  .sheethead .spec{ margin:0 0 10px; }
+  .sheethead h1{ font-size:44px; font-weight:900; line-height:1.05; }
+  .sheethead p{ font-size:15px; font-weight:600; color:var(--ink-2); margin-top:10px; max-width:640px; text-wrap:pretty; }
+  .grid{ display:grid; grid-template-columns:1fr; gap:40px 48px; }
+  .comp{ padding-top:32px; min-width:0; }
+  .comp > h2{ font-size:26px; font-weight:900; line-height:1.15; display:flex; align-items:baseline; gap:12px; }
+  .comp > h2 .num{ font-family:var(--f-mono); font-size:15px; font-weight:600; color:var(--brand); direction:ltr; }
+  .comp > .rule{ font-size:14px; font-weight:600; color:var(--ink-2); margin-top:8px; max-width:560px; text-wrap:pretty; }
+  .spec{ margin:22px 0 8px; font-family:var(--f-mono); direction:ltr; text-align:right; font-size:10.5px; font-weight:500; color:var(--ink-3); letter-spacing:.5px; }
+  .spec b{ font-weight:600; color:var(--ink-2); }
+  .spec bdi{ font-family:var(--f); font-size:11.5px; }
+  .frame{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:20px; }
+  .frame.page{ background:var(--page); }
+
+  /* ── 1 · sync status row (loft-home-v1 grammar) ── */
+  .sync{ display:flex; align-items:center; gap:10px; min-height:40px; padding:0 14px; border-radius:12px; font-size:13.5px; font-weight:600; color:var(--ink-2); }
+  .sync .n{ font-family:var(--f-mono); font-variant-numeric:tabular-nums; direction:ltr; font-weight:600; color:var(--ink); }
+  .sync.synced{ border:1px dashed var(--line); color:var(--ink-3); font-size:12px; min-height:34px; justify-content:center; }
+  .sync.offline{ font-style:italic; color:var(--ink-3); }
+  .sync.offline i{ flex:none; width:8px; height:8px; border-radius:999px; border:2px solid var(--ink-3); }
+  .sync.syncing{ color:var(--ink-3); }
+  .sync.syncing i{ flex:none; width:14px; height:14px; border-radius:999px; border:2.5px solid var(--line); border-top-color:var(--brand); animation:spin .9s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+  .sync.pending{ background:var(--surface); border:1px solid var(--line); }
+  .sync.pending i{ flex:none; width:8px; height:8px; border-radius:999px; background:var(--brand); }
+  .sync.error{ background:var(--gold-tint); color:var(--gold-ink); font-weight:700; }
+  .sync.error i{ flex:none; width:8px; height:8px; border-radius:999px; background:var(--gold); }
+  .sync.error a{ margin-inline-start:auto; color:var(--gold-ink); text-decoration:underline; text-underline-offset:3px; font-weight:800; }
+  .sync.off{ color:var(--ink-3); }
+  .sync.off i{ flex:none; width:10px; height:2px; background:var(--ink-3); border-radius:1px; }
+  .frame.page .sync.pending{ background:var(--surface); }
+
+  /* ── 2 · toasts ── */
+  .toast{ display:flex; align-items:center; gap:12px; background:var(--ink); color:#fff; border-radius:var(--r-btn); min-height:56px; padding:12px 18px;
+          font-size:15px; font-weight:700; max-width:390px; margin-inline:auto; }
+  .toast i{ flex:none; width:8px; height:8px; border-radius:999px; background:var(--brand-tint); }
+  .toast.success i{ background:#2FBF95; }
+  .toast.error i{ background:var(--danger); }
+  .toast .msg{ flex:1; min-width:0; text-wrap:pretty; }
+  .toast .act{ flex:none; border:none; background:var(--surface); color:var(--ink); border-radius:999px; min-height:36px; padding:0 16px; font-size:14px; font-weight:800; }
+  .toast.info{ align-items:flex-start; padding-block:14px; font-weight:600; font-size:14.5px; }
+  .toast.info i{ margin-top:8px; }
+  .toaststack{ display:flex; flex-direction:column; gap:12px; }
+  .toaststack .ctx{ font-size:12px; font-weight:600; color:var(--ink-3); text-align:center; }
+
+  /* ── 3 · confirm dialogs ── */
+  .overlay{ background:rgba(16,24,32,.55); border-radius:var(--r); padding:28px 20px; display:grid; place-items:center; }
+  .dlg{ background:var(--surface); border-radius:var(--r); padding:24px 22px 20px; width:100%; max-width:400px; }
+  .dlg h3{ font-size:24px; font-weight:900; line-height:1.15; }
+  .dlg p{ font-size:15px; font-weight:600; color:var(--ink-2); margin-top:10px; text-wrap:pretty; }
+  .dlg .who{ display:flex; align-items:center; gap:12px; margin-top:16px; padding:14px 16px; background:var(--page); border-radius:var(--r-btn); }
+  .dlg .who .nm{ font-size:19px; font-weight:800; flex:1; }
+  .plate{ display:inline-flex; align-items:center; background:var(--ink); color:#fff; border-radius:10px; overflow:hidden; font-family:var(--f-mono); direction:ltr; }
+  .plate.sm{ font-size:12.5px; font-weight:600; letter-spacing:.5px; }
+  .plate.sm > span{ padding:6px 10px; }
+  .plate.sm .season{ background:var(--gold); color:var(--ink); padding:6px 8px; font-weight:600; }
+  .dlg .btns{ display:flex; gap:10px; margin-top:22px; }
+  .dlg .btns button{ flex:1; border-radius:var(--r-btn); min-height:54px; padding:0 16px; font-size:16px; font-weight:800; }
+  .dlg .cancel{ border:2px solid var(--ink); background:transparent; color:var(--ink); }
+  .dlg .danger{ border:none; background:var(--danger); color:#fff; }
+  .dlg .ink{ border:none; background:var(--ink); color:#fff; }
+  .dlg .brand{ border:none; background:var(--brand); color:#fff; }
+  .dlg ul{ list-style:none; margin-top:14px; display:flex; flex-direction:column; gap:8px; }
+  .dlg li{ display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:12px; font-size:14px; font-weight:600; line-height:1.4; }
+  .dlg li .f{ flex:none; font-size:12.5px; font-weight:800; color:var(--ink-2); }
+  .dlg li .f + span{ flex:1; min-width:0; }
+  .dlg ul.errs li{ background:var(--danger-tint); }
+  .dlg ul.errs li .f{ color:var(--danger); }
+  .dlg ul.warns li{ background:var(--gold-tint); }
+  .dlg ul.warns li .f{ color:var(--gold-ink); }
+  .dlg .mono{ font-family:var(--f-mono); direction:ltr; unicode-bidi:isolate; font-weight:600; }
+
+  /* ── 4 · validation (add-edit-bird-v1 grammar) ── */
+  .field > label{ display:block; font-size:13.5px; font-weight:800; color:var(--ink-2); margin-bottom:8px; }
+  .field input{ width:100%; border:2px solid var(--line); border-radius:var(--r-btn); padding:17px 16px; font-family:var(--f); font-size:16px; font-weight:600; background:var(--page); color:var(--ink); outline:none; min-height:58px; }
+  .field input.data{ font-family:var(--f-mono); direction:ltr; text-align:right; letter-spacing:1px; }
+  .field input.err{ border-color:var(--danger); background:var(--surface); }
+  .field input.warn{ border-color:var(--gold); background:var(--surface); }
+  .field input.focus{ border-color:var(--brand); background:var(--surface); box-shadow:0 0 0 3px var(--brand-tint); }
+  .err-msg{ font-size:13px; font-weight:700; color:var(--danger); margin-top:8px; }
+  .warnbox{ background:var(--gold-tint); border:1px solid var(--gold); border-radius:var(--r-btn); padding:14px 16px; margin-top:10px; }
+  .warnbox .t{ font-size:13px; font-weight:800; color:var(--ink); }
+  .warnbox p{ font-size:14px; font-weight:600; color:var(--ink); margin-top:4px; text-wrap:pretty; }
+  .warnbox button{ margin-top:10px; border:none; background:none; padding:0; font-size:13.5px; font-weight:800; color:var(--brand-deep); text-decoration:underline; text-underline-offset:3px; }
+
+  /* ── 5 · notice banner ── */
+  .notice{ display:flex; align-items:center; gap:12px; background:var(--brand-tint); border-radius:var(--r-btn); padding:10px 10px 10px 18px; min-height:56px; }
+  .notice .msg{ flex:1; min-width:0; font-size:14.5px; font-weight:700; color:var(--ink); text-wrap:pretty; }
+  .notice .msg .n{ font-family:var(--f-mono); direction:ltr; unicode-bidi:isolate; font-weight:600; }
+  .notice .msg a{ color:var(--brand-deep); font-weight:800; text-decoration:underline; text-underline-offset:3px; }
+  .notice .x{ flex:none; width:44px; height:44px; border:none; border-radius:12px; background:transparent; color:var(--ink-2); display:grid; place-items:center; }
+  .notice .x svg{ width:18px; height:18px; stroke:currentColor; stroke-width:2.6; fill:none; stroke-linecap:round; }
+
+  /* ── 6 · empty states (loft-home-v1 grammar) ── */
+  .empty{ padding:36px 24px 40px; display:flex; flex-direction:column; align-items:center; text-align:center; }
+  .empty .mark{ width:92px; height:92px; border-radius:28px; background:var(--brand); display:grid; place-items:center; }
+  .empty .mark svg{ width:48px; height:48px; stroke:#fff; stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .empty.quiet .mark{ background:var(--surface); border:1px solid var(--line); }
+  .empty.quiet .mark svg{ stroke:var(--ink-3); }
+  .empty h2{ font-size:34px; font-weight:900; line-height:1.1; margin-top:22px; }
+  .empty.quiet h2{ font-size:26px; }
+  .empty p{ font-size:15px; font-weight:500; color:var(--ink-2); margin-top:10px; max-width:320px; text-wrap:pretty; }
+  .empty .cta{ width:100%; max-width:360px; border:none; border-radius:var(--r-btn); padding:18px; margin-top:28px; background:var(--brand); color:#fff; font-size:17px; font-weight:800; }
+  .empty .alt{ width:100%; max-width:360px; border:2px solid var(--ink); background:transparent; color:var(--ink); border-radius:var(--r-btn); padding:15px; margin-top:24px; font-size:15.5px; font-weight:800; }
+
+  /* ── 7 · loading ── */
+  .pageload{ min-height:260px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; color:var(--ink-3); font-size:14px; font-weight:700; }
+  .spinner{ width:36px; height:36px; border-radius:999px; border:3px solid var(--line); border-top-color:var(--brand); animation:spin .9s linear infinite; }
+  .btnrow{ display:flex; gap:10px; max-width:390px; }
+  .btn{ flex:1; border:none; border-radius:var(--r-btn); min-height:58px; padding:0 20px; font-size:17px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:10px; }
+  .btn.save{ background:var(--brand); color:#fff; }
+  .btn.save:disabled{ background:var(--brand-tint); color:var(--brand-deep); cursor:default; }
+  .btn.save:disabled .spinner{ width:18px; height:18px; border-width:2.5px; border-color:rgba(14,111,87,.25); border-top-color:var(--brand-deep); }
+  .btn.cancel{ flex:none; border:2px solid var(--ink); background:transparent; color:var(--ink); font-size:16px; }
+  .btn.cancel:disabled{ border-color:var(--line); color:var(--ink-3); cursor:default; }
+
+  /* ── 8 · offline media (bird-profile-v1 grammar) ── */
+  .gal{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:390px; }
+  .ph{ aspect-ratio:1; border-radius:18px; position:relative; border:none; padding:0; background:var(--page); text-align:center; }
+  .ph.img{ background:var(--brand-tint); border:1px solid var(--line); }
+  .ph.img span{ position:absolute; bottom:8px; inset-inline-start:8px; font-family:var(--f-mono); font-size:10px; color:var(--ink-2); direction:ltr; }
+  .ph.remote{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:10px; border:1px solid var(--line); }
+  .ph.remote svg{ width:24px; height:24px; stroke:var(--ink-3); stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .ph.remote span{ font-size:11.5px; font-weight:700; color:var(--ink-3); line-height:1.3; }
+  .hero{ margin-top:12px; max-width:390px; aspect-ratio:16/10; border-radius:var(--r); border:1px solid var(--line); background:var(--page); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; }
+  .hero svg{ width:36px; height:36px; stroke:var(--ink-3); stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .hero span{ font-size:14px; font-weight:700; color:var(--ink-3); }
+  .hero small{ font-family:var(--f-mono); direction:ltr; font-size:11px; color:var(--ink-3); }
+
+  /* ── focus swatch ── */
+  .focusdemo{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .focusdemo .btn{ flex:none; min-height:54px; }
+  .is-focus{ box-shadow:0 0 0 3px var(--brand-tint), 0 0 0 5px var(--brand); }
+
+  @media (hover:hover){
+    .toast .act:hover, .dlg .cancel:hover, .empty .alt:hover, .btn.cancel:not(:disabled):hover{ background:var(--ink); color:#fff; }
+    .toast .act:hover{ background:var(--brand-tint); color:var(--ink); }
+    .dlg .brand:hover, .empty .cta:hover, .btn.save:not(:disabled):hover{ background:var(--brand-deep); }
+    .dlg .danger:hover{ background:#A83223; }
+    .notice .x:hover{ background:var(--surface); color:var(--ink); }
+    .sync.error a:hover{ color:var(--ink); }
+  }
+  @media (min-width:1100px){
+    .grid{ grid-template-columns:1fr 1fr; }
+    .comp.wide{ grid-column:1 / -1; }
+    .sheet{ padding:40px 32px 120px; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="sheethead">
+    <div class="spec">zajil · shared states · v1 · 12/12</div>
+    <h1>الحالات المشتركة</h1>
+    <p>المكوّنات التي تظهر في كل شاشة، بكل حالاتها. مرجع واحد للتنفيذ: لا تعيد كل شاشة تصميم حوار التأكيد أو الإشعار من جديد.</p>
+  </div>
+
+  <div class="grid">
+
+  <!-- ═══ 1 · SYNC STATUS ROW ═══ -->
+  <section class="comp" id="sync">
+    <h2><span class="num">01</span>صف حالة المزامنة</h2>
+    <p class="rule">يجلس فوق المحتوى في شاشات القوائم. الحالة الصحية لا تظهر أبدًا. «دون اتصال» هي الحالة الشائعة؛ الخطأ الكهرماني استثناء نادر.</p>
+
+    <div class="spec">sync · <b>synced</b> · renders nothing (dashed box = review only)</div>
+    <div class="frame page"><div class="sync synced">مزامَن — لا يظهر شيء</div></div>
+
+    <div class="spec">sync · <b>offline</b> · common case · never error-styled</div>
+    <div class="frame page"><div class="sync offline"><i></i>دون اتصال — يعمل محليًا</div></div>
+
+    <div class="spec">sync · <b>syncing</b> · brief</div>
+    <div class="frame page"><div class="sync syncing"><i></i>جارٍ المزامنة…</div></div>
+
+    <div class="spec">sync · <b>pending</b> · {n} mono ltr</div>
+    <div class="frame page"><div class="sync pending"><i></i><span class="n">3</span>تغييرات بانتظار المزامنة</div></div>
+
+    <div class="spec">sync · <b>error</b> · rare · gold-tint / #7A5A0E · link → <bdi>الأدوات</bdi></div>
+    <div class="frame page"><div class="sync error"><i></i>تعذّرت المزامنة<a href="#">الأدوات</a></div></div>
+
+    <div class="spec">sync · <b>off</b> · user switched sync off in <bdi>الأدوات</bdi></div>
+    <div class="frame page"><div class="sync off"><i></i>المزامنة متوقفة</div></div>
+  </section>
+
+  <!-- ═══ 2 · TOASTS ═══ -->
+  <section class="comp" id="toast">
+    <h2><span class="num">02</span>الإشعارات المؤقتة</h2>
+    <p class="rule">أسفل الشاشة، فوق شريط التبويبات بـ 12px. تختفي بعد 4 ثوانٍ؛ إشعار «تراجع» يبقى 6 ثوانٍ ويلي كل حذف.</p>
+
+    <div class="spec">toast · <b>undo</b> · follows every delete · 6s</div>
+    <div class="frame page"><div class="toaststack">
+      <div class="toast"><i></i><span class="msg">تم حذف برق</span><button class="act">تراجع</button></div>
+      <div class="toast"><i></i><span class="msg">تم الحذف</span><button class="act">تراجع</button></div>
+    </div></div>
+
+    <div class="spec">toast · <b>success</b> · 4s</div>
+    <div class="frame page"><div class="toast success"><i></i><span class="msg">تم الحفظ</span></div></div>
+
+    <div class="spec">toast · <b>error</b> · 6s · danger dot only, text stays white</div>
+    <div class="frame page"><div class="toast error"><i></i><span class="msg">تعذّر الحفظ — راجع البيانات</span></div></div>
+
+    <div class="spec">toast · <b>info / long</b> · wraps to 2 lines max</div>
+    <div class="frame page"><div class="toast info"><i></i><span class="msg">حُمّلت البيانات التجريبية… <span style="direction:ltr;unicode-bidi:isolate;font-family:var(--f-mono);font-size:13px">24</span> طائرًا و<span style="direction:ltr;unicode-bidi:isolate;font-family:var(--f-mono);font-size:13px">6</span> أزواج في لوفت الفحيص.</span></div></div>
+  </section>
+
+  <!-- ═══ 3 · CONFIRM DIALOGS ═══ -->
+  <section class="comp wide" id="dialogs">
+    <h2><span class="num">03</span>حوارات التأكيد</h2>
+    <p class="rule">مركّزة، بعرض أقصى 400px على كل المقاسات. التمويه <span style="font-family:var(--f-mono);direction:ltr;unicode-bidi:isolate;font-size:13px">ink @ 55%</span>. الزر الخطير أحمر فقط عند فقدان بيانات؛ تسجيل الخروج ليس خطيرًا.</p>
+
+    <div class="grid" style="gap:0 48px">
+      <div>
+        <div class="spec">dialog · <b>simple</b> · <bdi>إلغاء / حذف</bdi> (danger)</div>
+        <div class="overlay"><div class="dlg" role="dialog">
+          <h3>تأكيد الحذف؟</h3>
+          <div class="btns"><button class="cancel">إلغاء</button><button class="danger">حذف</button></div>
+        </div></div>
+
+        <div class="spec">dialog · <b>destructive w/ consequences</b> · delete bird · count = offspring+pairs+results+health+media</div>
+        <div class="overlay"><div class="dlg" role="dialog">
+          <h3>حذف الطائر؟</h3>
+          <div class="who"><span class="nm">برق</span><span class="plate sm"><span>JOR 24 17352</span><span class="season">24</span></span></div>
+          <p>سيُحذف برق و7 علاقات مرتبطة: نسب، سباقات، صحة</p>
+          <div class="btns"><button class="cancel">إلغاء</button><button class="danger">حذف</button></div>
+        </div></div>
+      </div>
+      <div>
+        <div class="spec">dialog · <b>replace-import</b> · <bdi>إلغاء / استبدال</bdi> (danger)</div>
+        <div class="overlay"><div class="dlg" role="dialog">
+          <h3>استبدال السجلّ؟</h3>
+          <p>سيُستبدل السجلّ بالكامل. متابعة؟</p>
+          <div class="btns"><button class="cancel">إلغاء</button><button class="danger">استبدال</button></div>
+        </div></div>
+
+        <div class="spec">dialog · <b>sign-out</b> · <bdi>إلغاء / تسجيل الخروج</bdi> (ink) · not danger</div>
+        <div class="overlay"><div class="dlg" role="dialog">
+          <h3>تسجيل الخروج؟</h3>
+          <p>تسجيل الخروج يوقف المزامنة فقط — بياناتك تبقى على هذا الجهاز.</p>
+          <div class="btns"><button class="cancel">إلغاء</button><button class="ink">تسجيل الخروج</button></div>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 4 · VALIDATION ═══ -->
+  <section class="comp" id="validation">
+    <h2><span class="num">04</span>التحقق والتحذيرات</h2>
+    <p class="rule">الأحمر يمنع الحفظ ويظهر تحت الحقل. الكهرماني لا يمنع؛ يشرح ويسمح بالمتابعة.</p>
+
+    <div class="spec">field · <b>inline error</b> · border danger · message 13/700 danger</div>
+    <div class="frame">
+      <div class="field"><label>رقم الحلقة</label><input class="data err" value="JOR 24 1735" readonly><div class="err-msg">رقم الحلقة غير مكتمل — الصيغة: بلد، سنة، رقم</div></div>
+      <div class="field" style="margin-top:18px"><label>الاسم</label><input class="err" value="" placeholder="اسم الطائر" readonly><div class="err-msg">الاسم مطلوب</div></div>
+    </div>
+
+    <div class="spec">field · <b>non-blocking warning</b> · border gold · warnbox · continue allowed</div>
+    <div class="frame">
+      <div class="field"><label>رقم الحلقة</label><input class="data warn" value="JOR 24 17352" readonly>
+        <div class="warnbox"><div class="t">رقم حلقة مكرر — يمكنك المتابعة والحفظ</div><p>الحلقة مسجّلة أيضًا للطائر «الصاعقة».</p><button>عرض الطائر الآخر</button></div>
+      </div>
+    </div>
+
+    <div class="spec">dialog · <b>form-level error list</b> · blocks save · one button</div>
+    <div class="overlay"><div class="dlg" role="dialog">
+      <h3>لا يمكن الحفظ</h3>
+      <p>3 حقول تحتاج تصحيحًا:</p>
+      <ul class="errs">
+        <li><span class="f">الاسم</span><span>الاسم مطلوب</span></li>
+        <li><span class="f">الحلقة</span><span>رقم الحلقة غير مكتمل</span></li>
+        <li><span class="f">الفقس</span><span>تاريخ الفقس بعد اليوم</span></li>
+      </ul>
+      <div class="btns"><button class="ink">رجوع للنموذج</button></div>
+    </div></div>
+
+    <div class="spec">dialog · <b>warnings-confirm</b> · <bdi>إلغاء / حفظ رغم ذلك</bdi> (brand)</div>
+    <div class="overlay"><div class="dlg" role="dialog">
+      <h3>تحذيرات — راجع قبل الحفظ:</h3>
+      <ul class="warns">
+        <li><span class="f">الحلقة</span><span>رقم حلقة مكرر مع «الصاعقة» <span class="mono">JOR 24 17352</span></span></li>
+        <li><span class="f">الأب</span><span>الأب أصغر من الطائر بسنتين</span></li>
+      </ul>
+      <div class="btns"><button class="cancel">إلغاء</button><button class="brand">حفظ رغم ذلك</button></div>
+    </div></div>
+  </section>
+
+  <!-- ═══ 5 · NOTICE BANNER ═══ -->
+  <section class="comp" id="notice">
+    <h2><span class="num">05</span>إشعار لمرة واحدة</h2>
+    <p class="rule">فوق المحتوى، تحت صف المزامنة إن وُجد. يُغلق بالإجراء أو بـ ✕ ولا يعود. لون العلامة التجارية الفاتح، ليس كهرمانيًا: خبر، لا تحذير.</p>
+
+    <div class="spec">notice · <b>default</b> · brand-tint · link + dismiss 44px</div>
+    <div class="frame page">
+      <div class="notice"><span class="msg">تمت المزامنة. وُجدت <span class="n">3</span> حلقات مكررة — <a href="#">راجعها</a></span><button class="x" aria-label="إغلاق"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    </div>
+
+    <div class="spec">notice · <b>long</b> · wraps, ✕ stays top-aligned</div>
+    <div class="frame page">
+      <div class="notice" style="align-items:flex-start"><span class="msg" style="padding-block:10px">اكتمل الاستيراد: <span class="n">142</span> طائرًا و<span class="n">18</span> زوجًا من ملف النسخة الاحتياطية — <a href="#">عرض الملخّص</a></span><button class="x" aria-label="إغلاق"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    </div>
+
+    <div class="spec">focus · <b>standard focus ring</b> · box-shadow 0 0 0 3px brand-tint + 5px brand · all interactive elements</div>
+    <div class="frame focusdemo">
+      <button class="btn save is-focus" style="flex:none">حفظ</button>
+      <button class="btn cancel is-focus">إلغاء</button>
+      <div class="field" style="flex:1;min-width:180px"><input class="data focus" value="JOR 24 17352" readonly></div>
+    </div>
+  </section>
+
+  <!-- ═══ 6 · EMPTY STATES ═══ -->
+  <section class="comp" id="empty">
+    <h2><span class="num">06</span>الحالات الفارغة</h2>
+    <p class="rule">الشكل الثابت: علامة · سطر قصير · إجراء أساسي واحد. أول تشغيل بعلامة ملوّنة؛ لا نتائج بعلامة هادئة وزر إطار.</p>
+
+    <div class="spec">empty · <b>first-run</b> · brand mark · 34/900 · one primary</div>
+    <div class="frame page"><div class="empty">
+      <div class="mark"><svg viewBox="0 0 24 24"><path d="M4 13c3-1 5-3 6-6 1 3 3 5 6 6l4 1-4 1c-3 1-5 3-6 6-1-3-3-5-6-6l-4-1z"/></svg></div>
+      <h2>لا طيور بعد</h2>
+      <p>ابدأ بطائر واحد. الحلقة والاسم يكفيان، والباقي لاحقًا.</p>
+      <button class="cta">أضف أول طائر</button>
+    </div></div>
+
+    <div class="spec">empty · <b>no results for filter</b> · quiet mark · 26/900 · outline action</div>
+    <div class="frame page"><div class="empty quiet">
+      <div class="mark"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></div>
+      <h2>لا نتائج لهذا الفلتر</h2>
+      <p>لا طيور من إناث فريق السباق لموسم <span style="font-family:var(--f-mono);direction:ltr;unicode-bidi:isolate">2023</span>.</p>
+      <button class="alt">مسح الفلاتر</button>
+    </div></div>
+  </section>
+
+  <!-- ═══ 7 · LOADING ═══ -->
+  <section class="comp" id="loading">
+    <h2><span class="num">07</span>التحميل</h2>
+    <p class="rule">لا هياكل رمادية. دوّار واحد وسطر واحد. على الزر: يُعطَّل ويتغيّر نصّه؛ لا يتغيّر حجمه.</p>
+
+    <div class="spec">loading · <b>page-level</b> · spinner 36 · label ink-3</div>
+    <div class="frame page"><div class="pageload"><div class="spinner"></div>جارٍ التحميل…</div></div>
+
+    <div class="spec">loading · <b>button working</b> · disabled · label change · sibling disabled too</div>
+    <div class="frame">
+      <div class="btnrow"><button class="btn cancel" disabled>إلغاء</button><button class="btn save" disabled><span class="spinner"></span>جارٍ الحفظ…</button></div>
+      <div class="spec" style="margin-top:14px">↑ working &nbsp;·&nbsp; ↓ idle (reference)</div>
+      <div class="btnrow"><button class="btn cancel">إلغاء</button><button class="btn save">حفظ</button></div>
+    </div>
+  </section>
+
+  <!-- ═══ 8 · OFFLINE MEDIA ═══ -->
+  <section class="comp" id="media">
+    <h2><span class="num">08</span>الصورة على جهاز آخر</h2>
+    <p class="rule">ملف الصورة موجود لكن على جهاز آخر لم يزامن الوسائط. معلومة هادئة بلون ink-3، لا حالة خطأ، لا زر إعادة تحميل.</p>
+
+    <div class="spec">media · <b>gallery tile</b> · bird-profile-v1</div>
+    <div class="frame"><div class="gal">
+      <button class="ph img"><span>IMG_4471</span></button>
+      <button class="ph remote"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/></svg><span>الصورة على جهاز آخر</span></button>
+      <button class="ph remote"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/></svg><span>الصورة على جهاز آخر</span></button>
+    </div></div>
+
+    <div class="spec">media · <b>hero / cover slot</b> · filename mono when known</div>
+    <div class="frame"><div class="hero">
+      <svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/></svg>
+      <span>الصورة على جهاز آخر</span><small>IMG_4471 · iPhone · 2024-05-03</small>
+    </div></div>
+  </section>
+
+  </div>
+</div>
+</body>
+</html>
