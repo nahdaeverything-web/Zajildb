@@ -9,6 +9,7 @@ import * as relationship from '@/src/engine/relationship.js';
 import * as rings from '@/src/engine/rings.js';
 import * as validate from '@/src/engine/validate.js';
 import * as velocity from '@/src/engine/velocity.js';
+import { useZajilStore, selectBirds } from '@/src/db/react';
 
 declare global {
   interface Window {
@@ -30,6 +31,16 @@ if (typeof window !== 'undefined') {
   window.__zajilEngine = { coi, fci, integrity, pedigree, relationship, rings, validate, velocity };
 }
 
+// Renders THROUGH the bridge. The 2.4 proof saves a bird via window.__zajilDb
+// (the layer, not React) and asserts this component re-rendered.
+function BridgeDemo() {
+  const birds = useZajilStore(selectBirds);
+  const last = birds[birds.length - 1];
+  return (
+    <p>bridge: <span id="bridge-count">{birds.length}</span> birds · last: <span id="bridge-last">{last ? last.name : '—'}</span></p>
+  );
+}
+
 export default function HarnessView() {
   const [status, setStatus] = useState('booting');
   useEffect(() => {
@@ -45,6 +56,7 @@ export default function HarnessView() {
       <h1>test-harness</h1>
       <p id="harness-status">{status}</p>
       <p>window.__zajilDb ({Object.keys(db).length} exports) · window.__zajilEngine (8 modules)</p>
+      <BridgeDemo />
     </section>
   );
 }
