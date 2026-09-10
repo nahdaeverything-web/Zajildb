@@ -1,0 +1,1235 @@
+{
+ "format": "zajil-export",
+ "version": 1,
+ "kind": "sample-data",
+ "exportedAt": "2026-08-01T09:00:00.000Z",
+ "lofts": [
+  {
+   "id": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "name": "لوفت الزرقاء",
+   "location": "الزرقاء، الأردن",
+   "statuses": [
+    "breeder",
+    "race team",
+    "young bird",
+    "stock",
+    "sold",
+    "lost",
+    "dead"
+   ],
+   "createdAt": "2021-01-01T00:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  }
+ ],
+ "birds": [
+  {
+   "id": "bd265245-a1c7-5ed0-a9fa-9a2e25ef8899",
+   "rings": [
+    {
+     "country": "BE",
+     "union": "",
+     "year": 2018,
+     "serial": "3054047",
+     "raw": "BE-2018-3054047",
+     "type": "national"
+    }
+   ],
+   "name": "Gouden 47",
+   "sex": "cock",
+   "hatchDate": "2018-03-02",
+   "colour": "أزرق",
+   "strain": "يانسن",
+   "eyeSign": "",
+   "status": "reference",
+   "sireId": null,
+   "damId": null,
+   "external": true,
+   "breeder": "استيراد — بلجيكا",
+   "owner": "",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "f5dde55c-ab75-522b-99f8-257b31d2d9ae",
+   "rings": [
+    {
+     "country": "BE",
+     "union": "",
+     "year": 2018,
+     "serial": "3054112",
+     "raw": "BE-2018-3054112",
+     "type": "national"
+    }
+   ],
+   "name": "Blauwe Duivin",
+   "sex": "hen",
+   "hatchDate": "2018-04-11",
+   "colour": "أزرق مخطط",
+   "strain": "يانسن",
+   "eyeSign": "",
+   "status": "reference",
+   "sireId": null,
+   "damId": null,
+   "external": true,
+   "breeder": "استيراد — بلجيكا",
+   "owner": "",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "180905f7-fce1-5967-91e8-5bd5c6c41c6e",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2020,
+     "serial": "10231",
+     "raw": "JO-2020-10231",
+     "type": "national"
+    }
+   ],
+   "name": "الصقر",
+   "sex": "cock",
+   "hatchDate": "2020-03-14",
+   "colour": "أزرق",
+   "strain": "يانسن",
+   "eyeSign": "برتقالية",
+   "status": "breeder",
+   "sireId": "bd265245-a1c7-5ed0-a9fa-9a2e25ef8899",
+   "damId": "f5dde55c-ab75-522b-99f8-257b31d2d9ae",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "مزاد عمّان",
+   "acquiredDate": "2020-09-20",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "788e5a98-49ef-55a2-ad9c-a925d9dad783",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2020,
+     "serial": "10245",
+     "raw": "JO-2020-10245",
+     "type": "national"
+    }
+   ],
+   "name": "الريح",
+   "sex": "hen",
+   "hatchDate": "2020-05-02",
+   "colour": "أزرق مخطط",
+   "strain": "يانسن",
+   "eyeSign": "لؤلؤية",
+   "status": "breeder",
+   "sireId": "bd265245-a1c7-5ed0-a9fa-9a2e25ef8899",
+   "damId": "f5dde55c-ab75-522b-99f8-257b31d2d9ae",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "مزاد عمّان",
+   "acquiredDate": "2020-09-20",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "0f8611fe-12c2-5bb5-8c91-a9e98c8c0102",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2022,
+     "serial": "20117",
+     "raw": "JO-2022-20117",
+     "type": "national"
+    },
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2023,
+     "serial": "00871",
+     "raw": "FCI-JO-2023-00871",
+     "type": "FCI"
+    }
+   ],
+   "name": "برق",
+   "sex": "cock",
+   "hatchDate": "2022-04-08",
+   "colour": "أزرق",
+   "strain": "يانسن",
+   "eyeSign": "برتقالية غامقة",
+   "status": "breeder",
+   "sireId": "180905f7-fce1-5967-91e8-5bd5c6c41c6e",
+   "damId": "788e5a98-49ef-55a2-ad9c-a925d9dad783",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [
+    {
+     "id": "e305e730-ec90-5e5d-9515-209b185d9d20",
+     "at": "2023-11-05T10:00:00.000Z",
+     "text": "حالة تحقق يدوي: أبوه وأمه أشقاء — معامل التربية الداخلية 25٪ بالضبط. الحلقة الدولية FCI-JO-2023-00871."
+    }
+   ],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "724618de-5496-5229-a765-20740583aa51",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2019,
+     "serial": "08812",
+     "raw": "JO-2019-08812",
+     "type": "national"
+    }
+   ],
+   "name": "الملكة",
+   "sex": "hen",
+   "hatchDate": "2019-02-27",
+   "colour": "رمادي",
+   "strain": "فان لون",
+   "eyeSign": "لؤلؤية",
+   "status": "breeder",
+   "sireId": null,
+   "damId": null,
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "نادي الزرقاء",
+   "acquiredDate": "2021-01-15",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2024,
+     "serial": "31002",
+     "raw": "JO-2024-31002",
+     "type": "national"
+    },
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2024,
+     "serial": "01455",
+     "raw": "FCI-JO-2024-01455",
+     "type": "FCI"
+    }
+   ],
+   "name": "سهم",
+   "sex": "cock",
+   "hatchDate": "2024-03-19",
+   "colour": "أزرق",
+   "strain": "يانسن",
+   "eyeSign": "",
+   "status": "race team",
+   "sireId": "0f8611fe-12c2-5bb5-8c91-a9e98c8c0102",
+   "damId": "724618de-5496-5229-a765-20740583aa51",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "d57ccebb-5119-58fa-9aff-4de7e4f02cef",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2024,
+     "serial": "31003",
+     "raw": "JO-2024-31003",
+     "type": "national"
+    }
+   ],
+   "name": "شقراء",
+   "sex": "hen",
+   "hatchDate": "2024-03-19",
+   "colour": "أشقر",
+   "strain": "يانسن",
+   "eyeSign": "",
+   "status": "race team",
+   "sireId": "0f8611fe-12c2-5bb5-8c91-a9e98c8c0102",
+   "damId": "724618de-5496-5229-a765-20740583aa51",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "64a6330a-ee1b-5ef0-bfe7-8abc7c5e5b5e",
+   "rings": [
+    {
+     "country": "SY",
+     "union": "",
+     "year": 2021,
+     "serial": "44210",
+     "raw": "SY-2021-44210",
+     "type": "national"
+    }
+   ],
+   "name": "رعد",
+   "sex": "cock",
+   "hatchDate": "2021-06-11",
+   "colour": "أحمر",
+   "strain": "شامي",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": null,
+   "damId": null,
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "حلب — أبو محمد",
+   "acquiredDate": "2022-03-02",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "e8e60797-fb84-5289-9b4a-4550c7cc79db",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2021,
+     "serial": "15530",
+     "raw": "JO-2021-15530",
+     "type": "national"
+    }
+   ],
+   "name": "غيمة",
+   "sex": "hen",
+   "hatchDate": "2021-08-01",
+   "colour": "أبيض",
+   "strain": "شامي",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": null,
+   "damId": null,
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "ff1b00a4-7bf6-5353-8564-1d84233d9e11",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2023,
+     "serial": "22871",
+     "raw": "JO-2023-22871",
+     "type": "national"
+    }
+   ],
+   "name": "أمل",
+   "sex": "hen",
+   "hatchDate": "2023-04-02",
+   "colour": "أحمر رصاصي",
+   "strain": "شامي",
+   "eyeSign": "",
+   "status": "breeder",
+   "sireId": "64a6330a-ee1b-5ef0-bfe7-8abc7c5e5b5e",
+   "damId": "e8e60797-fb84-5289-9b4a-4550c7cc79db",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "fe9751d3-560c-5278-95ac-68f4d26941a9",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2023,
+     "serial": "22872",
+     "raw": "JO-2023-22872",
+     "type": "national"
+    }
+   ],
+   "name": "فجر",
+   "sex": "cock",
+   "hatchDate": "2023-04-02",
+   "colour": "أحمر",
+   "strain": "شامي",
+   "eyeSign": "",
+   "status": "race team",
+   "sireId": "64a6330a-ee1b-5ef0-bfe7-8abc7c5e5b5e",
+   "damId": "e8e60797-fb84-5289-9b4a-4550c7cc79db",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "b591f98a-1dde-53b0-ab06-be5431de00f8",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2025,
+     "serial": "40118",
+     "raw": "JO-2025-40118",
+     "type": "national"
+    },
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2025,
+     "serial": "02201",
+     "raw": "FCI-JO-2025-02201",
+     "type": "FCI"
+    }
+   ],
+   "name": "نجم",
+   "sex": "cock",
+   "hatchDate": "2025-02-21",
+   "colour": "أزرق",
+   "strain": "يانسن × شامي",
+   "eyeSign": "",
+   "status": "race team",
+   "sireId": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
+   "damId": "ff1b00a4-7bf6-5353-8564-1d84233d9e11",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "914beb55-594d-5cfe-afde-ad6c05221233",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2025,
+     "serial": "40119",
+     "raw": "JO-2025-40119",
+     "type": "national"
+    }
+   ],
+   "name": "لؤلؤة",
+   "sex": "hen",
+   "hatchDate": "2025-02-21",
+   "colour": "رمادي فاتح",
+   "strain": "يانسن × شامي",
+   "eyeSign": "",
+   "status": "young bird",
+   "sireId": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
+   "damId": "ff1b00a4-7bf6-5353-8564-1d84233d9e11",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "b2119a47-d5db-5e26-9071-757dc7b4e10b",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2025,
+     "serial": "40230",
+     "raw": "JO-2025-40230",
+     "type": "national"
+    }
+   ],
+   "name": "وضاح",
+   "sex": "cock",
+   "hatchDate": "2025-04-05",
+   "colour": "أبيض",
+   "strain": "يانسن × شامي",
+   "eyeSign": "",
+   "status": "young bird",
+   "sireId": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
+   "damId": "ff1b00a4-7bf6-5353-8564-1d84233d9e11",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "ef2e501a-f94e-578e-8648-1fb58f16175b",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2026,
+     "serial": "51007",
+     "raw": "JO-2026-51007",
+     "type": "national"
+    }
+   ],
+   "name": "ياقوت",
+   "sex": "unknown",
+   "hatchDate": "2026-03-11",
+   "colour": "أزرق",
+   "strain": "يانسن",
+   "eyeSign": "",
+   "status": "young bird",
+   "sireId": "0f8611fe-12c2-5bb5-8c91-a9e98c8c0102",
+   "damId": "724618de-5496-5229-a765-20740583aa51",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "de9741f3-a078-592b-b0e9-a3192451c964",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2026,
+     "serial": "51008",
+     "raw": "JO-2026-51008",
+     "type": "national"
+    }
+   ],
+   "name": "هدهد",
+   "sex": "unknown",
+   "hatchDate": "2026-03-12",
+   "colour": "أزرق مخطط",
+   "strain": "يانسن",
+   "eyeSign": "",
+   "status": "young bird",
+   "sireId": "0f8611fe-12c2-5bb5-8c91-a9e98c8c0102",
+   "damId": "724618de-5496-5229-a765-20740583aa51",
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "2a382c6b-6d23-5121-9735-2f47c6653fa2",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2022,
+     "serial": "20940",
+     "raw": "JO-2022-20940",
+     "type": "national"
+    }
+   ],
+   "name": "عاصفة",
+   "sex": "hen",
+   "hatchDate": "2022-05-30",
+   "colour": "أسود",
+   "strain": "محلي",
+   "eyeSign": "",
+   "status": "stock",
+   "sireId": null,
+   "damId": null,
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "ef2cf4c9-5034-55bf-a7a7-1bdcc00adf6f",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2020,
+     "serial": "11602",
+     "raw": "JO-2020-11602",
+     "type": "national"
+    }
+   ],
+   "name": "الطيار",
+   "sex": "cock",
+   "hatchDate": "2020-07-14",
+   "colour": "أزرق",
+   "strain": "محلي",
+   "eyeSign": "",
+   "status": "lost",
+   "sireId": null,
+   "damId": null,
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [
+    {
+     "id": "bf82b292-114d-5e9a-9fa4-1308d067829a",
+     "at": "2025-06-08T14:00:00.000Z",
+     "text": "فُقد في سباق الجفر 2025-06-07، الرقم JO-2020-11602 — بلاغ للنادي."
+    }
+   ],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  },
+  {
+   "id": "c986201d-7f6b-5099-af44-8f831a05d150",
+   "rings": [
+    {
+     "country": "JO",
+     "union": "",
+     "year": 2018,
+     "serial": "05233",
+     "raw": "JO-2018-05233",
+     "type": "national"
+    }
+   ],
+   "name": "درّة",
+   "sex": "hen",
+   "hatchDate": "2018-03-25",
+   "colour": "رمادي",
+   "strain": "فان لون",
+   "eyeSign": "",
+   "status": "dead",
+   "sireId": null,
+   "damId": null,
+   "external": false,
+   "breeder": "",
+   "owner": "لوفت الزرقاء",
+   "acquiredFrom": "",
+   "acquiredDate": "",
+   "notes": [],
+   "createdAt": "2026-08-01T09:00:00.000Z",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f"
+  }
+ ],
+ "pairs": [
+  {
+   "id": "8f9b29ee-1499-52de-9166-6f675b0a8f27",
+   "sireId": "0f8611fe-12c2-5bb5-8c91-a9e98c8c0102",
+   "damId": "724618de-5496-5229-a765-20740583aa51",
+   "season": "2026",
+   "nestBox": "3",
+   "status": "active",
+   "startDate": "2026-01-20",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "rounds": [
+    {
+     "id": "46887358-a124-5c24-b1a0-c902cc1443ec",
+     "number": 1,
+     "eggs": [
+      {
+       "id": "07b3634d-bac9-51e7-ae74-720fe8fd9487",
+       "laidDate": "2026-02-19",
+       "state": "hatched",
+       "hatchDate": "2026-03-11",
+       "chickId": "ef2e501a-f94e-578e-8648-1fb58f16175b",
+       "ringed": true,
+       "weaned": true,
+       "weanDate": "2026-04-06"
+      },
+      {
+       "id": "a20373bd-445f-5048-a2a6-e8509b97c95c",
+       "laidDate": "2026-02-21",
+       "state": "hatched",
+       "hatchDate": "2026-03-12",
+       "chickId": "de9741f3-a078-592b-b0e9-a3192451c964",
+       "ringed": true,
+       "weaned": true,
+       "weanDate": "2026-04-06"
+      }
+     ]
+    },
+    {
+     "id": "36dc59f7-5820-5817-ab73-b606430a98ad",
+     "number": 2,
+     "eggs": [
+      {
+       "id": "f31a5dd5-f4d9-5762-af53-a39eb7a0ea8d",
+       "laidDate": "2026-08-14",
+       "state": "laid"
+      },
+      {
+       "id": "2ffa867f-376b-5adb-b0ca-be76ee34b6ee",
+       "laidDate": "2026-08-16",
+       "state": "laid"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "6d9094f3-3984-5c3b-a48d-040ab7708733",
+   "sireId": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
+   "damId": "ff1b00a4-7bf6-5353-8564-1d84233d9e11",
+   "season": "2026",
+   "nestBox": "5",
+   "status": "separated",
+   "startDate": "2026-01-20",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "rounds": [
+    {
+     "id": "d8f03fb0-dddb-51b8-b73c-b1cdd41edff5",
+     "number": 1,
+     "eggs": [
+      {
+       "id": "8d3b4612-a239-5393-8487-794d2f2997e6",
+       "laidDate": "2026-02-25",
+       "state": "failed"
+      },
+      {
+       "id": "047ccdd2-d631-5205-a635-b2510037e35b",
+       "laidDate": "2026-02-27",
+       "state": "hatched",
+       "hatchDate": "2026-03-17",
+       "chickId": null,
+       "ringed": false,
+       "weaned": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "a348ed6b-28a3-5696-aba7-3caca4f799c6",
+   "sireId": "b2119a47-d5db-5e26-9071-757dc7b4e10b",
+   "damId": "2a382c6b-6d23-5121-9735-2f47c6653fa2",
+   "season": "2026",
+   "nestBox": "7",
+   "status": "active",
+   "startDate": "2026-07-30",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "rounds": [
+    {
+     "id": "975105a7-73ae-515c-9268-12cd2a6ef1c5",
+     "number": 1,
+     "eggs": [
+      {
+       "id": "7bb625db-20b8-5712-b975-64a4cc57a3c9",
+       "laidDate": "2026-08-18",
+       "state": "laid"
+      },
+      {
+       "id": "b2583b97-811e-58d2-b585-b242f31b19fe",
+       "laidDate": "2026-08-20",
+       "state": "laid"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "aa6f7eed-75ff-5269-8273-acacd9653bcb",
+   "sireId": "64a6330a-ee1b-5ef0-bfe7-8abc7c5e5b5e",
+   "damId": "e8e60797-fb84-5289-9b4a-4550c7cc79db",
+   "season": "2023",
+   "nestBox": "1",
+   "status": "separated",
+   "startDate": "2023-02-01",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z",
+   "rounds": [
+    {
+     "id": "f8480c54-731f-5721-a4f5-5577cd02269a",
+     "number": 1,
+     "eggs": [
+      {
+       "id": "19b46c6e-6763-5544-a387-899a8fa43b50",
+       "laidDate": "2023-03-10",
+       "state": "hatched",
+       "hatchDate": "2023-04-02",
+       "chickId": "ff1b00a4-7bf6-5353-8564-1d84233d9e11",
+       "ringed": true,
+       "weaned": true,
+       "weanDate": "2023-04-28"
+      },
+      {
+       "id": "1d1292b1-7b5c-57a2-bc0b-014ad38c4ea2",
+       "laidDate": "2023-03-12",
+       "state": "hatched",
+       "hatchDate": "2023-04-02",
+       "chickId": "fe9751d3-560c-5278-95ac-68f4d26941a9",
+       "ringed": true,
+       "weaned": true,
+       "weanDate": "2023-04-28"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "raceResults": [
+  {
+   "id": "6fcb5b7a-2a40-5575-a0dd-1b9da74bb38e",
+   "birdId": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
+   "date": "2025-04-12",
+   "raceType": "club",
+   "organisation": "نادي الزرقاء للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق القويرة",
+   "releasePoint": {
+    "name": "القويرة",
+    "lat": 29.803,
+    "lon": 35.312
+   },
+   "loftPoint": {
+    "lat": 32.0728,
+    "lon": 36.0876
+   },
+   "releaseTime": "2025-04-12T06:30:00",
+   "arrivalTime": "2025-04-12T10:04:00",
+   "distanceKm": 263,
+   "velocity": 1229,
+   "position": 3,
+   "fanciersEntered": 14,
+   "birdsEntered": 96,
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "b19a1451-4563-5f5c-8aab-a93d219a8d42",
+   "birdId": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
+   "date": "2025-04-26",
+   "raceType": "club",
+   "organisation": "نادي الزرقاء للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق معان الربيعي",
+   "releasePoint": {
+    "name": "معان",
+    "lat": 30.1962,
+    "lon": 35.734
+   },
+   "loftPoint": {
+    "lat": 32.0728,
+    "lon": 36.0876
+   },
+   "releaseTime": "2025-04-26T06:15:00",
+   "arrivalTime": "2025-04-26T09:02:00",
+   "distanceKm": 211.4,
+   "velocity": 1266,
+   "position": 1,
+   "fanciersEntered": 14,
+   "birdsEntered": 96,
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "8fc1c38e-c4d6-50a8-8e01-b80e253b87f2",
+   "birdId": "c5209ce0-51da-5083-a6c4-c6fb2c907f73",
+   "date": "2025-05-17",
+   "raceType": "federation",
+   "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
+   "country": "JO",
+   "raceName": "بطولة الاتحاد — العقبة",
+   "releasePoint": {
+    "name": "العقبة",
+    "lat": 29.5321,
+    "lon": 35.0063
+   },
+   "loftPoint": {
+    "lat": 32.0728,
+    "lon": 36.0876
+   },
+   "releaseTime": "2025-05-17T06:00:00",
+   "arrivalTime": "2025-05-17T10:41:00",
+   "distanceKm": 300.8,
+   "velocity": 1070,
+   "position": 2,
+   "fanciersEntered": 27,
+   "birdsEntered": 214,
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "b7afd7ee-2a22-5cb9-9762-fa379f39e335",
+   "birdId": "fe9751d3-560c-5278-95ac-68f4d26941a9",
+   "date": "2025-04-12",
+   "raceType": "club",
+   "organisation": "نادي الزرقاء للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق القويرة",
+   "releasePoint": {
+    "name": "القويرة",
+    "lat": 29.803,
+    "lon": 35.312
+   },
+   "loftPoint": {
+    "lat": 32.0728,
+    "lon": 36.0876
+   },
+   "releaseTime": "2025-04-12T06:30:00",
+   "arrivalTime": "2025-04-12T10:22:00",
+   "distanceKm": 263,
+   "velocity": 1134,
+   "position": 11,
+   "fanciersEntered": 14,
+   "birdsEntered": 96,
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "5973d061-363d-52f2-a52b-67898cbe7697",
+   "birdId": "fe9751d3-560c-5278-95ac-68f4d26941a9",
+   "date": "2025-05-17",
+   "raceType": "federation",
+   "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
+   "country": "JO",
+   "raceName": "بطولة الاتحاد — العقبة",
+   "releasePoint": {
+    "name": "العقبة",
+    "lat": 29.5321,
+    "lon": 35.0063
+   },
+   "loftPoint": {
+    "lat": 32.0728,
+    "lon": 36.0876
+   },
+   "releaseTime": "2025-05-17T06:00:00",
+   "arrivalTime": "2025-05-17T11:05:00",
+   "distanceKm": 300.8,
+   "velocity": 986,
+   "position": 19,
+   "fanciersEntered": 27,
+   "birdsEntered": 214,
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "cbff5ea0-f474-5942-ba78-fbf3f11325be",
+   "birdId": "ef2cf4c9-5034-55bf-a7a7-1bdcc00adf6f",
+   "date": "2025-06-07",
+   "raceType": "club",
+   "organisation": "نادي الزرقاء للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق الجفر — فُقد الطير",
+   "releasePoint": {
+    "name": "الجفر",
+    "lat": 30.3427,
+    "lon": 36.147
+   },
+   "loftPoint": {
+    "lat": 32.0728,
+    "lon": 36.0876
+   },
+   "releaseTime": "2025-06-07T05:45:00",
+   "arrivalTime": "2025-06-07T09:30:00",
+   "distanceKm": 192.5,
+   "velocity": 855,
+   "position": null,
+   "fanciersEntered": 14,
+   "birdsEntered": 96,
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "29e57c75-4c78-5617-ab84-87f0f9120ce4",
+   "birdId": "b591f98a-1dde-53b0-ab06-be5431de00f8",
+   "date": "2026-04-04",
+   "raceType": "club",
+   "organisation": "نادي الزرقاء للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق القويرة",
+   "releasePoint": {
+    "name": "القويرة",
+    "lat": 29.803,
+    "lon": 35.312
+   },
+   "loftPoint": {
+    "lat": 32.0728,
+    "lon": 36.0876
+   },
+   "releaseTime": "2026-04-04T06:20:00",
+   "arrivalTime": "2026-04-04T09:58:00",
+   "distanceKm": 263,
+   "velocity": 1206,
+   "position": 2,
+   "fanciersEntered": 14,
+   "birdsEntered": 96,
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "e4c3fec1-2790-5162-8eea-bffaed899895",
+   "birdId": "b591f98a-1dde-53b0-ab06-be5431de00f8",
+   "date": "2026-04-18",
+   "raceType": "club",
+   "organisation": "نادي الزرقاء للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق معان",
+   "releasePoint": {
+    "name": "معان",
+    "lat": 30.1962,
+    "lon": 35.734
+   },
+   "loftPoint": {
+    "lat": 32.0728,
+    "lon": 36.0876
+   },
+   "releaseTime": "2026-04-18T06:10:00",
+   "arrivalTime": "2026-04-18T08:51:00",
+   "distanceKm": 211.4,
+   "velocity": 1313,
+   "position": 1,
+   "fanciersEntered": 14,
+   "birdsEntered": 96,
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "a862892b-d952-54ad-be96-ed429dfeec7d",
+   "birdId": "b591f98a-1dde-53b0-ab06-be5431de00f8",
+   "date": "2026-05-09",
+   "raceType": "national",
+   "organisation": "الاتحاد الأردني لهواة الحمام الزاجل",
+   "country": "JO",
+   "raceName": "السباق الوطني — العقبة",
+   "releasePoint": {
+    "name": "العقبة",
+    "lat": 29.5321,
+    "lon": 35.0063
+   },
+   "loftPoint": {
+    "lat": 32.0728,
+    "lon": 36.0876
+   },
+   "releaseTime": "2026-05-09T05:50:00",
+   "arrivalTime": "2026-05-09T10:12:00",
+   "distanceKm": 300.8,
+   "velocity": 1148,
+   "position": 4,
+   "fanciersEntered": 41,
+   "birdsEntered": 388,
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "44124c4f-277b-5b0f-9d5b-06b8d08974ed",
+   "birdId": "914beb55-594d-5cfe-afde-ad6c05221233",
+   "date": "2026-04-04",
+   "raceType": "club",
+   "organisation": "نادي الزرقاء للحمام الزاجل",
+   "country": "JO",
+   "raceName": "سباق القويرة",
+   "releasePoint": {
+    "name": "القويرة",
+    "lat": 29.803,
+    "lon": 35.312
+   },
+   "loftPoint": {
+    "lat": 32.0728,
+    "lon": 36.0876
+   },
+   "releaseTime": "2026-04-04T06:20:00",
+   "arrivalTime": "2026-04-04T10:31:00",
+   "distanceKm": 263,
+   "velocity": 1048,
+   "position": 27,
+   "fanciersEntered": 14,
+   "birdsEntered": 96,
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "c3797aec-0625-5b79-9534-248219508003",
+   "birdId": "b2119a47-d5db-5e26-9071-757dc7b4e10b",
+   "date": "2026-03-20",
+   "raceType": "training",
+   "organisation": "نادي الزرقاء للحمام الزاجل",
+   "country": "JO",
+   "raceName": "تدريب الجفر",
+   "releasePoint": {
+    "name": "الجفر",
+    "lat": 30.3427,
+    "lon": 36.147
+   },
+   "loftPoint": {
+    "lat": 32.0728,
+    "lon": 36.0876
+   },
+   "releaseTime": "2026-03-20T07:00:00",
+   "arrivalTime": "2026-03-20T08:55:00",
+   "distanceKm": 192.5,
+   "velocity": 1674,
+   "position": null,
+   "fanciersEntered": 1,
+   "birdsEntered": 22,
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "60c39890-2e27-52d6-95ef-3302075b1fa0",
+   "birdId": "ef2e501a-f94e-578e-8648-1fb58f16175b",
+   "date": "2026-06-14",
+   "raceType": "training",
+   "organisation": "نادي الزرقاء للحمام الزاجل",
+   "country": "JO",
+   "raceName": "تدريب الجفر",
+   "releasePoint": {
+    "name": "الجفر",
+    "lat": 30.3427,
+    "lon": 36.147
+   },
+   "loftPoint": {
+    "lat": 32.0728,
+    "lon": 36.0876
+   },
+   "releaseTime": "2026-06-14T06:40:00",
+   "arrivalTime": "2026-06-14T08:47:00",
+   "distanceKm": 192.5,
+   "velocity": 1515,
+   "position": null,
+   "fanciersEntered": 1,
+   "birdsEntered": 18,
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  }
+ ],
+ "healthEvents": [
+  {
+   "id": "548c20e4-52ac-53b9-841f-0ad2af15dac9",
+   "eventType": "vaccination",
+   "wholeLoft": true,
+   "birdId": null,
+   "date": "2026-02-01",
+   "medication": "لقاح باراميكسو (نيوكاسل الحمام) — Colombovac PMV",
+   "notes": "قبل موسم التزاوج، كامل اللوفت",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "5fdcb825-1ea1-5476-82d8-d966f8de6d6d",
+   "eventType": "vaccination",
+   "wholeLoft": true,
+   "birdId": null,
+   "date": "2025-02-03",
+   "medication": "لقاح باراميكسو PMV",
+   "notes": "",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "afc9f0e1-8093-5843-8809-3a72770248fc",
+   "eventType": "treatment",
+   "wholeLoft": true,
+   "birdId": null,
+   "date": "2026-03-25",
+   "medication": "رونيدازول — وقاية من الترايكوموناس",
+   "notes": "كورس ٥ أيام في ماء الشرب",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "35801f90-4c12-54b5-85f3-fbfb9630f111",
+   "eventType": "illness",
+   "wholeLoft": false,
+   "birdId": "914beb55-594d-5cfe-afde-ad6c05221233",
+   "date": "2026-05-02",
+   "medication": "",
+   "notes": "إسهال أخضر بعد سباق القويرة — عزل ومتابعة، تعافت خلال أسبوع",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "538dbe78-dcce-55f9-8c25-d3e545ed007c",
+   "eventType": "treatment",
+   "wholeLoft": false,
+   "birdId": "914beb55-594d-5cfe-afde-ad6c05221233",
+   "date": "2026-05-03",
+   "medication": "أمبروليوم — كوكسيديا",
+   "notes": "",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  },
+  {
+   "id": "bbb1152f-441b-5653-8588-24305709e5a5",
+   "eventType": "check",
+   "wholeLoft": false,
+   "birdId": "0f8611fe-12c2-5bb5-8c91-a9e98c8c0102",
+   "date": "2026-01-10",
+   "medication": "",
+   "notes": "فحص ما قبل الموسم — وزن وريش ممتازان",
+   "loftId": "b5ab67a5-483f-5a6c-997c-a5de423cb53f",
+   "updatedAt": "2026-08-01T09:00:00.000Z"
+  }
+ ],
+ "media": []
+}
