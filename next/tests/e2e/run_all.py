@@ -26,7 +26,19 @@ time.sleep(0.8)
 env = dict(os.environ, ZAJIL_URL=f'http://127.0.0.1:{port}/{ROUTE}')
 print(f'  serving {OUT} on 127.0.0.1:{port} → ZAJIL_URL={env["ZAJIL_URL"]}')
 
-SUITES = sorted(f for f in glob.glob(os.path.join(HERE, '*.py')) if os.path.basename(f) != 'run_all.py')
+# Live suites are OPT-IN, as in the root runner: they need the internet and
+# credentials, and push_live WRITES to the real project. A suite that does not
+# run is printed as skipped, never silently absent.
+OPT_IN = {
+    'push_live.py': ('--live-push', 'needs the internet and live credentials, and WRITES to the real project'),
+    'pull_live.py': ('--live-pull', 'needs the internet and live credentials; reads the real project'),
+}
+SUITES = sorted(f for f in glob.glob(os.path.join(HERE, '*.py')) if os.path.basename(f) not in ({'run_all.py'} | set(OPT_IN)))
+skipped = []
+for _name, (_flag, _reason) in OPT_IN.items():
+    if _flag in sys.argv: SUITES.append(os.path.join(HERE, _name))
+    else: skipped.append((_name, _flag, _reason))
+SUITES = sorted(SUITES)
 total_pass = total_fail = 0
 failed_suites = []
 try:
@@ -53,5 +65,7 @@ try:
         print(f'  [{flag}] {name:26} {summary}')
 finally:
     srv.terminate()
-print(f'\n  {total_pass} assertions passed, {total_fail} failed, {len(failed_suites)} suite(s) errored')
+for _name, _flag, _reason in skipped:
+    print(f'  [skip] {_name:26} not run — {_reason} (add {_flag})')
+print(f'\n  {total_pass} assertions passed, {total_fail} failed, {len(failed_suites)} suite(s) errored' + (f', {len(skipped)} skipped' if skipped else ''))
 sys.exit(1 if (total_fail or failed_suites) else 0)
