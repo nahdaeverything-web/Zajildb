@@ -104,6 +104,18 @@ const guards = {
     if (process.env.NEXT_PUBLIC_HARNESS === '1') return [];
     return existsSync(join(ROOT, 'app', 'test-harness')) ? ['app/test-harness/  exists in a NORMAL build'] : [];
   },
+  // 7. A secret key never appears under next/ — not in source, tests, docs or
+  //    config. The secret key grants everything; the publishable one grants
+  //    nothing on its own (js/sync-config.js). Needle assembled from parts so
+  //    this file cannot match itself.
+  'no-secret-key'() {
+    const needle = 'sb_' + 'secret_';
+    const bad = [];
+    for (const f of files('.js', '.mjs', '.ts', '.tsx', '.css', '.json', '.md', '.py', '.txt', '.env', '.html')) {
+      lines(f).forEach((l, i) => { if (l.includes(needle)) bad.push(`${rel(f)}:${i + 1}`); });
+    }
+    return bad;
+  },
   // 5. No dynamic route segments: user data cannot be enumerated at build time,
   //    so [id] cannot be statically exported. Record views use ?id=.
   'no-dynamic-segments'() {
