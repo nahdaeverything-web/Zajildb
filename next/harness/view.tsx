@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import * as db from '@/src/db.js';
 import * as coi from '@/src/engine/coi.js';
 import * as fci from '@/src/engine/fci.js';
@@ -17,6 +18,7 @@ declare global {
     __zajilEngine: { coi: typeof coi; fci: typeof fci; integrity: typeof integrity; pedigree: typeof pedigree;
                      relationship: typeof relationship; rings: typeof rings; validate: typeof validate; velocity: typeof velocity };
     __zajilReady: Promise<void>;
+    __zajilSyncLoop: (() => void) | null;   // the stop function when ?sync=1 started the loop, else null
   }
 }
 
@@ -43,14 +45,21 @@ function BridgeDemo() {
 
 export default function HarnessView() {
   const [status, setStatus] = useState('booting');
+  // ?sync=1 — boot parity only. Vanilla boot() runs initDB() then, later,
+  // startSyncLoop() (js/app.js:241, :252). The harness does the same ONLY when
+  // asked, so Phase 4/5 can prove the loop boots in the port. Default off; the
+  // Phase 2/3 suites never need it — they drive signIn/pushOnce/syncOnce
+  // directly. With the shipped empty config the loop is inert either way.
+  const syncFlag = useSearchParams().get('sync') === '1';
   useEffect(() => {
-    // Mirror the one thing vanilla boot() does that the data layer needs:
-    // open the database and load the in-memory mirrors (js/app.js:241).
-    // Sync is dormant this phase and startSyncLoop() is deliberately not
-    // called; autoBackup() is not scheduled either — the harness is a
-    // surface for the layer, not a copy of the app shell.
-    window.__zajilReady = db.initDB().then(() => setStatus('ready'), (e: unknown) => setStatus('failed: ' + String(e)));
-  }, []);
+    let stop: (() => void) | null = null;
+    window.__zajilSyncLoop = null;
+    window.__zajilReady = db.initDB().then(() => {
+      setStatus('ready');
+      if (syncFlag) { stop = db.startSyncLoop(); window.__zajilSyncLoop = stop; }
+    }, (e: unknown) => setStatus('failed: ' + String(e)));
+    return () => { if (stop) stop(); window.__zajilSyncLoop = null; };
+  }, [syncFlag]);
   return (
     <section style={{ padding: 24 }} dir="ltr">
       <h1>test-harness</h1>
