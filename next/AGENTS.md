@@ -1,3 +1,4 @@
+<!-- create-next-app output: Next.js API guidance for coding agents, NOT Zajil project rules. Zajil rules live in the root HANDOFF.md, BACKLOG.md and design/README.md. Next re-adds the delimited block below on `next dev`; this line sits above it. -->
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

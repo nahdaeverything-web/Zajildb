@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Zajil — React/Next port (`next/`)
 
-## Getting Started
+The rebuild of Zajil as a static-export Next.js app, implementing the frozen
+specs in `../design/approved/` — **not** the current vanilla screens. Where a
+spec and today's app differ, the spec wins; `../design/README.md` says where
+that is deliberate. The vanilla app in the repo root keeps running untouched
+until a cutover ruling.
 
-First, run the development server:
+## Rules that are enforced, not remembered
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- `npm run build` runs `guards/run.mjs` first (`prebuild`). Palette, no root
+  imports, `<html lang="ar" dir="rtl">`, no gradients / blurred shadows, no
+  dynamic route segments. Each guard was proved to fire by reintroducing its
+  violation — see the Phase 0.5 commit.
+- `output: 'export'` — no server, ever. Record views take `?id=`, never `[id]`.
+- Everything outside `next/` is read-only during the port. `next/` imports
+  nothing from `../js`, `../css` or `../tools` (guarded); the engine and the
+  dataset id mapper are byte-identical copies under `src/engine/` and `tests/`.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tests
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+    node tests/run.js        # the root engine suite against src/engine/ — 33/33
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Two files you did not write
 
-## Learn More
+`AGENTS.md` and `CLAUDE.md` are **create-next-app output**: Next.js API
+guidance for coding agents, re-added by `next dev` if removed. They are not
+Zajil project rules — those live in the root `HANDOFF.md`, `BACKLOG.md` and
+`design/README.md`. Each carries a first-line comment saying so.
 
-To learn more about Next.js, take a look at the following resources:
+## Fonts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Self-hosted under `public/fonts/` (OFL 1.1, licences beside the faces), wired
+through `app/fonts.ts`. Alexandria is one variable file subset to Arabic +
+Latin; IBM Plex Mono is the two static weights the specs load.
