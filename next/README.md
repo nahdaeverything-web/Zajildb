@@ -60,3 +60,21 @@ worker registration and its caches (Phase 5), and any `localStorage`. The
 cutover plan must say which path each class of user takes, in what order,
 and what the vanilla app shows once it is retired. **No cutover without a
 ruling.**
+
+## Deferred to Phase 4 (recorded so nothing is lost)
+
+Root browser suites — or assertions inside them — that test the data layer
+**through the vanilla shell** and therefore cannot run against a port with
+placeholder screens. Each returns to scope when the screen it drives is
+ported. Nothing here is skipped silently: the Phase 4 order must account for
+every line.
+
+| item | why it waits | root counts |
+|---|---|---|
+| `record_factory.py` | fills `.ring-input`, submits `button.btn-primary` | 8 |
+| `change_events.py` | navigates `#/breeding`, finds «زوج جديد» | 8 |
+| `ownership.py` | drives `#/bird/new`, clicks | 10 |
+| `data_loss.py` | drives `#/bird/new`, clicks | 8 |
+| `pull.py` | one `#/bird/` navigation (line 356) — the URL-and-module rule stays clean rather than carrying a documented exception | 58 |
+| `auth_live.py` | fills `.sync-signin` and clicks the sign-in button (lines 111–113) | 18 |
+| `convergence.py:248-252` — 2 of 36 | the duplicate-ring **toast**: asserts on `.toast` DOM text, which `js/app.js:213-214` renders from `takeSyncDuplicateNotice()` via `i18n.t('sync.duplicates')` and the shell's toast. The layer's half (the notice is counted once) passes at line 241. RULED Phase 4; a harness that grows fake shell components to satisfy assertions is fitted to the test, not the layer. | 2 |
