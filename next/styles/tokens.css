@@ -43,8 +43,11 @@
   --r-pill: 999px;
 
   /* ── type ── */
-  --f: 'Alexandria', system-ui, sans-serif;
-  --f-mono: 'IBM Plex Mono', monospace;
+  /* The family names the specs use, resolved through next/font/local's
+   * variables so the self-hosted faces are what actually renders. The
+   * fallbacks match the specs' own stacks. */
+  --f: var(--font-alexandria), 'Alexandria', system-ui, sans-serif;
+  --f-mono: var(--font-plex-mono), 'IBM Plex Mono', monospace;
 }
 
 /* ─────────────────────── SANCTIONED EXTENSIONS ───────────────────────
