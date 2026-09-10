@@ -16,6 +16,10 @@
   .rail a:hover { background: var(--brand-tint); color: var(--brand-deep); }
   .tabbar a:hover { color: var(--brand-deep); }
 }
+/* RULED (post-Phase-1): at 701–1099 the tab bar matches the content column
+ * (720px), not the spec's 430px phone width. The kit was silent; this is the
+ * design owner's decision, not the spec's CSS. */
+@media (min-width: 701px) { .tabbar { max-width: 720px; } }
 @media (min-width: 1100px) {
   .rail { display: flex; }
   .tabbar { display: none !important; }
