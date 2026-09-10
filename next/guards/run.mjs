@@ -31,7 +31,8 @@ const CORE = ['#128C6E', '#0E6F57', '#E3F4EE', '#101820', '#4A5560', '#8C97A2',
               '#F5F7F8', '#FFFFFF', '#E4E9ED', '#C9971F', '#FBF3DF', '#C43D2B'];
 const EXT  = ['#8A6410', '#7A5A0E', '#F8E6E3', '#2FBF95', '#A83223'];
 const DEV  = ['#5CD6A8', '#FF8A78', '#E6B84A', '#D8DEE3'];
-const SANCTIONED = new Set([...CORE, ...EXT, ...DEV].map((h) => h.toUpperCase()));
+const SEX  = ['#E4EDF6', '#0A4D8C', '#F6E4EE', '#8C0A57'];   // ruled in: sex chips
+const SANCTIONED = new Set([...CORE, ...EXT, ...DEV, ...SEX].map((h) => h.toUpperCase()));
 const expand = (h) => (h.length === 4 ? '#' + [...h.slice(1)].map((c) => c + c).join('') : h).toUpperCase();
 
 const guards = {

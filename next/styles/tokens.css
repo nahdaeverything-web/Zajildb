@@ -32,6 +32,13 @@
   --gold-tint: #FBF3DF;
   --danger: #C43D2B;
 
+  /* ── sex chips — RULED sanctioned as real UI (loft-home-v1, prototype).
+   * Raised in Phase 0.2 as unlisted; ruled in after Phase 1 acceptance. */
+  --sex-m-bg: #E4EDF6;
+  --sex-m-fg: #0A4D8C;
+  --sex-f-bg: #F6E4EE;
+  --sex-f-fg: #8C0A57;
+
   /* ── radii ──
    * --r and --r-btn are declared by all thirteen specs; --r-row is the
    * certificate spec's own name for the 18px row-card radius (used as a
@@ -65,6 +72,13 @@
  *             tint provides — shared-states-v1
  *   #A83223   solid danger fill, confirm-dialog danger button :hover
  *             — shared-states-v1
+ *
+ * RULED NOT sanctioned, after being raised in Phase 0.2:
+ *   FBEDEA (hex, no # — see guard)   sign-in-v1's .msg.cred — SPEC DRIFT. The danger tint is
+ *             #F8E6E3 and the port uses that.
+ *   E9EDF0 (hex, no # — see guard) / DDE2E6 (hex, no # — see guard)   the spec DOCUMENTS' body background — the grey
+ *             behind the mocked phone frame. Presentation chrome, not app
+ *             surface (the app page is --page). Not tokens.
  *
  * Developer console ONLY — a dark monospace surface that deliberately does
  * not use the app palette. Never reuse these anywhere else:
