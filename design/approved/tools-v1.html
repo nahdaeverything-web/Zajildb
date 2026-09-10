@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>زاجل — الأدوات والإعدادات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brand:#128C6E; --brand-deep:#0E6F57; --brand-tint:#E3F4EE;
+    --ink:#101820; --ink-2:#4A5560; --ink-3:#8C97A2;
+    --page:#F5F7F8; --surface:#FFFFFF; --line:#E4E9ED;
+    --gold:#C9971F; --gold-tint:#FBF3DF; --danger:#C43D2B; --danger-tint:#F8E6E3;
+    --r:20px; --r-btn:16px;
+    --f:'Alexandria', system-ui, sans-serif;
+    --f-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  button, input, select, textarea{ font-family:var(--f); }
+  body{ font-family:var(--f); color:var(--ink); background:#E9EDF0; min-height:100vh; display:flex; justify-content:center; line-height:1.5; }
+  .phone{ width:100%; max-width:430px; min-height:100vh; background:var(--page); position:relative; }
+  [hidden]{ display:none !important; }
+  .num{ font-family:var(--f-mono); font-weight:600; direction:ltr; unicode-bidi:isolate; font-variant-numeric:tabular-nums; }
+  a{ color:var(--ink); }
+
+  /* ── header + sticky index ── */
+  .lofthead{ background:var(--surface); border-bottom:1px solid var(--line); padding:20px 20px 0; position:sticky; top:0; z-index:9; }
+  .lofthead .season{ font-size:13px; font-weight:700; color:var(--ink-3); }
+  .lofthead h1{ font-size:34px; font-weight:900; line-height:1.1; }
+  .index{ display:flex; gap:6px; padding:14px 0 12px; overflow-x:auto; scrollbar-width:none; }
+  .index::-webkit-scrollbar{ display:none; }
+  .index a{ flex:none; text-decoration:none; border:1px solid var(--line); background:var(--page); color:var(--ink-2); border-radius:999px; padding:9px 16px; font-size:13.5px; font-weight:700; min-height:40px; display:flex; align-items:center; gap:8px; }
+  .index a .c{ font-family:var(--f-mono); font-weight:600; font-size:12px; color:var(--ink-3); }
+  .index a.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .index a.on .c{ color:rgba(255,255,255,.7); }
+
+  .panel{ padding:8px 20px 110px; }
+  .group{ padding-top:22px; scroll-margin-top:118px; }
+  .group > .gh{ display:flex; align-items:baseline; gap:12px; margin-bottom:12px; }
+  .group > .gh h2{ font-size:26px; font-weight:900; line-height:1.1; }
+  .group > .gh .c{ font-size:13px; font-weight:700; color:var(--ink-3); }
+  .cards{ display:grid; gap:14px; }
+
+  /* ── cards ── */
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:20px; min-width:0; }
+  .card h3{ font-size:19px; font-weight:800; line-height:1.3; }
+  .card .sub{ font-size:13px; font-weight:600; color:var(--ink-2); margin-top:4px; text-wrap:pretty; }
+  .card .sub.mute{ color:var(--ink-3); }
+  .hint{ font-size:12.5px; font-weight:600; color:var(--ink-3); margin-top:8px; text-wrap:pretty; }
+
+  /* setting rows */
+  .set{ padding:16px 0; border-top:1px solid var(--line); }
+  .set:first-of-type{ border-top:none; }
+  .set > label, .set .k{ display:block; font-size:13.5px; font-weight:800; color:var(--ink-2); margin-bottom:10px; }
+  .seg{ display:flex; gap:6px; }
+  .seg button{ flex:1; border:1px solid var(--line); background:var(--page); padding:12px 4px; cursor:pointer; font-size:14.5px; font-weight:700; color:var(--ink-2); border-radius:999px; min-height:48px; display:flex; align-items:center; justify-content:center; gap:6px; }
+  .seg button .num{ font-size:12.5px; }
+  .seg button[aria-pressed="true"]{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .seg button[aria-pressed="true"] .num{ color:rgba(255,255,255,.75); }
+
+  .stepper{ display:flex; align-items:center; gap:10px; direction:ltr; justify-content:flex-end; }
+  .stepper button{ width:48px; height:48px; border-radius:999px; border:1px solid var(--line); background:var(--page); font-size:22px; font-weight:700; color:var(--ink); cursor:pointer; }
+  .stepper input{ width:72px; height:48px; border:2px solid var(--line); border-radius:var(--r-btn); background:var(--surface); text-align:center; font-family:var(--f-mono); font-size:22px; font-weight:600; color:var(--brand); outline:none; }
+  .stepper .rng{ font-family:var(--f-mono); font-size:12px; color:var(--ink-3); margin-inline-end:auto; }
+
+  .check{ display:flex; align-items:center; gap:14px; cursor:pointer; min-height:48px; }
+  .check .box{ width:28px; height:28px; flex:none; border-radius:9px; border:2px solid var(--ink-3); background:var(--surface); display:grid; place-items:center; }
+  .check .box svg{ width:16px; height:16px; stroke:#fff; stroke-width:3.4; fill:none; stroke-linecap:round; stroke-linejoin:round; display:none; }
+  .check input{ position:absolute; opacity:0; pointer-events:none; }
+  .check input:checked + .box{ background:var(--ink); border-color:var(--ink); }
+  .check input:checked + .box svg{ display:block; }
+  .check .t{ font-size:15px; font-weight:700; }
+
+  /* fields */
+  .field{ margin-top:16px; }
+  .field:first-child{ margin-top:0; }
+  .field > label{ display:block; font-size:13.5px; font-weight:800; color:var(--ink-2); margin-bottom:8px; }
+  .field input, .field select{ width:100%; border:2px solid var(--line); border-radius:var(--r-btn); padding:15px 16px; font-size:16px; font-weight:600; background:var(--page); color:var(--ink); outline:none; min-height:56px; appearance:none; -webkit-appearance:none; }
+  .field select{ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234A5560' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:left 16px center; background-size:18px; padding-left:44px; }
+  .field input:focus, .field select:focus{ border-color:var(--brand); background:var(--surface); }
+  .field input.data{ font-family:var(--f-mono); font-weight:500; direction:ltr; text-align:left; }
+  .field input.err{ border-color:var(--danger); background:var(--surface); }
+  .field input::placeholder{ color:var(--ink-3); font-weight:500; }
+  .file{ display:flex; align-items:center; gap:12px; border:2px dashed var(--line); border-radius:var(--r-btn); padding:12px 12px 12px 16px; min-height:56px; background:var(--page); }
+  .file .pick{ flex:none; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:9px 16px; font-size:13.5px; font-weight:800; color:var(--ink); cursor:pointer; min-height:40px; }
+  .file .fn{ font-size:13.5px; font-weight:600; color:var(--ink-3); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .file .fn.has{ font-family:var(--f-mono); font-weight:500; color:var(--ink); direction:ltr; }
+
+  /* buttons */
+  .btn{ border:none; border-radius:var(--r-btn); min-height:56px; padding:0 20px; font-size:16px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; width:100%; }
+  .btn svg{ width:20px; height:20px; stroke:currentColor; stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .btn.primary{ background:var(--brand); color:#fff; }
+  .btn.ink{ background:var(--surface); color:var(--ink); border:2px solid var(--ink); }
+  .btn.ghost{ background:var(--page); color:var(--ink); border:1px solid var(--line); }
+  .btn.danger{ background:var(--surface); color:var(--danger); border:2px solid var(--danger); }
+  .btn.sm{ min-height:46px; font-size:14.5px; padding:0 16px; width:auto; }
+  .btn:disabled{ opacity:.55; cursor:default; }
+  .btn .spin{ width:18px; height:18px; border-radius:50%; border:3px solid rgba(255,255,255,.35); border-top-color:#fff; animation:spin .8s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+  .btns{ display:grid; gap:10px; margin-top:16px; }
+  .btns.row{ grid-template-columns:1fr 1fr; }
+
+  /* kv rows (sync signed-in) */
+  .kv{ display:grid; margin-top:14px; border-top:1px solid var(--line); }
+  .kv > div{ display:flex; justify-content:space-between; align-items:center; gap:12px; min-height:52px; border-bottom:1px solid var(--line); }
+  .kv .k{ font-size:14px; font-weight:700; color:var(--ink-2); flex:none; }
+  .kv .v{ font-size:15px; font-weight:700; text-align:left; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+  .kv .v.num{ font-size:15px; }
+  .kv .v .big{ font-family:var(--f-mono); font-weight:600; font-size:26px; line-height:1; color:var(--brand); direction:ltr; }
+  .kv .v .big.zero{ color:var(--ink-3); }
+  .kv .v.mute{ color:var(--ink-3); }
+
+  /* messages */
+  .msg{ border-radius:var(--r-btn); padding:14px 16px; margin-top:14px; font-size:14px; font-weight:700; text-wrap:pretty; }
+  .msg .code{ display:block; font-family:var(--f-mono); font-weight:500; font-size:12px; color:var(--ink-3); direction:ltr; text-align:right; margin-top:6px; }
+  .msg.danger{ background:var(--danger-tint); color:var(--danger); border:1px solid #E8B8B1; }
+  .msg.danger .code{ color:#9A4A40; }
+  .msg.amber{ background:var(--gold-tint); color:#7A5A0F; border:1px solid var(--gold); }
+  .msg.amber .code{ color:#8A6410; }
+  .msg.calm{ background:var(--page); color:var(--ink-2); border:1px solid var(--line); }
+  .msg.ok{ background:var(--brand-tint); color:var(--brand-deep); border:1px solid #BDE3D5; }
+  .msg.ok svg{ width:18px; height:18px; stroke:var(--brand-deep); stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; vertical-align:-3px; margin-inline-end:6px; }
+  .msg h4{ font-size:14px; font-weight:800; margin-bottom:6px; }
+  .msg ul{ list-style:none; display:grid; gap:6px; }
+  .msg li{ display:flex; justify-content:space-between; gap:10px; font-size:13.5px; font-weight:600; }
+  .msg li .num{ font-size:12.5px; font-weight:500; }
+
+  /* duplicates */
+  .dup{ margin-top:14px; border:1px solid var(--line); border-radius:18px; overflow:hidden; }
+  .dup .ring{ background:var(--ink); color:#fff; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .dup .ring .plate{ font-family:var(--f-mono); font-weight:600; font-size:17px; direction:ltr; letter-spacing:.5px; }
+  .dup .ring .plate span{ color:var(--gold); }
+  .dup .ring .n{ font-size:12.5px; font-weight:700; color:rgba(255,255,255,.7); }
+  .dup .copy{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-top:1px solid var(--line); }
+  .dup .copy:first-of-type{ border-top:none; }
+  .dup .copy .name{ font-size:16px; font-weight:800; }
+  .dup .copy .links{ font-size:12.5px; font-weight:600; color:var(--ink-2); margin-top:2px; }
+  .dup .copy .links.none{ color:var(--ink-3); }
+  .dup .copy .links b{ font-family:var(--f-mono); font-weight:600; direction:ltr; unicode-bidi:isolate; }
+  .dup .del{ flex:none; border:1.5px solid var(--danger); color:var(--danger); background:var(--surface); border-radius:999px; padding:8px 16px; font-size:13.5px; font-weight:800; cursor:pointer; min-height:40px; }
+
+  /* dataset buttons */
+  .ds{ display:grid; gap:10px; margin-top:16px; }
+  .ds button{ text-align:start; border:1px solid var(--line); background:var(--page); border-radius:18px; padding:16px; cursor:pointer; display:flex; align-items:center; gap:14px; min-height:64px; }
+  .ds .ico{ width:44px; height:44px; flex:none; border-radius:14px; background:var(--brand-tint); display:grid; place-items:center; }
+  .ds .ico svg{ width:22px; height:22px; stroke:var(--brand); stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .ds .t{ font-size:15.5px; font-weight:800; }
+  .ds .d{ font-size:12.5px; font-weight:600; color:var(--ink-2); margin-top:2px; }
+
+  /* backup */
+  .stat{ display:flex; align-items:baseline; gap:10px; margin-top:12px; }
+  .stat .k{ font-size:14px; font-weight:700; color:var(--ink-2); }
+  .stat .v{ font-family:var(--f-mono); font-weight:600; font-size:20px; color:var(--ink); direction:ltr; }
+  .stat .v.mute{ font-family:var(--f); font-weight:700; color:var(--ink-3); font-size:15px; }
+  .subsec{ margin-top:22px; padding-top:18px; border-top:1px solid var(--line); }
+  .subsec h4{ font-size:15.5px; font-weight:800; margin-bottom:12px; }
+  .inline{ display:grid; grid-template-columns:1fr auto; gap:10px; align-items:end; }
+
+  /* developer disclosure */
+  details.dev{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); }
+  details.dev summary{ list-style:none; cursor:pointer; padding:20px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  details.dev summary::-webkit-details-marker{ display:none; }
+  details.dev summary h3{ font-size:19px; font-weight:800; }
+  details.dev summary .sub{ margin-top:2px; }
+  details.dev summary .chev{ width:36px; height:36px; flex:none; border-radius:999px; border:1px solid var(--line); display:grid; place-items:center; }
+  details.dev summary .chev svg{ width:18px; height:18px; stroke:var(--ink-2); stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; transition:transform .2s; }
+  details.dev[open] summary .chev svg{ transform:rotate(180deg); }
+  details.dev .body{ padding:0 20px 20px; }
+  details.dev .body h4{ font-size:15.5px; font-weight:800; padding-top:4px; }
+  .devbtns{ display:grid; gap:8px; margin-top:12px; }
+  .devbtns button{ border:1px solid var(--line); background:var(--page); border-radius:var(--r-btn); min-height:50px; padding:0 16px; font-size:14.5px; font-weight:800; color:var(--ink); cursor:pointer; text-align:start; display:flex; align-items:center; gap:10px; }
+  .devbtns button svg{ width:18px; height:18px; stroke:currentColor; stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  /* Developer console ONLY: the bright palette below (#5CD6A8 ok · #FF8A78 fail · #E6B84A warn · #D8DEE3 text)
+     is scoped to this dark monospace surface and must NOT be reused elsewhere in the app — standard tokens apply everywhere else. */
+  .out{ margin-top:12px; background:var(--ink); color:#D8DEE3; border-radius:var(--r-btn); padding:16px; font-family:var(--f-mono); font-weight:500; font-size:12.5px; line-height:1.65; direction:ltr; text-align:left; white-space:pre; overflow-x:auto; min-height:180px; }
+  .out .ok{ color:#5CD6A8; }
+  .out .bad{ color:#FF8A78; }
+  .out .dim{ color:#8C97A2; }
+  .out .hd{ color:#fff; font-weight:600; }
+  .out .gold{ color:#E6B84A; }
+
+  /* about */
+  .ver{ display:flex; align-items:baseline; gap:12px; margin-top:12px; }
+  .ver .v{ font-family:var(--f-mono); font-weight:600; font-size:30px; color:var(--brand); direction:ltr; line-height:1; }
+  .ver .k{ font-size:14px; font-weight:700; color:var(--ink-2); }
+
+  /* ── nav ── */
+  .tabbar{ position:fixed; bottom:0; inset-inline:0; margin-inline:auto; max-width:430px; background:var(--surface); border-top:1px solid var(--line); display:flex; padding:10px 4px 14px; z-index:10; }
+  .tabbar button{ flex:1; min-width:0; border:none; background:none; cursor:pointer; color:var(--ink-3); font-size:10.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:5px; white-space:nowrap; }
+  .tabbar button svg, .rail button svg{ width:26px; height:26px; stroke:currentColor; stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .tabbar button.on{ color:var(--brand); }
+  .rail{ display:none; position:fixed; top:0; bottom:0; inset-inline-start:0; width:132px; background:var(--surface); border-inline-end:1px solid var(--line); flex-direction:column; gap:4px; padding:24px 12px; z-index:11; }
+  .rail button{ display:flex; align-items:center; gap:10px; border:none; background:none; cursor:pointer; color:var(--ink-3); font-size:13px; font-weight:700; padding:12px 10px; border-radius:14px; min-height:48px; }
+  .rail button.on{ background:var(--brand-tint); color:var(--brand); }
+
+  @media (hover:hover){
+    .btn.primary:hover{ background:var(--brand-deep); }
+    .btn.ink:hover, .dup .del:hover{ background:var(--ink); color:#fff; border-color:var(--ink); }
+    .btn.ghost:hover, .ds button:hover, .devbtns button:hover, .file .pick:hover{ background:var(--brand-tint); border-color:var(--brand); }
+    .btn.danger:hover{ background:var(--danger); color:#fff; }
+    .index a:hover{ border-color:var(--ink); color:var(--ink); }
+    .index a.on:hover{ color:#fff; }
+    .rail button:hover{ background:var(--brand-tint); color:var(--brand-deep); }
+    .tabbar button:hover{ color:var(--brand-deep); }
+    .seg button:hover{ border-color:var(--ink); }
+  }
+  button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
+  .field input:focus-visible, .field select:focus-visible{ outline:none; }
+
+  /* ── demo switcher (design review only) ── */
+  .demo{ position:fixed; top:14px; inset-inline-end:14px; z-index:50; display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
+  .demo .g{ display:flex; gap:2px; background:var(--ink); border-radius:999px; padding:3px; align-items:center; }
+  .demo .g span{ color:rgba(255,255,255,.55); font-size:10.5px; font-weight:700; padding:0 8px 0 4px; }
+  .demo button{ border:none; background:none; color:#fff; opacity:.6; font-size:11.5px; font-weight:700; padding:6px 10px; border-radius:999px; cursor:pointer; }
+  .demo button.on{ opacity:1; background:rgba(255,255,255,.16); }
+
+  @media (min-width:701px){
+    .phone{ max-width:720px; border-inline:1px solid var(--line); }
+  }
+  @media (min-width:1100px){
+    .rail{ display:flex; }
+    .tabbar{ display:none !important; }
+    .demo{ inset-inline-end:152px; }
+    .phone{ max-width:none; margin-inline-start:132px; border:none; }
+    .lofthead{ padding:32px 32px 0; }
+    .lofthead .in{ margin-inline:auto; max-width:1024px; }
+    .index{ padding:18px 0 14px; }
+    .panel{ margin-inline:auto; max-width:1024px; width:100%; padding:8px 32px 80px; }
+    .group{ padding-top:32px; scroll-margin-top:140px; }
+    .group > .gh h2{ font-size:30px; }
+    .cards{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start; }
+    .card.span{ grid-column:1 / -1; }
+    .card.span .two{ display:grid; grid-template-columns:1fr 1fr; gap:0 40px; }
+    .card.span .two > .col:last-child{ border-inline-start:1px solid var(--line); padding-inline-start:40px; }
+    .btns.desk3{ grid-template-columns:1fr 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <div class="demo" aria-label="عرض النموذج">
+    <div class="g"><span>المزامنة</span>
+      <button data-k="sync" data-v="off">غير مهيأة</button>
+      <button data-k="sync" data-v="out">خروج</button>
+      <button data-k="sync" data-v="busy">جارٍ</button>
+      <button data-k="sync" data-v="e1">خطأ ١</button>
+      <button data-k="sync" data-v="e2">خطأ ٢</button>
+      <button data-k="sync" data-v="e3">خطأ ٣</button>
+      <button data-k="sync" data-v="in" class="on">داخل</button>
+      <button data-k="sync" data-v="err">خطأ</button>
+      <button data-k="sync" data-v="anom">شواذ</button>
+    </div>
+    <div class="g"><span>الحلقات</span>
+      <button data-k="dup" data-v="clean">نظيف</button>
+      <button data-k="dup" data-v="found" class="on">مكرر</button>
+      <span>المطوّر</span>
+      <button data-k="dev" data-v="ok" class="on">نجاح</button>
+      <button data-k="dev" data-v="bad">فشل</button>
+    </div>
+  </div>
+
+  <header class="lofthead"><div class="in">
+    <div class="season">لوفت الفحيص · zajil-v1.9.1</div>
+    <h1>الأدوات والإعدادات</h1>
+    <nav class="index" aria-label="فهرس الصفحة">
+      <a href="#g-settings" class="on">إعدادات <span class="c">3</span></a>
+      <a href="#g-data">بيانات <span class="c">3</span></a>
+      <a href="#g-adv">متقدّم <span class="c">3</span></a>
+    </nav>
+  </div></header>
+
+  <main class="panel">
+
+    <!-- ═══ إعدادات ═══ -->
+    <section class="group" id="g-settings">
+      <div class="gh"><h2>إعدادات</h2><span class="c">اللغة والعرض · الحساب · اللوفت</span></div>
+      <div class="cards">
+
+        <!-- 1. الإعدادات -->
+        <article class="card">
+          <h3>الإعدادات</h3>
+          <div class="set">
+            <span class="k">اللغة</span>
+            <div class="seg" role="group"><button aria-pressed="true">العربية</button><button aria-pressed="false">English</button></div>
+          </div>
+          <div class="set">
+            <span class="k">الأرقام</span>
+            <div class="seg" role="group">
+              <button aria-pressed="true">غربية <span class="num">0123456789</span></button>
+              <button aria-pressed="false">مشرقية <span class="num">٠١٢٣٤٥٦٧٨٩</span></button>
+            </div>
+            <div class="hint">أرقام الحلقات تُعرض دائمًا بالأرقام الغربية.</div>
+          </div>
+          <div class="set">
+            <span class="k">عرض التاريخ</span>
+            <div class="seg" role="group"><button aria-pressed="true">ميلادي</button><button aria-pressed="false">هجري</button><button aria-pressed="false">ميلادي + هجري</button></div>
+          </div>
+          <div class="set">
+            <label for="coi">عمق حساب COI (أجيال)</label>
+            <div class="stepper">
+              <span class="rng">3 – 15</span>
+              <button aria-label="أقل">−</button>
+              <input id="coi" type="number" min="3" max="15" value="10" inputmode="numeric">
+              <button aria-label="أكثر">+</button>
+            </div>
+          </div>
+          <div class="set">
+            <label class="check"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg></span><span class="t">وضع التباين العالي (ضوء الشمس)</span></label>
+          </div>
+        </article>
+
+        <!-- 2. المزامنة -->
+        <article class="card" id="sync">
+          <h3>المزامنة</h3>
+
+          <!-- a. not configured -->
+          <div data-sync="off" hidden>
+            <div class="msg calm" style="margin-top:14px">المزامنة غير مهيأة على هذا الجهاز.</div>
+          </div>
+
+          <!-- b. signed out (+ busy, e1, e2, e3) -->
+          <div data-sync="out busy e1 e2 e3" hidden>
+            <div class="sub">سجّل الدخول لمزامنة بياناتك بين أجهزتك.</div>
+            <form style="margin-top:16px" onsubmit="return false">
+              <div class="field"><label for="em">البريد الإلكتروني</label><input id="em" class="data" type="email" value="ahmad.alfuheis@gmail.com" autocomplete="username"></div>
+              <div class="field"><label for="pw">كلمة المرور</label><input id="pw" class="data" type="password" value="••••••••••" autocomplete="current-password"></div>
+              <div class="msg danger" data-sync="e1" hidden>البريد الإلكتروني أو كلمة المرور غير صحيحة.<span class="code">HTTP 401</span></div>
+              <div class="msg danger" data-sync="e2" hidden>تعذّر الاتصال بالخادم — تحقّق من الشبكة وحاول مجددًا.<span class="code">HTTP 0</span></div>
+              <div class="msg danger" data-sync="e3" hidden>المزامنة غير مهيأة على هذا الجهاز.<span class="code">HTTP 503</span></div>
+              <div class="btns">
+                <button class="btn primary" data-sync="out e1 e2 e3" hidden>تسجيل الدخول</button>
+                <button class="btn primary" data-sync="busy" disabled hidden><span class="spin"></span>جارٍ تسجيل الدخول…</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- c. signed in (+ d error, e anomalies) -->
+          <div data-sync="in err anom" hidden>
+            <div class="kv">
+              <div><span class="k">الحساب</span><span class="v num">ahmad.alfuheis@gmail.com</span></div>
+              <div><span class="k">آخر مزامنة</span><span class="v num">07 / 09 / 2026 · 21:40</span></div>
+              <div><span class="k">بانتظار المزامنة</span><span class="v"><span class="big" id="pending">3</span></span></div>
+            </div>
+            <div class="msg amber" data-sync="err" hidden>آخر خطأ: انتهت صلاحية الجلسة — أعد تسجيل الدخول.<span class="code">HTTP 401 — 07 / 09 / 2026 · 21:40</span></div>
+            <div class="msg amber" data-sync="anom" hidden>
+              <h4>سجلات لم يقبلها الخادم: 3</h4>
+              <ul>
+                <li><span>نتيجة سباق لطير محذوف</span><span class="num">race · 2026-05-14</span></li>
+                <li><span>بيضة بلا زوج مرتبط</span><span class="num">egg · 2026-03-02</span></li>
+                <li><span>حدث صحي بتاريخ غير صالح</span><span class="num">health · 0000-00-00</span></li>
+              </ul>
+            </div>
+            <div class="btns desk3">
+              <button class="btn primary"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 13.6-5.7L20 8M20 4v4h-4M20 12a8 8 0 0 1-13.6 5.7L4 16M4 20v-4h4"/></svg>مزامنة الآن</button>
+              <button class="btn ghost">إيقاف المزامنة</button>
+              <button class="btn ghost">تسجيل الخروج</button>
+            </div>
+            <div class="hint">تسجيل الخروج يوقف المزامنة فقط — بياناتك تبقى على هذا الجهاز.</div>
+          </div>
+        </article>
+
+        <!-- 3. اللوفت -->
+        <article class="card">
+          <h3>اللوفت</h3>
+          <form style="margin-top:16px" onsubmit="return false">
+            <div class="field"><label for="ln">اسم اللوفت</label><input id="ln" type="text" value="لوفت الفحيص" placeholder="لوفت بلا اسم"></div>
+            <div class="field"><label for="lc">الموقع</label><input id="lc" type="text" value="الفحيص، البلقاء"></div>
+            <div class="btns"><button class="btn ink">حفظ</button></div>
+          </form>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ═══ بيانات ═══ -->
+    <section class="group" id="g-data">
+      <div class="gh"><h2>بيانات</h2><span class="c">فحص · تعلّم · نسخ احتياطي</span></div>
+      <div class="cards">
+
+        <!-- 4. duplicates -->
+        <article class="card">
+          <h3>طيور مكررة (نفس رقم الحلقة)</h3>
+          <div data-dup="clean" hidden>
+            <div class="msg ok" style="margin-top:14px"><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>لا توجد أرقام حلقات مكررة.</div>
+          </div>
+          <div data-dup="found" hidden>
+            <div class="sub">وُجد <b class="num">2</b> رقم حلقة مكرر. احتفظ بالسجل المرتبط واحذف النسخة الزائدة.</div>
+            <div class="dup">
+              <div class="ring"><span class="plate">JOR <span>24</span> 17352</span><span class="n">نسختان</span></div>
+              <div class="copy"><div><div class="name">برق</div><div class="links">هذا السجل مرتبط بـ <b>7</b> علاقات (نسب، سباقات، صحة)</div></div><button class="del">حذف</button></div>
+              <div class="copy"><div><div class="name">برق (نسخة)</div><div class="links none">بدون روابط معروفة</div></div><button class="del">حذف</button></div>
+            </div>
+            <div class="dup">
+              <div class="ring"><span class="plate">NL <span>23</span> 1408811</span><span class="n">نسختان</span></div>
+              <div class="copy"><div><div class="name">غيمة</div><div class="links">هذا السجل مرتبط بـ <b>3</b> علاقات (نسب)</div></div><button class="del">حذف</button></div>
+              <div class="copy"><div><div class="name">غيمه</div><div class="links">هذا السجل مرتبط بـ <b>1</b> علاقة (صحة)</div></div><button class="del">حذف</button></div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 5. teaching data -->
+        <article class="card">
+          <h3>تحميل بيانات تجريبية للتعلّم</h3>
+          <div class="sub">بيانات للتعلّم فقط. تُدمج مع بياناتك دون حذف شيء — ويمكن حذف طيورها لاحقًا كأي طير.</div>
+          <div class="ds">
+            <button><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14M4 19a2 2 0 0 0 2 2h14M8 7h8M8 11h6"/></svg></span><span><span class="t">مثال صغير</span><span class="d">٢٠ طيرًا</span></span></button>
+            <button><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14M4 19a2 2 0 0 0 2 2h14M8 7h8M8 11h6"/></svg></span><span><span class="t">لوفت تعليمي كامل</span><span class="d">٣٨ طيرًا، ٥ أجيال</span></span></button>
+          </div>
+        </article>
+
+        <!-- 6. backup / export -->
+        <article class="card span">
+          <h3>النسخ الاحتياطي والتصدير</h3>
+          <div class="two">
+            <div class="col">
+              <div class="stat"><span class="k">آخر تصدير:</span><span class="v">04 / 09 / 2026</span></div>
+              <div class="hint" style="margin-top:4px">نسخ تلقائي داخلي كل 12 ساعة (آخر 7 نسخ)</div>
+              <div class="btns"><button class="btn primary"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"/></svg>تصدير كل البيانات (JSON)</button></div>
+              <div class="subsec">
+                <h4>استرجاع نسخة تلقائية</h4>
+                <div class="inline">
+                  <div class="field"><label for="snap">النسخة</label>
+                    <select id="snap" class="num">
+                      <option>2026-09-08 09:00 · 34 طيرًا</option>
+                      <option>2026-09-07 21:00 · 34 طيرًا</option>
+                      <option>2026-09-07 09:00 · 33 طيرًا</option>
+                      <option>2026-09-06 21:00 · 33 طيرًا</option>
+                    </select>
+                  </div>
+                  <button class="btn ink" style="width:auto;min-height:56px">استيراد</button>
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="subsec" style="margin-top:0;padding-top:0;border-top:none">
+                <h4 style="margin-top:14px">استيراد ملف JSON</h4>
+                <div class="field"><label for="mode">طريقة الاستيراد</label>
+                  <select id="mode"><option>دمج (الأحدث يبقى)</option><option>استبدال كامل</option></select>
+                </div>
+                <div class="field"><label>الملف</label>
+                  <div class="file"><button class="pick">اختيار ملف</button><span class="fn">لم يُختر ملف — .json</span></div>
+                </div>
+                <div class="btns"><button class="btn ghost">استيراد</button></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ═══ متقدّم ═══ -->
+    <section class="group" id="g-adv">
+      <div class="gh"><h2>متقدّم</h2><span class="c">ميزات اختيارية · المطوّر · حول</span></div>
+      <div class="cards">
+
+        <!-- 7. scanner -->
+        <article class="card">
+          <h3>ماسح شهادات النسب الورقية</h3>
+          <div class="sub">ميزة اختيارية تتطلب خادم رؤية حاسوبية — يحلّل صور الشهادات الورقية ويقترح الأنساب.</div>
+          <div class="field" style="margin-top:16px"><label for="vis">عنوان خادم الرؤية (اختياري)</label><input id="vis" class="data" type="url" placeholder="https://vision.example.org"></div>
+          <div class="msg calm">غير مفعّل — التطبيق يعمل دون اتصال بشكل كامل.</div>
+        </article>
+
+        <!-- 9. about (placed beside scanner on desktop) -->
+        <article class="card">
+          <h3>حول التطبيق</h3>
+          <div class="ver"><span class="k">الإصدار</span><span class="v">zajil-v1.9.1</span></div>
+          <div class="hint">الإصدار المثبَّت فعليًا على هذا الجهاز، كما يبلّغ عنه عامل الخدمة — قد يختلف عن آخر إصدار منشور حتى تُحدَّث الصفحة.</div>
+        </article>
+
+        <!-- 8. developer (collapsed) -->
+        <details class="dev card span" style="padding:0">
+          <summary>
+            <div><h3>أدوات المطوّر</h3><div class="sub mute">فحوصات المحرّك · للمطوّرين فقط</div></div>
+            <span class="chev"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>
+          </summary>
+          <div class="body">
+            <h4>لوحة المطوّر — فحوصات المحرّك</h4>
+            <div class="devbtns">
+              <button><svg viewBox="0 0 24 24"><path d="M7 4l12 8-12 8z"/></svg>تشغيل الفحوصات</button>
+              <button><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg>فحص التصدير والاستيراد (ذهاب وإياب)</button>
+              <button><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 1 0-5.7l2.3-2.3a4 4 0 0 1 5.7 5.7l-1 1M14 10a4 4 0 0 1 0 5.7l-2.3 2.3a4 4 0 0 1-5.7-5.7l1-1"/></svg>فحص ترابط البيانات</button>
+            </div>
+            <pre class="out" data-dev="ok" hidden><span class="hd">zajil engine checks · v1.9.1 · 2026-09-08 09:14:02</span>
+<span class="dim">──────────────────────────────────────────────</span>
+<span class="ok">✔</span> pedigree.ancestors(5)          34/34 birds      12 ms
+<span class="ok">✔</span> coi.wright(depth=10)           25 computed       41 ms
+<span class="ok">✔</span> rings.unique                   2 collisions flagged (expected)
+<span class="ok">✔</span> breeding.eggs → chicks         17 linked          3 ms
+<span class="ok">✔</span> races.speed(m/min)             41 results         2 ms
+<span class="ok">✔</span> export → import roundtrip      1,284 records · sha256 match
+<span class="ok">✔</span> integrity.orphans              0 orphaned records
+<span class="dim">──────────────────────────────────────────────</span>
+<span class="ok">PASS</span>  7 passed · 0 failed · 71 ms</pre>
+            <pre class="out" data-dev="bad" hidden><span class="hd">zajil engine checks · v1.9.1 · 2026-09-08 09:16:40</span>
+<span class="dim">──────────────────────────────────────────────</span>
+<span class="ok">✔</span> pedigree.ancestors(5)          34/34 birds      12 ms
+<span class="ok">✔</span> coi.wright(depth=10)           25 computed       41 ms
+<span class="ok">✔</span> rings.unique                   2 collisions flagged (expected)
+<span class="bad">✘</span> breeding.eggs → chicks         <span class="bad">egg#e-2026-0311 → chick id missing</span>
+<span class="ok">✔</span> races.speed(m/min)             41 results         2 ms
+<span class="bad">✘</span> integrity.orphans              <span class="bad">2 orphaned: health#h-0419, race#r-0142</span>
+<span class="gold">⚠</span> export → import roundtrip      <span class="gold">skipped (integrity failed)</span>
+<span class="dim">──────────────────────────────────────────────</span>
+<span class="bad">FAIL</span>  4 passed · 2 failed · 1 skipped · 58 ms</pre>
+          </div>
+        </details>
+
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="tabbar">
+    <button><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>الطيور</button>
+    <button><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>التزاوج</button>
+    <button><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>السباقات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>الصحة</button>
+    <button><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>الإحصائيات</button>
+    <button class="on"><svg viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg>الأدوات</button>
+  </nav>
+  <nav class="rail">
+    <button><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>الطيور</button>
+    <button><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>التزاوج</button>
+    <button><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>السباقات</button>
+    <button><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>الصحة</button>
+    <button><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>الإحصائيات</button>
+    <button class="on"><svg viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg>الأدوات</button>
+  </nav>
+</div>
+
+<script>
+  const state = { sync:'in', dup:'found', dev:'ok' };
+  function apply(){
+    for (const k of Object.keys(state)){
+      document.querySelectorAll('[data-'+k+']').forEach(el => {
+        el.hidden = !el.dataset[k].split(' ').includes(state[k]);
+      });
+    }
+    document.getElementById('pending').textContent = state.sync==='err' ? '12' : state.sync==='anom' ? '3' : '3';
+    if (state.dev){ document.querySelector('details.dev').open = true; }
+  }
+  document.querySelector('.demo').addEventListener('click', e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    state[b.dataset.k]=b.dataset.v;
+    document.querySelectorAll('.demo button[data-k="'+b.dataset.k+'"]').forEach(x=>x.classList.toggle('on', x===b));
+    apply();
+    if (b.dataset.k==='dev') document.querySelector('details.dev').open = true;
+  });
+  apply();
+  document.querySelector('details.dev').open = false;
+
+  // index: smooth scroll + active tracking
+  const links=[...document.querySelectorAll('.index a')];
+  links.forEach(a=>a.addEventListener('click', e=>{
+    e.preventDefault();
+    const t=document.querySelector(a.getAttribute('href'));
+    const top=t.getBoundingClientRect().top + window.scrollY - (document.querySelector('.lofthead').offsetHeight + 8);
+    window.scrollTo({ top, behavior:'smooth' });
+  }));
+  const groups=[...document.querySelectorAll('.group')];
+  const io=new IntersectionObserver(es=>{
+    es.forEach(en=>{ if(en.isIntersecting){ links.forEach(a=>a.classList.toggle('on', a.getAttribute('href')==='#'+en.target.id)); } });
+  },{ rootMargin:'-45% 0px -50% 0px' });
+  groups.forEach(g=>io.observe(g));
+</script>
+</body>
+</html>

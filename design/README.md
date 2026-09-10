@@ -41,6 +41,7 @@ Changing a file in `approved/` is a design decision, not an edit.
 | Stats | `approved/stats-v1.html` | approved |
 | Shared states (component gallery) | `approved/shared-states-v1.html` | approved |
 | Pedigree certificate | `approved/certificate-v1.html` | approved |
+| Tools & settings | `approved/tools-v1.html` | approved |
 
 Where two versions of a screen are listed, **the highest `-vN` is the one to
 build**. Earlier versions stay in place unchanged so a decision already made
@@ -195,6 +196,33 @@ block can populate.
 **Photo bytes stay device-local**, so «الصورة على جهاز آخر» on a certificate
 is expected behaviour, not an error — the same rule the shared-states gallery
 specifies.
+
+**Tools & settings (`tools-v1.html`) — deliberate differences from today's
+app. Implement the spec, not the current behaviour.**
+
+1. **The nine cards are grouped into three sections** — إعدادات · بيانات ·
+   متقدّم — with an **in-page index** (`<nav class="index"
+   aria-label="فهرس الصفحة">`). Today `renderTools` appends all nine as a
+   flat scroll (`js/views/tools.js:22-23`).
+2. **The first card is renamed «الإعدادات».** Today it repeats the page
+   title: `settingsCard` uses `t('tools.title')` = «الأدوات والإعدادات» for
+   both the `<h1>` and its own `<h2>` (`js/views/tools.js:21,55`).
+3. **The developer panel is collapsed** behind a `<details>` disclosure,
+   **closed by default**. Today it is always expanded.
+4. **The example-data button says ٥ أجيال.** Today the button says «٦ أجيال»
+   (`bird.exampleLarge`) while the toast says «خمسة أجيال»
+   (`bird.exampleLoaded`) — ٥ is correct.
+
+**Sanctioned palette extension, scoped.** The developer console's dark
+surface uses `#5CD6A8` (ok) · `#FF8A78` (fail) · `#E6B84A` (warn) ·
+`#D8DEE3` (text). These are for that terminal only — a CSS comment in the
+file ("Developer console ONLY") says so, and it is the marker that
+distinguishes this 40,231-byte version from the 39,980-byte copy that lacks
+it. Standard tokens apply everywhere else.
+
+**On «الأنساب»:** it appears once, as prose in the scanner card («…ويقترح
+الأنساب»). RULED: the ban covers a nav *tab* named الأنساب, not the word —
+the tab bar and rail carry exactly the ruled six.
 
 **Design contract:** [`ZAJIL-DESIGN-KIT.md`](ZAJIL-DESIGN-KIT.md) — brief,
 inventory, responsive rules; brand `#128C6E`.
