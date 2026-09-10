@@ -40,6 +40,7 @@ Changing a file in `approved/` is a design decision, not an edit.
 | Breeding | `approved/breeding-v1.html` | approved |
 | Stats | `approved/stats-v1.html` | approved |
 | Shared states (component gallery) | `approved/shared-states-v1.html` | approved |
+| Pedigree certificate | `approved/certificate-v1.html` | approved |
 
 Where two versions of a screen are listed, **the highest `-vN` is the one to
 build**. Earlier versions stay in place unchanged so a decision already made
@@ -164,6 +165,36 @@ Two deliberate differences from today's app:
 need more contrast than the card tints provide. Both appear exactly once, and
 they are the only inline colour literals in the file; everything else comes
 from the tokens.
+
+**Pedigree certificate (`certificate-v1.html`) — a REDESIGN of a live
+feature**, not a new screen. The app already has a printable certificate at
+`#/cert/<id>`, reached from the pedigree view and the bird detail.
+
+**Preserved controls** (all three verified present in `js/views/cert.js`):
+the 3 / 4 / 5 generation toggle (`vs.gens`, default 5), the Arabic/English
+content switch that is **independent of the UI language** (`vs.lang` seeds
+from the UI language once, then follows the user), and browser print
+(`window.print()`).
+
+**New in the spec:** a **9:16 phone-shareable format** — the default preview
+on mobile, while A4 leads on desktop; **three independently toggleable
+photos** (bird / sire / dam); a **loft branding block** (loft name, breeder
+name, phone, website, logo) shown by default and toggleable; a **QR slot**
+for a future public bird page; and an options panel.
+
+**Mobile rule:** the A4 renders as a *scaled preview with tap-to-zoom*
+(«تكبير») — it must never become a horizontally overflowing document.
+
+**The branding block needs data the app does not have.** It auto-populates
+from loft settings, but **breeder name, phone, website and logo do not exist
+anywhere in the app today** — `js/views/tools.js:73-74` writes only
+`loft.name` and `loft.location`, and none of those four fields appears
+anywhere in `js/`. They need adding to the loft card in الأدوات before this
+block can populate.
+
+**Photo bytes stay device-local**, so «الصورة على جهاز آخر» on a certificate
+is expected behaviour, not an error — the same rule the shared-states gallery
+specifies.
 
 **Design contract:** [`ZAJIL-DESIGN-KIT.md`](ZAJIL-DESIGN-KIT.md) — brief,
 inventory, responsive rules; brand `#128C6E`.

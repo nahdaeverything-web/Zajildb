@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>زاجل — شهادة النسب</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brand:#128C6E; --brand-deep:#0E6F57; --brand-tint:#E3F4EE;
+    --ink:#101820; --ink-2:#4A5560; --ink-3:#8C97A2;
+    --page:#F5F7F8; --surface:#FFFFFF; --line:#E4E9ED;
+    --gold:#C9971F; --gold-tint:#FBF3DF; --danger:#C43D2B;
+    --r:20px; --r-btn:16px; --r-row:18px;
+    --f:'Alexandria', system-ui, sans-serif;
+    --f-mono:'IBM Plex Mono', monospace;
+    --gap:18px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:var(--f); color:var(--ink); background:#DDE2E6; min-height:100vh; line-height:1.45; }
+  a{ color:var(--brand-deep); } a:hover{ color:var(--brand); }
+  button, input{ font-family:var(--f); }
+  .mono{ font-family:var(--f-mono); direction:ltr; unicode-bidi:isolate; font-weight:600; white-space:nowrap; }
+
+  /* ═══════════ LAYOUT: options panel (start side) + preview ═══════════ */
+  .app{ display:flex; min-height:100vh; align-items:flex-start; }
+  .panel{ width:430px; flex:none; background:var(--page); min-height:100vh; position:sticky; top:0; display:flex; flex-direction:column; border-inline-end:1px solid var(--line); }
+  .preview{ flex:1; min-width:0; padding:28px 28px 48px; display:flex; flex-direction:column; gap:28px; }
+  @media (max-width:1099px){ .app{ flex-direction:column; } .panel{ width:100%; position:static; min-height:0; border:none; } }
+  /* phone */
+  @media (max-width:700px){
+    .app{ flex-direction:column-reverse; }
+    .preview{ padding:16px 16px 8px; gap:16px; background:var(--surface); border-bottom:1px solid var(--line); }
+    .vrow{ grid-template-columns:1fr; gap:20px; }
+    .variants{ display:none; }
+    .top{ padding:14px 16px 12px; }
+    .opts{ padding:18px 16px 140px; gap:24px; }
+    .seg button{ min-height:52px; font-size:16px; }
+    .row{ min-height:72px; padding:14px 16px; gap:12px; }
+    .sw{ width:60px; height:36px; } .sw::after{ width:30px; height:30px; } .sw.on::after{ transform:translateX(-24px); }
+    .pick{ min-height:44px; }
+    .fields label{ min-height:60px; }
+    .cta{ position:fixed; bottom:0; inset-inline:0; z-index:15; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); }
+    .btn{ min-height:56px; }
+    .zoom-btn{ display:inline-flex; }
+    .cap{ justify-content:space-between; align-items:center; }
+  }
+  .zoom-btn{ display:none; align-items:center; gap:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-weight:800; font-size:14px; min-height:44px; padding:0 16px; border-radius:999px; cursor:pointer; }
+  .zoom-btn svg{ width:18px; height:18px; stroke:currentColor; stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .stage.tappable{ cursor:zoom-in; }
+  /* full-screen zoom overlay (phone reading mode) */
+  .zoom{ display:none; position:fixed; inset:0; z-index:30; background:var(--page); flex-direction:column; }
+  .zoom.open{ display:flex; }
+  .zoom .zbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; background:var(--surface); border-bottom:1px solid var(--line); flex:none; }
+  .zoom .zbar .zt{ font-size:16px; font-weight:900; }
+  .zoom .zbar .zh{ font-size:12px; font-weight:700; color:var(--ink-3); margin-top:2px; }
+  .zoom .zscroll{ flex:1; overflow:auto; -webkit-overflow-scrolling:touch; padding:16px; touch-action:pan-x pan-y pinch-zoom; }
+  .zoom .zscroll .sheet{ transform-origin:top right; }
+  .zoom .zscroll.en .sheet{ transform-origin:top left; }
+  .zoom .zlvl{ display:flex; gap:6px; }
+  .zoom .zlvl button{ border:1px solid var(--line); background:var(--surface); color:var(--ink-2); font-weight:800; font-size:13px; min-width:48px; min-height:44px; border-radius:999px; cursor:pointer; }
+  .zoom .zlvl button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  /* ═══════════ OPTIONS PANEL (app screen, no tab bar) ═══════════ */
+  .top{ background:var(--surface); padding:16px 20px 14px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line); }
+  .icon-btn{ width:46px; height:46px; border:none; border-radius:14px; cursor:pointer; background:var(--page); color:var(--ink); display:grid; place-items:center; flex:none; }
+  .icon-btn svg{ width:22px; height:22px; stroke:currentColor; stroke-width:2.3; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .top .ttl{ font-size:22px; font-weight:900; line-height:1; }
+  .top .crumb{ font-size:12.5px; font-weight:700; color:var(--ink-3); margin-top:4px; display:flex; gap:8px; align-items:center; }
+  .opts{ padding:20px 20px 200px; display:flex; flex-direction:column; gap:26px; overflow:auto; flex:1; }
+  .sec .lab{ font-size:13px; font-weight:800; color:var(--ink-3); margin-bottom:10px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:2px 12px; }
+  .sec .lab .hint{ font-size:11.5px; font-weight:600; }
+  .seg{ display:flex; background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:4px; gap:2px; }
+  .seg button{ flex:1; border:none; background:none; font-weight:800; font-size:15px; color:var(--ink-2); padding:0 14px; min-height:44px; border-radius:999px; cursor:pointer; white-space:nowrap; }
+  .seg button.on{ background:var(--ink); color:#fff; }
+  .seg button .mono{ font-size:14px; }
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; }
+  .row{ display:flex; align-items:center; gap:14px; padding:14px 16px; min-height:64px; border-bottom:1px solid var(--line); }
+  .row:last-child{ border-bottom:none; }
+  .row .tx{ flex:1; min-width:0; }
+  .row .t{ font-size:15.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .d{ font-size:12.5px; font-weight:600; color:var(--ink-2); margin-top:2px; }
+  .row .d.mono{ font-size:12px; }
+  .thumb{ width:52px; height:52px; border-radius:14px; background:var(--page); border:1px solid var(--line); display:grid; place-items:center; flex:none; }
+  .thumb span{ font-family:var(--f-mono); font-size:9px; color:var(--ink-3); direction:ltr; }
+  .thumb.empty{ border-style:dashed; }
+  .thumb svg{ width:20px; height:20px; stroke:var(--ink-3); stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .sw{ width:54px; height:32px; border-radius:999px; border:none; background:var(--line); position:relative; cursor:pointer; flex:none; transition:background .15s; }
+  .sw::after{ content:''; position:absolute; top:3px; inset-inline-start:3px; width:26px; height:26px; border-radius:999px; background:#fff; transition:transform .15s; }
+  .sw.on{ background:var(--brand); } .sw.on::after{ transform:translateX(-22px); }
+  .pick{ border:none; background:var(--brand-tint); color:var(--brand-deep); font-weight:800; font-size:13px; padding:0 14px; min-height:40px; border-radius:999px; cursor:pointer; white-space:nowrap; flex:none; }
+  .row.off .thumb, .row.off .t, .row.off .d, .row.off .pick{ opacity:.45; }
+  .row.off .pick{ pointer-events:none; }
+  .away-row .d{ color:var(--ink-2); display:flex; gap:6px; align-items:center; }
+  .away-row .d svg{ width:14px; height:14px; stroke:var(--ink-3); stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .fields{ display:flex; flex-direction:column; }
+  .fields label{ display:flex; align-items:center; gap:12px; padding:0 16px; min-height:56px; border-bottom:1px solid var(--line); }
+  .fields label:last-child{ border-bottom:none; }
+  .fields label span{ font-size:12px; font-weight:800; color:var(--ink-3); width:96px; flex:none; }
+  .fields input{ flex:1; min-width:0; border:none; background:none; font-size:15px; font-weight:700; color:var(--ink); outline:none; padding:14px 0; }
+  .fields input.mono{ font-weight:600; font-size:14px; text-align:end; }
+  .fields input:focus{ box-shadow:inset 0 -3px 0 var(--brand); }
+  .fields .logo-row{ justify-content:space-between; }
+  .cta{ position:sticky; bottom:0; padding:14px 20px 20px; background:var(--page); border-top:1px solid var(--line); display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .btn{ border-radius:var(--r-btn); font-weight:800; cursor:pointer; min-height:56px; font-size:17px; display:flex; align-items:center; justify-content:center; gap:10px; }
+  .btn svg{ width:22px; height:22px; stroke:currentColor; stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .btn-outline{ border:2px solid var(--ink); background:transparent; color:var(--ink); }
+  .btn-primary{ border:none; background:var(--brand); color:#fff; }
+  @media (hover:hover){
+    .icon-btn:hover{ background:var(--brand-tint); }
+    .btn-outline:hover{ background:var(--ink); color:#fff; } .btn-primary:hover{ background:var(--brand-deep); }
+    .pick:hover{ background:var(--brand); color:#fff; }
+  }
+  button:focus-visible, input:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
+  .toast{ position:fixed; bottom:24px; inset-inline:0; margin-inline:auto; width:max-content; max-width:90vw; background:var(--ink); color:#fff; font-size:14.5px; font-weight:700; padding:14px 20px; border-radius:var(--r-btn); opacity:0; transform:translateY(8px); transition:.2s; pointer-events:none; z-index:20; }
+  .toast.show{ opacity:1; transform:none; }
+
+  /* ═══════════ PREVIEW STAGE ═══════════ */
+  .stage{ position:relative; width:100%; }
+  .stage > .sheet{ position:absolute; top:0; inset-inline-start:0; transform-origin:top right; }
+  .stage > .sheet.en{ transform-origin:top left; }
+  .cap{ font-size:12.5px; font-weight:700; color:var(--ink-2); display:flex; gap:14px; align-items:baseline; }
+  .cap b{ font-size:15px; font-weight:900; color:var(--ink); }
+  .variants{ display:flex; flex-direction:column; gap:12px; }
+  .vrow{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:16px; }
+  .v .cap{ margin-bottom:8px; }
+
+  /* ═══════════ THE SHEET ═══════════ */
+  .sheet{ background:var(--surface); display:flex; flex-direction:column; flex:none; direction:rtl; }
+  .sheet.en{ direction:ltr; }
+  .sheet .en-t{ display:none; } .sheet.en .en-t{ display:inline; } .sheet.en .ar-t{ display:none; }
+  .sheet .en-t.blk, .sheet .ar-t.blk{ display:block; } .sheet.en .ar-t.blk{ display:none; } .sheet:not(.en) .en-t.blk{ display:none; }
+
+  .a4{ width:297mm; height:210mm; padding:9mm 10mm 8mm; gap:16px; }
+
+  .head{ display:flex; align-items:flex-end; justify-content:space-between; gap:24px; padding-bottom:14px; border-bottom:3px solid var(--gold); }
+  .head .id{ display:flex; align-items:center; gap:14px; }
+  .mark{ width:52px; height:52px; border-radius:16px; background:var(--brand); display:grid; place-items:center; flex:none; }
+  .mark svg{ width:32px; height:32px; }
+  .head h1{ font-size:34px; font-weight:900; line-height:1; letter-spacing:-0.3px; }
+  .head .sub{ font-size:12.5px; font-weight:700; color:var(--ink-3); margin-top:6px; }
+  .head .meta{ display:flex; gap:28px; text-align:start; }
+  .head .meta .k{ font-size:11px; font-weight:800; color:var(--ink-3); }
+  .head .meta .v{ font-size:14px; font-weight:600; color:var(--ink); margin-top:3px; white-space:nowrap; }
+
+  /* tree — approved pedigree geometry */
+  .tree{ flex:1; min-height:0; display:flex; flex-direction:column; }
+  .ruler{ display:flex; padding-bottom:8px; }
+  .ruler > div{ flex:1; padding-inline-start:var(--gap); font-size:11px; font-weight:800; color:var(--ink-3); }
+  .ruler > div.r1{ flex:1.45; padding-inline-start:0; }
+  .gens{ flex:1; min-height:0; display:flex; }
+  .gen{ flex:1; min-width:0; padding-inline-start:var(--gap); display:flex; flex-direction:column; }
+  .gen.g1{ flex:1.45; padding-inline-start:0; justify-content:center; }
+  .sheet.d3 .g4, .sheet.d3 .g5, .sheet.d3 .r4, .sheet.d3 .r5, .sheet.d3 .b4, .sheet.d3 .b5,
+  .sheet.d4 .g5, .sheet.d4 .r5, .sheet.d4 .b5{ display:none; }
+  .pair{ flex:1; display:flex; flex-direction:column; position:relative; min-height:0; }
+  .pair::before{ content:''; position:absolute; inset-inline-start:calc(-1 * var(--gap)); top:25%; height:50%; border-inline-start:1px solid var(--line); }
+  .slot{ flex:1; display:flex; align-items:center; position:relative; min-height:0; padding:2px 0; }
+  .slot::before{ content:''; position:absolute; inset-inline-start:calc(-1 * var(--gap)); width:var(--gap); top:50%; border-top:1px solid var(--line); }
+
+  .node{ width:100%; background:var(--surface); border:1px solid var(--line); display:flex; flex-direction:column; justify-content:center; color:var(--ink); text-align:start; min-height:0; min-width:0; }
+  .node .nm{ font-weight:800; line-height:1.15; }
+  .node .rg{ font-family:var(--f-mono); font-weight:600; color:var(--ink-2); direction:ltr; unicode-bidi:isolate; text-align:end; white-space:nowrap; }
+  .node .ci{ display:flex; align-items:center; gap:6px; }
+  .node .ci .dot{ flex:none; width:7px; height:7px; border-radius:999px; background:var(--gold); }
+  .n2{ border-radius:18px; padding:12px 14px; flex-direction:row; align-items:center; }
+  .n2 .tx{ display:flex; flex-direction:column; gap:3px; min-width:0; flex:1; }
+  .n2 .nm{ font-size:22px; } .n2 .rg{ font-size:12.5px; }
+  .n3{ border-radius:16px; padding:9px 13px; gap:2px; } .n3 .nm{ font-size:17px; } .n3 .rg{ font-size:11.5px; }
+  .n4{ border-radius:14px; padding:6px 11px; gap:1px; } .n4 .nm{ font-size:13.5px; } .n4 .rg{ font-size:10.5px; }
+  .n5{ border-radius:12px; padding:4px 10px; flex-direction:row; align-items:center; justify-content:space-between; gap:8px; } .n5 .nm{ font-size:11.5px; } .n5 .rg{ font-size:9.5px; }
+  .node.unknown{ background:var(--page); border:1px dashed var(--line); flex-direction:row; align-items:center; }
+  .node.unknown .nm{ font-weight:700; color:var(--ink-3); }
+  .a4.d3 .n3{ padding:14px 16px; border-radius:18px; } .a4.d3 .n3 .nm{ font-size:22px; } .a4.d3 .n3 .rg{ font-size:12.5px; }
+  .a4.d4 .n4{ padding:9px 13px; } .a4.d4 .n4 .nm{ font-size:16px; } .a4.d4 .n4 .rg{ font-size:11.5px; }
+  .a4 .n2.has-photo{ padding:10px 12px; } .a4 .n2.has-photo .nm{ font-size:18px; } .a4 .n2.has-photo .rg{ font-size:11px; }
+  .a4.d5 .n2.has-photo .nm{ font-size:15px; } .a4.d5 .n2.has-photo .rg{ font-size:10px; }
+  .a4.d5 .n2.has-photo .photo{ width:52px; height:52px; margin-inline-end:10px; }
+
+  /* subject */
+  .n1{ border:2px solid var(--ink); border-radius:var(--r); padding:18px; }
+  .n1 .big{ font-size:44px; font-weight:900; line-height:1.05; }
+  .n1 .plate{ margin-top:10px; align-self:flex-start; }
+  .n1 .facts{ display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
+  .facts .k{ font-size:11px; font-weight:800; color:var(--ink-3); }
+  .facts .v{ font-size:14.5px; font-weight:800; margin-top:2px; }
+  .facts .v.mono{ font-size:12.5px; letter-spacing:-0.2px; }
+
+  .plate{ display:inline-flex; align-items:stretch; direction:ltr; border-radius:10px; overflow:hidden; background:var(--ink); }
+  .plate .yr{ background:var(--gold); color:#fff; font-family:var(--f-mono); font-weight:600; font-size:11px; padding:0 8px; display:grid; place-items:center; }
+  .plate .no{ color:#fff; font-family:var(--f-mono); font-weight:600; font-size:14px; letter-spacing:1px; padding:7px 12px; }
+
+  /* photos — flat placeholder slots */
+  .photo{ background:var(--page); border:1px solid var(--line); border-radius:14px; overflow:hidden; position:relative; display:grid; place-items:center; }
+  .photo span{ font-family:var(--f-mono); font-size:10px; color:var(--ink-3); direction:ltr; }
+  .photo .aw{ display:none; }
+  .photo.away{ border-style:dashed; } .photo.away span{ display:none; } .photo.away .aw{ display:grid; place-items:center; }
+  .photo.away .aw svg{ width:18px; height:18px; stroke:var(--ink-3); stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .n1 .photo{ aspect-ratio:16/9; margin-bottom:14px; }
+  .n2 .photo{ width:64px; height:64px; flex:none; border-radius:12px; margin-inline-end:12px; }
+  .n2 .photo span{ font-size:8px; }
+  .away-cap{ font-size:10px; font-weight:700; color:var(--ink-3); }
+
+  /* footer */
+  .foot{ display:grid; grid-template-columns:auto 1fr auto auto; gap:22px; align-items:stretch; padding-top:16px; border-top:1px solid var(--line); }
+  .coi{ background:var(--brand); color:#fff; border-radius:var(--r); padding:14px 20px 12px; display:flex; flex-direction:column; justify-content:center; min-width:200px; }
+  .coi .n{ font-size:46px; font-weight:900; line-height:1; direction:ltr; font-variant-numeric:tabular-nums; }
+  .coi .l{ font-size:13px; font-weight:800; margin-top:8px; }
+  .coi .s{ font-size:11px; font-weight:600; margin-top:2px; }
+  .verify{ display:flex; flex-direction:column; justify-content:center; gap:8px; min-width:0; }
+  .verify .vrow{ display:flex; align-items:center; gap:9px; font-size:16px; font-weight:800; }
+  .verify .vrow svg{ width:22px; height:22px; flex:none; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; background:var(--brand); border-radius:999px; padding:4px; }
+  .verify .issued{ font-size:12px; font-weight:700; color:var(--ink-2); }
+  .verify .note{ font-size:11px; font-weight:600; color:var(--ink-3); }
+  .loft{ display:flex; align-items:center; gap:14px; padding-inline:22px; border-inline:1px solid var(--line); }
+  .sheet.nobrand .loft{ display:none; }
+  .loft .logo{ width:60px; height:60px; border-radius:16px; background:var(--page); border:1px solid var(--line); display:grid; place-items:center; flex:none; }
+  .loft .logo span{ font-family:var(--f-mono); font-size:9px; color:var(--ink-3); direction:ltr; }
+  .loft .nm{ font-size:19px; font-weight:900; line-height:1.1; }
+  .loft .br{ font-size:12.5px; font-weight:700; color:var(--ink-2); margin-top:3px; }
+  .loft .ct{ font-size:12px; font-weight:600; color:var(--ink-2); margin-top:5px; display:flex; gap:12px; flex-wrap:wrap; }
+  .qr{ display:flex; flex-direction:column; align-items:center; gap:6px; width:104px; }
+  .qr .box{ width:92px; height:92px; border-radius:14px; border:1px dashed var(--ink-3); background:var(--page); display:grid; place-items:center; }
+  .qr .box span{ font-family:var(--f-mono); font-size:10px; color:var(--ink-3); direction:ltr; }
+  .qr .cap{ font-size:10px; font-weight:700; color:var(--ink-3); text-align:center; line-height:1.3; }
+
+  /* ═══════════ 9:16 STORY (designed at 405×720 = 1080×1920 ÷ 2.667) ═══════════ */
+  .story{ width:405px; height:720px; padding:18px; gap:10px; }
+  .story .head{ padding-bottom:9px; gap:12px; }
+  .story .mark{ width:34px; height:34px; border-radius:11px; } .story .mark svg{ width:21px; height:21px; }
+  .story .head .id{ gap:10px; }
+  .story .head h1{ font-size:21px; white-space:nowrap; } .story .head .id{ flex:none; }
+  .story .head .sub{ font-size:9.5px; margin-top:3px; }
+  .story .head .meta{ flex:1; min-width:0; flex-direction:column; align-items:flex-end; gap:2px; text-align:end; } .story .head .meta .k{ font-size:8.5px; } .story .head .meta .v{ font-size:10.5px; margin-top:0; }
+  .story .head .meta > div:first-child{ display:none; }
+  .story .head .meta .depth{ display:none; }
+  .story .subj{ display:flex; gap:12px; align-items:center; }
+  .story .subj .photo{ width:84px; height:84px; flex:none; margin:0; aspect-ratio:auto; }
+  .story .subj .big{ font-size:34px; font-weight:900; line-height:1; }
+  .story .subj .plate{ margin-top:7px; align-self:flex-start; }
+  .story .plate .yr{ font-size:9px; padding:0 6px; } .story .plate .no{ font-size:11.5px; padding:5px 9px; letter-spacing:.6px; }
+  .story .facts{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:8px 0 0; border-top:1px solid var(--line); }
+  .story .facts .k{ font-size:8.5px; } .story .facts .v{ font-size:11.5px; margin-top:0; } .story .facts .v.mono{ font-size:10px; letter-spacing:-0.3px; }
+  .story .bands{ flex:1; min-height:0; display:flex; flex-direction:column; gap:7px; }
+  .story .band{ display:flex; flex-direction:column; flex:0 0 auto; }
+  .story .b5, .story.d4 .b4, .story.d3 .b3{ flex:1; min-height:0; }
+  .story.d5 .b5{ min-height:110px; }
+  .story .subj .photo{ width:72px; height:72px; }
+  .story .facts{ padding-top:6px; }
+  .story .band .bl{ margin-bottom:2px; }
+  .story .band .bl{ font-size:9px; font-weight:800; color:var(--ink-3); margin-bottom:3px; display:flex; justify-content:space-between; white-space:nowrap; gap:6px; }
+  .story .band .bl i{ font-style:normal; font-weight:600; }
+  .story .grid{ flex:1; display:grid; gap:5px; grid-auto-rows:auto; }
+  .story .b5 .grid, .story.d4 .b4 .grid, .story.d3 .b3 .grid{ grid-auto-rows:minmax(0,1fr); min-height:0; }
+  .story .b2 .grid{ grid-template-columns:1fr 1fr; }
+  .story .b3 .grid{ grid-template-columns:1fr 1fr; }
+  .story .b4 .grid{ grid-template-columns:repeat(4,1fr); }
+  .story .b5 .grid{ grid-template-columns:repeat(4,1fr); }
+  .story .node{ min-height:0; align-self:stretch; }
+  .story .node .nm, .story .node .rg, .story .away-cap{ line-height:1.15; }
+  .story .coi .s{ display:none; }
+  .story .n2{ border-radius:14px; padding:5px 10px; } .story .n2 .nm{ font-size:14px; } .story .n2 .rg{ font-size:9.5px; }
+  .story .n2 .photo{ width:22px; height:22px; border-radius:6px; margin-inline-end:8px; } .story .n2 .photo span{ font-size:5px; }
+  .story.d5 .n2{ position:relative; } .story.d5 .n2 .photo{ position:absolute; inset-inline-end:8px; top:50%; transform:translateY(-50%); margin:0; } .story.d5 .n2.has-photo .tx{ padding-inline-end:28px; }
+  .story .n2 .photo.away .aw svg{ width:14px; height:14px; }
+  .story .n2 .tx{ gap:1px; } .story .away-cap{ font-size:7.5px; }
+  .story .n3{ border-radius:12px; padding:3px 8px; gap:1px; } .story .n3 .nm{ font-size:12px; } .story .n3 .rg{ font-size:8.5px; }
+  .story .n4{ border-radius:10px; padding:3px 7px; gap:1px; flex-direction:column; } .story .n4 .nm{ font-size:9.5px; } .story .n4 .rg{ font-size:7px; }
+  .story .n5{ border-radius:8px; padding:2px 6px; flex-direction:column; align-items:flex-start; justify-content:center; gap:0; } .story .n5 .nm{ font-size:8.5px; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; } .story .n5 .rg{ font-size:6.5px; line-height:1.1; letter-spacing:-0.2px; }
+  .story .n5 .nm{ flex:none; }
+  .story .node .ci .dot{ width:5px; height:5px; } .story .node .ci{ gap:4px; line-height:1.1; min-width:0; }
+  .story.d3 .n2{ padding:12px 14px; border-radius:18px; } .story.d3 .n2 .nm{ font-size:22px; } .story.d3 .n2 .rg{ font-size:12.5px; } .story.d3 .n2 .photo{ width:56px; height:56px; }
+  .story.d3 .n3{ padding:10px 14px; border-radius:16px; gap:2px; } .story.d3 .n3 .nm{ font-size:18px; } .story.d3 .n3 .rg{ font-size:11px; }
+  .story.d4 .n2{ padding:8px 12px; } .story.d4 .n2 .nm{ font-size:17px; } .story.d4 .n2 .rg{ font-size:10.5px; } .story.d4 .n2 .photo{ width:44px; height:44px; }
+  .story.d4 .n3{ padding:6px 11px; } .story.d4 .n3 .nm{ font-size:14px; } .story.d4 .n3 .rg{ font-size:9.5px; }
+  .story.d4 .n4{ padding:5px 9px; } .story.d4 .n4 .nm{ font-size:11.5px; } .story.d4 .n4 .rg{ font-size:8px; }
+  .story .foot{ display:flex; gap:10px; padding-top:10px; }
+  .story .coi{ min-width:0; width:150px; flex:none; padding:8px 12px 7px; border-radius:14px; }
+  .story .coi .n{ font-size:28px; } .story .coi .l{ font-size:8.5px; margin-top:4px; white-space:nowrap; } .story .coi .s{ font-size:7.5px; }
+  .story .verify{ gap:4px; }
+  .story .verify .vrow{ font-size:11px; gap:6px; white-space:nowrap; } .story .verify .vrow svg{ width:16px; height:16px; padding:3px; stroke-width:3.4; }
+  .story .verify .issued{ font-size:8.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .story .verify .note{ display:none; }
+  .story .verify .issued .loftname{ display:none; }
+  .story .brandrow{ display:flex; gap:10px; align-items:center; padding-top:9px; border-top:1px solid var(--line); }
+  .story .loft{ flex:1; min-width:0; padding:0; border:none; gap:10px; }
+  .story .loft .logo{ width:40px; height:40px; border-radius:11px; } .story .loft .logo span{ font-size:7px; }
+  .story .loft .nm{ font-size:13.5px; } .story .loft .br{ font-size:9.5px; margin-top:1px; } .story .loft .ct{ font-size:8.5px; gap:8px; margin-top:2px; }
+  .story .qr{ width:auto; flex-direction:row; gap:8px; }
+  .story .qr .box{ width:44px; height:44px; border-radius:10px; } .story .qr .box span{ font-size:7px; }
+  .story .qr .cap{ font-size:7.5px; text-align:start; }
+  .story.nobrand .brandrow{ justify-content:flex-end; }
+
+  @media print{
+    body{ background:#fff; }
+    .panel, .variants, .cap, .toast, .zoom, .zoom-btn{ display:none !important; }
+    .app{ display:block; } .preview{ padding:0; display:block; }
+    .stage{ width:auto !important; height:auto !important; }
+    .stage > .sheet{ position:static; transform:none !important; }
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+</style>
+<style id="pagesize">@page{ size:A4 landscape; margin:0; }</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ═══════════ OPTIONS PANEL ═══════════ -->
+  <aside class="panel" id="panel">
+    <div class="top">
+      <button class="icon-btn" aria-label="رجوع"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div>
+        <div class="ttl">شهادة النسب</div>
+        <div class="crumb">برق <span class="mono">JOR 24 17352</span></div>
+      </div>
+    </div>
+    <div class="opts">
+      <div class="sec">
+        <div class="lab">التنسيق</div>
+        <div class="seg" data-key="format"><button data-v="a4" class="on">A4 عرضي</button><button data-v="story">صورة للهاتف <span class="mono">9:16</span></button></div>
+      </div>
+      <div class="sec">
+        <div class="lab">الأجيال</div>
+        <div class="seg" data-key="depth"><button data-v="3"><span class="mono">3</span></button><button data-v="4"><span class="mono">4</span></button><button data-v="5" class="on"><span class="mono">5</span></button></div>
+      </div>
+      <div class="sec">
+        <div class="lab">لغة المحتوى <span class="hint">مستقلة عن لغة التطبيق</span></div>
+        <div class="seg" data-key="lang"><button data-v="ar" class="on">عربي</button><button data-v="en">English</button></div>
+      </div>
+      <div class="sec">
+        <div class="lab">الصور <span class="hint">تبقى الملفات على جهازك</span></div>
+        <div class="card">
+          <div class="row off" id="r-bird">
+            <button class="sw" data-photo="bird" aria-label="صورة الطائر"></button>
+            <div class="thumb empty"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-4-8 7"/></svg></div>
+            <div class="tx"><div class="t">الطائر · برق</div><div class="d">لا صورة بعد</div></div>
+            <button class="pick">اختيار صورة</button>
+          </div>
+          <div class="row off" id="r-sire">
+            <button class="sw" data-photo="sire" aria-label="صورة الأب"></button>
+            <div class="thumb"><span>sire</span></div>
+            <div class="tx"><div class="t">الأب · الصاعقة</div><div class="d">من ملف الطائر</div></div>
+            <button class="pick">تغيير</button>
+          </div>
+          <div class="row off away-row" id="r-dam">
+            <button class="sw" data-photo="dam" aria-label="صورة الأم"></button>
+            <div class="thumb empty"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 17h.01"/></svg></div>
+            <div class="tx"><div class="t">الأم · غيمة</div><div class="d"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 17h.01"/></svg>الصورة على جهاز آخر</div></div>
+            <button class="pick">اختيار هنا</button>
+          </div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="lab">بيانات اللوفت <span class="hint">من إعدادات اللوفت · تُعدَّل قبل الطباعة</span></div>
+        <div class="card">
+          <div class="row" id="r-brand">
+            <button class="sw on" data-brand aria-label="إظهار بيانات اللوفت"></button>
+            <div class="tx"><div class="t">إظهار بيانات اللوفت على الشهادة</div><div class="d">بطاقة المربّي على الطائر المباع</div></div>
+          </div>
+          <div class="fields" id="fields">
+            <label><span>اسم اللوفت</span><input data-f="loft" value="لوفت الفحيص"></label>
+            <label><span>اسم المربّي</span><input data-f="breeder" value="خالد الحدّاد"></label>
+            <label><span>الهاتف</span><input class="mono" data-f="phone" value="+962 79 512 3344"></label>
+            <label><span>الموقع الإلكتروني</span><input class="mono" data-f="site" value="fuheis-loft.jo"></label>
+            <label class="logo-row"><span>شعار اللوفت</span><div class="thumb"><span>logo</span></div><button class="pick">تغيير</button></label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cta">
+      <button class="btn btn-outline" id="share"><svg viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"/></svg>مشاركة</button>
+      <button class="btn btn-primary" onclick="window.print()"><svg viewBox="0 0 24 24"><path d="M7 9V4h10v5M7 18H5a1 1 0 0 1-1-1v-6h16v6a1 1 0 0 1-1 1h-2M7 15h10v5H7z"/></svg>طباعة</button>
+    </div>
+  </aside>
+
+  <!-- ═══════════ PREVIEW ═══════════ -->
+  <main class="preview">
+    <div class="cap" id="maincap"></div>
+    <div class="stage" id="main"></div>
+    <div class="variants" id="variants">
+      <div class="cap"><b>حالات الصور</b>بلا صور · صورة واحدة · ثلاث صور (الأم على جهاز آخر)</div>
+      <div class="vrow">
+        <div class="v"><div class="cap">0 صور</div><div class="stage" id="v0"></div></div>
+        <div class="v"><div class="cap">صورة واحدة — الطائر</div><div class="stage" id="v1"></div></div>
+        <div class="v"><div class="cap">ثلاث صور</div><div class="stage" id="v3"></div></div>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<div class="zoom" id="zoom" role="dialog" aria-label="معاينة مكبرة">
+  <div class="zbar">
+    <button class="icon-btn" id="zclose" aria-label="إغلاق"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div style="flex:1;min-width:0"><div class="zt">معاينة مكبرة</div><div class="zh">اسحب للتنقل · قرّب بإصبعين</div></div>
+    <div class="zlvl" id="zlvl"><button data-z="1">100%</button><button data-z="0.7" class="on">70%</button><button data-z="fit">ملاءمة</button></div>
+  </div>
+  <div class="zscroll" id="zscroll"></div>
+</div>
+
+<script>
+/* ───────── data (loft record) ───────── */
+const BIRD = { ar:'برق', en:'Barq', ring:'JOR 24 17352', yr:'24', hatch:'18 / 03 / 2024', sex:['ذكر','Cock'], color:['أزرق مخطط','Blue bar'], strain:['يانسن','Janssen'] };
+const G = { // sire first (top), dam second; null = unknown; 4th field = common ancestor (COI)
+  2: [['الصاعقة','Al-Saiqa','JOR 21 08841'],['غيمة','Ghaima','JOR 22 04117']],
+  3: [['النشمي','Al-Nashmi','JOR 18 02290'],['فيروز','Fairuz','NL 19 1447206'],['سلطان','Sultan','JOR 19 05512'],['ياقوت','Yaqut','BE 20 6034981']],
+  4: [['عنتر','Antar','JOR 15 03318'],['جوهرة','Jawhara','JOR 16 01102'],['ذهب','Dhahab','NL 16 1338705'],['أنيسة','Anisa','NL 17 1402884'],
+      ['مهند','Muhannad','JOR 16 04471'],['نجمة','Najma','JOR 17 02845'],['عاصف','Asef','BE 17 6011240'],['مسك','Misk','BE 18 6027113']],
+  5: [['الفاتح','Al-Fateh','JOR 12 00874',1],['خنساء','Khansa','JOR 13 01560'],['سيف','Saif','JOR 13 02201'],['دلال','Dalal','JOR 14 00933'],
+      ['برنس','Prince','NL 13 1201884'],null,null,null,
+      ['الفاتح','Al-Fateh','JOR 12 00874',1],['سمراء','Samra','JOR 13 04012'],['مارد','Mared','JOR 14 06621'],['لؤلؤة','Lulua','JOR 15 03980'],
+      ['هيبة','Haiba','BE 14 6100392'],null,['الوسمي','Al-Wasmi','BE 15 6208774'],null]
+};
+const LABELS = { 1:['الطائر','Subject'], 2:['الوالدان','Parents'], 3:['الأجداد','Grandparents'], 4:['الأجداد الكبار','Great-grandparents'], 5:['الجيل الخامس','5th generation'] };
+const loft = { loft:'لوفت الفحيص', loftEn:'Al-Fuheis Loft', breeder:'خالد الحدّاد', breederEn:'Khaled Al-Haddad', phone:'+962 79 512 3344', site:'fuheis-loft.jo' };
+const isPhone = () => matchMedia('(max-width:700px)').matches;
+const state = { format: isPhone() ? 'story' : 'a4', depth:5, lang:'ar', photos:{bird:false,sire:false,dam:false}, away:{dam:true}, brand:true };
+
+/* ───────── sheet renderer ───────── */
+const t = (ar,en,blk)=>`<span class="ar-t${blk?' blk':''}">${ar}</span><span class="en-t${blk?' blk':''}">${en}</span>`;
+const MARK = '<div class="mark"><svg viewBox="0 0 100 100" fill="#fff"><path d="M18 78c14 4 34 4 46-4 10-7 16-18 17-30 0-4-2-6-5-6-2 0-4 1-5 3l-4 8c-6 10-16 16-28 18-8 1-15 5-21 11z"/><path d="M62 34c3-6 9-9 15-8 3 0 5 2 5 5 0 2-1 3-3 4l-6 2c-4 2-8 1-11-3z"/><path d="M80 36l8 2-8 2z"/></svg></div>';
+const AWAY = '<span class="aw"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 17h.01"/></svg></span>';
+const photo = (who, o) => o.photos[who] ? `<div class="photo${o.away[who]?' away':''}"><span>${who} photo</span>${AWAY}</div>` : '';
+
+function node(g,b,i,o){
+  if(!b) return `<div class="node n${g} unknown"><span class="nm">${t('غير معروف','Unknown')}</span></div>`;
+  const nm = `<span class="nm">${t(b[0],b[1])}</span>`;
+  const name = b[3] ? `<span class="ci"><i class="dot"></i>${nm}</span>` : nm;
+  if(g===2){
+    const who = i===0?'sire':'dam', ph = photo(who,o);
+    const cap = ph && o.away[who] ? `<span class="away-cap">${t('الصورة على جهاز آخر','Photo is on another device')}</span>` : '';
+    return `<div class="node n2${ph?' has-photo':''}">${ph}<div class="tx">${name}<span class="rg">${b[2]}</span>${cap}</div></div>`;
+  }
+  return `<div class="node n${g}">${name}<span class="rg">${b[2]}</span></div>`;
+}
+const facts = () => `<div class="facts">
+  <div><div class="k">${t('الجنس','Sex')}</div><div class="v">${t(...BIRD.sex)}</div></div>
+  <div><div class="k">${t('تاريخ الفقس','Hatched')}</div><div class="v mono">${BIRD.hatch}</div></div>
+  <div><div class="k">${t('اللون','Colour')}</div><div class="v">${t(...BIRD.color)}</div></div>
+  <div><div class="k">${t('السلالة','Strain')}</div><div class="v">${t(...BIRD.strain)}</div></div></div>`;
+const plate = () => `<span class="plate"><span class="yr">${BIRD.yr}</span><span class="no">${BIRD.ring}</span></span>`;
+const head = (o) => `<header class="head">
+  <div class="id">${MARK}<div><h1>${t('شهادة النسب','Pedigree Certificate')}</h1><div class="sub">${t('زاجل · سجل اللوفت الموثق','Zajil · verified loft record')}</div></div></div>
+  <div class="meta">
+    <div><div class="k">${t('رقم الشهادة','Certificate no.')}</div><div class="v mono">ZJ-2026-00417</div></div>
+    <div><div class="k">${t('تاريخ الإصدار','Issued')}</div><div class="v mono">09 / 09 / 2026</div></div>
+    <div class="depth"><div class="k">${t('عمق الشجرة','Depth')}</div><div class="v">${t(`<span class="mono">${o.depth}</span> أجيال`,`<span class="mono">${o.depth}</span> generations`)}</div></div>
+  </div></header>`;
+const coi = (o) => `<div class="coi"><div class="n">3.1%</div><div class="l">${t('معامل التربية الداخلية','Inbreeding coefficient')}</div>
+  <div class="s">${t('محسوب على 5 أجيال · <span class="mono">25</span> من <span class="mono">30</span> سلفًا','Over 5 generations · 25 of 30 ancestors')}</div></div>`;
+const verify = () => `<div class="verify">
+  <div class="vrow"><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>${t('سجل موثق في زاجل منذ <span class="mono">11 / 2022</span>','Verified Zajil record since <span class="mono">11 / 2022</span>')}</div>
+  <div class="issued">${t(`صدرت من سجل اللوفت في <span class="mono">09 / 09 / 2026</span><span class="loftname"> · ${loft.loft}</span>`,`Issued from the loft record on <span class="mono">09 / 09 / 2026</span><span class="loftname"> · ${loft.loftEn}</span>`)}</div>
+  <div class="note">${t('الأسماء والحلقات كما هي مسجلة في اللوفت. الحلقة: الدولة · السنة · الرقم.','Names and rings as recorded in the loft. Ring: country · year · number.')}</div></div>`;
+const loftBlock = () => `<div class="loft"><div class="logo"><span>loft logo</span></div><div>
+  <div class="nm">${t(loft.loft,loft.loftEn)}</div><div class="br">${t('المربّي: '+loft.breeder,'Breeder: '+loft.breederEn)}</div>
+  <div class="ct"><span class="mono">${loft.phone}</span><span class="mono">${loft.site}</span></div></div></div>`;
+const qr = () => `<div class="qr"><div class="box"><span>QR</span></div><div class="cap">${t('الصفحة العامة للطائر<br>قريبًا','Public bird page<br>coming soon')}</div></div>`;
+
+function pairs(g,o){ let h=''; const L=G[g]; for(let p=0;p<L.length;p+=2) h+=`<div class="pair"><div class="slot">${node(g,L[p],p,o)}</div><div class="slot">${node(g,L[p+1],p+1,o)}</div></div>`; return h; }
+function grid(g,o){ return G[g].map((b,i)=>node(g,b,i,o)).join(''); }
+const cls = (o) => `sheet ${o.format==='a4'?'a4':'story'} d${o.depth}${o.lang==='en'?' en':''}${o.brand?'':' nobrand'}`;
+
+function sheetA4(o){
+  return `<div class="${cls(o)}">${head(o)}
+  <section class="tree">
+    <div class="ruler">${[1,2,3,4,5].map(g=>`<div class="r${g}">${t(...LABELS[g])}</div>`).join('')}</div>
+    <div class="gens">
+      <div class="gen g1"><div class="node n1">${photo('bird',o)}<div class="big">${t(BIRD.ar,BIRD.en)}</div>${plate()}${facts()}</div></div>
+      ${[2,3,4,5].map(g=>`<div class="gen g${g}">${pairs(g,o)}</div>`).join('')}
+    </div></section>
+  <footer class="foot">${coi(o)}${verify()}${loftBlock()}${qr()}</footer></div>`;
+}
+function sheetStory(o){
+  const counts = {2:'2',3:'4',4:'8',5:'16'};
+  return `<div class="${cls(o)}">${head(o)}
+  <section class="subj">${photo('bird',o)}<div><div class="big">${t(BIRD.ar,BIRD.en)}</div>${plate()}</div></section>
+  ${facts()}
+  <section class="bands">${[2,3,4,5].map(g=>`<div class="band b${g}"><div class="bl">${t(...LABELS[g])}<i class="mono">${counts[g]}</i></div><div class="grid">${grid(g,o)}</div></div>`).join('')}</section>
+  <footer class="foot">${coi(o)}${verify()}</footer>
+  <div class="brandrow">${loftBlock()}${qr()}</div></div>`;
+}
+const render = (o) => o.format==='a4' ? sheetA4(o) : sheetStory(o);
+
+/* ───────── mount + scale-to-fit ───────── */
+const SIZE = { a4:[1123,794], story:[405,720] };
+function mount(id,o){
+  const st=document.getElementById(id); st.innerHTML=render(o); st.dataset.format=o.format;
+  if(id==='main' && o.format==='story' && isPhone()){ st.style.width=Math.min(st.parentElement.clientWidth-32, 405)+'px'; }
+  else st.style.width='';
+  const [w,h]=SIZE[o.format], s=Math.min(1, st.clientWidth / w);
+  st.style.height = (h*s)+'px'; st.firstElementChild.style.transform=`scale(${s})`;
+}
+function paint(){
+  mount('main', state);
+  const fmt = state.format==='a4' ? 'A4 عرضي · 297×210 مم' : 'صورة للهاتف · 9:16 · 1080×1920';
+  document.getElementById('maincap').innerHTML = `<span><b>المعاينة</b> ${fmt} · <span class="mono">${state.depth}</span> أجيال</span>` +
+    (state.format==='a4' ? `<button class="zoom-btn" id="zoomBtn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5M11 8v6M8 11h6"/></svg>تكبير</button>` : '');
+  const main=document.getElementById('main'); main.classList.toggle('tappable', state.format==='a4' && isPhone());
+  const zb=document.getElementById('zoomBtn'); if(zb) zb.addEventListener('click', openZoom);
+  const base = {...state, away:{dam:true}};
+  mount('v0', {...base, photos:{bird:false,sire:false,dam:false}});
+  mount('v1', {...base, photos:{bird:true,sire:false,dam:false}});
+  mount('v3', {...base, photos:{bird:true,sire:true,dam:true}});
+  document.getElementById('pagesize').textContent = state.format==='a4' ? '@page{ size:A4 landscape; margin:0; }' : '@page{ size:108mm 192mm; margin:0; }';
+}
+addEventListener('resize', paint);
+
+/* ───────── phone zoom overlay ───────── */
+let zoomLevel = 0.7;
+function layoutZoom(){
+  const sc=document.getElementById('zscroll'), sh=sc.firstElementChild; if(!sh) return;
+  const [w,h]=SIZE[state.format];
+  const z = zoomLevel==='fit' ? Math.min(1,(sc.clientWidth-32)/w) : zoomLevel;
+  sh.style.transform=`scale(${z})`; sh.style.position='static';
+  sc.classList.toggle('en', state.lang==='en');
+  sc.style.setProperty('--zw', (w*z)+'px'); sh.style.marginBottom = (h*z - h) + 'px';
+  sh.style.marginInlineEnd = (w*z - w) + 'px';
+  document.querySelectorAll('#zlvl button').forEach(b=>b.classList.toggle('on', b.dataset.z==String(zoomLevel)));
+}
+function openZoom(){
+  const sc=document.getElementById('zscroll'); sc.innerHTML=render(state);
+  document.getElementById('zoom').classList.add('open'); document.body.style.overflow='hidden'; layoutZoom();
+}
+function closeZoom(){ document.getElementById('zoom').classList.remove('open'); document.body.style.overflow=''; }
+document.getElementById('zclose').addEventListener('click', closeZoom);
+document.getElementById('zlvl').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; zoomLevel = b.dataset.z==='fit' ? 'fit' : +b.dataset.z; layoutZoom(); });
+document.getElementById('main').addEventListener('click', ()=>{ if(state.format==='a4' && isPhone()) openZoom(); });
+addEventListener('keydown', e=>{ if(e.key==='Escape') closeZoom(); });
+
+/* ───────── options panel wiring ───────── */
+document.querySelectorAll('.seg').forEach(s=>s.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  s.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+  state[s.dataset.key] = s.dataset.key==='depth' ? +b.dataset.v : b.dataset.v; paint();
+}));
+document.querySelectorAll('.sw[data-photo]').forEach(sw=>sw.addEventListener('click',()=>{
+  const on=!sw.classList.contains('on'); sw.classList.toggle('on',on);
+  state.photos[sw.dataset.photo]=on; document.getElementById('r-'+sw.dataset.photo).classList.toggle('off',!on); paint();
+}));
+document.querySelector('.sw[data-brand]').addEventListener('click',function(){
+  const on=!this.classList.contains('on'); this.classList.toggle('on',on); state.brand=on;
+  document.getElementById('fields').style.display = on?'':'none'; paint();
+});
+document.querySelectorAll('#fields input').forEach(i=>i.addEventListener('input',()=>{ loft[i.dataset.f]=i.value; if(i.dataset.f==='loft') loft.loftEn=i.value; if(i.dataset.f==='breeder') loft.breederEn=i.value; paint(); }));
+const toast=(m)=>{ const el=document.getElementById('toast'); el.textContent=m; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2200); };
+document.querySelectorAll('.pick').forEach(b=>b.addEventListener('click',()=>toast('اختيار الصورة من هذا الجهاز — تبقى الملفات محليًا')));
+document.getElementById('share').addEventListener('click',()=>toast(state.format==='a4' ? 'مشاركة ملف PDF للشهادة' : 'مشاركة صورة 9:16 للشهادة'));
+paint();
+</script>
+</body>
+</html>
