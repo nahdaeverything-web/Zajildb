@@ -1,0 +1,71 @@
+/* Zajil design tokens — the single source of colour, radius and type.
+ *
+ * Copied from design/approved/, not retyped: every value below was read out of
+ * the approved specs, where all thirteen files declare an identical :root
+ * block. Do not edit a value here to make a screen look right; the specs are
+ * frozen, and a disagreement between a screen and this file is a question for
+ * the design owner, not an edit.
+ *
+ * A guard (next/guards/palette.mjs) fails the build on any hex outside the
+ * sanctioned set below, so adding a colour is a deliberate act with a paper
+ * trail rather than something that happens quietly inside a component.
+ */
+
+:root {
+  /* ── brand ── */
+  --brand: #128C6E;
+  --brand-deep: #0E6F57;
+  --brand-tint: #E3F4EE;
+
+  /* ── ink ── */
+  --ink: #101820;
+  --ink-2: #4A5560;
+  --ink-3: #8C97A2;
+
+  /* ── surfaces ── */
+  --page: #F5F7F8;
+  --surface: #FFFFFF;
+  --line: #E4E9ED;
+
+  /* ── accents ── */
+  --gold: #C9971F;
+  --gold-tint: #FBF3DF;
+  --danger: #C43D2B;
+
+  /* ── radii ──
+   * --r and --r-btn are declared by all thirteen specs; --r-row is the
+   * certificate spec's own name for the 18px row-card radius (used as a
+   * literal 24 times elsewhere); --r-pill names the 999px pill (59 literal
+   * uses). Naming the last two here is what stops them being retyped. */
+  --r: 20px;
+  --r-btn: 16px;
+  --r-row: 18px;
+  --r-pill: 999px;
+
+  /* ── type ── */
+  --f: 'Alexandria', system-ui, sans-serif;
+  --f-mono: 'IBM Plex Mono', monospace;
+}
+
+/* ─────────────────────── SANCTIONED EXTENSIONS ───────────────────────
+ * Not part of the core palette. Each is allowed in ONE place, named here,
+ * and the palette guard admits it only because it is on this list. Using
+ * one of these outside its stated scope is a defect even though the guard
+ * cannot see the difference.
+ *
+ *   #8A6410   dark gold text/hover on a gold ground — tools spec
+ *   #7A5A0E   dark gold ink on gold-tint (--gold-ink)
+ *             — loft-home-v1, bird-profile-v1
+ *   #F8E6E3   danger tint, a pale ground under --danger text
+ *             — loft-home-v1, bird-profile-v1, shared-states-v1
+ *   #2FBF95   solid success-toast fill; needs more contrast than a card
+ *             tint provides — shared-states-v1
+ *   #A83223   solid danger fill, confirm-dialog danger button :hover
+ *             — shared-states-v1
+ *
+ * Developer console ONLY — a dark monospace surface that deliberately does
+ * not use the app palette. Never reuse these anywhere else:
+ *   #5CD6A8 ok · #FF8A78 fail · #E6B84A warn · #D8DEE3 text
+ * (Scoped by a CSS comment in the tools spec, which is not yet archived —
+ * see the report: tools-v1.html is on hold pending a ruling.)
+ * ────────────────────────────────────────────────────────────────────── */
