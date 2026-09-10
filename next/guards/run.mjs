@@ -49,12 +49,12 @@ const guards = {
     }
     return bad;
   },
-  // 2. next/ never reaches into the vanilla app: no import/url of ../js or ../css.
+  // 2. next/ never reaches into the root at all: no import/url of ../js, ../css or ../tools.
   'no-root-imports'() {
     const bad = [];
     for (const f of files('.ts', '.tsx', '.js', '.mjs', '.css')) {
       lines(f).forEach((l, i) => {
-        if (/['"(](\.\.\/)+(js|css)\//.test(l)) bad.push(`${rel(f)}:${i + 1}  ${l.trim()}`);
+        if (/['"(](\.\.\/)+(js|css|tools)\//.test(l)) bad.push(`${rel(f)}:${i + 1}  ${l.trim()}`);
       });
     }
     return bad;

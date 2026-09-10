@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 // documents the case — 'g3-sheikh' says double first cousins, an opaque uuid
 // says nothing — so the tests keep the key and derive the id the same way the
 // generator does. Same function, same namespace, so they cannot drift apart.
-import { uuidFor } from '../../tools/idmap.js';
+import { uuidFor } from './idmap.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { test, assert, assertEq, assertClose } from './harness.js';
