@@ -97,6 +97,13 @@ const guards = {
     }
     return bad;
   },
+  // 6. The test harness route must not exist unless this is a harness build.
+  //    app/test-harness/ is created by scripts/build-harness.mjs for one build and
+  //    removed after; its presence during a normal build is a defect.
+  'no-harness-route'() {
+    if (process.env.NEXT_PUBLIC_HARNESS === '1') return [];
+    return existsSync(join(ROOT, 'app', 'test-harness')) ? ['app/test-harness/  exists in a NORMAL build'] : [];
+  },
   // 5. No dynamic route segments: user data cannot be enumerated at build time,
   //    so [id] cannot be statically exported. Record views use ?id=.
   'no-dynamic-segments'() {
