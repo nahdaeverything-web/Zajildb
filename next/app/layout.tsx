@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { alexandria, plexMono } from './fonts';
 import Nav from '@/components/Nav';
+import ShellHost from '@/src/components/ShellHost';
 import '../styles/tokens.css';
 import './globals.css';
 import s from './layout.module.css';
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <main className={s.main}>{children}</main>
         <Nav />
+        <ShellHost />
       </body>
     </html>
   );
