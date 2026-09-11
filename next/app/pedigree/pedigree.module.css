@@ -1,0 +1,158 @@
+/* Copied from design/approved/pedigree-tree-v1.html <style> — screen rules only.
+ * Dropped: the :root, body and universal resets, .phone (the layout frames the page), .tabbar/.rail (Nav.module.css owns the nav),
+ * @page (not expressible in a CSS Module). Element rules (a, h1) are scoped under the view root .screen. Port-necessary
+ * additions are at the end, each with its reason. See the pedigree commit. */
+.screen{ display:block; }
+
+  .screen a{ color:var(--brand-deep); } .screen a:hover{ color:var(--brand); }
+
+  .top{ background:var(--surface); padding:16px 20px 0; }
+  .top .bar{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .icon-btn{ width:46px; height:46px; border:none; border-radius:14px; cursor:pointer;
+             background:var(--page); color:var(--ink); display:grid; place-items:center; }
+  .icon-btn svg{ width:22px; height:22px; stroke:currentColor; stroke-width:2.3; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .crumb{ font-size:15px; font-weight:700; color:var(--ink-3); }
+  .topicons{ display:flex; gap:8px; }
+
+  .headwrap{ background:var(--surface); border-bottom:1px solid var(--line); padding:14px 20px 22px; }
+  .head{ display:flex; flex-direction:column; gap:22px; }
+  .eyebrow{ font-size:13px; font-weight:700; color:var(--ink-3); }
+  .screen h1{ font-size:40px; font-weight:900; line-height:1.05; margin-top:4px; }
+  .subject{ display:flex; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap; }
+  .subject .nm{ font-size:20px; font-weight:800; }
+  .sex{ font-size:13.5px; font-weight:700; padding:6px 14px; border-radius:999px; background:var(--brand-tint); color:var(--brand-deep); }
+
+  .plate{ display:inline-flex; align-items:stretch; direction:ltr; border-radius:10px; overflow:hidden; background:var(--ink); }
+  .plate .yr{ background:var(--gold); color:#fff; font-family:var(--f-mono); font-weight:600; font-size:10px; padding:0 7px; display:grid; place-items:center; }
+  .plate .no{ color:#fff; font-family:var(--f-mono); font-weight:600; font-size:12px; letter-spacing:1px; padding:6px 10px; }
+
+  .tiles{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .tile{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px 10px 14px; text-align:center; }
+  .tile .n{ font-size:34px; font-weight:900; color:var(--brand); direction:ltr; line-height:1; font-variant-numeric:tabular-nums; }
+  .tile .l{ font-size:12.5px; color:var(--ink-2); font-weight:600; margin-top:6px; }
+
+  .actions{ display:none; gap:10px; flex:none; }
+  .btn{ border-radius:var(--r-btn); font-family:var(--f); font-weight:800; cursor:pointer; min-height:50px; }
+  .btn-outline{ border:2px solid var(--ink); background:transparent; color:var(--ink); padding:15px 22px; font-size:15.5px; }
+  .btn-primary{ border:none; background:var(--brand); color:#fff; padding:15px 26px; font-size:15.5px; }
+
+  .body{ padding-bottom:170px; }
+  .legend{ display:flex; flex-wrap:wrap; gap:8px 18px; padding:16px 20px 4px; }
+  .legend span{ display:flex; align-items:center; gap:7px; font-size:12.5px; font-weight:700; color:var(--ink-3); }
+  .legend .dot{ width:8px; height:8px; border-radius:999px; background:var(--gold); }
+  .legend .dash{ width:16px; height:0; border-top:1px dashed var(--ink-3); }
+  .hint{ display:flex; align-items:center; gap:8px; padding:8px 20px 12px; font-size:12.5px; font-weight:700; color:var(--ink-3); }
+  .hint svg{ width:16px; height:16px; stroke:currentColor; stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+
+  .chartwrap{ overflow-x:auto; padding:0 20px 8px; scrollbar-width:thin; }
+  .chart{ min-width:836px; }
+  .ruler{ display:flex; padding-bottom:10px; }
+  .ruler > div{ flex:1; padding-inline-start:var(--gap); font-size:11.5px; font-weight:800; color:var(--ink-3); }
+  .ruler > div:first-child{ flex:1.2; padding-inline-start:0; }
+  .gens{ display:flex; height:800px; }
+  .gen{ flex:1; padding-inline-start:var(--gap); display:flex; flex-direction:column; }
+  .gen.g1{ flex:1.2; padding-inline-start:0; align-items:center; justify-content:center; }
+  .g1{ min-width:190px; } .g2{ min-width:172px; } .g3{ min-width:166px; } .g4{ min-width:158px; } .g5{ min-width:150px; }
+
+  /* connectors: each pair draws a vertical bracket in the column gap; each slot draws a stub from the bracket to its node */
+  .pair{ flex:1; display:flex; flex-direction:column; position:relative; }
+  .pair::before{ content:''; position:absolute; inset-inline-start:calc(-1 * var(--gap)); top:25%; height:50%; border-inline-start:1px solid var(--line); }
+  .slot{ flex:1; display:flex; align-items:center; position:relative; }
+  .slot::before{ content:''; position:absolute; inset-inline-start:calc(-1 * var(--gap)); width:var(--gap); top:50%; border-top:1px solid var(--line); }
+
+  .node{ width:100%; background:var(--surface); border:1px solid var(--line); text-align:start; cursor:pointer; font-family:var(--f);
+         display:flex; flex-direction:column; justify-content:center; color:var(--ink); }
+  .node .nm{ font-weight:800; line-height:1.15; }
+  .node .rg{ font-family:var(--f-mono); font-weight:600; color:var(--ink-2); direction:ltr; text-align:right; }
+  .node .ci{ display:flex; align-items:center; gap:6px; }
+  .node .ci .dot{ flex:none; width:7px; height:7px; border-radius:999px; background:var(--gold); }
+  .n1{ border:2px solid var(--ink); border-radius:var(--r); padding:16px; }
+  .n1 .nm{ font-size:28px; font-weight:900; line-height:1.1; }
+  .n1 .plate{ margin-top:10px; align-self:flex-start; }
+  .n1 .dt{ font-family:var(--f-mono); font-weight:600; font-size:11px; color:var(--ink-2); direction:ltr; text-align:right; margin-top:8px; }
+  .n2{ min-height:56px; border-radius:18px; padding:12px 14px; gap:4px; } .n2 .nm{ font-size:20px; } .n2 .rg{ font-size:12px; }
+  .n3{ min-height:52px; border-radius:16px; padding:10px 13px; gap:3px; } .n3 .nm{ font-size:17px; } .n3 .rg{ font-size:11.5px; }
+  .n4{ min-height:46px; border-radius:14px; padding:8px 12px; gap:2px; } .n4 .nm{ font-size:15px; } .n4 .rg{ font-size:11px; }
+  .n5{ min-height:44px; border-radius:14px; padding:7px 11px; gap:2px; } .n5 .nm{ font-size:13.5px; } .n5 .rg{ font-size:10.5px; }
+  .node.unknown{ background:var(--page); border:1px dashed var(--line); flex-direction:row; align-items:center; justify-content:space-between; gap:6px; }
+  .node.unknown span{ font-size:13px; font-weight:700; color:var(--ink-3); }
+  .node.unknown svg{ flex:none; width:14px; height:14px; stroke:var(--ink-3); stroke-width:2.8; fill:none; stroke-linecap:round; }
+
+  .cta{ position:fixed; bottom:84px; inset-inline:0; margin-inline:auto; max-width:430px; padding:0 20px; z-index:9; }
+  .cta button{ width:100%; border:none; border-radius:var(--r-btn); padding:18px; cursor:pointer; background:var(--brand); color:#fff;
+               font-family:var(--f); font-size:17px; font-weight:800; }
+
+  @media (hover:hover){
+    .icon-btn:hover{ background:var(--brand-tint); }
+    .node:hover{ background:var(--brand-tint); border-color:var(--brand); }
+    .btn-outline:hover{ background:var(--ink); color:#fff; }
+    .btn-primary:hover, .cta button:hover{ background:var(--brand-deep); }
+  }
+  .icon-btn:focus-visible, .node:focus-visible, .btn:focus-visible, .cta button:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
+
+  /* Part 3 — tablet */
+  @media (min-width:701px){
+    .phone{ max-width:720px; border-inline:1px solid var(--line); }
+    .cta{ max-width:720px; }
+  }
+  /* Part 3 — desktop: rail on the RTL start (right) edge, wall chart uncapped */
+  @media (min-width:1100px){
+    .rail{ display:flex; }
+    .cta, .hint, .topicons{ display:none; }
+    .actions{ display:flex; }
+    .head{ flex-direction:row; align-items:flex-end; justify-content:space-between; gap:40px; }
+    .tiles{ width:400px; flex:none; }
+    .chart{ min-width:0; }
+    .chartwrap{ overflow-x:visible; padding-inline:32px; }
+    .headwrap{ padding-inline:32px; }
+    .body{ padding-bottom:40px; }
+  }
+  /* wall chart print */
+  @media print{
+    .cta, .hint, .top, .actions, .legend{ display:none; }
+    .head{ flex-direction:row; align-items:flex-end; justify-content:space-between; gap:40px; }
+    .tiles{ width:380px; flex:none; }
+    .headwrap{ padding:0 0 10px; border-bottom:1px solid var(--line); }
+    .body{ padding:0; }
+    .chartwrap{ overflow:visible; padding:0; }
+    .chart{ min-width:0; } .gens{ height:590px; }
+    .n1{ padding:10px 12px; } .n1 .nm{ font-size:22px; }
+    .n2, .n3{ min-height:0; padding:7px 10px; } .n4, .n5{ min-height:0; padding:5px 9px; }
+    .n2 .nm{ font-size:16px; } .n3 .nm{ font-size:14px; } .n4 .nm{ font-size:12.5px; } .n5 .nm{ font-size:11px; }
+    .n4 .rg{ font-size:9.5px; } .n5 .rg{ font-size:9px; }
+  }
+
+/* ── port additions (not in the spec) ── */
+/* the spec's nodes are buttons; the port's are links to the profile — keep the geometry on an anchor */
+.screen a{ text-decoration:none; }
+.node{ text-decoration:none; }
+.cta a, .btn{ display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
+.cta a{ width:100%; border:none; border-radius:var(--r-btn); padding:18px; background:var(--brand); color:#fff; font-family:var(--f); font-size:17px; font-weight:800; }
+/* vanilla's generation control (pedigree.js:25, 3 / 4 / 5) — the spec fixes four ancestor generations; carried as a small pill row
+   in the legend's grammar (raised in the 4B report). The chart's width and height follow the deepest column. */
+.gensel{ display:flex; gap:6px; padding:0 20px 8px; align-items:center; }
+.gensel button{ border:1px solid var(--line); background:var(--surface); color:var(--ink-2); border-radius:999px; min-width:44px; min-height:36px; font-family:var(--f-mono); font-weight:600; font-size:13px; cursor:pointer; }
+.gensel button[aria-pressed="true"]{ background:var(--ink); border-color:var(--ink); color:#fff; }
+.g6{ min-width:146px; } .n6{ min-height:40px; border-radius:12px; padding:6px 10px; gap:2px; } .n6 .nm{ font-size:12.5px; } .n6 .rg{ font-size:10px; }
+.chart.deep{ min-width:1000px; } .chart.shallow{ min-width:660px; }
+/* vanilla's COI breakdown and relationship finder (pedigree.js:90-160) — carried below the chart in the spec's tile/card grammar */
+.cards{ padding:16px 20px 0; display:flex; flex-direction:column; gap:14px; }
+.card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:20px; }
+.card h2{ font-size:19px; font-weight:800; margin-bottom:12px; }
+.card p{ font-size:14.5px; font-weight:600; color:var(--ink-2); margin-top:6px; }
+.card .muted{ color:var(--ink-3); }
+.tbl{ overflow-x:auto; margin-top:10px; }
+.tbl table{ width:100%; border-collapse:collapse; }
+.tbl th{ font-size:12.5px; font-weight:700; color:var(--ink-3); text-align:right; padding:0 6px 10px; border-bottom:2px solid var(--line); white-space:nowrap; }
+.tbl td{ padding:11px 6px; font-size:14.5px; font-weight:600; border-bottom:1px solid var(--line); }
+.tbl tr:last-child td{ border-bottom:none; }
+.tbl .num{ direction:ltr; text-align:right; font-family:var(--f-mono); font-size:13px; }
+.finder input{ width:100%; border:2px solid var(--line); border-radius:var(--r-btn); min-height:52px; padding:0 16px; font-family:var(--f); font-size:15px; font-weight:600; background:var(--page); color:var(--ink); outline:none; }
+.finder input:focus{ border-color:var(--brand); background:var(--surface); }
+.finder .list{ display:flex; flex-direction:column; gap:6px; margin-top:8px; max-height:280px; overflow:auto; }
+.finder .list button{ border:1px solid var(--line); background:var(--surface); border-radius:14px; padding:10px 13px; text-align:start; font-family:var(--f); font-size:15px; font-weight:700; color:var(--ink); cursor:pointer; }
+.finder .list button:hover{ border-color:var(--brand); }
+.rel{ margin-top:12px; }
+.rel .lvl{ display:inline-block; margin-top:8px; padding:8px 12px; border-radius:12px; font-size:13.5px; font-weight:800; }
+.rel .severe{ background:#F8E6E3; color:var(--danger); } .rel .high{ background:var(--gold-tint); color:#8A6410; } .rel .moderate{ background:var(--gold-tint); color:#8A6410; } .rel .info, .rel .none{ background:var(--page); color:var(--ink-2); }
+@media (min-width:1100px){ .cards{ padding-inline:32px; } .gensel{ padding-inline:32px; } }

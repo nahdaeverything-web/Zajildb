@@ -45,6 +45,16 @@ until a cutover ruling.
   documents, save-and-new with carry-over. The shell's dialog overlay is now a
   fixed full-viewport scrim (z 40) — the gallery had drawn it inside a static
   frame, so on a screen a fixed action bar could sit above it.
+- **Pedigree tree (4B)** — `/pedigree?id=` (pedigree-tree-v1): the wall chart
+  as designed, four ancestor generations by default. Carried from vanilla
+  where the spec is silent (raised in the 4B report): the 3 / 4 / 5 generation
+  control (`?gens=` too; the chart's width and height follow the deepest
+  column, the sixth ruler label comes from a `{n}` template), the COI
+  breakdown table with AVK, and the relationship finder — both below the
+  chart in the spec's card grammar. An unknown slot's «add» opens the CHILD's
+  edit form, where the parent is picked or created. Share = the profile's
+  export; print = `window.print()` with the spec's wall-chart print rules
+  (`@page` cannot live in a CSS Module and was dropped).
 - Everything outside `next/` is read-only during the port. `next/` imports
   nothing from `../js`, `../css` or `../tools` (guarded); the engine and the
   dataset id mapper are byte-identical copies under `src/engine/` and `tests/`.

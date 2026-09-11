@@ -18,7 +18,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SPECS = join(ROOT, '..', 'design', 'approved');
 
 // ── shipped screens: added as each screen lands ──
-export const SHIPPED = ['shared-states-v1.html', 'loft-home-v1.html', 'bird-profile-v1.html', 'add-edit-bird-v2.html'];
+export const SHIPPED = ['shared-states-v1.html', 'loft-home-v1.html', 'bird-profile-v1.html', 'add-edit-bird-v2.html', 'pedigree-tree-v1.html'];
 
 const AR = /[؀-ۿ]/;
 // FORMAT tags fold into their parent (they never carry a standalone UI string);
@@ -59,7 +59,9 @@ const dict = { ...parseDict(readFileSync(join(ROOT, 'src', 'i18n.js'), 'utf8')),
 // dictionary values go through the same norm() as spec text, so a trailing colon
 // or separator on either side cannot make a real key look like a miss
 const values = new Map(Object.entries(dict).map(([k, v]) => [norm(v), k]));
-const templates = Object.entries(dict).filter(([, v]) => v.includes('{')).map(([k, v]) => [new RegExp('^' + norm(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\{[a-zA-Z]+\\\}/g, '.+?') + '$'), k]);
+// a template whose LAST token is a param («سلفًا من {total}») still matches a spec string whose trailing count
+// norm() stripped («سلفًا من 30» → «سلفًا من»): that final param is optional
+const templates = Object.entries(dict).filter(([, v]) => v.includes('{')).map(([k, v]) => [new RegExp('^' + norm(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ \\\{[a-zA-Z]+\\\}$/, '( .+?)?').replace(/\\\{[a-zA-Z]+\\\}/g, '.+?') + '$'), k]);
 const mockFile = join(ROOT, 'guards', 'strings.mock.json');
 const mock = existsSync(mockFile) ? JSON.parse(readFileSync(mockFile, 'utf8')) : {};
 // PENDING: real UI strings whose wording conflicts with the vanilla voice or with

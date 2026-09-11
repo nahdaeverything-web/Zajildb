@@ -100,6 +100,20 @@ export const EXT = {
   'act.change':               { ar: 'تغيير', en: 'Change' },
   'form.notes.placeholder':   { ar: 'سلالة، مصدر الطائر، ملاحظات التدريب…', en: 'Strain, where the bird came from, training notes…' },
 
+  // ── pedigree-tree-v1 (4B) ──
+  'ped.tile.ancestors':       { ar: 'سلفًا من {total}', en: 'ancestors of {total}' },
+  'ped.tile.complete':        { ar: 'أجيال مكتملة', en: 'complete generations' },
+  'ped.legend.order':         { ar: 'الأب أعلى · الأم أسفل', en: 'Sire above · dam below' },
+  'ped.legend.common':        { ar: 'سلف مشترك', en: 'Common ancestor' },
+  'ped.legend.unknown':       { ar: 'غير مسجل', en: 'Not recorded' },
+  'ped.hint.scroll':          { ar: 'اسحب لرؤية الأجيال الأقدم', en: 'Drag to see the older generations' },
+  'ped.gen.parents':          { ar: 'الوالدان', en: 'Parents' },
+  'ped.gen.grand':            { ar: 'الأجداد', en: 'Grandparents' },
+  'ped.gen.great':            { ar: 'الأجداد الكبار', en: 'Great-grandparents' },
+  'ped.gen.fifth':            { ar: 'الجيل الخامس', en: 'Fifth generation' },
+  'ped.gen.nth':              { ar: 'الجيل {n}', en: 'Generation {n}' },
+  'ped.unknown.add':          { ar: 'سلف غير مسجل — إضافة', en: 'Ancestor not recorded — add' },
+
   // ── rulings at 4A acceptance ──
   // nav.breeding: a DELIBERATE RENAME from vanilla's «التربية». Every approved
   // spec and the kit NAVIGATION NOTE say «التزاوج»; ruled at 4A acceptance.
