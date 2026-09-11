@@ -27,6 +27,12 @@ if (leaks.length) { console.log('✗ no-sync-config-in-build  (' + leaks.length 
 console.log('✓ no-sync-config-in-build  out/ carries no Supabase host and no publishable key');
 const harness = process.env.NEXT_PUBLIC_HARNESS === '1';
 const present = existsSync('out/test-harness.html') || existsSync('out/test-harness');
+// harness globals must never ship: in a normal build no chunk may mention __zajilDb
+if (!harness && existsSync('out')) {
+  const hit = [...walk('out')].filter((f) => /\.js$/.test(f) && readFileSync(f, 'utf8').includes('__zajil' + 'Db'));
+  if (hit.length) { console.log('✗ no-harness-globals-in-build  ' + hit.length + ' chunk(s) mention __zajilDb in a NORMAL build'); for (const h of hit) console.log('    ' + h); process.exit(1); }
+  console.log('✓ no-harness-globals-in-build  (normal build)');
+}
 if (!harness && present) { console.log('✗ no-harness-output  out/test-harness exists in a NORMAL build'); process.exit(1); }
 if (harness && !present)  { console.log('✗ harness-output-expected  build:harness produced no out/test-harness.html'); process.exit(1); }
 console.log(harness ? '✓ harness-output-expected  out/test-harness.html present (harness build)' : '✓ no-harness-output  (normal build)');

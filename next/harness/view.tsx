@@ -12,16 +12,6 @@ import * as validate from '@/src/engine/validate.js';
 import * as velocity from '@/src/engine/velocity.js';
 import { useZajilStore, selectBirds } from '@/src/db/react';
 
-declare global {
-  interface Window {
-    __zajilDb: typeof db;
-    __zajilEngine: { coi: typeof coi; fci: typeof fci; integrity: typeof integrity; pedigree: typeof pedigree;
-                     relationship: typeof relationship; rings: typeof rings; validate: typeof validate; velocity: typeof velocity };
-    __zajilReady: Promise<void>;
-    __zajilSyncLoop: (() => void) | null;   // the stop function when ?sync=1 started the loop, else null
-  }
-}
-
 // The vanilla suites reach the data layer with `await import('./js/db.js')`
 // inside page.evaluate. The port exposes the same module namespace on
 // window, synchronously at bundle evaluation so it is present the moment the
