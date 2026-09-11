@@ -18,6 +18,9 @@ until a cutover ruling.
   `strings.mock.json`, or a pending ruling in `strings.pending.json` — which
   the build accepts but reports as ⚠). Each guard was proved to fire by
   reintroducing its violation — see the Phase 0.5 and 4A-guards commits.
+  Since 4B `npm run build:harness` runs the same prebuild guards before its
+  build (it spawns `next build` directly, outside the npm lifecycle, so it
+  had skipped them — an unsanctioned hex reached a green harness build).
 - `output: 'export'` — no server, ever. Record views take `?id=`, never `[id]`.
 - **Rulings at 4A acceptance** (each recorded where it applies):
   `nav.breeding` is a deliberate rename to «التزاوج» (i18n.ext.js overrides
