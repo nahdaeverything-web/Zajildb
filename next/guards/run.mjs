@@ -8,6 +8,7 @@
 // every guard here was proved to fire by reintroducing its violation — see
 // the Phase 0.5 commit.
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join, relative, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -125,6 +126,36 @@ const guards = {
       if (seg) bad.push(`${rel(f)}  segment ${seg}`);
     }
     return [...new Set(bad.map((b) => b.split('/page')[0].split('/layout')[0]))];
+  },
+  // 8. (4A) UI code talks to the data layer through its facade and the React
+  //    bridge only. A view, component or harness file that imports
+  //    src/db/storage|oplog|records|io|sync directly bypasses the write
+  //    boundary (records.js saveBird validates; storage.js emits) — the
+  //    layer's own rule: "Import from db.js, never from here directly".
+  'ui-imports'() {
+    const bad = [];
+    for (const dir of ['app', 'components', 'src/components', 'harness']) {
+      if (!existsSync(join(ROOT, dir))) continue;
+      for (const f of [...walk(join(ROOT, dir))].filter((p) => ['.ts', '.tsx'].includes(extname(p)))) {
+        lines(f).forEach((l, i) => {
+          const m = l.match(/from\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]/);
+          const spec = m && (m[1] || m[2]);
+          if (spec && /(^|\/)src\/db\/(storage|oplog|records|io|sync)(\.js)?$/.test(spec)) bad.push(`${rel(f)}:${i + 1}  ${l.trim()}`);
+        });
+      }
+    }
+    return bad;
+  },
+  // 9. (4A) The string guard — guards/strings.mjs, run as its own process so
+  //    it stays a standalone tool (--only, --emit-mock). Every Arabic string a
+  //    SHIPPED spec renders must be a key, a template, recorded mock content
+  //    or a pending ruling; anything else fails the build. Its report (⚠
+  //    pending lines) is passed through so a pending ruling is never silent.
+  strings() {
+    const r = spawnSync(process.execPath, [join(ROOT, 'guards', 'strings.mjs')], { encoding: 'utf8' });
+    const out = (r.stdout || '') + (r.stderr || '');
+    for (const l of out.split('\n')) if (l.trim()) console.log('    ' + l);
+    return r.status === 0 ? [] : ['guards/strings.mjs exited ' + r.status];
   },
 };
 

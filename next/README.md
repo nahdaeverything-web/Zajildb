@@ -10,8 +10,14 @@ until a cutover ruling.
 
 - `npm run build` runs `guards/run.mjs` first (`prebuild`). Palette, no root
   imports, `<html lang="ar" dir="rtl">`, no gradients / blurred shadows, no
-  dynamic route segments. Each guard was proved to fire by reintroducing its
-  violation — see the Phase 0.5 commit.
+  dynamic route segments; since 4A also `ui-imports` (views, components and
+  the harness reach the data layer only through `src/db.js` and
+  `src/db/react.ts` — never `src/db/storage|oplog|records|io|sync`) and
+  `strings` (`guards/strings.mjs`: every Arabic string a shipped spec renders
+  is a key, a `{param}` template, recorded mock content in
+  `strings.mock.json`, or a pending ruling in `strings.pending.json` — which
+  the build accepts but reports as ⚠). Each guard was proved to fire by
+  reintroducing its violation — see the Phase 0.5 and 4A-guards commits.
 - `output: 'export'` — no server, ever. Record views take `?id=`, never `[id]`.
 - Everything outside `next/` is read-only during the port. `next/` imports
   nothing from `../js`, `../css` or `../tools` (guarded); the engine and the
