@@ -69,3 +69,31 @@ root runner's parsing and is the gate. The port's own new test
 **Fix at source (Phase 7):** append `sys.exit(1 if fail else 0)` after the
 summary print in each suite (28 one-line changes), and keep the runner's
 parse as belt-and-braces. Then a direct run means what it says.
+
+---
+
+## RF-3 — the free-tier dev project auto-pauses (ops, not code)
+
+**What:** the dev Supabase project (`thfxijqzxzdttsuqriwn`) is on the free
+tier, which **pauses a project after ~7 days idle**. A paused project's
+hostname is withdrawn from DNS while the `supabase.co` apex keeps resolving.
+
+**How it presented (2026-09-11):** every live suite failed at the first
+network call with `AuthError('network')` — `js/db/sync.js:160`, the branch
+for a fetch that rejects — from both the port *and* the vanilla tree (root
+control). `getent hosts thfxijqzxzdttsuqriwn.supabase.co` returned nothing;
+`curl` returned 000 "Could not resolve host". Last live traffic before that
+was ~4 Sept. Restoring the project in the dashboard cleared it.
+
+**Why it matters:** it blocks **every** live suite (`auth_live`, `push_live`,
+`pull_live`, `live_deployment`) and looks, from the client, exactly like an
+outage. Anyone running the live gates after a quiet week will see a red
+network failure that no code change can fix.
+
+**Port handling:** none needed — the classification is correct. Recorded so
+the next person checks the dashboard before debugging DNS.
+
+**At source (Phase 7 / release):** production runs on **Pro** (release
+checklist) and does not pause. For the dev project: either keep it warm
+(any authenticated request inside the window) or expect to unpause it before
+a live run. Worth one line in the live suites' header comments.
