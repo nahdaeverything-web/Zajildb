@@ -97,7 +97,7 @@ export default function BirdsView() {
           {!empty && booted && (
             <div className={s.tools}>
               <label className={s.search}><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('loft.search.placeholder')} aria-label={t('act.search')} data-testid="search-input" /></label>
-              <Link href="/bird/new" className={s['btn-add']} data-testid="add-bird">{t('act.addBird')}</Link>
+              <Link href="/bird/new" className={s['btn-add']} data-testid="add-bird">{t('act.newBird')}</Link>
             </div>
           )}
         </div>
@@ -153,7 +153,7 @@ export default function BirdsView() {
               </tbody>
             </table>
           </div>
-          <div className={s.fab} data-testid="fab-add"><Link href="/bird/new">{t('act.addBird')}</Link></div>
+          <div className={s.fab} data-testid="fab-add"><Link href="/bird/new">{t('act.newBird')}</Link></div>
         </div>
       )}
       <span className={sh.muted} hidden>{version ? '' : ''}</span>

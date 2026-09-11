@@ -38,7 +38,7 @@ export default function ShellHost() {
         ))}
       </div>
       {dialog && (
-        <div className={s.overlay} data-testid="dialog-overlay">
+        <div className={`${s.overlay} ${s.modal}`} data-testid="dialog-overlay">
           <div className={s.dlg} role="dialog" aria-modal="true" aria-label={dialog.title} ref={box} data-testid="dialog">
             <h3>{dialog.title}</h3>
             {dialog.who && <div className={s.who}><span className={s.nm}>{dialog.who.label}</span>{dialog.who.plate && <span className={`${s.plate} ${s.sm}`}><span>{dialog.who.plate}</span></span>}</div>}

@@ -32,6 +32,19 @@ until a cutover ruling.
   ruling settled lives in `guards/strings.ruled.json` (accepted silently, the
   ruling is the record); `strings.pending.json` holds only what still awaits
   one.
+- **Bird form (4B)** — `/bird/new` and `/bird/edit?id=` share `app/bird/form.tsx`
+  (add-edit-bird-v2). It is a modal flow: the spec draws its own fixed action
+  bar and no tab bar, so `Nav` hides the tab bar on those two routes (the rail
+  stays at ≥1100). The parent picker has no design of its own — vanilla's
+  `birdPicker` rules (search, blocked match, inline create, abandon keeps the
+  committed parent, explicit clear) are rendered in the spec's parent-slot
+  grammar. Errors go to shared-states' error dialog and mark the field;
+  warnings to its warnings dialog; the duplicate ring shows live in the spec's
+  warnbox. Capabilities the spec is silent on are carried: several rings with
+  types, hatch-from-ring-year, the remaining vanilla fields (second card),
+  documents, save-and-new with carry-over. The shell's dialog overlay is now a
+  fixed full-viewport scrim (z 40) — the gallery had drawn it inside a static
+  frame, so on a screen a fixed action bar could sit above it.
 - Everything outside `next/` is read-only during the port. `next/` imports
   nothing from `../js`, `../css` or `../tools` (guarded); the engine and the
   dataset id mapper are byte-identical copies under `src/engine/` and `tests/`.

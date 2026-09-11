@@ -32,7 +32,7 @@ export const EXT = {
   'val.cannotSave':           { ar: 'لا يمكن الحفظ', en: 'Cannot save' },
   'val.fieldsNeedFix':        { ar: '{n} حقول تحتاج تصحيحًا:', en: '{n} fields need correcting:' },
   'val.backToForm':           { ar: 'رجوع للنموذج', en: 'Back to the form' },
-  'val.saveAnyway':           { ar: 'حفظ رغم ذلك', en: 'Save anyway' },
+  // val.saveAnyway «حفظ رغم ذلك» was retired at 4A acceptance (ruling 14: vanilla act.saveAnyway has the same meaning)
   'warn.dupRing.title':       { ar: 'رقم حلقة مكرر — يمكنك المتابعة والحفظ', en: 'Duplicate ring number — you can continue and save' },
   'warn.dupRing.body':        { ar: 'الحلقة مسجّلة أيضًا للطائر «{name}».', en: 'This ring is also recorded for “{name}”.' },
   'warn.dupRing.view':        { ar: 'عرض الطائر الآخر', en: 'View the other bird' },
@@ -49,7 +49,7 @@ export const EXT = {
   'loft.season':              { ar: 'موسم {a} / {b}', en: 'Season {a} / {b}' },
   'loft.countLine':           { ar: '{n} طائرًا · {m} ذكرًا · {f} أنثى', en: '{n} birds · {m} cocks · {f} hens' },
   'loft.search.placeholder':  { ar: 'بحث بالاسم أو رقم الحلقة', en: 'Search by name or ring number' },
-  'act.addBird':              { ar: 'إضافة طائر', en: 'Add a bird' },
+  // act.addBird «إضافة طائر» was retired at 4A acceptance (ruling 14: vanilla act.newBird «طير جديد» has the same meaning)
   'filter.males':             { ar: 'ذكور', en: 'Cocks' },
   'filter.females':           { ar: 'إناث', en: 'Hens' },
   'loft.generation':          { ar: 'جيل {y}', en: 'Generation {y}' },
@@ -83,6 +83,22 @@ export const EXT = {
   'col.release':              { ar: 'الإطلاق', en: 'Release' },
   'health.next':              { ar: 'التطعيم القادم', en: 'Next vaccination' },
   'health.next.estimate':     { ar: 'تقديري — سنة من آخر تطعيم', en: 'Estimate — one year after the last vaccination' },
+
+  // ── add-edit-bird-v2 (4B) ──
+  // Vanilla wins for the title (act.newBird), the save button (act.save), the colour label (bird.colour),
+  // the hatch label (bird.hatchDate), the status words (status.*) and the duplicate-ring warning
+  // (shared-states' warn.dupRing.*); the spec's variants are on strings.ruled.json (ruling 14).
+  'form.sec.basics':          { ar: 'الأساسيات', en: 'Basics' },
+  'form.photo.hint':          { ar: 'تُحفظ الصورة على هذا الجهاز.', en: 'The photo is kept on this device.' },
+  'form.name.placeholder':    { ar: 'مثال: رعد', en: 'e.g. Thunder' },
+  'form.colour.placeholder':  { ar: 'مثال: أزرق مخطط', en: 'e.g. blue bar' },
+  'form.parent.none':         { ar: 'لم تُحدَّد', en: 'Not set' },
+  'form.parent.pick':         { ar: 'اختيار من اللوفت', en: 'Choose from the loft' },
+  'form.parent.quick':        { ar: 'إنشاء سريع', en: 'Quick create' },
+  'form.external.title':      { ar: 'سلف خارج اللوفت', en: 'Ancestor outside the loft' },
+  'form.external.body':       { ar: 'سجل مرجعي للنسب فقط — لا يظهر في قائمة الطيور ولا في السباقات.', en: 'A pedigree-only reference record — not listed among the birds and never in races.' },
+  'act.change':               { ar: 'تغيير', en: 'Change' },
+  'form.notes.placeholder':   { ar: 'سلالة، مصدر الطائر، ملاحظات التدريب…', en: 'Strain, where the bird came from, training notes…' },
 
   // ── rulings at 4A acceptance ──
   // nav.breeding: a DELIBERATE RENAME from vanilla's «التربية». Every approved

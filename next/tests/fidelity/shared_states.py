@@ -79,7 +79,8 @@ try:
         check('error-list dialog: one button, 3 items', pg.locator('[data-testid=dialog-confirm]').count() == 0 and pg.locator('[data-testid=dialog-errs] li').count() == 3)
         pg.click('[data-testid=dialog-cancel]')
         pg.click('[data-testid=open-dlg-warns]')
-        check('warnings dialog: 2 items, «حفظ رغم ذلك»', pg.locator('[data-testid=dialog-warns] li').count() == 2 and pg.locator('[data-testid=dialog-confirm]').inner_text() == 'حفظ رغم ذلك')
+        # ruling 14 (4A acceptance): vanilla act.saveAnyway «حفظ رغم التحذير» wins over the spec's «حفظ رغم ذلك» (same meaning)
+        check('warnings dialog: 2 items, «حفظ رغم التحذير»', pg.locator('[data-testid=dialog-warns] li').count() == 2 and pg.locator('[data-testid=dialog-confirm]').inner_text() == 'حفظ رغم التحذير')
         pg.click('[data-testid=dialog-confirm]')
 
         # §04 validation · §05 notice · §06 empty · §07 loading · §08 media · bits

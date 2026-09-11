@@ -34,16 +34,22 @@ function isOn(pathname: string, tab: (typeof TABS)[number]) {
     tab.owns.some((p) => pathname === p || pathname.startsWith(p + '/'));
 }
 
+// The bird form is a modal flow: add-edit-bird-v2 draws its own fixed action
+// bar where the tab bar sits and no tab bar at all (the rail stays at ≥1100).
+const NO_TABBAR = ['/bird/new', '/bird/edit'];
+
 export default function Nav() {
-  const pathname = usePathname() ?? '';
+  // a plain file server serves the export as /birds.html, /bird/new.html; a static host as the clean path — compare the clean one
+  const pathname = (usePathname() ?? '').replace(/\.html$/, '');
   const items = TABS.map((tab) => (
     <Link key={tab.href} href={tab.href} className={isOn(pathname, tab) ? s.on : undefined}>
       <svg viewBox="0 0 24 24" aria-hidden="true">{tab.icon}</svg>{t(tab.label)}
     </Link>
   ));
+  const modalFlow = NO_TABBAR.some((p) => pathname === p || pathname.startsWith(p + '/'));
   return (
     <>
-      <nav className={s.tabbar} aria-label="التنقل">{items}</nav>
+      {!modalFlow && <nav className={s.tabbar} aria-label="التنقل">{items}</nav>}
       <nav className={s.rail} aria-label="التنقل">{items}</nav>
     </>
   );

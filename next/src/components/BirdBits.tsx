@@ -2,7 +2,7 @@ import { t, fmtPercent, ringHTML } from '@/src/i18n.ext.js';
 import s from './shared.module.css';
 
 // Small pieces every screen reuses, ported from js/ui.js one-to-one.
-type Ring = { raw?: string; type?: string; year?: string | number };
+type Ring = { raw?: string; type?: string; year?: string | number | null };   // parseRing yields year: null when absent
 type BirdLike = { id: string; name?: string; sex?: string; rings?: Ring[] } | null | undefined;
 
 /** ui.js primaryRing: the FCI ring if there is one, else the first. */

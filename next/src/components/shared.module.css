@@ -156,3 +156,6 @@ button:focus-visible, a:focus-visible, input:focus-visible{ outline:none; box-sh
 
 /* ── @keyframes, verbatim from the spec (a CSS Module localises animation names) ── */
 @keyframes spin{ to{ transform:rotate(360deg);} }
+/* ── the live dialog overlay ── the spec's .overlay is drawn inside a static gallery frame; on a screen the same scrim is
+   fixed, full-viewport and above every fixed bar (tab bar / FAB / form action bar are z 9–10, toasts 12) */
+.overlay.modal{ position:fixed; inset:0; z-index:40; border-radius:0; padding:20px; }
