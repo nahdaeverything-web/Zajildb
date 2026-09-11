@@ -1,0 +1,11 @@
+{
+  "loft-home-v1.html": {
+    "التزاوج": "tab label: every spec and the kit NAVIGATION NOTE say «التزاوج»; vanilla nav.breeding is «التربية». Nav.tsx currently shows the spec word (Phase 0). Awaiting ruling.",
+    "3 تغييرات بانتظار المزامنة": "plural agreement: spec «3 تغييرات …» vs vanilla template sync.pending «{n} تغييرًا …». Awaiting ruling on plural forms.",
+    "إعادة المحاولة": "sync error-row link: loft-home says «إعادة المحاولة», shared-states says «الأدوات» (nav.tools). Shared-states wins by its precedence rule; the port links to الأدوات. Recorded."
+  },
+  "shared-states-v1.html": {
+    "3 تغييرات بانتظار المزامنة": "plural agreement: spec «3 تغييرات …» vs vanilla template sync.pending «{n} تغييرًا …». Awaiting ruling on plural forms.",
+    "تمت المزامنة. وُجدت 3 حلقات مكررة": "plural agreement + link split: spec «وُجدت 3 حلقات مكررة — راجعها(link)» vs vanilla sync.duplicates «وُجدت {n} حلقة مكررة — راجعها.». Awaiting ruling."
+  }
+}

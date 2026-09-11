@@ -1,3 +1,4 @@
-export default function Page() {
-  return <section style={{ padding: 24 }}><h1>الطيور</h1><p>Phase 0 placeholder — /birds</p></section>;
-}
+import { Suspense } from 'react';
+import BirdsView from './view';
+// الطيور — loft home. Spec: design/approved/loft-home-v1.html.
+export default function Page() { return <Suspense fallback={null}><BirdsView /></Suspense>; }

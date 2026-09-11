@@ -1,0 +1,136 @@
+/* Copied from design/approved/loft-home-v1.html <style> — screen rules only.
+ * Dropped: gallery chrome (.demo .spec .phone), :root/body/*, .tabbar/.rail (Nav.module.css owns the nav), .sync* (the shared SyncRow owns it);
+ * a comma list keeps its surviving members. A CSS Module refuses pure element selectors: the spec's page-level rules
+ * (h1 a button [hidden]) are scoped under the view root .screen, the table's own under .table. See the loft-home commit. */
+.screen{ display:block; }
+
+.screen a{ color:var(--brand-deep); font-weight:700; }
+.screen a:hover{ color:var(--brand); }
+.screen button{ font-family:var(--f); }
+.screen [hidden]{ display:none !important; }
+/* ── loft header ── */
+  .lofthead{ background:var(--surface); border-bottom:1px solid var(--line); padding:22px 20px 20px; }
+.headrow{ display:flex; flex-direction:column; gap:18px; }
+.eyebrow{ font-size:13px; font-weight:700; color:var(--ink-3); }
+.screen h1{ font-size:40px; font-weight:900; line-height:1.05; margin-top:4px; }
+.count{ font-size:15px; font-weight:700; color:var(--ink-2); margin-top:10px; display:flex; gap:6px; align-items:baseline; flex-wrap:wrap; }
+.count b{ font-size:24px; font-weight:900; color:var(--brand); direction:ltr; line-height:1; font-variant-numeric:tabular-nums; }
+.count .sep{ color:var(--ink-3); margin-inline:4px; }
+.tools{ display:flex; flex-direction:column; gap:12px; }
+.search{ display:flex; align-items:center; gap:10px; background:var(--page); border:2px solid var(--line); border-radius:var(--r-btn); padding:0 16px; min-height:56px; }
+.search:focus-within{ border-color:var(--brand); background:var(--surface); }
+.search svg{ flex:none; width:22px; height:22px; stroke:var(--ink-3); stroke-width:2.4; fill:none; stroke-linecap:round; }
+.search input{ border:none; outline:none; flex:1; min-width:0; font-family:var(--f); font-size:16px; font-weight:600; background:transparent; color:var(--ink); }
+.search input::placeholder{ color:var(--ink-3); }
+.btn-add{ display:none; border:none; background:var(--brand); color:#fff; border-radius:var(--r-btn); min-height:56px; padding:0 24px;
+            font-size:16px; font-weight:800; cursor:pointer; align-items:center; gap:10px; white-space:nowrap; }
+.btn-add svg{ width:20px; height:20px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; }
+/* ── filters ── */
+  .filters{ display:flex; gap:8px; padding:14px 20px 0; overflow-x:auto; scrollbar-width:none; }
+.filters::-webkit-scrollbar{ display:none; }
+.fp{ flex:none; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:0 18px; min-height:44px;
+       font-size:14px; font-weight:700; color:var(--ink-2); cursor:pointer; white-space:nowrap; }
+.fp[data-year]{ font-variant-numeric:tabular-nums; }
+.fp.on{ background:var(--brand); border-color:var(--brand); color:#fff; }
+.fp .gap{ flex:none; width:1px; }
+.fdiv{ flex:none; width:1px; background:var(--line); margin:8px 4px; }
+/* ── sync status row (above the list) ── */
+  .sync{ display:flex; align-items:center; gap:10px; margin:14px 20px 0; min-height:40px; padding:0 14px; border-radius:12px;
+         font-size:13.5px; font-weight:600; color:var(--ink-2); }
+@keyframes spin{ to{ transform:rotate(360deg);} }
+/* ── list ── */
+  .list{ padding:6px 20px 190px; }
+.yearlbl{ position:sticky; top:0; z-index:2; background:var(--page); display:flex; align-items:baseline; gap:8px; padding:20px 4px 10px; }
+.yearlbl .y{ font-size:15px; font-weight:800; }
+.yearlbl .y b{ direction:ltr; font-variant-numeric:tabular-nums; }
+.yearlbl .c{ font-size:12.5px; font-weight:700; color:var(--ink-3); direction:ltr; }
+.yearlbl::after{ content:''; flex:1; border-top:1px solid var(--line); align-self:center; margin-inline-start:6px; }
+.brow{ width:100%; text-align:start; background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:16px 18px; margin-bottom:10px;
+         display:flex; align-items:center; gap:14px; cursor:pointer; color:var(--ink); min-height:88px; }
+.brow .mid{ flex:1; min-width:0; display:flex; flex-direction:column; gap:9px; }
+.brow .nm{ font-size:21px; font-weight:900; line-height:1.15; }
+.brow .sub{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.brow .chev{ flex:none; width:18px; height:18px; stroke:var(--ink-3); stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.brow.gone .nm{ color:var(--ink-3); }
+.plate{ display:inline-flex; align-items:stretch; direction:ltr; border-radius:10px; overflow:hidden; background:var(--ink); flex:none; }
+.plate .yr{ background:var(--gold); color:#fff; font-family:var(--f-mono); font-weight:600; font-size:10px; padding:0 7px; display:grid; place-items:center; }
+.plate .no{ color:#fff; font-family:var(--f-mono); font-weight:600; font-size:12px; letter-spacing:1px; padding:6px 10px; white-space:nowrap; }
+.sx{ display:inline-flex; align-items:center; justify-content:center; gap:4px; min-width:30px; height:30px; padding:0 8px; border-radius:9px;
+       font-size:12.5px; font-weight:800; line-height:1; }
+.sx.m{ background:var(--ink); color:#fff; }
+.sx.f{ background:var(--surface); color:var(--ink); border:2px solid var(--ink); }
+.sx.u{ background:var(--page); color:var(--ink-3); border:1px solid var(--line); }
+.sx .g{ font-size:15px; font-weight:700; }
+.st{ display:inline-flex; align-items:center; height:30px; padding:0 12px; border-radius:999px; font-size:12.5px; font-weight:800; white-space:nowrap; }
+.st.race{ background:var(--brand-tint); color:var(--brand-deep); }
+.st.active{ background:var(--page); color:var(--ink-2); border:1px solid var(--line); }
+.st.breed{ background:var(--gold-tint); color:#7A5A0E; }
+.st.gone{ background:var(--page); color:var(--ink-3); border:1px solid var(--line); }
+/* ── desktop table (hidden on phone) ── */
+  .table{ display:none; margin:18px 20px 60px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; }
+.table table{ width:100%; border-collapse:collapse; }
+.table th{ text-align:start; font-size:12.5px; font-weight:800; color:var(--ink-3); padding:14px 16px; border-bottom:2px solid var(--line); white-space:nowrap; cursor:pointer; user-select:none; }
+th .sort{ display:inline-flex; align-items:center; gap:5px; }
+th .sort svg{ width:12px; height:12px; stroke:currentColor; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; opacity:0; }
+th.on{ color:var(--ink); }
+th.on .sort svg{ opacity:1; }
+th.desc .sort svg{ transform:rotate(180deg); }
+.table th:hover{ color:var(--ink); background:var(--page); }
+.table td{ padding:12px 16px; border-bottom:1px solid var(--line); font-size:15px; font-weight:600; vertical-align:middle; height:60px; }
+.table tr:last-child td{ border-bottom:none; }
+.table tbody tr{ cursor:pointer; }
+.table tbody tr:hover td{ background:var(--brand-tint); }
+td.nm{ font-size:17px; font-weight:800; }
+td.ltr{ direction:ltr; text-align:right; font-variant-numeric:tabular-nums; }
+td.yr{ font-weight:700; color:var(--ink-2); }
+.res{ display:inline-flex; align-items:center; gap:8px; }
+.res .pl{ display:inline-block; min-width:36px; text-align:center; font-weight:800; font-size:13.5px; padding:4px 8px; border-radius:10px; background:var(--page); color:var(--ink-2); direction:ltr; }
+.res .pl.top{ background:var(--brand); color:#fff; }
+.res .w{ font-weight:600; color:var(--ink-2); }
+.res.none{ color:var(--ink-3); font-weight:600; }
+tr.gone td.nm{ color:var(--ink-3); }
+/* ── empty state ── */
+  .empty{ padding:36px 24px 190px; display:flex; flex-direction:column; align-items:center; text-align:center; }
+.empty .mark{ width:92px; height:92px; border-radius:28px; background:var(--brand); display:grid; place-items:center; }
+.empty .mark svg{ width:56px; height:56px; }
+.empty h2{ font-size:34px; font-weight:900; line-height:1.1; margin-top:22px; }
+.empty p{ font-size:15px; font-weight:500; color:var(--ink-2); margin-top:10px; max-width:320px; text-wrap:pretty; }
+.empty .cta{ width:100%; max-width:360px; border:none; border-radius:var(--r-btn); padding:18px; margin-top:28px; cursor:pointer;
+               background:var(--brand); color:#fff; font-size:17px; font-weight:800; }
+.empty .alt{ width:100%; max-width:360px; border:2px solid var(--ink); background:transparent; color:var(--ink); border-radius:var(--r-btn);
+               padding:15px; margin-top:12px; cursor:pointer; font-size:15.5px; font-weight:800; }
+.empty .hint{ font-size:12.5px; font-weight:600; color:var(--ink-3); margin-top:12px; }
+/* ── add bird (phone) ── */
+  .fab{ position:fixed; bottom:96px; inset-inline-start:calc(50% - 215px + 20px); z-index:9; }
+@media (max-width:470px){
+.fab{ inset-inline-start:20px; }
+}
+.fab button{ border:none; border-radius:18px; background:var(--ink); color:#fff; font-size:16px; font-weight:800; min-height:58px; padding:0 24px;
+               cursor:pointer; display:flex; align-items:center; gap:10px; }
+.fab svg{ width:22px; height:22px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; }
+/* ── nav ── */
+  .tabbar{ position:fixed; bottom:0; inset-inline:0; margin-inline:auto; max-width:430px; background:var(--surface);
+           border-top:1px solid var(--line); display:flex; padding:10px 4px 14px; z-index:10; }
+@media (hover:hover){
+.brow:hover{ background:var(--brand-tint); border-color:var(--brand); }
+.fp:hover:not(.on){ border-color:var(--brand); color:var(--brand-deep); }
+.fab button:hover{ background:var(--brand-deep); }
+.btn-add:hover, .empty .cta:hover{ background:var(--brand-deep); }
+.empty .alt:hover{ background:var(--ink); color:#fff; }
+}
+.screen button:focus-visible, .search:has(input:focus-visible), .table tbody tr:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
+/* ── demo switcher (design review only) ── */
+  .demo{ position:fixed; top:14px; inset-inline-end:14px; z-index:20; display:flex; gap:4px; background:var(--ink); border-radius:999px; padding:4px; }
+@media (min-width:1100px){
+.fab, .list{ display:none !important; }
+.lofthead{ padding:32px 0 24px; }
+.lofthead, .filters, .table, .empty{ margin-inline:auto; max-width:960px; }
+.lofthead{ padding-inline:32px; max-width:1024px; }
+.headrow{ flex-direction:row; align-items:flex-end; justify-content:space-between; gap:32px; }
+.tools{ flex-direction:row; align-items:center; flex:none; }
+.search{ width:340px; }
+.btn-add{ display:inline-flex; }
+.filters{ padding-inline:32px; max-width:1024px; }
+.table{ display:block; }
+.empty{ padding-top:64px; }
+}

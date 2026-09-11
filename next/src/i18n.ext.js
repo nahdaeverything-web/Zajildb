@@ -19,6 +19,7 @@ export const EXT = {
   // ── shared-states-v1 (4A) ──
   'empty.firstRun.title':     { ar: 'لا طيور بعد', en: 'No birds yet' },
   'empty.firstRun.body':      { ar: 'ابدأ بطائر واحد. الحلقة والاسم يكفيان، والباقي لاحقًا.', en: 'Start with one bird. A ring and a name are enough; the rest can wait.' },
+  'empty.firstRun.cta':       { ar: 'أضف أول طائر', en: 'Add your first bird' },
   'empty.filter.title':       { ar: 'لا نتائج لهذا الفلتر', en: 'No results for this filter' },
   'empty.filter.clear':       { ar: 'مسح الفلاتر', en: 'Clear filters' },
   'loading.saving':           { ar: 'جارٍ الحفظ…', en: 'Saving…' },
@@ -42,7 +43,23 @@ export const EXT = {
   'kind.pairs':               { ar: 'أزواج', en: 'pairs' },
   'kind.media':               { ar: 'صور', en: 'photos' },
   'act.replace':              { ar: 'استبدال', en: 'Replace' },
-  'empty.firstRun.cta':       { ar: 'أضف أول طائر', en: 'Add your first bird' },
+
+  // ── loft-home-v1 (4A) ──
+  'loft.season':              { ar: 'موسم {a} / {b}', en: 'Season {a} / {b}' },
+  'loft.countLine':           { ar: '{n} طائرًا · {m} ذكرًا · {f} أنثى', en: '{n} birds · {m} cocks · {f} hens' },
+  'loft.search.placeholder':  { ar: 'بحث بالاسم أو رقم الحلقة', en: 'Search by name or ring number' },
+  'act.addBird':              { ar: 'إضافة طائر', en: 'Add a bird' },
+  'filter.males':             { ar: 'ذكور', en: 'Cocks' },
+  'filter.females':           { ar: 'إناث', en: 'Hens' },
+  'loft.generation':          { ar: 'جيل {y}', en: 'Generation {y}' },
+  'loft.noResults':           { ar: 'لا نتائج', en: 'No results' },
+  'col.ring':                 { ar: 'الحلقة', en: 'Ring' },
+  'col.generation':           { ar: 'الجيل', en: 'Generation' },
+  'col.lastResult':           { ar: 'آخر نتيجة', en: 'Last result' },
+  'race.noneShort':           { ar: 'لا سباقات', en: 'No races' },
+  'empty.loft.body':          { ar: 'اسم، رقم حلقة، وجنس — وتبدأ شجرة نسب لوفتك من هنا. كل ما تسجّله يُحفظ على جهازك ويُزامَن حين يتوفر اتصال.', en: 'A name, a ring number and a sex — and your loft’s pedigree tree starts here. Everything you record is saved on your device and synced when a connection is available.' },
+  'empty.example.cta':        { ar: 'تحميل سرب تعليمي', en: 'Load a teaching flock' },
+  'empty.example.hint':       { ar: '{n} طائرًا بأنسابهم ونتائجهم للتجربة — يمكن حذفهم لاحقًا', en: '{n} birds with their pedigrees and results to try out — they can be deleted later' },
 };
 
 function interpolate(s, params) {
