@@ -66,7 +66,9 @@ export function useMediaForBird(birdId: string | null) {
     if (!birdId) { setMedia([]); return; }
     let live = true;
     const load = () => db.mediaForBird(birdId).then((rows: Array<Record<string, unknown>>) => {
-      if (live) setMedia(rows.map((m) => { const { blob: _blob, ...meta } = m; return meta; }));
+      // `hasBlob` says whether the bytes are on this device (SYNC-DESIGN §7: metadata syncs, blobs do not) — the profile
+      // gallery decides placeholder vs photo from it, then fetches the blob itself (idbGet) only for the rows it renders
+      if (live) setMedia(rows.map((m) => { const { blob, ...meta } = m; return { ...meta, hasBlob: !!blob }; }));
     });
     load();
     const off = db.onChange((ev: ChangeEvent) => { if (ev && ev.type === 'media' && ev.birdId === birdId) load(); });

@@ -18,7 +18,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SPECS = join(ROOT, '..', 'design', 'approved');
 
 // ── shipped screens: added as each screen lands ──
-export const SHIPPED = ['shared-states-v1.html', 'loft-home-v1.html'];
+export const SHIPPED = ['shared-states-v1.html', 'loft-home-v1.html', 'bird-profile-v1.html'];
 
 const AR = /[؀-ۿ]/;
 // FORMAT tags fold into their parent (they never carry a standalone UI string);
@@ -29,7 +29,7 @@ const AR = /[؀-ۿ]/;
 const FORMAT = new Set(['b','i','em','strong','bdi','small','u','kbd','code','sup','sub']);
 const SKIP = new Set(['script','style','svg']);
 const ATTRS = ['placeholder','aria-label','title','alt','value','data-label'];
-const norm = (v) => { v = v.replace(/\s+/g, ' ').trim().replace(/^[·|—–:؛، ]+|[·|—–:؛، ]+$/g, '').trim(); return v.replace(/^[\d٠-٩]+(?=[؀-ۿ])/, ''); };
+const norm = (v) => { v = v.replace(/\s+/g, ' ').trim().replace(/^[·|—–:؛، ]+|[·|—–:؛، ]+$/g, '').trim(); return v.replace(/^[\d٠-٩]+(?=[؀-ۿ])/, '').replace(/(?<=[؀-ۿ])\s*[\d٠-٩]+$/, ''); };   // a folded count either side of a label («الصور 3») is not part of the string
 
 /** Element-level Arabic strings of a spec (Set). */
 export function extract(html) {

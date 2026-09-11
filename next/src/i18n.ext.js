@@ -11,7 +11,8 @@
 // must be EITHER a key here (or in the vanilla dictionary) OR on that screen's
 // recorded mock-content list in guards/strings.mock.json — the string guard
 // fails the build otherwise. Each screen's commit names what it promoted and
-// what it judged mock.
+// what it judged mock. Where vanilla already has the string, vanilla's wording
+// is the app's voice and wins; the spec's variant goes to strings.pending.json.
 import { t as base, getLang } from './i18n.js';
 export * from './i18n.js';
 
@@ -60,6 +61,28 @@ export const EXT = {
   'empty.loft.body':          { ar: 'اسم، رقم حلقة، وجنس — وتبدأ شجرة نسب لوفتك من هنا. كل ما تسجّله يُحفظ على جهازك ويُزامَن حين يتوفر اتصال.', en: 'A name, a ring number and a sex — and your loft’s pedigree tree starts here. Everything you record is saved on your device and synced when a connection is available.' },
   'empty.example.cta':        { ar: 'تحميل سرب تعليمي', en: 'Load a teaching flock' },
   'empty.example.hint':       { ar: '{n} طائرًا بأنسابهم ونتائجهم للتجربة — يمكن حذفهم لاحقًا', en: '{n} birds with their pedigrees and results to try out — they can be deleted later' },
+
+  // ── bird-profile-v1 (4A) ──
+  // Vanilla already carries «رجوع» (act.back), «الصور» (bird.photos), «السجل الصحي» (bird.healthLog),
+  // «المركز» (race.position, the spec's «الترتيب» column) and «الفقس» in «تاريخ الفقس» (bird.hatchDate,
+  // the spec's «التفقيس»); vanilla's words are used and the spec variants are on strings.pending.json.
+  'act.options':              { ar: 'خيارات', en: 'Options' },
+  'tab.overview':             { ar: 'عام', en: 'Overview' },
+  'tab.pedigree':             { ar: 'النسب', en: 'Pedigree' },
+  'tile.coi':                 { ar: 'التربية الداخلية', en: 'Inbreeding' },
+  'tile.races':               { ar: 'سباقًا', en: 'races' },
+  'tile.hatch':               { ar: 'الفقس', en: 'Hatched' },
+  'profile.verified.title':   { ar: 'سجل موثق', en: 'Verified record' },
+  'profile.verified.body':    { ar: 'في زاجل منذ {since}. كل تعديل محفوظ بتاريخه وجهازه، والشهادة تُبنى من السجل نفسه.', en: 'In Zajil since {since}. Every edit is kept with its date and device, and the certificate is built from this very record.' },
+  'profile.basics':           { ar: 'البيانات الأساسية', en: 'Basic details' },
+  'profile.added':            { ar: 'أُضيف', en: 'Added' },
+  'profile.coiLine':          { ar: 'التربية الداخلية {pct} من {n} أجيال · اكتمال الشجرة {c}', en: 'Inbreeding {pct} over {n} generations · pedigree {c} complete' },
+  'profile.fullTree':         { ar: 'شجرة النسب الكاملة', en: 'Full pedigree tree' },
+  'race.best':                { ar: 'أفضل نتيجة', en: 'Best result' },
+  'race.kmMpm':               { ar: '{km} km · {mpm} m/min', en: '{km} km · {mpm} m/min' },
+  'col.release':              { ar: 'الإطلاق', en: 'Release' },
+  'health.next':              { ar: 'التطعيم القادم', en: 'Next vaccination' },
+  'health.next.estimate':     { ar: 'تقديري — سنة من آخر تطعيم', en: 'Estimate — one year after the last vaccination' },
 };
 
 function interpolate(s, params) {

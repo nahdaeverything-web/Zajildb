@@ -31,9 +31,10 @@ export function SexChip({ sex }: { sex?: string }) {
   return <span className={`${s.sx} ${s[k]}`} data-sex={sx} aria-label={t('sex.' + sx)}><span className={s.g}>{sexIcon(sx)}</span>{t('sex.' + sx)}</span>;
 }
 /** COI value with ui.js's band as DATA (≥25% severe · ≥12.5% high · ≥6.25% moderate · >0 info · 0 none). No approved spec draws a coloured badge; each screen presents the value as its spec does. */
-export function COIValue({ coi }: { coi: number }) {
+export function COIValue({ coi, mono = true }: { coi: number; mono?: boolean }) {
   const band = coi >= 0.25 ? 'severe' : coi >= 0.125 ? 'high' : coi >= 0.0625 ? 'moderate' : coi > 0 ? 'info' : 'none';
-  return <span className={s.mono} data-testid="coi-badge" data-band={band}>{fmtPercent(coi, 1)}</span>;
+  // mono=false where the spec sets the value in the display face (bird-profile's tiles and COI line)
+  return <span className={mono ? s.mono : undefined} data-testid="coi-badge" data-band={band}>{fmtPercent(coi, 1)}</span>;
 }
 /** The ring plate — shared-states `.plate` / `.plate.sm`: a mono ring, optional season. */
 export function Plate({ ring, season, small = false }: { ring: string; season?: string; small?: boolean }) {
