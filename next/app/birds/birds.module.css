@@ -134,3 +134,5 @@ tr.gone td.nm{ color:var(--ink-3); }
 .table{ display:block; }
 .empty{ padding-top:64px; }
 }
+/* ruling 14 (4A acceptance): the external marker — vanilla's chip-ext (birds.js:102) carried into the spec's row; kit over spec */
+.ext{ display:inline-flex; align-items:center; height:30px; padding:0 10px; border-radius:999px; font-size:12px; font-weight:800; white-space:nowrap; background:var(--page); color:var(--ink-3); border:1px dashed var(--ink-3); }

@@ -19,6 +19,19 @@ until a cutover ruling.
   the build accepts but reports as ⚠). Each guard was proved to fire by
   reintroducing its violation — see the Phase 0.5 and 4A-guards commits.
 - `output: 'export'` — no server, ever. Record views take `?id=`, never `[id]`.
+- **Rulings at 4A acceptance** (each recorded where it applies):
+  `nav.breeding` is a deliberate rename to «التزاوج» (i18n.ext.js overrides
+  vanilla's «التربية»; every spec and the kit say so) · ONE season rule
+  everywhere a season is displayed — split-year with a 1 July turnover
+  (`src/components/season.ts`); breeding's stored `season` stays vanilla's
+  plain year · ownership is kit-over-spec: the external marker and the
+  «الخارجية فقط» pill are on loft home although loft-home-v1 draws neither ·
+  capabilities the specs are silent on are carried, not dropped: per-photo
+  delete, add-note, the FCI per-bird line · the mini-tree plate shrinks at
+  phone width for real ring lengths (spec-vs-real-data) · spec wording that a
+  ruling settled lives in `guards/strings.ruled.json` (accepted silently, the
+  ruling is the record); `strings.pending.json` holds only what still awaits
+  one.
 - Everything outside `next/` is read-only during the port. `next/` imports
   nothing from `../js`, `../css` or `../tools` (guarded); the engine and the
   dataset id mapper are byte-identical copies under `src/engine/` and `tests/`.

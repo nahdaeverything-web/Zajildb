@@ -1,22 +1,6 @@
 {
-  "loft-home-v1.html": {
-    "التزاوج": "tab label: every spec and the kit NAVIGATION NOTE say «التزاوج»; vanilla nav.breeding is «التربية». Nav.tsx currently shows the spec word (Phase 0). Awaiting ruling.",
-    "3 تغييرات بانتظار المزامنة": "plural agreement: spec «3 تغييرات …» vs vanilla template sync.pending «{n} تغييرًا …». Awaiting ruling on plural forms.",
-    "إعادة المحاولة": "sync error-row link: loft-home says «إعادة المحاولة», shared-states says «الأدوات» (nav.tools). Shared-states wins by its precedence rule; the port links to الأدوات. Recorded."
-  },
-  "shared-states-v1.html": {
-    "3 تغييرات بانتظار المزامنة": "plural agreement: spec «3 تغييرات …» vs vanilla template sync.pending «{n} تغييرًا …». Awaiting ruling on plural forms.",
-    "تمت المزامنة. وُجدت 3 حلقات مكررة": "plural agreement + link split: spec «وُجدت 3 حلقات مكررة — راجعها(link)» vs vanilla sync.duplicates «وُجدت {n} حلقة مكررة — راجعها.». Awaiting ruling."
-  },
   "bird-profile-v1.html": {
-    "التفقيس": "tile label: spec «التفقيس» vs vanilla's word inside bird.hatchDate «تاريخ الفقس»; the port's tile.hatch uses vanilla's root word. Awaiting ruling on the voice.",
-    "الصورة الرئيسية": "cover-photo aria-label: no vanilla media field marks a primary photo, so the .ph.cover badge and this label are not rendered. Awaiting ruling.",
     "صورة": "photo-tile aria-label: the port labels each tile with vanilla's photo.{subtype} (الجسم/العين/الجناح/أخرى) rather than the generic «صورة». Recorded.",
-    "تاريخ التفقيس": "basics row: vanilla bird.hatchDate «تاريخ الفقس» wins over spec «تاريخ التفقيس». Awaiting ruling on the voice (with the tile label).",
-    "التربية الداخلية 3.1% من خمسة أجيال · أربعة مكتملة": "pedigree-tab COI line: the spec spells the numbers out and closes with a count of complete generations; the port renders profile.coiLine with the engine's depth and vanilla's completeness % (ped.completeness), and adds vanilla's AVK line. Awaiting ruling.",
-    "الترتيب": "race-table column: vanilla race.position «المركز» wins over spec «الترتيب». Recorded.",
-    "ملاحظة": "health kind chip: no vanilla event type for «ملاحظة» (vanilla: تطعيم/علاج/مرض/فحص); the port maps treatment/illness to the spec's red kind, check to the grey one. Awaiting ruling on adding event types.",
-    "فيتامينات": "health kind chip: no vanilla event type for «فيتامينات». Awaiting ruling on adding event types (with the note kind).",
-    "التزاوج": "tab label: every spec and the kit NAVIGATION NOTE say «التزاوج»; vanilla nav.breeding is «التربية». Nav.tsx currently shows the spec word (Phase 0). Awaiting ruling."
+    "التربية الداخلية 3.1% من خمسة أجيال · أربعة مكتملة": "pedigree-tab COI line: the spec spells the numbers out and closes with a count of complete generations; the port renders profile.coiLine with the engine's depth and vanilla's completeness % (ped.completeness), and adds vanilla's AVK line. Awaiting ruling."
   }
 }

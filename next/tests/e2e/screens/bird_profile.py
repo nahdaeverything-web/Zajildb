@@ -60,10 +60,22 @@ try:
         # ── overview: verified notice, gallery with the elsewhere placeholder, basics, notes read-only ──
         check('«سجل موثق» notice present', 'سجل موثق' in pg.locator('[data-testid=verified-notice]').inner_text())
         check('gallery shows the blobless photo as «الصورة على جهاز آخر»', pg.locator('[data-testid=gallery] [data-testid=media-elsewhere]').count() == 1)
+        # ruling 8 (4A acceptance): per-photo delete with undo (bird-detail.js:233)
+        pg.click('[data-testid=media-tile] [data-testid=media-delete]'); pg.wait_for_timeout(150)
+        check('[ruling 8] tile ✕ asks «تأكيد الحذف؟»', 'تأكيد الحذف' in pg.locator('[data-testid=dialog]').inner_text())
+        pg.click('[data-testid=dialog-confirm]'); pg.wait_for_timeout(400)
+        check('[ruling 8] the media row is gone from the gallery and the store', pg.locator('[data-testid=media-tile]').count() == 0 and pg.evaluate("async (id) => (await window.__zajilDb.mediaForBird(id)).length", ids['barq']) == 0)
+        pg.click('[data-testid=toast-action]'); pg.wait_for_timeout(400)
+        check('[ruling 8] undo restores the row into the gallery', pg.locator('[data-testid=media-tile] [data-testid=media-elsewhere]').count() == 1)
+        pg.wait_for_timeout(4500)   # let the confirmation toast expire before the screenshots
         rows = pg.locator('[data-testid=basics] [data-testid^=row-]').count()
         check('basic details rows (loft · colour · hatch · sire · dam · added)', rows >= 5, rows)
         check('sire / dam are links to their profiles', pg.locator('[data-testid=row-sire] a').get_attribute('href').startswith('/bird?id=') and pg.locator('[data-testid=row-dam] a').get_attribute('href').startswith('/bird?id='))
-        check('notes card is read-only on the profile (spec) — no add-note control', pg.locator('[data-testid=notes]').count() == 1 and pg.locator('[data-testid=notes] textarea').count() == 0)
+        # ruling 10 (4A acceptance): vanilla's add-note carried into the spec's notes card — saved through the write boundary
+        n_notes = pg.locator('[data-testid=note]').count()
+        pg.fill('[data-testid=note-input]', 'ملاحظة اختبار — من البروفايل'); pg.click('[data-testid=note-add]'); pg.wait_for_timeout(400)
+        saved = pg.evaluate("(id) => (window.__zajilDb.getBird(id).notes || []).some(n => n.text === 'ملاحظة اختبار — من البروفايل')", ids['barq'])
+        check('[ruling 10] add-note appends to bird.notes and the card re-renders', saved and pg.locator('[data-testid=note]').count() == n_notes + 1 and pg.locator('[data-testid=note-input]').input_value() == '', pg.locator('[data-testid=note]').count())
         for w in (430, 900, 1400):
             pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/overview-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
@@ -88,6 +100,14 @@ try:
         racer = h.evaluate("() => { const db = window.__zajilDb; const n = new Map(); for (const r of db.state.raceResults.values()) n.set(r.birdId, (n.get(r.birdId) || 0) + 1); return [...n.entries()].sort((a, b) => b[1] - a[1])[0]; }")
         pg.goto(f"{ROOT}bird.html?id={racer[0]}&tab=race", wait_until='load'); pg.wait_for_selector('[data-testid=race-best]', timeout=6000)
         check('races tab (bird with results): best result + ≥1 season table, ranks as pills', pg.locator('[data-testid=season-card]').count() >= 1 and pg.locator('[data-testid=race-row]').count() == racer[1], racer[1])
+        # ruling 6: one season rule — split-year label with the 1 July turnover, computed here from the bird's own result dates
+        exp = pg.evaluate("(id) => { const s = new Set(); for (const r of window.__zajilDb.state.raceResults.values()) if (r.birdId === id && r.date) { const y = +r.date.slice(0, 4), m = +r.date.slice(5, 7); s.add(m >= 7 ? y : y - 1); } return [...s].sort((a, b) => b - a); }", racer[0])
+        heads = [h.strip() for h in pg.locator('[data-testid=season-card] h2').all_inner_texts()]
+        check('[ruling 6] season cards labelled «موسم a / a+1» by the July rule, newest first', [h.split()[1] for h in heads] == [str(a) for a in exp], heads)
+        # ruling 10: the FCI per-bird line as one row in the races tab (bird-detail.js:131)
+        q = pg.evaluate("(id) => { const db = window.__zajilDb, e = window.__zajilEngine; const rs = [...db.state.raceResults.values()].filter(r => r.birdId === id); const el = e.fci.birdEligibility(db.getBird(id), rs); return [el.qualifyingResults.length, rs.length]; }", racer[0])
+        fci = pg.locator('[data-testid=fci-row]').inner_text()
+        check('[ruling 10] «نتائج مؤهلة: n / total» row present with the engine\'s numbers', 'نتائج مؤهلة' in fci and f'{q[0]} / {q[1]}' in fci, fci.replace('\n', ' '))
         for w in (430, 900, 1400):
             pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/races-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})

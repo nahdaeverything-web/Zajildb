@@ -5,7 +5,7 @@ import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds } from '@/src/db/react';
 import { t, fmtNum, statusLabel } from '@/src/i18n.ext.js';
 import { ringKey } from '@/src/engine/rings.js';
-import { SyncRow, Empty, toast, primaryRing } from '@/src/components';
+import { SyncRow, Empty, toast, primaryRing, seasonLabel } from '@/src/components';
 import sh from '@/src/components/shared.module.css';
 import s from './birds.module.css';
 
@@ -63,6 +63,7 @@ export default function BirdsView() {
     if (qq) { const rk = ringKey(qq); rs = rs.filter((r) => searchText(r.b).includes(qq) || (rk && (r.b.rings || []).some((x) => ringKey(x as never).includes(rk)))); }
     if (filter === 'm' || filter === 'f') rs = rs.filter((r) => r.sexK === filter);
     if (filter === 'race' || filter === 'breed') rs = rs.filter((r) => r.stK === filter);
+    if (filter === 'ext') rs = rs.filter((r) => !!r.b.external);          // birds.js:37 — ruling 14 (4A): kit over spec
     if (year) rs = rs.filter((r) => r.year === year);
     return rs;
   }, [rows, q, filter, year]);
@@ -75,7 +76,6 @@ export default function BirdsView() {
 
   const m = rows.filter((r) => r.sexK === 'm').length, f = rows.filter((r) => r.sexK === 'f').length;
   const loft = db.currentLoft() as { name?: string } | null;
-  const yr = new Date().getFullYear();   // season eyebrow: year / year+1, the same source as breeding's season default (interim; spec silent on the rule)
   const empty = booted && rows.length === 0;
   const onSort = (k: SortKey) => { if (k === sortK) setDesc(!desc); else { setSortK(k); setDesc(k === 'year' || k === 'res'); } };
   const pill = (label: string, active: boolean, onClick: () => void, extra: Record<string, string> = {}) => (
@@ -84,13 +84,15 @@ export default function BirdsView() {
   const Plate = ({ ring }: { ring: string }) => <span className={s.plate}><span className={s.yr}>{ring.split(' ')[1] ?? ''}</span><span className={s.no}>{ring}</span></span>;
   const Sx = ({ k }: { k: Row['sexK'] }) => <span className={`${s.sx} ${s[k]}`} data-sex={k === 'm' ? 'cock' : k === 'f' ? 'hen' : 'unknown'} aria-label={t(sexKey[k])}><span className={s.g}>{sexIcon[k]}</span>{t(sexKey[k])}</span>;
   const St = ({ r }: { r: Row }) => <span className={`${s.st} ${s[r.stK]}`} data-testid="status-pill">{r.stLabel}</span>;
+  // birds.js:102 chip-ext — the external marker, ruled in at 4A acceptance (kit over spec: reference birds are a real feature)
+  const Ext = () => <span className={s.ext} data-testid="ext-tag">{t('bird.externalShort')}</span>;
   const Res = ({ r }: { r: Row }) => r.last ? <span className={s.res}><span className={`${s.pl} ${r.last.pl <= 10 ? s.top : ''}`}>{fmtNum(r.last.pl, { group: false })}</span><span className={s.w}>{r.last.w}</span></span> : <span className={`${s.res} ${s.none}`}>{t('race.noneShort')}</span>;
 
   return (
     <section className={s.screen}>
       <div className={s.lofthead}>
         <div className={s.headrow}>
-          <div><div className={s.eyebrow}>{t('loft.season', { a: yr, b: yr + 1 })}</div><h1>{loft?.name || t('loft.unnamed')}</h1>
+          <div><div className={s.eyebrow} data-testid="season-eyebrow">{seasonLabel()}</div><h1>{loft?.name || t('loft.unnamed')}</h1>
             <div className={s.count} data-testid="count-line">{empty ? t('empty.firstRun.title') : !booted ? '' : t('loft.countLine', { n: fmtNum(rows.length), m: fmtNum(m), f: fmtNum(f) })}</div></div>
           {!empty && booted && (
             <div className={s.tools}>
@@ -113,6 +115,7 @@ export default function BirdsView() {
             {pill(t('filter.females'), filter === 'f', () => { setFilter('f'); setYear(null); }, { 'data-filter': 'f' })}
             {pill(statusLabel('race team'), filter === 'race', () => { setFilter('race'); setYear(null); }, { 'data-filter': 'race' })}
             {pill(statusLabel('breeder'), filter === 'breed', () => { setFilter('breed'); setYear(null); }, { 'data-filter': 'breed' })}
+            {pill(t('filter.externalOnly'), filter === 'ext', () => { setFilter('ext'); setYear(null); }, { 'data-filter': 'ext' })}
             {years.map((y) => pill(y, year === y, () => { setYear(year === y ? null : y); setFilter('all'); }, { 'data-year': y }))}
           </div>
           <SyncRow />
@@ -122,7 +125,7 @@ export default function BirdsView() {
                 <div className={s.yearlbl} data-testid="year-label"><span className={s.y}>{t('loft.generation', { y })}</span><span className={s.c}>{fmtNum(rs.length)}</span></div>
                 {rs.map((r) => (
                   <Link key={r.b.id} href={`/bird?id=${r.b.id}`} className={`${s.brow} ${r.stK === 'gone' ? s.gone : ''}`} data-testid="bird-row">
-                    <span className={s.mid}><span className={s.nm}>{r.name || r.ring || r.b.id.slice(0, 8)}</span><span className={s.sub}>{r.ring && <Plate ring={r.ring} />}<Sx k={r.sexK} /><St r={r} /></span></span>
+                    <span className={s.mid}><span className={s.nm}>{r.name || r.ring || r.b.id.slice(0, 8)}</span><span className={s.sub}>{r.ring && <Plate ring={r.ring} />}<Sx k={r.sexK} /><St r={r} />{r.b.external && <Ext />}</span></span>
                     <svg className={s.chev} viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
                   </Link>
                 ))}
@@ -140,7 +143,7 @@ export default function BirdsView() {
                 {sorted.map((r) => (
                   <tr key={r.b.id} tabIndex={0} className={r.stK === 'gone' ? s.gone : ''} data-testid="table-row" onClick={() => { window.location.href = `/bird?id=${r.b.id}`; }}>
                     <td className={s.ltr}>{r.ring ? <Plate ring={r.ring} /> : '—'}</td>
-                    <td className={s.nm} data-testid="cell-name">{r.name}</td>
+                    <td className={s.nm} data-testid="cell-name">{r.name}{r.b.external && <> <Ext /></>}</td>
                     <td><Sx k={r.sexK} /></td>
                     <td><St r={r} /></td>
                     <td className={`${s.yr} ${s.ltr}`}>{r.year}</td>

@@ -7,7 +7,8 @@ import { useZajilStore, selectBird, useMediaForBird } from '@/src/db/react';
 import { t, fmtDate, fmtNum, fmtPercent, statusLabel } from '@/src/i18n.ext.js';
 import { inbreeding, ancestorLoss } from '@/src/engine/coi.js';
 import { descendantDepths, pedigreeGrid } from '@/src/engine/pedigree.js';
-import { SyncRow, Loading, MediaPlaceholder, COIValue, BirdLabel, primaryRing, birdLabelText, toast, undoToast, confirmDialog } from '@/src/components';
+import { birdEligibility } from '@/src/engine/fci.js';
+import { SyncRow, Loading, MediaPlaceholder, COIValue, BirdLabel, primaryRing, birdLabelText, toast, undoToast, confirmDialog, seasonStart } from '@/src/components';
 import sh from '@/src/components/shared.module.css';
 import s from './bird.module.css';
 
@@ -33,11 +34,7 @@ const TABS: Array<[Tab, string]> = [['over', 'tab.overview'], ['ped', 'tab.pedig
 const getBird = (id: string) => db.getBird(id) as Bird | undefined;
 const byDateDesc = <T extends { date?: string }>(a: T, b: T) => (b.date || '').localeCompare(a.date || '');
 
-// Season of a race: turns over in July. Interim — the spec's own tables put
-// January–March races in the season that began the previous year; the rule
-// itself is not written anywhere (raised in the 4A report, with loft-home's
-// eyebrow which currently uses the calendar year).
-const seasonOf = (iso?: string) => { const y = +(iso || '').slice(0, 4); if (!y) return 0; return +(iso || '').slice(5, 7) >= 7 ? y : y - 1; };
+// Season of a race: the one display rule (src/components/season.ts, ruled at 4A acceptance).
 // Ruling 4 (4.0): next vaccination = most recent vaccination event + 365 days, labelled an estimate, hidden when none.
 const plus365 = (iso: string) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + 365); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 // Plate season badge = the two last digits of the primary ring's year (the spec's «24» beside JOR 24 17352).
@@ -57,6 +54,7 @@ export default function BirdView() {
   const [tab, setTab] = useState<Tab>(want && TABS.some(([k]) => k === want) ? want : 'over');
   const [booted, setBooted] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [noteText, setNoteText] = useState('');
   useEffect(() => { db.initDB().then(() => setBooted(true)); }, []);
   const bird = useZajilStore(selectBird(id)) as Bird | null;
   const st = useZajilStore((x) => x);
@@ -120,6 +118,19 @@ export default function BirdView() {
       downloadJSON(payload, `zajil-bird-${ring.replace(/[^\w-]+/g, '_') || id.slice(0, 8)}.json`); toast(t('toast.exported'), { kind: 'success' });
     });
   }
+  // bird-detail.js:233 — per-photo delete with undo (ruling 8: a capability the spec's silence does not remove)
+  async function delMedia(m: Media) {
+    const ok = await confirmDialog({ title: t('confirm.deleteGeneric'), cancelLabel: t('act.cancel'), confirmLabel: t('act.delete'), confirmKind: 'danger' });
+    if (!ok) return;
+    const snap = await db.deleteMedia(m.id);
+    undoToast(t('toast.deleted'), t('act.undo'), async () => { if (!snap) return; await db.restoreMedia(snap); toast(t('toast.undone'), { kind: 'success' }); });
+  }
+  // bird-detail.js:189 — add a note through the write boundary (ruling 10: data entry must not be lost)
+  async function addNote() {
+    const text = noteText.trim(); if (!text) return;
+    const copy = { ...bird!, notes: [...(bird!.notes || []), { id: db.uuid(), at: db.nowISO(), text }] };
+    try { await db.saveBird(copy); setNoteText(''); } catch { toast(t('toast.saveFailed'), { kind: 'error' }); }
+  }
 
   // ── pedigree tab data ──
   const gens = pedigreeGrid(getBird, id, 2) as Slot[][];
@@ -142,7 +153,8 @@ export default function BirdView() {
   // ── races tab data ──
   const best = results.filter((r) => r.position && r.position >= 1).sort((a, b) => (a.position! - b.position!) || byDateDesc(a, b))[0];
   const seasons = new Map<number, Race[]>();
-  for (const r of results) { const sy = seasonOf(r.date); (seasons.get(sy) ?? seasons.set(sy, []).get(sy)!).push(r); }
+  for (const r of results) { const sy = seasonStart(r.date || ''); (seasons.get(sy) ?? seasons.set(sy, []).get(sy)!).push(r); }
+  const elig = birdEligibility(bird, results) as { hasRing: boolean; qualifyingResults: unknown[] };   // bird-detail.js:131 — one row in the races tab (ruling 10)
   const seasonList = [...seasons.entries()].sort((a, b) => b[0] - a[0]);
   const raceLabel = (r: Race) => r.releasePoint?.name || r.raceName || t('raceType.' + (r.raceType || 'training'));
 
@@ -234,10 +246,15 @@ export default function BirdView() {
               <h2>{t('bird.photos')} <span className={s.cnt}>{fmtNum(media.length)}</span></h2>
               {media.length === 0 ? <p className={sh.muted}>{t('common.none')}</p> : (
                 <div className={s.gal} data-testid="gallery">
-                  {media.map((m) => !m.hasBlob ? <MediaPlaceholder key={m.id} kind={m.kind === 'photo' ? 'photo' : 'file'} filename={m.name} />
-                    : !urls[m.id] ? <div key={m.id} className={s.ph} />
-                    : m.kind === 'photo' ? <div key={m.id} className={`${s.ph} ${s.img}`} data-testid="media-photo"><img src={urls[m.id]} alt={t('photo.' + (m.subtype || 'other'))} loading="lazy" /><span>{m.name}</span></div>
-                    : <a key={m.id} className={`${s.ph} ${s.img}`} href={urls[m.id]} download={m.name || 'document'} data-testid="media-file">📄<span>{m.name || 'document'}</span></a>)}
+                  {media.map((m) => (
+                    <div key={m.id} className={s.phwrap} data-testid="media-tile">
+                      {!m.hasBlob ? <MediaPlaceholder kind={m.kind === 'photo' ? 'photo' : 'file'} filename={m.name} />
+                        : !urls[m.id] ? <div className={s.ph} />
+                        : m.kind === 'photo' ? <div className={`${s.ph} ${s.img}`} data-testid="media-photo"><img src={urls[m.id]} alt={t('photo.' + (m.subtype || 'other'))} loading="lazy" /><span>{m.name}</span></div>
+                        : <a className={`${s.ph} ${s.img}`} href={urls[m.id]} download={m.name || 'document'} data-testid="media-file">📄<span>{m.name || 'document'}</span></a>}
+                      <button type="button" className={s.del} aria-label={t('act.delete')} onClick={() => delMedia(m)} data-testid="media-delete">✕</button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -263,7 +280,11 @@ export default function BirdView() {
           <div className={s.card} data-testid="notes">
             <h2>{t('common.notes')}</h2>
             {(bird.notes || []).length === 0 ? <p className={sh.muted}>{t('common.none')}</p>
-              : [...(bird.notes || [])].sort((a, b) => (b.at || '').localeCompare(a.at || '')).map((n, i) => <p key={n.id || i} className={s.prose}><span className={sh.muted}>{fmtDate(n.at, { withTime: true })} — </span><bdi>{n.text}</bdi></p>)}
+              : [...(bird.notes || [])].sort((a, b) => (b.at || '').localeCompare(a.at || '')).map((n, i) => <p key={n.id || i} className={s.prose} data-testid="note"><span className={sh.muted}>{fmtDate(n.at, { withTime: true })} — </span><bdi>{n.text}</bdi></p>)}
+            <div className={s.noteform}>
+              <textarea rows={2} value={noteText} onChange={(e) => setNoteText(e.target.value)} aria-label={t('bird.addNote')} data-testid="note-input" />
+              <button type="button" className={`${sh.btn} ${sh.save}`} onClick={addNote} disabled={!noteText.trim()} data-testid="note-add">+ {t('bird.addNote')}</button>
+            </div>
           </div>
         </section>
 
@@ -317,6 +338,9 @@ export default function BirdView() {
         </section>
 
         <section className={s.panel} id="p-race" role="tabpanel" aria-labelledby="t-race" hidden={tab !== 'race'} data-testid="panel-race">
+          <div className={s.card} data-testid="fci-row"><div className={s.rows}>
+            <div className={s.row}><span className={s.k}>{t('fci.qualifying')}</span><span className={`${s.v} ${s.data}`}>{fmtNum(elig.qualifyingResults.length)} / {fmtNum(results.length)}</span></div>
+          </div></div>
           {results.length === 0 ? <div className={s.card}><p className={sh.muted}>{t('race.noRaces')}</p></div> : (
             <>
               {best && (

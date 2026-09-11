@@ -1,41 +1,44 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { t } from '@/src/i18n.ext.js';
 import s from './Nav.module.css';
 
 /**
  * The six ruled destinations — kit v3.1 NAVIGATION NOTE, RULED 2026-09-02.
  * No home tab, no sign-in tab. Icons are the spec's own SVG paths, verbatim.
+ * Labels come from the dictionary (nav.*); nav.breeding is the ruled rename
+ * «التزاوج» carried by i18n.ext.js, so the shell and every screen agree.
  *
  * `owns` lists the record routes that light a tab, mirroring the vanilla
  * router (js/app.js:119): a bird, its pedigree and its certificate belong to
  * الطيور; a pair belongs to التزاوج.
  */
 const TABS = [
-  { href: '/birds',    owns: ['/bird', '/pedigree', '/cert'], label: 'الطيور',
+  { href: '/birds',    owns: ['/bird', '/pedigree', '/cert'], label: 'nav.birds',
     icon: <><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></> },
-  { href: '/breeding', owns: ['/pair'], label: 'التزاوج',
+  { href: '/breeding', owns: ['/pair'], label: 'nav.breeding',
     icon: <><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></> },
-  { href: '/races',    owns: [], label: 'السباقات',
+  { href: '/races',    owns: [], label: 'nav.races',
     icon: <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/> },
-  { href: '/health',   owns: [], label: 'الصحة',
+  { href: '/health',   owns: [], label: 'nav.health',
     icon: <path d="M3 12h4l2-5 3 10 2-5h7"/> },
-  { href: '/stats',    owns: [], label: 'الإحصائيات',
+  { href: '/stats',    owns: [], label: 'nav.stats',
     icon: <path d="M5 20V10M12 20V4M19 20v-7"/> },
-  { href: '/tools',    owns: [], label: 'الأدوات',
+  { href: '/tools',    owns: [], label: 'nav.tools',
     icon: <><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></> },
 ];
 
-function isOn(pathname: string, t: (typeof TABS)[number]) {
-  return pathname === t.href || pathname.startsWith(t.href + '/') ||
-    t.owns.some((p) => pathname === p || pathname.startsWith(p + '/'));
+function isOn(pathname: string, tab: (typeof TABS)[number]) {
+  return pathname === tab.href || pathname.startsWith(tab.href + '/') ||
+    tab.owns.some((p) => pathname === p || pathname.startsWith(p + '/'));
 }
 
 export default function Nav() {
   const pathname = usePathname() ?? '';
-  const items = TABS.map((t) => (
-    <Link key={t.href} href={t.href} className={isOn(pathname, t) ? s.on : undefined}>
-      <svg viewBox="0 0 24 24" aria-hidden="true">{t.icon}</svg>{t.label}
+  const items = TABS.map((tab) => (
+    <Link key={tab.href} href={tab.href} className={isOn(pathname, tab) ? s.on : undefined}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">{tab.icon}</svg>{t(tab.label)}
     </Link>
   ));
   return (

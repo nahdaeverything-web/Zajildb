@@ -1,0 +1,20 @@
+{
+  "loft-home-v1.html": {
+    "التزاوج": "RULED (4A acceptance): nav.breeding is renamed to the spec word in i18n.ext.js — resolves as a key now; entry kept for the record.",
+    "3 تغييرات بانتظار المزامنة": "RULED (4A acceptance, item 14): plural forms — the existing vanilla template wins where the meaning is identical. Was: plural agreement: spec «3 تغييرات …» vs vanilla template sync.pending «{n} تغييرًا …». Awaiting ruling on plural forms.",
+    "إعادة المحاولة": "RULED (4A acceptance, item 14): shared-states wins — the sync error row links to nav.tools. Was: sync error-row link: loft-home says «إعادة المحاولة», shared-states says «الأدوات» (nav.tools). Shared-states wins by its precedence rule; the port links to الأدوات. Recorded."
+  },
+  "shared-states-v1.html": {
+    "3 تغييرات بانتظار المزامنة": "RULED (4A acceptance, item 14): plural forms — the existing vanilla template wins where the meaning is identical. Was: plural agreement: spec «3 تغييرات …» vs vanilla template sync.pending «{n} تغييرًا …». Awaiting ruling on plural forms.",
+    "تمت المزامنة. وُجدت 3 حلقات مكررة": "RULED (4A acceptance, item 14): plural forms — the existing vanilla template wins where the meaning is identical. Was: plural agreement + link split: spec «وُجدت 3 حلقات مكررة — راجعها(link)» vs vanilla sync.duplicates «وُجدت {n} حلقة مكررة — راجعها.». Awaiting ruling."
+  },
+  "bird-profile-v1.html": {
+    "التزاوج": "RULED (4A acceptance): nav.breeding is renamed to the spec word in i18n.ext.js — resolves as a key now; entry kept for the record.",
+    "التفقيس": "RULED (4A acceptance, item 14): synonyms — the existing vanilla key (bird.hatchDate root word) wins. Was: tile label: spec «التفقيس» vs vanilla's word inside bird.hatchDate «تاريخ الفقس»; the port's tile.hatch uses vanilla's root word. Awaiting ruling on the voice.",
+    "تاريخ التفقيس": "RULED (4A acceptance, item 14): synonyms — the existing vanilla key (bird.hatchDate root word) wins. Was: basics row: vanilla bird.hatchDate «تاريخ الفقس» wins over spec «تاريخ التفقيس». Awaiting ruling on the voice (with the tile label).",
+    "الصورة الرئيسية": "RULED (4A acceptance, item 8): cover photo dropped — not rendered. Was: cover-photo aria-label: no vanilla media field marks a primary photo, so the .ph.cover badge and this label are not rendered. Awaiting ruling.",
+    "الترتيب": "RULED (4A acceptance, item 14): synonyms — vanilla race.position wins. Was: race-table column: vanilla race.position «المركز» wins over spec «الترتيب». Recorded.",
+    "ملاحظة": "RULED (4A acceptance, item 9): health kinds are vanilla's four only. Was: health kind chip: no vanilla event type for «ملاحظة» (vanilla: تطعيم/علاج/مرض/فحص); the port maps treatment/illness to the spec's red kind, check to the grey one. Awaiting ruling on adding event types.",
+    "فيتامينات": "RULED (4A acceptance, item 9): health kinds are vanilla's four only. Was: health kind chip: no vanilla event type for «فيتامينات». Awaiting ruling on adding event types (with the note kind)."
+  }
+}

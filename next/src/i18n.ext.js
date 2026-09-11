@@ -83,6 +83,12 @@ export const EXT = {
   'col.release':              { ar: 'الإطلاق', en: 'Release' },
   'health.next':              { ar: 'التطعيم القادم', en: 'Next vaccination' },
   'health.next.estimate':     { ar: 'تقديري — سنة من آخر تطعيم', en: 'Estimate — one year after the last vaccination' },
+
+  // ── rulings at 4A acceptance ──
+  // nav.breeding: a DELIBERATE RENAME from vanilla's «التربية». Every approved
+  // spec and the kit NAVIGATION NOTE say «التزاوج»; ruled at 4A acceptance.
+  // EXT wins over the vanilla dictionary, so every t('nav.breeding') follows.
+  'nav.breeding':             { ar: 'التزاوج', en: 'Breeding' },
 };
 
 function interpolate(s, params) {

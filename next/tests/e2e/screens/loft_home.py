@@ -82,7 +82,7 @@ try:
 
         # ── filter pills (spec: الكل · ذكور · إناث · فريق السباق · تربية · years) ──
         pills = pg.locator('[data-testid=filter-pill]').all_inner_texts()
-        check('pills: الكل ذكور إناث فريق السباق تربية + generation years', pills[:5] == ['الكل', 'ذكور', 'إناث', 'فريق السباق', 'تربية'] and any(t.isdigit() for t in pills[5:]), pills[:7])
+        check('pills: الكل ذكور إناث فريق السباق تربية الخارجية فقط + generation years', pills[:6] == ['الكل', 'ذكور', 'إناث', 'فريق السباق', 'تربية', 'الخارجية فقط'] and any(t.isdigit() for t in pills[6:]), pills[:8])
         pg.click('[data-testid=filter-pill][data-filter=f]'); pg.wait_for_timeout(200)
         sexes = pg.locator('[data-testid=bird-row] [data-sex]').evaluate_all("els => els.map(e => e.dataset.sex)")
         check('pill «إناث» → only hens listed', len(sexes) > 0 and set(sexes) == {'hen'}, set(sexes))
@@ -94,6 +94,16 @@ try:
         check(f'year pill {y} → one generation group only', pg.locator('[data-testid=year-label]').count() == 1 and y in pg.locator('[data-testid=year-label]').first.inner_text())
         pg.click('[data-testid=filter-pill][data-filter=all]'); pg.wait_for_timeout(200)
         check('«الكل» restores every row', pg.locator('[data-testid=bird-row]').count() == n_rows)
+        # ── [ownership#5] the ownership filter splits the register; the external marker on rows (ruling 14: kit over spec) ──
+        n_ext = pg.evaluate("() => window.__zajilDb.allBirds().filter(b => b.external).length")
+        pg.click('[data-testid=filter-pill][data-filter=ext]'); pg.wait_for_timeout(200)
+        check('[ownership#5] pill «الخارجية فقط» lists exactly the external birds, each carrying the «خارجي» marker', n_ext > 0 and pg.locator('[data-testid=bird-row]').count() == n_ext and pg.locator('[data-testid=bird-row] [data-testid=ext-tag]').count() == n_ext, f'{n_ext} external')
+        pg.click('[data-testid=filter-pill][data-filter=all]'); pg.wait_for_timeout(200)
+        # scoped to the phone rows: the desktop table (hidden at 430 by CSS) also carries the marker in its name cell
+        check('[ownership#5] owned + external = total; markers only on external rows', pg.locator('[data-testid=bird-row]').count() == n_rows and pg.locator('[data-testid=bird-row] [data-testid=ext-tag]').count() == n_ext, f"{pg.locator('[data-testid=bird-row] [data-testid=ext-tag]').count()} markers / {n_ext} external")
+        # ── ruling 6: the season eyebrow follows the one display rule (1 July turnover) ──
+        y, m = pg.evaluate("() => { const d = new Date(); return [d.getFullYear(), d.getMonth() + 1]; }"); a = y if m >= 7 else y - 1
+        check('[ruling 6] season eyebrow «موسم a / a+1» with the July turnover', pg.locator('[data-testid=season-eyebrow]').inner_text().strip() == f'موسم {a} / {a + 1}', pg.locator('[data-testid=season-eyebrow]').inner_text())
 
         # ── [change_events#1, #5] external write refreshes the register, scroll preserved ──
         pg.evaluate("window.scrollTo(0, 600)"); pg.wait_for_timeout(100)
