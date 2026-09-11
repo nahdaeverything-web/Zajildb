@@ -55,6 +55,19 @@ until a cutover ruling.
   edit form, where the parent is picked or created. Share = the profile's
   export; print = `window.print()` with the spec's wall-chart print rules
   (`@page` cannot live in a CSS Module and was dropped).
+- **Breeding (4B)** — the spec's two levels are two routes: `/breeding`
+  (list for a season, `?season=`) and `/pair?id=` (the pair with its rounds
+  and eggs) — design/README.md breeding note 1. Shared pieces live in
+  `app/breeding/shared.tsx`: the sheets (new pair with the kin box, link an
+  existing bird, ring a chick) and every mutation, each a fresh copy through
+  `Pairs.save` / `saveBird` as vanilla. Spec rules the app did not have
+  (raised in the 4B report): the nest-box number is required and one active
+  pair per nest and season; a bird already linked to an egg this season
+  cannot be linked again; the ring sheet needs a ring and warns when its year
+  differs from the hatch year (the spec's fixed-format warning was not
+  carried — real rings are not all JO-YYYY-NNNNN). Deletes for the pair, a
+  round or an egg confirm inline (spec) and undo through the shell; the
+  stored `season` stays a plain year and is shown as the spec shows it.
 - Everything outside `next/` is read-only during the port. `next/` imports
   nothing from `../js`, `../css` or `../tools` (guarded); the engine and the
   dataset id mapper are byte-identical copies under `src/engine/` and `tests/`.

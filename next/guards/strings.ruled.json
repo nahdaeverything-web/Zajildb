@@ -34,5 +34,13 @@
   },
   "pedigree-tree-v1.html": {
     "الطائر": "RULED (4A acceptance, item 14): synonyms — vanilla ped.subject wins for the first ruler label. Was: «الطائر»"
+  },
+  "breeding-v1.html": {
+    "الزوج": "RULED (4A acceptance, item 14): synonyms — vanilla br.pair wins for the table header. Was: «الزوج»",
+    "الأب ♂": "Label + sex glyph: the spec folds a ♂ decoration into the bird.sire label; the port renders bird.sire and the glyph beside it.",
+    "الأم ♀": "Label + sex glyph: the spec folds a ♀ decoration into the bird.dam label; the port renders bird.dam and the glyph beside it.",
+    "(إن كان مشترى)": "RULED (4A acceptance, item 14): the same text as vanilla br.acquiredFrom, split across two spans in the spec; the port renders the vanilla label whole.",
+    "مصدر الزوج": "RULED (4A acceptance, item 14): the same text as vanilla br.acquiredFrom, split across two spans in the spec; the port renders the vanilla label whole.",
+    "حفظ الزوج": "RULED (4A acceptance, item 14): synonyms — vanilla act.save wins for the sheet's primary action. Was: «حفظ الزوج»"
   }
 }

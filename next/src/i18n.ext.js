@@ -114,6 +114,44 @@ export const EXT = {
   'ped.gen.nth':              { ar: 'الجيل {n}', en: 'Generation {n}' },
   'ped.unknown.add':          { ar: 'سلف غير مسجل — إضافة', en: 'Ancestor not recorded — add' },
 
+  // ── breeding-v1 (4B) ──
+  // Vanilla wins for the save buttons (act.save / act.saveAnyway), «الطير» (bird.one), the delete toasts (toast.deleted)
+  // and the split «مصدر الزوج» label (br.acquiredFrom whole); the spec variants are on strings.ruled.json (ruling 14).
+  'br.countLine':             { ar: '{n} أزواج · {m} نشط', en: '{n} pairs · {m} active' },
+  'br.progress':              { ar: 'التقدم', en: 'Progress' },
+  'br.empty.body':            { ar: 'أنشئ أول زوج من «زوج جديد».', en: 'Create the first pair from “New pair”.' },
+  'br.pairs':                 { ar: 'الأزواج', en: 'Pairs' },
+  'br.pairsSeason':           { ar: 'الأزواج · موسم {y}', en: 'Pairs · season {y}' },
+  'br.notSaved':              { ar: 'لم يُحفظ الزوج. صحّح ما يلي:', en: 'The pair was not saved. Fix the following:' },
+  'br.pickSire':              { ar: 'اختر ذكرًا', en: 'Choose a cock' },
+  'br.pickDam':               { ar: 'اختر أنثى', en: 'Choose a hen' },
+  'br.pickBird':              { ar: 'اختر طيرًا من اللوفت', en: 'Choose a bird from the loft' },
+  'br.nest.placeholder':      { ar: '4', en: '4' },
+  'br.source.placeholder':    { ar: 'مثل: لوفت أبو خالد — الزرقاء', en: 'e.g. Abu Khalid loft — Zarqa' },
+  'br.name.placeholder':      { ar: 'مثل: برق', en: 'e.g. Lightning' },
+  'common.optional':          { ar: '(اختياري)', en: '(optional)' },
+  'br.saveAndLink':           { ar: 'حفظ وربط بالبيضة', en: 'Save and link to the egg' },
+  'br.kinWait':               { ar: 'تنبيه القرابة يظهر بعد اختيار الأب والأم', en: 'The relationship check appears once both parents are chosen' },
+  'br.err.sire':              { ar: 'اختر الأب.', en: 'Choose the sire.' },
+  'br.err.dam':               { ar: 'اختر الأم.', en: 'Choose the dam.' },
+  'br.err.nest':              { ar: 'رقم العش مطلوب.', en: 'The nest box number is required.' },
+  'br.err.nestBusy':          { ar: 'العش {n} مشغول بزوج نشط في هذا الموسم.', en: 'Nest box {n} is taken by an active pair this season.' },
+  'br.blk.parent':            { ar: 'الطير أحد أبوي هذا الزوج.', en: 'The bird is one of this pair’s parents.' },
+  'br.blk.linked':            { ar: 'الطير مرتبط ببيضة أخرى في هذا الموسم.', en: 'The bird is already linked to another egg this season.' },
+  'br.ringCtx':               { ar: 'فرخ {s} × {d} · البطن {n} · فقس {date}', en: 'Chick of {s} × {d} · round {n} · hatched {date}' },
+  'br.warn.ringYear':         { ar: 'سنة الحلقة {y} تختلف عن موسم الفقس {h}.', en: 'The ring year {y} differs from the hatch year {h}.' },
+  'br.hatchedOf':             { ar: '{h} من {n} فقست', en: '{h} of {n} hatched' },
+  'br.separate':              { ar: 'فصل الزوج', en: 'Separate the pair' },
+  'br.reactivate':            { ar: 'إعادة تنشيط الزوج', en: 'Reactivate the pair' },
+  'br.eggsCount':             { ar: '{n} بيض', en: '{n} eggs' },
+  'br.roundsCount':           { ar: '{n} بطون', en: '{n} rounds' },
+  'br.noEggs':                { ar: 'بلا بيض', en: 'No eggs' },
+  'br.noRounds':              { ar: 'لا بطون بعد', en: 'No rounds yet' },
+  'br.deleteRound':           { ar: 'حذف البطن', en: 'Delete the round' },
+  'br.deleteEgg':             { ar: 'حذف البيضة', en: 'Delete the egg' },
+  'br.weanDate':              { ar: 'تاريخ الفطام', en: 'Wean date' },
+  'act.more':                 { ar: 'المزيد', en: 'More' },
+
   // ── rulings at 4A acceptance ──
   // nav.breeding: a DELIBERATE RENAME from vanilla's «التربية». Every approved
   // spec and the kit NAVIGATION NOTE say «التزاوج»; ruled at 4A acceptance.
