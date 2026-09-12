@@ -238,6 +238,53 @@ spec puts its phone block.
 
 ---
 
+## SF-2 — the design kit's bird-status list disagreed with the data layer
+
+**RULED at Phase 6 acceptance: the kit was wrong, the data is right, and stored status
+lists are NOT migrated. Corrected on `main` in one docs-only commit — the single
+authorised edit outside `next/` in the whole port.**
+
+**Where:** [`design/ZAJIL-DESIGN-KIT.md:100-101`](../design/ZAJIL-DESIGN-KIT.md#L100) read
+```
+· status (نشط/تربية/فريق السباق/ميت/مباع/مفقود)
+```
+against [`js/db/storage.js:116`](../js/db/storage.js#L116)
+```js
+const DEFAULT_STATUSES = ['breeder', 'race team', 'young bird', 'stock', 'sold', 'lost', 'dead'];
+```
+which the dictionary ([`js/i18n.js`](../js/i18n.js), `status.*`) renders as
+تربية / فريق السباق / فرخ / احتياط / مباع / مفقود / نافق.
+
+**What:** four disagreements in one line. It invented **«نشط»**, a status the data layer has
+never had; it wrote **«ميت»** where the dictionary says **«نافق»**; and it omitted **«فرخ»**
+and **«احتياط»**. It also did not mention `REFERENCE_STATUS` («مرجع نسب»,
+[`js/db/storage.js:121`](../js/db/storage.js#L121)), which is appended rather than seeded so
+it cannot be picked for a real bird by accident.
+
+**Why it matters:** the statuses are not a design list, they are the LOFT'S OWN stored
+array — seeded at `initDB()` and carried per loft, so a status the kit names but the data
+lacks cannot be rendered without a destructive migration of every existing loft. Four
+approved specs draw the «نشط» chip on the strength of that line —
+`add-edit-bird-v1.html:199`, `add-edit-bird-v2.html`, `bird-profile-v1.html:217` and
+`zajil-prototype.html` — and it is MOCK CONTENT in all four: no build of Zajil, vanilla or
+port, has ever rendered it, because there has never been anything to render.
+
+**How it surfaced:** the port's Phase 6 fidelity pass audited all fourteen approved specs
+state by state. «نشط» was the only gap that recurred across specs, and four auditors
+independently called it a STOP with no authorising ruling. It is the one case in the port
+where a spec state had no port state AND the port was right.
+
+**Port handling:** none needed. The status segment and the profile's status chip render the
+loft's own list (`next/app/bird/form.tsx`, `next/app/bird/view.tsx`), which is what vanilla
+does. 4A acceptance item 4 had already accepted dropping the profile's hero «نشط» chip on
+exactly this basis; this finding is the general case behind that one.
+
+**Fixed at source:** yes, and uniquely so — `design/ZAJIL-DESIGN-KIT.md` now carries the
+data layer's list verbatim plus a note that the line must match `DEFAULT_STATUSES` and
+nothing else. The four specs are frozen and keep their mock chip; the kit now says so.
+
+---
+
 ## RF-5 — two version strings that disagree, and a grep that can read a comment
 
 **Where:**

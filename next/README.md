@@ -25,6 +25,19 @@ until a cutover ruling.
   `zajil-vX.Y.Z` string (version_display #8). The About row shows whatever
   the SERVICE WORKER reports, so a constant in the source is a second source
   of truth that goes stale the first time a build ships without it.
+  Since Phase 6 acceptance also `base-path-consistent` (postbuild): `basePath` is a
+  build-time constant, so what was ASKED for (`NEXT_PUBLIC_BASE_PATH`), what the EXPORT
+  carries (the asset URLs Next wrote into the documents) and what the WORKER baked
+  (`BUILT_FOR` and its first precache entry) must all agree. A worker whose prefix does not
+  match its host registers happily and caches NOTHING — all ~130 precache URLs 404, the
+  atomic install rejects, and the registration's `.catch` swallows it, so the app reports a
+  registered worker with no offline mode and no error anywhere. The check that matters is
+  the export against the request: a variable set for the postbuild step but not for
+  `next build` gives a root-absolute export with a prefixed worker, and nothing downstream
+  would notice. It runs BEFORE `sw-precache-sound`, because a prefix mismatch otherwise
+  reports 130 missing files instead of the one cause. Proved to fire three ways: a base path
+  requested against a root export, a worker baked for a different prefix, and a prefixed
+  export with no base path requested.
   Since 4D acceptance also `no-undefined-token`: a stylesheet may not read a
   custom property that is declared nowhere. CSS fails silently here — an
   undeclared property is an empty value, not an error — so only a guard can
@@ -620,7 +633,7 @@ so three of the four rows are closed; only a deployed origin is still missing.
 | ~~`version_display.py`~~ — **CLOSED at 5** | all 11 ported to `tests/e2e/version_display.py` and green. #8 became a stronger claim than the root's four-file spot check: no shipped file in the whole export carries the version, only the generated worker. | 11 |
 | ~~`service_worker.py`~~ — **CLOSED at 5** | all 5 ported to `tests/e2e/service_worker.py`, plus 7 the port needs and vanilla did not: the precache is populated rather than an empty shell from a failed install, a clean URL finds its OWN document offline, an unknown route falls back to the shell, the harness route serves the harness, and the install split proved both ways. | 5 → 12 |
 | ~~`subpath_hosting.py`~~ — **CLOSED at 5** | all 8 ported to `tests/pwa/subpath_hosting.py` (its own directory because it needs its own build), plus 6 more: assets resolve under the prefix and not at the origin root, the manifest is the prefixed one with a relative scope that follows it, a click stays inside the prefix, a clean URL under the prefix works offline, the version row reports the worker under the prefix, and nothing 4xx/5xx was served while online. | 8 → 14 |
-| `live_deployment.py` — **11 assertions, the ONLY uncovered ones left** | a real deployed origin, built with `NEXT_PUBLIC_BASE_PATH=/Zajildb`. Each has a local counterpart that proves the same behaviour against a python http.server — secure context, the six nav links, no failed requests, the worker's scope, the versioned cache, an installable manifest, the 38-bird load, offline boot, offline data, offline COI, zero page errors — and none of them can prove what GitHub Pages actually serves. See the Phase 6 coverage table. | 11 |
+| `live_deployment.py` — **11 assertions, the ONLY uncovered ones left; RULED at Phase 6 acceptance to be the FIRST GATE OF THE CUTOVER** | a real deployed origin, built with `NEXT_PUBLIC_BASE_PATH=/Zajildb`. Each has a local counterpart that proves the same behaviour against a python http.server — secure context, the six nav links, no failed requests, the worker's scope, the versioned cache, an installable manifest, the 38-bird load, offline boot, offline data, offline COI, zero page errors — and none of them can prove what GitHub Pages actually serves. See the Phase 6 coverage table. | 11 |
 
 ## Deferred to Phase 4 (recorded so nothing is lost)
 
