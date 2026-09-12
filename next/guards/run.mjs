@@ -25,6 +25,14 @@ function* walk(dir) {
 const files = (...exts) => [...walk(ROOT)].filter((f) => exts.includes(extname(f)));
 const rel = (f) => relative(ROOT, f);
 const lines = (f) => readFileSync(f, 'utf8').split('\n');
+// A colour NAMED IN A COMMENT is not a colour the app paints — and a guard that cannot
+// tell code from prose pushes you to write vaguer comments, which is the opposite of what
+// this repo wants: every dropped or substituted spec value is supposed to say so in place.
+// Comments are masked with spaces so line and column numbers stay exact.
+const maskComments = (src) => src
+  .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+  .replace(/(^|[^:])\/\/[^\n]*/g, (m, p1) => p1 + ' '.repeat(m.length - p1.length));
+const codeLines = (f) => maskComments(readFileSync(f, 'utf8')).split('\n');
 
 // ─── the sanctioned palette (tokens.css is the source of truth; this list
 //     mirrors its comments and must be edited together with it) ───
@@ -42,7 +50,7 @@ const guards = {
   palette() {
     const bad = [];
     for (const f of files('.css', '.tsx', '.ts')) {
-      lines(f).forEach((l, i) => {
+      codeLines(f).forEach((l, i) => {
         for (const m of l.matchAll(/#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b/g)) {
           if (!SANCTIONED.has(expand(m[0]))) bad.push(`${rel(f)}:${i + 1}  ${m[0]}`);
         }
@@ -82,7 +90,7 @@ const guards = {
   'no-gradient-no-blur'() {
     const bad = [];
     for (const f of files('.css', '.tsx')) {
-      lines(f).forEach((l, i) => {
+      codeLines(f).forEach((l, i) => {
         if (/gradient/i.test(l)) bad.push(`${rel(f)}:${i + 1}  gradient: ${l.trim()}`);
         for (const m of l.matchAll(/box-?[sS]hadow\s*:\s*['"]?([^;'"}]+)/g)) {
           for (const shadow of m[1].split(/,(?![^()]*\))/)) {

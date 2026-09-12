@@ -1,0 +1,120 @@
+/* Copied from design/approved/sign-in-v1.html <style> — screen rules only.
+ * Dropped: the :root, body and universal resets (the layout owns the page). Element rules ([hidden], form, textarea)
+ * are scoped under the view root .screen. The spec's two panes are two states of one route, so .auth/.early keep their
+ * rules verbatim. Port-necessary additions are at the end, each with its reason. See the sign-in commit. */
+.screen{ display:block; }
+
+  /* the spec's body rule. #E9EDF0 is the design gallery's own frame grey, not a token (Phase-1 ruling: chrome greys
+     are not tokens) — the layout owns the page background, and the screen paints itself below. */
+  .screen{ font-family:var(--f); color:var(--ink); line-height:1.5; }
+
+  /* ── SIGN-IN (the screen) ── */
+  .auth{ min-height:932px; display:flex; flex-direction:column; justify-content:center; padding:40px 24px 44px; background:var(--surface); }
+  .brand{ display:flex; flex-direction:column; align-items:center; }
+  .mark{ width:112px; height:112px; border-radius:34px; background:var(--brand); display:grid; place-items:center; }
+  .mark svg{ width:70px; height:70px; }
+  .brand h1{ font-size:60px; font-weight:900; line-height:1; margin-top:22px; letter-spacing:-0.5px; }
+  .brand .sub{ font-size:15.5px; font-weight:600; color:var(--ink-2); margin-top:10px; text-align:center; text-wrap:balance; }
+
+  .screen form{ margin-top:44px; }
+  .field{ margin-top:18px; }
+  .field label{ display:block; font-size:13.5px; font-weight:800; color:var(--ink-2); margin-bottom:8px; }
+  .field input{ width:100%; min-height:58px; border:2px solid var(--line); border-radius:var(--r-btn); padding:16px;
+                font-family:var(--f); font-size:16px; font-weight:600; background:var(--page); color:var(--ink); outline:none; }
+  .field input::placeholder{ color:var(--ink-3); font-weight:500; }
+  .field input:focus{ border-color:var(--brand); background:var(--surface); box-shadow:0 0 0 3px var(--brand-tint); }
+  .field input[type=email]{ direction:ltr; text-align:right; font-family:var(--f-mono); letter-spacing:.3px; }
+  .field input[type=password]{ direction:ltr; text-align:right; letter-spacing:4px; font-size:20px; }
+  .field input.err{ border-color:var(--danger); background:var(--surface); }
+  .field input:disabled{ color:var(--ink-3); opacity:.7; }
+
+  .msg{ display:flex; align-items:flex-start; gap:12px; margin-top:18px; padding:14px 16px; border-radius:var(--r-btn); font-size:14.5px; font-weight:700; line-height:1.45; }
+  .msg svg{ flex:none; width:22px; height:22px; stroke:currentColor; stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round; margin-top:1px; }
+  .msg.cred{ background:var(--danger-tint); color:var(--danger); }   /* the spec's #FBEDEA is the drift ruled out at Phase 1; the sanctioned danger tint instead */
+  .msg.net{ background:var(--page); border:1px solid var(--line); color:var(--ink); }
+  .msg.cfg{ background:var(--gold-tint); border:1px solid var(--gold); color:var(--ink); }
+  .msg small{ display:block; font-size:13px; font-weight:500; color:var(--ink-2); margin-top:3px; }
+
+  .cta{ width:100%; min-height:60px; border:none; border-radius:var(--r-btn); padding:18px; cursor:pointer; margin-top:24px;
+        background:var(--brand); color:#fff; font-family:var(--f); font-size:17.5px; font-weight:800;
+        display:flex; align-items:center; justify-content:center; gap:12px; }
+  .cta:hover{ background:var(--brand-deep); }
+  .cta:focus-visible{ outline:3px solid var(--brand); outline-offset:3px; }
+  .cta.busy{ background:var(--brand-deep); cursor:progress; }
+  .spin{ width:22px; height:22px; border-radius:999px; border:3px solid rgba(255,255,255,.35); border-top-color:#fff; animation:spin .8s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .alt{ text-align:center; font-size:14px; font-weight:600; color:var(--ink-2); margin-top:18px; }
+  .alt a{ color:var(--brand-deep); font-weight:800; text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:2px; }
+  .alt a:hover{ color:var(--brand); }
+  .forgot{ text-align:center; font-size:13px; font-weight:600; color:var(--ink-3); margin-top:8px; }
+  .forgot a{ color:var(--ink-2); font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+  .forgot a:hover{ color:var(--brand-deep); }
+  .invite{ text-align:center; font-size:13px; font-weight:600; color:var(--ink-3); margin-top:22px; }
+  .foot{ margin-top:auto; padding-top:32px; text-align:center; font-family:var(--f-mono); font-size:11px; color:var(--ink-3); direction:ltr; }
+
+  /* early access */
+  .early{ min-height:932px; display:flex; flex-direction:column; padding:20px 24px 44px; background:var(--surface); }
+  .early .back{ display:inline-flex; align-items:center; gap:8px; align-self:flex-start; border:none; background:var(--page); border-radius:14px;
+                min-height:46px; padding:0 16px 0 18px; font-family:var(--f); font-size:14.5px; font-weight:800; color:var(--ink); cursor:pointer; text-decoration:none; }
+  .early .back svg{ width:20px; height:20px; stroke:currentColor; stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .early .mark{ width:64px; height:64px; border-radius:20px; margin-top:28px; }
+  .early .mark svg{ width:40px; height:40px; }
+  .early h1{ font-size:38px; font-weight:900; line-height:1.1; margin-top:18px; text-wrap:balance; }
+  .early .lead{ font-size:15.5px; font-weight:600; color:var(--ink-2); margin-top:10px; text-wrap:pretty; }
+  .early form{ margin-top:22px; }
+  .early .field input[type=email]{ font-family:var(--f-mono); }
+  .early .field input[type=text]{ direction:rtl; text-align:start; }
+  .early .field label span{ font-weight:600; color:var(--ink-3); }
+  .early .field select{ width:100%; min-height:58px; border:2px solid var(--line); border-radius:var(--r-btn); padding:16px 44px 16px 16px; appearance:none;
+                        font-family:var(--f); font-size:16px; font-weight:600; background:var(--page) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234A5560' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat left 16px center / 20px; color:var(--ink); outline:none; }
+  .early .field select:invalid{ color:var(--ink-3); font-weight:500; }
+  .early .field select:focus{ border-color:var(--brand); background-color:var(--surface); box-shadow:0 0 0 3px var(--brand-tint); }
+  .early textarea{ width:100%; min-height:110px; border:2px solid var(--line); border-radius:var(--r-btn); padding:16px; resize:vertical;
+                   font-family:var(--f); font-size:16px; font-weight:600; background:var(--page); color:var(--ink); outline:none; }
+  .early textarea:focus{ border-color:var(--brand); background:var(--surface); box-shadow:0 0 0 3px var(--brand-tint); }
+  .early .fine{ font-size:13px; font-weight:600; color:var(--ink-3); margin-top:14px; text-align:center; }
+  .done{ margin-top:auto; margin-bottom:auto; display:flex; flex-direction:column; align-items:center; text-align:center; padding:24px 0; }
+  .done .ok{ width:112px; height:112px; border-radius:34px; background:var(--brand); display:grid; place-items:center; }
+  .done .ok svg{ width:56px; height:56px; stroke:#fff; stroke-width:4; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .done h1{ margin-top:26px; font-size:42px; }
+  .done p{ font-size:16px; font-weight:600; color:var(--ink-2); margin-top:10px; }
+  .done .mail{ margin-top:22px; font-family:var(--f-mono); font-size:14px; direction:ltr; background:var(--page); border:1px solid var(--line); border-radius:12px; padding:10px 16px; color:var(--ink-2); }
+  .done .cta{ margin-top:36px; }
+
+  /* desktop ≥1100 */
+  .auth.desk-auth .mark{ width:136px; height:136px; border-radius:40px; }
+  .auth.desk-auth .brand h1{ font-size:72px; margin-top:26px; }
+  .auth.desk-auth form{ width:100%; max-width:560px; margin:56px auto 0; }
+  @media (min-width:1100px){
+    .auth{ min-height:100vh; padding:64px 40px; }
+    .auth .mark{ width:136px; height:136px; border-radius:40px; }
+    .auth .mark svg{ width:84px; height:84px; }
+    .auth .brand h1{ font-size:72px; margin-top:26px; }
+    .auth .brand .sub{ font-size:17px; margin-top:12px; }
+    .auth form{ width:100%; max-width:560px; margin:56px auto 0; }
+    .auth .invite{ font-size:14px; }
+    .early{ padding:64px 40px; align-items:center; }
+    .early > *, .early form{ width:100%; max-width:560px; }
+  }
+
+  .screen{ padding:0; background:var(--surface); display:block; }
+  .auth, .early{ min-height:100vh; max-width:430px; margin:0 auto; }
+  @media (min-width:701px){ .auth, .early{ max-width:720px; } }
+  @media (min-width:1100px){ .auth, .early{ max-width:none; } }
+  .screen [hidden]{ display:none !important; }
+
+/* ── port additions (not in the spec) ── */
+/* the spec's «العودة إلى تسجيل الدخول» and «سجّل للوصول المبكر» are in-page toggles; in the port they stay in-page too,
+   so both are buttons styled as the spec's links / .back */
+.linkbtn{ border:none; background:none; padding:0; cursor:pointer; font-family:var(--f); color:var(--brand-deep); font-weight:800; text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:2px; font-size:14px; }
+.linkbtn:hover{ color:var(--brand); }
+/* the country select's two groups: the spec separates them with a disabled «──────────» row — an optgroup is the same
+   information with a name on it, and a screen reader can use it */
+.early .field optgroup{ font-weight:800; color:var(--ink-2); }
+
+/* The shell's tab bar stays on this screen ON PURPOSE: RULING 1 says sign-in is never a launch wall, and the bar is
+ * what makes that visible — every tab is one tap away, signed out. The spec's panes are 100vh, which would put the
+ * version foot under that bar, so they are shortened by the layout's own clearance instead (never the bar). */
+.auth, .early{ min-height:calc(100vh - 84px); }
+@media (min-width:1100px){ .auth, .early{ min-height:100vh; } }

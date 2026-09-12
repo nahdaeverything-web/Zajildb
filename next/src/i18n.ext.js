@@ -229,6 +229,39 @@ export const EXT = {
   'stats.empty.title':        { ar: 'لا توجد بيانات كافية بعد', en: 'Not enough data yet' },
   'stats.empty.body':         { ar: 'تظهر الإحصائيات بعد إضافة أول طيورك. يمكنك أيضًا تحميل اللوفت التعليمي لتجربة الشاشة ببيانات حقيقية.', en: 'The statistics appear once you add your first birds. You can also load the teaching loft to try the screen on real data.' },
 
+  // ── sign-in-v1 (4D) ──
+  // RULING 1 (Phase 4 order): the standalone screen is canonical and is never a launch
+  // wall. Vanilla carries the field labels and the button (sync.email / sync.password /
+  // sync.signIn / sync.signingIn), the not-configured line (sync.notSetUp) and the
+  // signed-in line; these are the strings the screen introduces.
+  'signin.tagline':           { ar: 'سجل لوفتك. من أي جهاز. حتى بلا إنترنت.', en: 'Your loft’s record. On any device. Even offline.' },
+  'signin.badCredentials':    { ar: 'البريد الإلكتروني أو كلمة المرور غير صحيحة', en: 'That email or password is not right' },
+  'signin.offline':           { ar: 'لا يوجد اتصال — تحقّق من الشبكة', en: 'No connection — check the network' },
+  'signin.offlineBody':       { ar: 'بياناتك محفوظة على الجهاز. أعد المحاولة عند توفر الاتصال.', en: 'Your records are saved on this device. Try again when you are back online.' },
+  'signin.notConfiguredBody': { ar: 'تواصل مع إدارة زاجل لإعداد الجهاز.', en: 'Contact the Zajil team to set this device up.' },
+  'signin.retry':             { ar: 'إعادة المحاولة', en: 'Try again' },
+  'signin.noAccount':         { ar: 'ليس لديك حساب؟', en: 'No account?' },
+  'signin.earlyAccess':       { ar: 'سجّل للوصول المبكر', en: 'Request early access' },
+  'signin.forgot':            { ar: 'هل نسيت كلمة المرور؟', en: 'Forgot your password?' },
+  'signin.forgotHelp':        { ar: 'للمساعدة، تواصل مع إدارة زاجل', en: 'For help, contact the Zajil team' },
+  'signin.inviteOnly':        { ar: 'الحسابات بدعوة من إدارة زاجل', en: 'Accounts are by invitation from the Zajil team' },
+  'signin.alreadyBody':       { ar: 'يمكنك إدارة الجلسة من بطاقة المزامنة في الأدوات.', en: 'You can manage the session from the sync card in Tools.' },
+  'signin.early.title':       { ar: 'سجّل اهتمامك بزاجل', en: 'Register your interest in Zajil' },
+  'signin.early.lead':        { ar: 'التسجيل في زاجل مفتوح بدعوة فقط حاليًا. اترك بياناتك وسنتواصل معك عند فتح باب التسجيل.', en: 'Zajil is invitation-only for now. Leave your details and we will be in touch when registration opens.' },
+  'signin.early.namePlaceholder': { ar: 'مثال: أبو النشمي', en: 'e.g. Abu Al-Nashmi' },
+  'signin.early.chooseCountry':   { ar: 'اختر الدولة', en: 'Choose a country' },
+  'signin.early.region':      { ar: 'المنطقة', en: 'The region' },
+  'signin.early.allCountries': { ar: 'كل الدول', en: 'All countries' },
+  'signin.early.city':        { ar: 'المدينة', en: 'City' },
+  'signin.early.cityPlaceholder': { ar: 'مثال: الفحيص', en: 'e.g. Fuheis' },
+  'signin.early.loftPlaceholder': { ar: 'مثال: لوفت الفحيص', en: 'e.g. Fuheis Loft' },
+  'signin.early.notePlaceholder': { ar: 'كم طائرًا لديك؟ هل تسابق؟', en: 'How many birds do you keep? Do you race?' },
+  'signin.early.send':        { ar: 'أرسل الطلب', en: 'Send the request' },
+  'signin.early.fine':        { ar: 'سيتم التواصل معك من إدارة زاجل', en: 'The Zajil team will be in touch' },
+  'signin.early.doneTitle':   { ar: 'وصلنا طلبك.', en: 'We have your request.' },
+  'signin.early.doneBody':    { ar: 'سنتواصل قريبًا.', en: 'We will be in touch soon.' },
+  'signin.early.back':        { ar: 'العودة إلى تسجيل الدخول', en: 'Back to sign in' },
+
   // ── rulings at 4A acceptance ──
   // nav.breeding: a DELIBERATE RENAME from vanilla's «التربية». Every approved
   // spec and the kit NAVIGATION NOTE say «التزاوج»; ruled at 4A acceptance.

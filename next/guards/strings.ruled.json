@@ -50,5 +50,9 @@
     "السباق": "RULED (4A acceptance, item 14): synonyms — vanilla race.name wins for the race column of the season table.",
     "بيض": "RULED (4A acceptance, item 14): synonyms — vanilla br.eggs wins for the breeding KPI label.",
     "تحميل اللوفت التعليمي": "RULED (4A acceptance, item 14): one string, one key — loft-home's empty.example.cta already carries this action."
+  },
+  "sign-in-v1.html": {
+    "لا يوجد اتصال — تحقّق من الشبكة بياناتك محفوظة على الجهاز. أعد المحاولة عند توفر الاتصال.": "The spec folds the offline message and its sub-line into one element, so the extractor sees them as one string; the port renders the same two keys (signin.offline + signin.offlineBody) in the same shape.",
+    "ملاحظة": "RULED (4A acceptance, item 14): synonyms — vanilla common.notes wins for the field label."
   }
 }
