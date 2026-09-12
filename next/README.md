@@ -34,6 +34,14 @@ until a cutover ruling.
   danger ground and both gold inks had been painting with nothing. A
   `var(--x, fallback)` is accepted, and properties set from script or by
   `next/font`'s `variable:` count as declared.
+  Since 5 also `sw-precache-sound` (postbuild): the generated worker's precache list
+  must name only files that are on disk, must carry the app's own cache prefix, must
+  bake the base path it was generated with, must include the harness route in a harness
+  build and never in a normal one, must hold the nine assets the app cannot work
+  offline without, and must precache EVERY navigable document. Each branch was proved
+  to fire. An install is one atomic call for the shell, so an entry that is not there
+  leaves no cache at all — and that looks exactly like a worker that has not activated
+  yet, which is why a guard and not a reading has to say it.
 - `output: 'export'` — no server, ever. Record views take `?id=`, never `[id]`.
 - **Ruling C (4B addendum) — fixed elements must not hide content.** Every
   screen test proves it geometrically at 430x900 and 900x900 (never on a
@@ -230,6 +238,101 @@ until a cutover ruling.
       failing silently (`app/cert/view.tsx:216`, `app/bird/view.tsx:116`), and
       the certificate suite asserts the contract that holds either way: a share
       always answers.
+- **PWA (Phase 5)** — a HAND-WRITTEN service worker, generated at build time.
+  `sw/sw.template.js` is the source; `scripts/build-sw.mjs` runs first in `postbuild`,
+  fills two placeholders from the FINISHED export, and writes `out/sw.js`.
+  RECOMMENDATION AND REASONS, as the Phase 5 order asked for before building. Three
+  independent reviews reached the same answer; next-pwa, `@ducanh2912/next-pwa` and
+  Serwist were all examined against this tree:
+    - **A custom worker source is unavoidable in every option**, so a library buys
+      nothing on the contract that gates most of the deferred assertions.
+      `src/components/version.ts` listens only on its own `MessageChannel` port and
+      accepts only `{type:'VERSION'}`; no library ships that handler, and
+      `version_display` #5 greps the shipped worker for a top-level VERSION constant.
+      Once the constant and the message handler are hand-written, the remaining sixty
+      lines of cache-first logic are the cheap part.
+    - **The cache NAME is the version in vanilla, and no library models that.** It is
+      the CacheStorage key, the sweep discriminator and the reply payload at once.
+      Serwist's precache cache is not versioned per release, so there is no per-version
+      cache to create and delete and nothing to report.
+    - **A library cannot see 60 of the 131 things that matter.** Serwist's configurator
+      globs `.next/`, where the RSC navigation payloads do not exist — they are created
+      by the export, as `.txt`, and they are exactly what an offline client-side
+      navigation fetches. A walk of `out/` gets all of them for free.
+    - **Serwist's output cannot reach `out/`.** Its default destination is `public/sw.js`
+      and it runs after `next build`, which has already copied `public/` into `out/`;
+      `scripts/clean-out.mjs` wipes `out/` before every build, so nothing can be
+      pre-seeded either. Any option needs a post-export step writing into `out/`, which
+      is the whole of the hand-written approach.
+    - **Both next-pwa packages are disqualified twice.** They are webpack plugins, so on
+      Next 16 (Turbopack by default) they would force the project onto a bundler it has
+      never built with; and a webpack plugin runs BEFORE Next prerenders, so it cannot
+      see the sixteen documents it is supposed to precache. `next-pwa`'s last publish was
+      2022 and the maintained fork's own README points at Serwist.
+    - **`@serwist/turbopack` wants `app/serwist/[path]/route.ts`** — a route handler and a
+      dynamic segment. `output: 'export'` refuses both, and the `no-dynamic-segments`
+      guard refuses the segment independently.
+    - **Cost:** 132 template lines plus an 89-line generator, zero new dependencies, on a
+      project whose whole dependency list is next, react and react-dom.
+  THE STRATEGY IS VANILLA'S, carried rule for rule from `sw.js`: cache-first with
+  `ignoreSearch` and no revalidation; non-GET and cross-origin never answered, so
+  Supabase sync passes through untouched; install with `cache:'reload'` Requests against
+  a host's `max-age`; activate deleting only the app's own prefix, because CacheStorage
+  is per-ORIGIN and `<user>.github.io` is shared with sibling projects;
+  `GET_VERSION` → `{type:'VERSION', version}`.
+  THREE DEPARTURES, each forced by the export's shape and each measured, not reasoned:
+    1. **The navigation fallback.** Vanilla answers every navigation miss with the one
+       cached `index.html`, because it is a single-document hash-routed SPA. This export
+       has sixteen documents and `index.html` is a client-side redirect to `/birds`, so
+       answering a `/tools` navigation with it would land the fancier somewhere else. The
+       navigation branch resolves the request's own document first — the flat export means
+       `/tools` is the file `tools.html` — and falls back to `index.html` only for a path
+       it has never heard of. Asserted offline, both ways.
+    2. **A network failure answers with a 504 instead of rejecting.** A rejected
+       `respondWith` surfaces as a request error in the page, and both intent suites
+       assert zero page errors across their offline sections. The suites now also state
+       the window in which a 4xx/5xx is a host failure rather than the worker's own
+       synthetic one.
+    3. **Install is split.** Vanilla's `addAll` is atomic over 41 hand-checked paths. This
+       list is ~130 build-named ones, about half of them navigation payloads, so keeping
+       it atomic would mean one 404 on one payload costs the app its whole offline mode —
+       and on GitHub Pages that is not hypothetical, since every `/_next/` path needs
+       `.nojekyll` to be served at all. Documents, chunks, stylesheets, fonts, datasets,
+       manifest and icons install atomically, exactly as vanilla does; the payloads are
+       added one by one with their failures reported. Proved both ways in
+       `tests/e2e/service_worker.py`: a 404 on a payload leaves ~130 entries cached and the
+       app boots offline, while a 404 on a shell entry still leaves NO cache, because a
+       half-installed shell is worse than none.
+  THE INSTALL SURFACE — `app/manifest.webmanifest` (static, so `start_url` and `scope`
+  stay the relative `./` that make subpath hosting work, and the icon `src`s stay
+  relative with it), the three vanilla icons carried verbatim into `public/icons/`,
+  `app/apple-icon.png`, and `themeColor` plus `viewportFit: 'cover'` on the `viewport`
+  export, which is where Next 16 puts them. The manifest's `theme_color` and
+  `background_color` are the kit's `--brand` and `--page`, not vanilla's `#0e7a5f` /
+  `#f6f4ef`: those are Phase-1 hexes the palette guard rejects, the same ruling class as
+  the high-contrast palette. The icon ARTWORK is still drawn in the Phase-1 green —
+  raised for an icon pass, not repainted here.
+  SUBPATH HOSTING — `basePath` now comes from `NEXT_PUBLIC_BASE_PATH`, because it is a
+  build-time constant: one build serves one prefix, and `output: 'export'` forbids the
+  rewrites that could normalise it at request time. `assetPrefix` would not do, since it
+  prefixes `/_next` assets but neither routes nor `next/link` hrefs. The worker bakes the
+  prefix its shell was generated with and says so loudly if it is installed somewhere
+  else, because every entry is prefix-qualified and a mismatch would 404 all of them and
+  leave a registered worker with no cache — indistinguishable from "not activated yet".
+  `tests/pwa/subpath_hosting.py` proves the whole of it under `/zajil/` with its own
+  build. THE LIVE TARGET IS `/Zajildb/`, so the release build needs
+  `NEXT_PUBLIC_BASE_PATH=/Zajildb`; nothing yet asserts that the artefact's prefix
+  matches the host it is deployed to, and that belongs with the deployment work.
+  ONE VANILLA BUG FIXED IN PASSING — `js/app.js:267` registers `'./sw.js'`, which is
+  document-relative. That was safe there because the app is one document at the root;
+  this export has `bird/new.html` and `bird/edit.html` one level deep, where it would
+  resolve to `/bird/sw.js` and scope the worker to `/bird/`. The port registers from the
+  base path with an explicit scope. `.nojekyll` is now shipped from `public/`, which the
+  vanilla root has and the export did not.
+  KNOWN COSTS, recorded rather than hidden: a version bump refetches the whole ~2 MB,
+  because the cache is keyed by version and written once — per-entry revisioning is what
+  a library would buy and this gives up; and the update path still needs two reloads to
+  show a new version, which is vanilla's inherited wart (HANDOFF.md:339).
 - Everything outside `next/` is read-only during the port. `next/` imports
   nothing from `../js`, `../css` or `../tools` (guarded); the engine and the
   dataset id mapper are byte-identical copies under `src/engine/` and `tests/`.
@@ -292,17 +395,17 @@ skipped silently.
 | `picker_duplicates.py` #8–10 | 3 | re-authored in `screens/tools.py` against the real duplicate finder: it lists a clone, says what each copy is linked to (with the kinds), and the group is gone once the surplus copy is deleted. |
 | `subpath_hosting.py` | 8 | needs the app deployed under a subdirectory with a service worker scoped to it — PWA phase, listed below. |
 
-## Deferred to the PWA phase (recorded so nothing is lost)
+## The PWA phase (Phase 5) — what closed and what is left
 
-Nothing here is a port decision: each assertion needs a service worker or a
-real deployment, and `output: 'export'` has produced neither yet.
+Everything here needed a service worker or a real deployment. Phase 5 built the worker,
+so three of the four rows are closed; only a deployed origin is still missing.
 
 | item | what it needs | root counts |
 |---|---|---|
-| `version_display.py` #1 #4 #5 #6 #7 | a registered service worker that answers `GET_VERSION`, and the version string in its own source | 5 of 11 |
-| `service_worker.py` | a registered service worker: precache, offline reload, update flow | 5 |
-| `subpath_hosting.py` | the export served from `/zajil/`, with the worker scoped there and the manifest resolving | 8 |
-| `live_deployment.py` | a real deployed origin | — |
+| ~~`version_display.py`~~ — **CLOSED at 5** | all 11 ported to `tests/e2e/version_display.py` and green. #8 became a stronger claim than the root's four-file spot check: no shipped file in the whole export carries the version, only the generated worker. | 11 |
+| ~~`service_worker.py`~~ — **CLOSED at 5** | all 5 ported to `tests/e2e/service_worker.py`, plus 7 the port needs and vanilla did not: the precache is populated rather than an empty shell from a failed install, a clean URL finds its OWN document offline, an unknown route falls back to the shell, the harness route serves the harness, and the install split proved both ways. | 5 → 12 |
+| ~~`subpath_hosting.py`~~ — **CLOSED at 5** | all 8 ported to `tests/pwa/subpath_hosting.py` (its own directory because it needs its own build), plus 6 more: assets resolve under the prefix and not at the origin root, the manifest is the prefixed one with a relative scope that follows it, a click stays inside the prefix, a clean URL under the prefix works offline, the version row reports the worker under the prefix, and nothing 4xx/5xx was served while online. | 8 → 14 |
+| `live_deployment.py` | a real deployed origin, built with `NEXT_PUBLIC_BASE_PATH=/Zajildb` | — |
 
 ## Deferred to Phase 4 (recorded so nothing is lost)
 

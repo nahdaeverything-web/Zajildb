@@ -15,3 +15,4 @@ export { Tpl } from './Tpl';
 export { applySettings, saveSetting } from './settings';
 export { default as AppSettings } from './AppSettings';
 export { initDB } from './boot';
+export { default as ServiceWorker } from './ServiceWorker';

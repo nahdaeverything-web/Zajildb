@@ -76,8 +76,16 @@ def row_state(page):
             if page.query_selector(ROW) else None)
 def toasts(page):
     return page.eval_on_selector_all('[data-testid=toast]', 'ns => ns.map(n => n.textContent)')
-def clear_toasts(page):
-    page.eval_on_selector_all('[data-testid=toast]', 'ns => ns.forEach(n => n.remove())')
+def clear_toasts(page, timeout=12000):
+    """Wait for the stack to empty through the app's own timers.
+
+    The root suite removes the nodes (`n.remove()`), which works because vanilla's toasts
+    are hand-made DOM. The port's are React-owned, and pulling one out behind React's back
+    breaks reconciliation: the next render dies with "removeChild … not a child of this
+    node" and the toast this section is measuring never appears. The longest timeout in
+    play is the 10 s sync-interrupt, so the wait is a little longer than that."""
+    page.wait_for_function("() => document.querySelectorAll('[data-testid=toast]').length === 0",
+                           timeout=timeout)
 
 with sync_playwright() as p:
     br = p.chromium.launch()

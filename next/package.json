@@ -1,6 +1,6 @@
 {
   "name": "next",
-  "version": "0.1.0",
+  "version": "1.9.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,7 +10,7 @@
     "guards": "node guards/run.mjs",
     "prebuild": "node guards/run.mjs && node scripts/clean-out.mjs",
     "build:harness": "node scripts/build-harness.mjs",
-    "postbuild": "node guards/postbuild.mjs"
+    "postbuild": "node scripts/build-sw.mjs && node guards/postbuild.mjs"
   },
   "dependencies": {
     "next": "16.3.4",

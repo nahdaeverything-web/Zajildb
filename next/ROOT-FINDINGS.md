@@ -235,3 +235,47 @@ clearance above it instead of finding no bar at all.
 **Fix at source (design):** move the `@media (max-width:700px)` block after the
 base declarations for `.zoom-btn` and `.cta`, which is where every other approved
 spec puts its phone block.
+
+---
+
+## RF-5 — two version strings that disagree, and a grep that can read a comment
+
+**Where:**
+- [`package.json:3`](../package.json#L3) — `"version": "1.4.1"`
+- [`sw.js:4`](../sw.js#L4) — `const VERSION = 'zajil-v1.9.1';`
+- [`HANDOFF.md:38`](../HANDOFF.md#L38) — `| App version (service worker) | zajil-v1.9.1 |`
+- [`tests/e2e/version_display.py:11`](../tests/e2e/version_display.py#L11) —
+  `re.search(r"const VERSION = '([^']+)'", open('sw.js').read())`
+
+**What:** two separate problems in the same place.
+
+1. The app's version lives in `sw.js` and is maintained by hand. `package.json` says
+   `1.4.1`, five releases behind — so the Node package's version is not the app's, and
+   nothing notices. [`BACKLOG.md:301`](../BACKLOG.md#L301) already records a
+   HANDOFF-vs-`sw.js` agreement check as unbuilt; this is the same gap with a third
+   party to it.
+2. The suite's grep is **unanchored** and takes the FIRST match in the file. `sw.js` has
+   no comment spelling that assignment out today, so it happens to read the constant —
+   but a comment that did would make the suite green about the wrong string. The port hit
+   exactly this: `sw/sw.template.js` described the requirement in prose, and the first
+   match became `'…'` from the comment. Found because the port's postbuild guard and the
+   suite disagreed; a single unanchored reader would not have noticed.
+
+**Why it matters:** #1 is the two-sources-of-truth problem the version machinery exists
+to prevent, one level up. #2 is a test that can pass while reading a different value than
+the one it is validating — the `version_display` #6 assertion ("the row shows what the
+worker reports") would still hold against a string nobody ships.
+
+**Port handling:** the port's version has ONE home, `next/package.json`, and
+`scripts/build-sw.mjs` composes `'zajil-v' + version` into the generated worker — so the
+package version and the app version cannot diverge. Its copy of the suite anchors the
+grep (`re.M` with `^`), and `guards/postbuild.mjs` anchors it the same way, with the
+template carrying a note that its own prose must never spell the assignment out.
+
+**Fix at source (Phase 7):** derive `sw.js`'s VERSION from `package.json` at release time
+(or bump both in one commit and guard the agreement, which is BACKLOG.md:301's item), and
+anchor the regex in `tests/e2e/version_display.py:11`:
+```diff
+-SW_VERSION = re.search(r"const VERSION = '([^']+)'", open('sw.js').read()).group(1)
++SW_VERSION = re.search(r"^const VERSION = '([^']+)'", open('sw.js').read(), re.M).group(1)
+```

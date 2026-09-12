@@ -4,6 +4,7 @@ import Nav from '@/components/Nav';
 import ShellHost from '@/src/components/ShellHost';
 import SyncNotices from '@/src/components/SyncNotices';
 import AppSettings from '@/src/components/AppSettings';
+import ServiceWorker from '@/src/components/ServiceWorker';
 import HarnessGlobals from '@/src/harness-globals';
 import '../styles/tokens.css';
 import './globals.css';
@@ -13,7 +14,12 @@ export const metadata: Metadata = {
   title: 'زاجل',
   description: 'إدارة اللوفت وشجرة النسب — يعمل دون اتصال',
 };
-export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',      // index.html:5 — the safe-area insets the fixed bars use
+  themeColor: '#128C6E',     // index.html:6, retuned to the kit's brand (--brand)
+};
 
 // Structural RTL: the document direction is set once, here. Layout follows
 // it through logical properties; nothing below should ever say left/right.
@@ -26,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ShellHost />
         <SyncNotices />
         <AppSettings />
+        <ServiceWorker />
         <HarnessGlobals />
       </body>
     </html>

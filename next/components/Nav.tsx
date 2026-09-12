@@ -40,19 +40,22 @@ function isOn(pathname: string, tab: (typeof TABS)[number]) {
 // "app screen, no tab bar" and draws its own fixed «مشاركة / طباعة» bar there.
 const NO_TABBAR = ['/bird/new', '/bird/edit', '/cert'];
 
+// Both navs render the SAME six tabs and CSS decides which one is on screen, so a plain
+// count of nav links is 12. Each nav carries its own data-testid and every link carries
+// data-tab, so a test can ask about the one that is visible rather than guessing.
 export default function Nav() {
   // a plain file server serves the export as /birds.html, /bird/new.html; a static host as the clean path — compare the clean one
   const pathname = (usePathname() ?? '').replace(/\.html$/, '');
   const items = TABS.map((tab) => (
-    <Link key={tab.href} href={tab.href} className={isOn(pathname, tab) ? s.on : undefined}>
+    <Link key={tab.href} href={tab.href} className={isOn(pathname, tab) ? s.on : undefined} data-testid="nav-link" data-tab={tab.href}>
       <svg viewBox="0 0 24 24" aria-hidden="true">{tab.icon}</svg>{t(tab.label)}
     </Link>
   ));
   const modalFlow = NO_TABBAR.some((p) => pathname === p || pathname.startsWith(p + '/'));
   return (
     <>
-      {!modalFlow && <nav className={s.tabbar} data-bottom-chrome="tabbar" aria-label="التنقل">{items}</nav>}
-      <nav className={s.rail} aria-label="التنقل">{items}</nav>
+      {!modalFlow && <nav className={s.tabbar} data-bottom-chrome="tabbar" data-testid="tabbar" aria-label="التنقل">{items}</nav>}
+      <nav className={s.rail} data-testid="rail" aria-label="التنقل">{items}</nav>
     </>
   );
 }

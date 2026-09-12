@@ -1,6 +1,7 @@
 'use client';
 import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds } from '@/src/db/react';
 import { t, fmtNum, statusLabel } from '@/src/i18n.ext.js';
@@ -38,6 +39,10 @@ async function loadExample(file: string) {
 }
 
 export default function BirdsView() {
+  // the desktop table row navigates through the router, like every Link in the app: a raw
+  // `location.href = '/bird?id='` is not rewritten by basePath and does not resolve on a
+  // plain file server, where the document is bird.html (found in the Phase 5 survey)
+  const router = useRouter();
   const birds = useZajilStore(selectBirds) as Bird[];
   const version = useZajilStore(() => db.state);          // races change too
   const [q, setQ] = useState(''); const [filter, setFilter] = useState<string>('all'); const [year, setYear] = useState<string | null>(null);
@@ -141,7 +146,7 @@ export default function BirdsView() {
               </tr></thead>
               <tbody>
                 {sorted.map((r) => (
-                  <tr key={r.b.id} tabIndex={0} className={r.stK === 'gone' ? s.gone : ''} data-testid="table-row" onClick={() => { window.location.href = `/bird?id=${r.b.id}`; }}>
+                  <tr key={r.b.id} tabIndex={0} className={r.stK === 'gone' ? s.gone : ''} data-testid="table-row" onClick={() => router.push(`/bird?id=${r.b.id}`)}>
                     <td className={s.ltr}>{r.ring ? <Plate ring={r.ring} /> : '—'}</td>
                     <td className={s.nm} data-testid="cell-name">{r.name}{r.b.external && <> <Ext /></>}</td>
                     <td><Sx k={r.sexK} /></td>

@@ -28,9 +28,14 @@ try:
             pg.screenshot(path=f'{OUT}/full-{w}.png', full_page=True)
             check(f'{w}: zero page errors', not errs, errs)
             if w >= 1100:
-                pg.click('[data-testid=fire-toast-success]'); pg.wait_for_timeout(120)
-                fb = pg.evaluate("() => innerHeight - document.querySelector('[data-testid=toast]').getBoundingClientRect().bottom")
-                check(f'{w}: no tab bar (rail) → toast 12 px from the bottom edge', 11 <= fb <= 13, f'{fb:.0f}px')
+                # the service worker's install toast is a real toast on a first load, and
+                # shared-states §02 draws ONE — so let the stack empty first
+                pg.wait_for_function("() => document.querySelectorAll('[data-testid=toast]').length === 0", timeout=9000)
+                pg.click('[data-testid=fire-toast-success]'); pg.wait_for_timeout(200)
+                fb = pg.evaluate("() => { const ns = document.querySelectorAll('[data-testid=toast]');"
+                                 " return { n: ns.length, gap: innerHeight - ns[ns.length - 1].getBoundingClientRect().bottom }; }")
+                check(f'{w}: no tab bar (rail) → toast 12 px from the bottom edge',
+                      fb['n'] == 1 and 11 <= fb['gap'] <= 13, f"{fb['n']} toast(s), {fb['gap']:.0f}px")
             pg.close()
 
         # ── behaviour, once, at 430 ──

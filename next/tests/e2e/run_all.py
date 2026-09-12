@@ -68,5 +68,8 @@ finally:
     srv.terminate()
 for _name, _flag, _reason in skipped:
     print(f'  [skip] {_name:26} not run — {_reason} (add {_flag})')
+print(f"  [elsewhere] {'subpath_hosting.py':22} tests/pwa/subpath_hosting.py — needs its own build "
+      "(basePath is baked into the export), so it builds, snapshots and restores out/ itself: "
+      "`python3 tests/pwa/subpath_hosting.py`")
 print(f'\n  {total_pass} assertions passed, {total_fail} failed, {len(failed_suites)} suite(s) errored' + (f', {len(skipped)} skipped' if skipped else ''))
 sys.exit(1 if (total_fail or failed_suites) else 0)

@@ -18,7 +18,11 @@ try {
   // (4B: the breeding module's unsanctioned hover reached a green harness build and failed the shipped one)
   code = spawnSync('node', ['guards/run.mjs'], { stdio: 'inherit', env: { ...process.env, NEXT_PUBLIC_HARNESS: '1' } }).status ?? 1;
   if (code === 0) code = spawnSync('npx', ['next', 'build'], { stdio: 'inherit', env: { ...process.env, NEXT_PUBLIC_HARNESS: '1' } }).status ?? 1;
-  // the postbuild guard runs from the npm lifecycle only for `npm run build`; run it here explicitly
+  // The service worker and the postbuild guards run from the npm lifecycle only for
+  // `npm run build`; run them here explicitly, in the same order — the worker is generated
+  // first so the guards can check it. Its generator excludes the harness route itself, so a
+  // harness build gets a worker whose shell is the shipped one.
+  if (code === 0) code = spawnSync('node', ['scripts/build-sw.mjs'], { stdio: 'inherit', env: { ...process.env, NEXT_PUBLIC_HARNESS: '1' } }).status ?? 1;
   if (code === 0) code = spawnSync('node', ['guards/postbuild.mjs'], { stdio: 'inherit', env: { ...process.env, NEXT_PUBLIC_HARNESS: '1' } }).status ?? 1;
 } finally {
   rmSync(DST, { recursive: true, force: true });
