@@ -11,6 +11,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
 from _layout import check_clearance, check_toast_clear, wait_toasts_clear, check_caret
+
+# The LOCAL calendar date, as src/dates.js todayISO() computes it. NEVER
+# new Date().toISOString().slice(0,10) — that is the UTC date, and east of
+# Greenwich it names YESTERDAY between local midnight and the offset. The
+# no-utc-date guard fails the build if that form comes back.
+LOCAL_TODAY = "(()=>{const n=new Date();return `${n.getFullYear()}-`+`${String(n.getMonth()+1).padStart(2,'0')}-`+`${String(n.getDate()).padStart(2,'0')}`;})()"
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'health')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -66,7 +72,7 @@ try:
         want = h.evaluate("""() => { const es = [...window.__zajilDb.state.healthEvents.values()].filter(e => e.eventType === 'vaccination' && e.date).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
             if (!es.length) return null; const d = new Date(es[0].date + 'T00:00:00'); d.setDate(d.getDate() + 365);
             const due = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            const days = Math.round((new Date(due + 'T00:00:00') - new Date(new Date().toISOString().slice(0,10) + 'T00:00:00')) / 86400000);
+            const days = Math.round((new Date(due + 'T00:00:00') - new Date((()=>{const n=new Date();return `${n.getFullYear()}-`+`${String(n.getMonth()+1).padStart(2,'0')}-`+`${String(n.getDate()).padStart(2,'0')}`;})() + 'T00:00:00')) / 86400000);
             return { last: es[0].date, due, days, med: es[0].medication, loft: !!es[0].wholeLoft }; }""")
         banner = pg.locator('[data-testid=next-vac]')
         check('[ruling 4] the banner derives the due date as the last vaccination + 365 days', banner.count() == 1 and str(abs(want['days'])) == pg.locator('[data-testid=next-days]').inner_text().strip(), f"due {want['due']}, {want['days']} days")
@@ -99,7 +105,7 @@ try:
 
         # ── the sheet: new (spec data-v="new") ──
         pg.click('[data-testid=new-event-fab]'); pg.wait_for_selector('[data-testid=event-sheet]')
-        check('sheet: «حدث جديد», type «تطعيم» with its colour dot, scope «طير واحد», date today', pg.locator('[data-testid=sheet-title]').inner_text().strip() == 'حدث جديد' and pg.locator('[data-testid=f-type]').input_value() == 'vaccination' and pg.locator('[data-testid=type-dot]').get_attribute('data-type') == 'vaccination' and pg.locator('[data-testid=f-scope]').input_value() == 'bird' and pg.locator('[data-testid=f-date]').input_value() == pg.evaluate("() => new Date().toISOString().slice(0,10)"))
+        check('sheet: «حدث جديد», type «تطعيم» with its colour dot, scope «طير واحد», date today', pg.locator('[data-testid=sheet-title]').inner_text().strip() == 'حدث جديد' and pg.locator('[data-testid=f-type]').input_value() == 'vaccination' and pg.locator('[data-testid=type-dot]').get_attribute('data-type') == 'vaccination' and pg.locator('[data-testid=f-scope]').input_value() == 'bird' and pg.locator('[data-testid=f-date]').input_value() == pg.evaluate("() => " + LOCAL_TODAY))
         types = [x.strip() for x in pg.locator('[data-testid=f-type] option').all_inner_texts()]
         check('the four vanilla event types, in vanilla\'s order', types == ['تطعيم', 'علاج', 'مرض', 'فحص'], types)
         pg.select_option('[data-testid=f-type]', 'treatment'); pg.wait_for_timeout(100)

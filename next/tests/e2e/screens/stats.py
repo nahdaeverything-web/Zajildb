@@ -48,7 +48,7 @@ EXPECT = """() => {
   const bands = [0, 0, 0, 0, 0, 0]; for (const c of cois) bands[band(c)]++;
   // the season rule: 1 July turnover
   const seasonOf = (iso) => { const y = +iso.slice(0, 4), m = +iso.slice(5, 7); return m >= 7 ? y : y - 1; };
-  const today = new Date().toISOString().slice(0, 10);
+  const today = (()=>{const n=new Date();return `${n.getFullYear()}-`+`${String(n.getMonth()+1).padStart(2,'0')}-`+`${String(n.getDate()).padStart(2,'0')}`;})();
   const season = seasonOf(today);
   const rs = [...db.state.raceResults.values()].filter(r => r.date && seasonOf(r.date) === season && r.raceType !== 'training');
   const vels = rs.map(r => r.velocity).filter(Boolean);
@@ -135,7 +135,7 @@ try:
               num('[data-testid=kpi-entries]') == str(exp['entries']) and num('[data-testid=kpi-velocity]').startswith(str(exp['avgVel']))
               and num('[data-testid=kpi-best]') == (str(exp['best']) if exp['best'] else '—') and num('[data-testid=kpi-top10]') == str(exp['top10']),
               f"entries={num('[data-testid=kpi-entries]')} vel={num('[data-testid=kpi-velocity]')}")
-        check('[README departure 5] …states the rule «لا تُحتسب نتائج التدريب.» and honours it', 'لا تُحتسب نتائج التدريب' in pg.locator('[data-testid=race-note]').inner_text() and exp['entries'] == pg.evaluate("""() => { const seasonOf = (iso) => { const y = +iso.slice(0,4), m = +iso.slice(5,7); return m >= 7 ? y : y - 1; }; const t = new Date().toISOString().slice(0,10);
+        check('[README departure 5] …states the rule «لا تُحتسب نتائج التدريب.» and honours it', 'لا تُحتسب نتائج التدريب' in pg.locator('[data-testid=race-note]').inner_text() and exp['entries'] == pg.evaluate("""() => { const seasonOf = (iso) => { const y = +iso.slice(0,4), m = +iso.slice(5,7); return m >= 7 ? y : y - 1; }; const t = (()=>{const n=new Date();return `${n.getFullYear()}-`+`${String(n.getMonth()+1).padStart(2,'0')}-`+`${String(n.getDate()).padStart(2,'0')}`;})();
             return [...window.__zajilDb.state.raceResults.values()].filter(r => r.date && seasonOf(r.date) === seasonOf(t) && r.raceType !== 'training').length; }"""))
         check('[README departure 5] …the best-five table is ranked, the leader highlighted, each row linking to its bird',
               pg.locator('[data-testid=race-table] [data-testid=race-row]').count() <= 5 and (pg.locator('[data-testid=race-row]').count() == 0 or pg.locator('[data-testid=race-row]').first.locator('a').get_attribute('href').startswith('/bird?id=')))

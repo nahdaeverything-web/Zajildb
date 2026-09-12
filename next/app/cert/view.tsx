@@ -5,6 +5,7 @@ import * as db from '@/src/db.js';
 import { useZajilStore, selectBird, useMediaForBird } from '@/src/db/react';
 import { t, fmtDate, fmtNum, fmtPercent, getLang, configure } from '@/src/i18n.ext.js';
 import { pedigreeGrid } from '@/src/engine/pedigree.js';
+import { todayISO } from '@/src/dates.js';
 import { inbreeding, ancestorLoss } from '@/src/engine/coi.js';
 import { Loading, toast, downloadJSON, primaryRing, birdLabelText, initDB } from '@/src/components';
 import s from './cert.module.css';
@@ -458,7 +459,9 @@ function Sheet(p: ScreenProps & { grid: Slot[][]; slots: SlotMap; urls: Record<s
     const anc = depth - 1;
     const { coi } = inbreeding(db.getBird, bird.id, anc) as { coi: number };
     const loss = ancestorLoss(db.getBird, bird.id, anc) as { filled: number; total: number };
-    const today = new Date().toISOString().slice(0, 10);
+    // the LOCAL calendar date: a certificate printed at 01:00 in Jordan must carry
+    // today's date, not yesterday's (src/dates.js, and the no-utc-date guard)
+    const today = todayISO();
 
     const photoBox = (who: 'bird' | 'sire' | 'dam') => {
       if (!photos[who]) return null;

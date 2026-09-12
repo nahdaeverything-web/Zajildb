@@ -38,6 +38,21 @@ until a cutover ruling.
   reports 130 missing files instead of the one cause. Proved to fire three ways: a base path
   requested against a root export, a worker baked for a different prefix, and a prefixed
   export with no base path requested.
+  Since Phase 7 also `no-utc-date`: no file may compute a calendar date with
+  `new Date().toISOString().slice(0,10)`. That is the UTC date, and east of
+  Greenwich it names YESTERDAY between local midnight and the offset —
+  `src/dates.js` exists for exactly this and `todayISO()` is the local date.
+  The ROOT tree has had this guard since v1.4 (`tests/guards.test.js:87-92`)
+  and the port never received it, which is how `app/cert/view.tsx` came to
+  stamp a printed pedigree certificate with the UTC day: a certificate printed
+  at 01:00 in Amman carried yesterday's date. Vanilla does not have the bug —
+  it formats a full instant in local time, so only the port's date-only
+  conversion introduced it. Unlike the root's, this guard also covers the
+  PYTHON SUITES, because the same slice in an assertion is a test that fails
+  for three hours a night and passes the rest of the day. That is how it was
+  found: the Phase 7 gate ran at 00:29 local and `screens/health.py` failed two
+  assertions that had passed twelve hours earlier. Proved to fire on both a
+  `.tsx` source file and a `.py` suite, and to leave prose comments alone.
   Since 4D acceptance also `no-undefined-token`: a stylesheet may not read a
   custom property that is declared nowhere. CSS fails silently here — an
   undeclared property is an empty value, not an error — so only a guard can

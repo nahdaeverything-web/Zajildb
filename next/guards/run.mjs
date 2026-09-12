@@ -225,6 +225,32 @@ const guards = {
     }
     return bad;
   },
+  // The root tree has had this guard since v1.4 (tests/guards.test.js:87-92) and the port
+  // never got it, which is exactly how app/cert/view.tsx came to date a printed pedigree
+  // certificate with `new Date().toISOString().slice(0,10)`. That is the UTC date: east of
+  // Greenwich, between local midnight and the offset, it names YESTERDAY — so a certificate
+  // printed at 01:00 in Amman carried the previous day. src/dates.js exists for this and
+  // says so in its header; todayISO() is the local calendar date.
+  //
+  // The port's version covers the SUITES as well as the source, because the same slice in a
+  // python assertion is a test that fails for three hours a night and passes the rest of the
+  // time — which is how this was found: screens/health.py, run at 00:29 local.
+  'no-utc-date'() {
+    const re = /toISOString\(\)\.slice\(\s*0\s*,\s*10\s*\)/;
+    const bad = [];
+    for (const f of files('.js', '.mjs', '.ts', '.tsx', '.py')) {
+      const r = rel(f);
+      if (r === 'src/dates.js') continue;        // the module that documents the mistake
+      if (r.startsWith('guards/')) continue;     // this guard and its proof name the shape
+      const ls = extname(f) === '.py' ? lines(f) : codeLines(f);
+      ls.forEach((l, i) => {
+        if (!re.test(l)) return;
+        if (/^\s*#/.test(l)) return;             // a python comment is prose, like // above
+        bad.push(`${r}:${i + 1}  ${l.trim().slice(0, 90)}`);
+      });
+    }
+    return bad.length ? bad.concat(['use todayISO() from src/dates.js — a UTC slice names the wrong day east of Greenwich']) : bad;
+  },
   strings() {
     const r = spawnSync(process.execPath, [join(ROOT, 'guards', 'strings.mjs')], { encoding: 'utf8' });
     const out = (r.stdout || '') + (r.stderr || '');
