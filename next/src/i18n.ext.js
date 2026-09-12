@@ -190,6 +190,35 @@ export const EXT = {
   'val.notSavedEvent':        { ar: 'لم يُحفظ الحدث. راجع الحقل المحدد بالأحمر.', en: 'The event was not saved. Check the field marked in red.' },
   'val.birdRequiredScope':    { ar: 'الطير مطلوب — اختر طيرًا أو غيّر النطاق إلى «اللوفت كامل».', en: 'The bird is required — choose one, or change the scope to “Whole loft”.' },
 
+  // ── stats-v1 (4C) ──
+  // design/README.md rules FIVE deliberate departures here, and every one is a
+  // string too: the COI honesty band and its note, the «غير محددة» strain row,
+  // the fifth sex tile, the whole-view empty state, and the two season cards.
+  // Vanilla keeps the titles it already has (stats.title, stats.byStatus,
+  // stats.byStrain, stats.avgCOI, stats.maxCOI, stats.totalBirds,
+  // stats.birdsWithFCI, stats.coiBand.zero) and the shared race/breeding words.
+  'stats.countLine':          { ar: '{n} طيرًا · محدّثة {d}', en: '{n} birds · updated {d}' },
+  'stats.coiHead':            { ar: 'توزيع معامل التربية الداخلية — حتى {n} أجيال', en: 'Inbreeding distribution — to {n} generations' },
+  'stats.coiScope':           { ar: 'محسوب لـ {n} طيرًا بنسب مسجل من أصل {total}', en: 'Computed for {n} birds with a recorded pedigree of {total}' },
+  'stats.coiBand.unknown':    { ar: 'نسب غير معروف', en: 'Pedigree unknown' },
+  'stats.coiNote':            { ar: '{n} طيور بلا نسب مسجل (أحد الأبوين مجهول) — غير محتسبة في المتوسط ولا في التوزيع.', en: '{n} birds have no recorded pedigree (a parent is unknown) — excluded from both the average and the distribution.' },
+  'stats.total':              { ar: 'المجموع', en: 'Total' },
+  'stats.strain.unset':       { ar: 'غير محددة', en: 'Unspecified' },
+  'stats.raceCard':           { ar: 'أداء السباقات — الموسم', en: 'Race performance — this season' },
+  'stats.raceCount':          { ar: '{n} سباقات', en: '{n} races' },
+  'stats.entries':            { ar: 'عدد المشاركات', en: 'Entries' },
+  'stats.avgVelocity':        { ar: 'متوسط السرعة', en: 'Average velocity' },
+  'stats.bestPosition':       { ar: 'أفضل مركز', en: 'Best position' },
+  'stats.top10':              { ar: 'المراكز العشرة الأولى', en: 'Top-ten finishes' },
+  'stats.noTraining':         { ar: 'لا تُحتسب نتائج التدريب.', en: 'Training results are not counted.' },
+  'stats.breedingCard':       { ar: 'التربية — الموسم', en: 'Breeding — this season' },
+  'stats.activePairs':        { ar: 'أزواج نشطة', en: 'Active pairs' },
+  'stats.hatched':            { ar: 'فقس', en: 'Hatched' },
+  'stats.weanedChicks':       { ar: 'فراخ مفطومة', en: 'Weaned chicks' },
+  'stats.hatchRate':          { ar: 'نسبة الفقس', en: 'Hatch rate' },
+  'stats.empty.title':        { ar: 'لا توجد بيانات كافية بعد', en: 'Not enough data yet' },
+  'stats.empty.body':         { ar: 'تظهر الإحصائيات بعد إضافة أول طيورك. يمكنك أيضًا تحميل اللوفت التعليمي لتجربة الشاشة ببيانات حقيقية.', en: 'The statistics appear once you add your first birds. You can also load the teaching loft to try the screen on real data.' },
+
   // ── rulings at 4A acceptance ──
   // nav.breeding: a DELIBERATE RENAME from vanilla's «التربية». Every approved
   // spec and the kit NAVIGATION NOTE say «التزاوج»; ruled at 4A acceptance.

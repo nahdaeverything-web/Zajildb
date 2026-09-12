@@ -44,5 +44,10 @@
     "(إن كان مشترى)": "RULED (4A acceptance, item 14): the same text as vanilla br.acquiredFrom, split across two spans in the spec; the port renders the vanilla label whole.",
     "مصدر الزوج": "RULED (4A acceptance, item 14): the same text as vanilla br.acquiredFrom, split across two spans in the spec; the port renders the vanilla label whole.",
     "حفظ الزوج": "RULED (4A acceptance, item 14): synonyms — vanilla act.save wins for the sheet's primary action. Was: «حفظ الزوج»"
+  },
+  "stats-v1.html": {
+    "السباق": "RULED (4A acceptance, item 14): synonyms — vanilla race.name wins for the race column of the season table.",
+    "بيض": "RULED (4A acceptance, item 14): synonyms — vanilla br.eggs wins for the breeding KPI label.",
+    "تحميل اللوفت التعليمي": "RULED (4A acceptance, item 14): one string, one key — loft-home's empty.example.cta already carries this action."
   }
 }
