@@ -250,6 +250,32 @@ cutover plan must say which path each class of user takes, in what order,
 and what the vanilla app shows once it is retired. **No cutover without a
 ruling.**
 
+## Intent lists at 4D — where every assertion went
+
+The Phase 4D order named six lists. Each one is accounted for here; nothing is
+skipped silently.
+
+| list | root | where it is now |
+|---|---|---|
+| `sync_ui.py` | 62 | **41** ported whole to `tests/e2e/sync_ui.py` (the status row, the interrupt rule, the الأدوات card, the backoff curve, the unconfigured build). Four kinds of change and no others: the module token, the shell's DOM (`#sync-row` → `[data-testid=sync-row]`; the healthy row is not rendered at all rather than rendered `display:none`, which is what "not taking up space" asserted), the routes, and RULING 1. **21** moved with the form RULING 1 superseded: the signed-out card, the create-account prohibition, the unconfigured state and the sign-out flow are in `screens/tools.py`; the form's own three error states are in `screens/sign_in.py`. |
+| `version_display.py` | 11 | **#2 #3 #9 #10** re-authored in `screens/tools.py` (the About row renders, is never blank, and shows the «غير معروف» fallback with no service worker). **#8** became the `no-hardcoded-version` guard, proved to fire. **#1 #4 #5 #6 #7** need a registered service worker answering `GET_VERSION` — PWA phase, listed below. |
+| `auth_live.py` | 18 | **ported whole**, opt-in behind `--live-auth`, with the six form assertions re-authored onto `/sign-in` (RULING 1). NOT RUN here: the sign-in screen runs the first-login cycle, so a live run WRITES to the real project, exactly like `--live-push`. That is an explicit authorisation, not a gate. |
+| `convergence.py:248-252` | 2 | **CLOSED.** `src/components/SyncNotices.tsx` reproduces js/app.js:195-217 and the assertions were re-authored onto the port's toast. convergence.py is 36/36. |
+| `picker_duplicates.py` #8–10 | 3 | re-authored in `screens/tools.py` against the real duplicate finder: it lists a clone, says what each copy is linked to (with the kinds), and the group is gone once the surplus copy is deleted. |
+| `subpath_hosting.py` | 8 | needs the app deployed under a subdirectory with a service worker scoped to it — PWA phase, listed below. |
+
+## Deferred to the PWA phase (recorded so nothing is lost)
+
+Nothing here is a port decision: each assertion needs a service worker or a
+real deployment, and `output: 'export'` has produced neither yet.
+
+| item | what it needs | root counts |
+|---|---|---|
+| `version_display.py` #1 #4 #5 #6 #7 | a registered service worker that answers `GET_VERSION`, and the version string in its own source | 5 of 11 |
+| `service_worker.py` | a registered service worker: precache, offline reload, update flow | 5 |
+| `subpath_hosting.py` | the export served from `/zajil/`, with the worker scoped there and the manifest resolving | 8 |
+| `live_deployment.py` | a real deployed origin | — |
+
 ## Deferred to Phase 4 (recorded so nothing is lost)
 
 Root browser suites — or assertions inside them — that test the data layer
@@ -265,5 +291,5 @@ every line.
 | `ownership.py` | drives `#/bird/new`, clicks | 10 |
 | `data_loss.py` | drives `#/bird/new`, clicks | 8 |
 | `pull.py` | one `#/bird/` navigation (line 356) — the URL-and-module rule stays clean rather than carrying a documented exception | 58 |
-| `auth_live.py` | fills `.sync-signin` and clicks the sign-in button (lines 111–113) | 18 |
+| ~~`auth_live.py`~~ — **PORTED at 4D** | opt-in behind `--live-auth`; the six form assertions re-authored onto `/sign-in`. See the intent-list table above. | 18 |
 | ~~`convergence.py:248-252`~~ — **CLOSED at 4D** | the duplicate-ring toast now has a shell to be raised in: `src/components/SyncNotices.tsx` reproduces js/app.js:195-217 (the sync-interrupt message and the sync-complete duplicate notice, both vanilla's PLAIN toast), mounted once in the layout. The three assertions were re-authored onto the port's `[data-testid=toast]` and pass; convergence.py is 36/36. | 2 |

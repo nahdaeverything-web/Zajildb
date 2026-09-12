@@ -32,6 +32,7 @@ print(f'  serving {OUT} on 127.0.0.1:{port} → ZAJIL_URL={env["ZAJIL_URL"]}')
 OPT_IN = {
     'push_live.py': ('--live-push', 'needs the internet and live credentials, and WRITES to the real project'),
     'pull_live.py': ('--live-pull', 'needs the internet and live credentials; reads the real project'),
+    'auth_live.py': ('--live-auth', 'needs the internet and live credentials, and WRITES to the real project (the sign-in screen runs the first-login cycle)'),
 }
 SUITES = sorted(f for f in glob.glob(os.path.join(HERE, '*.py')) if os.path.basename(f) not in ({'run_all.py'} | set(OPT_IN)))
 skipped = []

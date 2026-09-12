@@ -132,7 +132,7 @@ function SyncCard({ settings }: { settings: Record<string, unknown> }) {
   const [busy, setBusy] = useState(false);
   const cfg = db.syncConfig() as { configured: boolean };
   const auth = db.authState() as { signedIn: boolean; email: string | null };
-  const status = db.syncStatus() as { pending: number; state: string };
+  const status = db.syncStatus() as { pending: number; state: string; error?: { key: string; status?: number | null; at?: string } | null };
   const anomalies = (db.listSyncAnomalies ? db.listSyncAnomalies() : []) as Array<{ store?: string; recordId?: string; reason?: string; at?: string }>;
   const enabled = settings.syncEnabled !== false;
   return (
@@ -153,7 +153,13 @@ function SyncCard({ settings }: { settings: Record<string, unknown> }) {
             <div><span className={s.k}>{t('sync.lastSync')}</span><span className={s.v}>{settings.lastSyncAt ? fmtDate(settings.lastSyncAt as string, { withTime: true }) : t('sync.never')}</span></div>
             <div><span className={s.k}>{t('sync.pendingN')}</span><span className={s.v}><span className={`${s.big} ${status.pending ? '' : s.zero}`} data-testid="sync-pending">{fmtNum(status.pending)}</span></span></div>
           </div>
-          {settings.lastSyncError ? <div className={`${s.msg} ${s.amber}`} data-testid="sync-error">{t('sync.lastError')}: {String(settings.lastSyncError)}</div> : null}
+          {status.error ? (
+            <div className={`${s.msg} ${s.amber}`} data-testid="sync-error">
+              {t('sync.lastError')}: {t(status.error.key)}
+              {status.error.status ? ` (${status.error.status})` : ''}
+              {status.error.at ? ' — ' + fmtDate(status.error.at, { withTime: true }) : ''}
+            </div>
+          ) : null}
           {anomalies.length > 0 && (
             <div className={`${s.msg} ${s.amber}`} data-testid="sync-anomalies">
               <h4>{t('sync.anomalies', { n: fmtNum(anomalies.length) })}</h4>
