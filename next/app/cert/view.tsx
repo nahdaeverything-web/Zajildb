@@ -79,25 +79,35 @@ export default function CertView() {
   const st = useZajilStore((x) => x);
   const loft = db.currentLoft() as Loft | null;
 
-  const [format, setFormat] = useState<'a4' | 'story'>('a4');
+  // the spec's own default: a phone opens on the 9:16 sheet, anything wider on A4. The
+  // query is READ IN THE INITIALISER, not assigned from a mount effect: an effect that only
+  // seeds state from the environment buys a second render and a visible A4-then-story flip
+  // for nothing (and trips react-hooks/set-state-in-effect). `typeof window` is the guard
+  // Preview's `phone` already uses — this subtree only ever renders in the browser, because
+  // useSearchParams() bails the static export out to the page's Suspense boundary, but the
+  // build must not reach for matchMedia even so.
+  const [format, setFormat] = useState<'a4' | 'story'>(() =>
+    typeof window !== 'undefined' && matchMedia('(max-width:700px)').matches ? 'story' : 'a4');
   const [depth, setDepth] = useState(5);
-  const [lang, setLang] = useState<string>('');
+  // vanilla: the certificate starts in the app's language and can then be switched. The
+  // start value is READ below the boot guard rather than seeded by an effect — getLang()
+  // only says anything once initDB has configured i18n, and everything past that guard is
+  // after it. So the state here is the PICK: empty means «no explicit choice yet», which
+  // reads as the app language, not as «no language».
+  const [langPick, setLangPick] = useState<string>('');
   const [photos, setPhotos] = useState({ bird: false, sire: false, dam: false });
   const [brand, setBrand] = useState(true);
   const [zoom, setZoom] = useState<number | 'fit' | null>(null);
 
-  // the spec's own default: a phone opens on the 9:16 sheet, anything wider on A4
-  useEffect(() => { if (matchMedia('(max-width:700px)').matches) setFormat('story'); }, []);
-  // vanilla: the certificate starts in the app's language and can then be switched
-  useEffect(() => { if (booted && !lang) setLang(getLang()); }, [booted, lang]);
-
   useEffect(() => { if (booted && id && !bird) router.replace('/birds'); }, [booted, id, bird, router]);
   if (!booted || !bird) return <section className={s.screen}><Loading /></section>;
+
+  const lang = langPick || getLang();
 
   return (
     <CertScreen
       bird={bird} loft={loft} st={st} lang={lang || 'ar'}
-      format={format} setFormat={setFormat} depth={depth} setDepth={setDepth} setLang={setLang}
+      format={format} setFormat={setFormat} depth={depth} setDepth={setDepth} setLang={setLangPick}
       photos={photos} setPhotos={setPhotos} brand={brand} setBrand={setBrand}
       zoom={zoom} setZoom={setZoom} router={router}
     />
@@ -156,7 +166,7 @@ function CertScreen(p: ScreenProps) {
 
   return (
     <section className={s.screen} data-testid="cert-screen">
-      <Panel {...p} slots={slots} urls={urls} />
+      <Panel key={loft?.id || 'none'} {...p} slots={slots} urls={urls} />
       <Preview {...p} grid={grid} slots={slots} urls={urls} />
       {p.zoom !== null && <Zoom {...p} grid={grid} slots={slots} urls={urls} />}
       {/* the spec's own mechanism, restored: a <style> element whose text is the @page rule
@@ -173,6 +183,29 @@ function CertScreen(p: ScreenProps) {
 
 // ───────────────────────────────────────────────────────── options panel
 type SlotMap = Record<'bird' | 'sire' | 'dam', { bird: Bird | null; media: Media | null; label: string }>;
+
+// Declared at MODULE SCOPE deliberately. A component declared inside another component's
+// render body is a brand-new component type on every render, so React unmounts its DOM and
+// mounts a fresh subtree each time: a text field inside one loses the caret after a single
+// keystroke, and even a subtree without a field is dozens of pointless remounts per render
+// (eslint: react-hooks/static-components). Everything it used to close over now arrives as
+// a prop — the CSS module `s` is module state already, so it needs no passing.
+function Seg({ label, hint, value, options, onPick, testid }: {
+  label: string; hint?: string; value: string; options: Array<[string, ReactNode]>;
+  onPick: (v: string) => void; testid: string;
+}) {
+  return (
+    <div className={s.sec} data-testid={`sec-${testid}`}>
+      <div className={s.lab}>{label}{hint && <span className={s.hint}>{hint}</span>}</div>
+      <div className={s.seg} role="group" aria-label={label}>
+        {options.map(([v, node]) => (
+          <button key={v} type="button" className={value === v ? s.on : undefined} aria-pressed={value === v}
+            onClick={() => onPick(v)} data-testid={`${testid}-${v}`}>{node}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function Panel(p: ScreenProps & { slots: SlotMap; urls: Record<string, string> }) {
   const { bird, loft, format, depth, lang, photos, brand, slots, urls } = p;
@@ -218,21 +251,6 @@ function Panel(p: ScreenProps & { slots: SlotMap; urls: Record<string, string> }
       toast(t('toast.exported'), { kind: 'success' });
     }).catch(() => toast(t('err.exportFailed'), { kind: 'error' }));
   }
-
-  const Seg = ({ label, hint, value, options, onPick, testid }: {
-    label: string; hint?: string; value: string; options: Array<[string, ReactNode]>;
-    onPick: (v: string) => void; testid: string;
-  }) => (
-    <div className={s.sec} data-testid={`sec-${testid}`}>
-      <div className={s.lab}>{label}{hint && <span className={s.hint}>{hint}</span>}</div>
-      <div className={s.seg} role="group" aria-label={label}>
-        {options.map(([v, node]) => (
-          <button key={v} type="button" className={value === v ? s.on : undefined} aria-pressed={value === v}
-            onClick={() => onPick(v)} data-testid={`${testid}-${v}`}>{node}</button>
-        ))}
-      </div>
-    </div>
-  );
 
   return (
     <aside className={s.panel} data-testid="panel">

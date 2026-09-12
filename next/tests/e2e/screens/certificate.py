@@ -20,7 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 sys.path.insert(0, HERE)
 from _serve import serve                       # noqa: E402
-from _layout import check_clearance, check_toast_clear, wait_toasts_clear   # noqa: E402
+from _layout import check_clearance, check_toast_clear, wait_toasts_clear, check_caret   # noqa: E402
 
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'certificate')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
@@ -100,6 +100,37 @@ try:
               and pg.evaluate("() => !!document.querySelector('[data-bottom-chrome=cert-cta]')"))
         check('a wide screen opens on A4, which is the format the certificate is designed for',
               pg.locator('[data-testid=sheet]').get_attribute('data-format') == 'a4')
+        # [core_flows root line 81 — UNCOVERED until Phase 6] the suite asserted the ENGLISH
+        # sheet is ltr and that the document stays rtl, but never that the sheet's own
+        # default — Arabic — is rtl. That is the state a fancier actually prints.
+        # [Phase 6] the screen's own SHAPE, which no assertion had measured — and which was
+        # wrong from the day it was built: split-generic.mjs mapped the spec's `.app` to
+        # `.screen` inside the two media queries and missed the base rule and the phone one,
+        # so the class never existed in the DOM. The desktop two-column layout and the
+        # phone's preview-above-panel order simply never applied.
+        for w, want in ((1400, 'row'), (430, 'column-reverse')):
+            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(500)
+            geo = pg.evaluate("""() => { const sc = document.querySelector('[data-testid=cert-screen]');
+                const pa = document.querySelector('[data-testid=panel]');
+                const pv = document.querySelector('[data-testid=stage]').closest('main');
+                const r = (e) => { const b = e.getBoundingClientRect(); return { x: Math.round(b.x), y: Math.round(b.y) }; };
+                return { display: getComputedStyle(sc).display, dir: getComputedStyle(sc).flexDirection,
+                         panel: r(pa), preview: r(pv) }; }""")
+            if w == 1400:
+                check(f'[spec layout] @{w}: the options panel and the preview are two COLUMNS, side by side',
+                      geo['display'] == 'flex' and geo['dir'] == want
+                      and abs(geo['panel']['y'] - geo['preview']['y']) < 40
+                      and geo['panel']['x'] != geo['preview']['x'], str(geo))
+            else:
+                check(f'[spec layout] @{w}: the sheet is ABOVE the options, as the spec stacks it',
+                      geo['display'] == 'flex' and geo['dir'] == want
+                      and geo['preview']['y'] < geo['panel']['y'], str(geo))
+        pg.set_viewport_size({'width': 1400, 'height': 900}); pg.wait_for_timeout(400)
+
+        check('[core_flows] the certificate is RTL in its default language, before anything is switched',
+              pg.locator('[data-testid=sheet]').get_attribute('dir') == 'rtl'
+              and pg.locator('[data-testid=sheet]').get_attribute('lang') == 'ar',
+              f"dir={pg.locator('[data-testid=sheet]').get_attribute('dir')} lang={pg.locator('[data-testid=sheet]').get_attribute('lang')}")
         check('…and every control the spec draws is present: format, depth, language, three photo rows, the loft block',
               all(pg.locator(f'[data-testid={x}]').count() == 1 for x in
                   ['sec-format', 'sec-depth', 'sec-lang', 'sec-photos', 'sec-brand', 'row-bird', 'row-sire', 'row-dam', 'fields']))
@@ -151,6 +182,7 @@ try:
         pg.click('[data-testid=sw-brand]'); pg.wait_for_timeout(400)
 
         # the panel edits the ONE loft record
+        check_caret(pg, check, 'f-breeder', 'أبو زاجل', 'certificate panel')
         pg.fill('[data-testid=f-breeder]', 'أبو زاجل'); pg.locator('[data-testid=f-breeder]').blur(); pg.wait_for_timeout(600)
         check('an edit in the panel is an edit to the loft record, not a preview-only value',
               run(pg, "(db) => db.currentLoft().breederName") == 'أبو زاجل'
@@ -220,6 +252,10 @@ try:
               all(x in st for x in [target['name'], 'معامل التربية الداخلية', 'لوفت الفحيص'])
               and len([n for n in exp5['names'] if n and n in st]) == len([n for n in exp5['names'] if n]),
               st.replace('\n', ' ')[:80])
+        head = pg.locator('[data-testid=sheet] [data-testid=issued]')
+        check('[Phase 6] the 9:16 head keeps its ISSUE DATE — the rule that hid the removed certificate number was hiding this instead',
+              head.count() == 1 and head.is_visible() and head.inner_text().strip() != '',
+              f'{head.count()} cell(s), text {head.inner_text().strip()!r}' if head.count() else 'no issued cell')
         check('…in 9:16 — the aspect the caption promises',
               abs(pg.evaluate("() => { const r = document.querySelector('[data-testid=sheet]').getBoundingClientRect(); return r.width / r.height; }") - 405 / 720) < 0.01)
         shots(pg, 'story-ar', widths=(430, 1400))

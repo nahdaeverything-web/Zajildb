@@ -337,6 +337,211 @@ until a cutover ruling.
   nothing from `../js`, `../css` or `../tools` (guarded); the engine and the
   dataset id mapper are byte-identical copies under `src/engine/` and `tests/`.
 
+## Coverage honesty (Phase 6)
+
+Every assertion in the 31 root browser suites was mapped to the port, assertion by
+assertion, by nine auditors and two adversarial critics. 460 root assertions across 23
+local suites reconcile; the critics recounted eight suites by hand and found the counts
+right, then checked ~55 "covered" claims and found five where the port's assertion did not
+test the root's claim.
+
+Twelve gaps were real. **All twelve are now closed**, and closing three of them found
+defects:
+
+| root assertion | how it was carried | what closing it found |
+|---|---|---|
+| `entry_ergonomics` — one ring row pre-seeded | `bird_form.py` counts the rows on a fresh form | — |
+| `picker_duplicates:46` — no create row for an existing NAME | `bird_form.py` types a name into a parent picker | — |
+| `picker_guards#8` — a refused save writes no pair | the port's version never pressed save, so it could not fail for its own reason; it does now | — |
+| `core_flows:67` — `<html dir=ltr>` | `tools.py` clicks «English» and checks the document, the labels, and that it persists across a navigation | the English half of the app had shipped entirely untested |
+| `core_flows:70` — LTR: subject left of ancestors | `pedigree_tree.py` re-measures the chart with the app in English | — |
+| `core_flows:81` — the cert page is RTL | `certificate.py` asserts the Arabic sheet's own `dir` and `lang` | — |
+| `example_data:81` — a legend under the tree | re-authored onto the legend the spec replaced it with | the legend had no testid |
+| `change_events#7` — no view writes IndexedDB directly | the `ui-imports` guard now covers `db.idbPut/idbDelete/idbClear` and `db.emitChange` | the guard checked only IMPORT paths, and `src/db.js` re-exports the write primitives — the exact bypass it existed to stop passed green |
+| `change_events#1` — an external write refreshes the register | was `check(…, True)`, which cannot fail; now reads the DOM and the navigation count | — |
+| `core_flows#4` — ring search normalised | was weakened to `>= 1`, which a build listing all 38 would pass; now exactly 1 | — |
+| `data_loss#4` — object URLs revoked on leaving | `bird_profile.py` wraps `createObjectURL`/`revokeObjectURL`, seeds a real photo, and leaves through the app's own back link | the first attempt was vacuous: a document navigation destroys the counters, so it had to be a client-side one |
+| `data_loss#5` — photos survive a snapshot restore | `tools.py` takes a real `autoBackup()` and restores it through the card | — |
+| `data_loss#7` — the loft card is usable after a foreign replace-import | `tools.py` completes one and reads the card | the card kept the PREVIOUS loft's name and location, so Save would have written them onto the new loft. Both it and the certificate panel are keyed by the loft id now |
+| `teaching_loft#7` — عاصف's 25% COI on the detail screen | `bird_profile.py`, against the engine's own number | the port's only 25% assertion was a different bird, dataset and inbreeding path |
+| `sync_ui#1` — the shell has a status row | the port's substitute tested `typeof window.__zajilDb`, a tautology; now it drives a visible state on an EMPTY loft | the row lived inside the loft home's non-empty branch, so an empty loft with a paused or failing sync said nothing |
+| `sync_ui#24` — a MASKED password field | `sign_in.py` reads the input types, and the autocomplete pairing vanilla uses | the email field said `autocomplete="email"`, breaking the `username`/`current-password` pairing a password manager looks for |
+| `sync_ui#30` — the button is usable again | `sign_in.py` reads its enabled state after a failure | — |
+| `sync_ui#33` — ENTER submits | `sign_in.py` presses Enter against a stubbed project | it was carried only by `auth_live`, which the runner skips by default |
+
+**What is still uncovered: the 11 assertions of `live_deployment.py`, and nothing else.**
+Every one has a local counterpart that proves the same behaviour against a python
+http.server, and not one of them can prove what GitHub Pages actually serves. They close
+with the cutover.
+
+## The fidelity pass (Phase 6)
+
+All fourteen approved files were audited state by state against the port, one auditor each.
+`add-edit-bird-v1` is superseded by v2 — the whole diff is two hunks moving the desktop rail
+to the side the kit specifies, so v1 drops nothing — and `zajil-prototype` is the pre-spec
+whole-app mock. Both were audited as such. `tools-v1` came back with no unreachable state at
+all.
+
+CAVEAT, stated because it changes how much weight this carries: the two adversarial critics
+that were to check the auditors' work both died on a session limit. The eight defects below
+were each verified and fixed by hand, with a measurement before and after, so those stand on
+their own evidence. The 598 "reachable" and 467 "asserted" counts are the auditors' own and
+have NOT been independently checked — the equivalent critics on the coverage audit found
+five false "covered" claims out of ~55 sampled, so treat these as a good-faith survey rather
+than a proof.
+
+| | |
+|---|---|
+| spec states enumerated | 670 |
+| reachable in the port | 598 |
+| ruled out, with the ruling named | 47 |
+| **not reachable** | **25** |
+| states an assertion proves | 467 |
+| deliberate differences, each with its authorisation | 222 |
+
+Eight of the twenty-four were real defects, and they are fixed. Each was a silent failure —
+CSS that cannot parse is dropped, and a layout that collapses still renders:
+
+- **Both tree connector systems were dead.** The specs declare `--gap` in their `:root` as
+  "the column gap AND the connector stub length" (20px for the pedigree tree, 18px for the
+  certificate), and `split-generic.mjs` strips `:root`. So both modules read `--gap` four
+  times and declared it nowhere: every `padding-inline-start:var(--gap)` resolved to
+  nothing and every `calc(-1 * var(--gap))` was invalid. The trees had no column gaps and
+  no connector lines. **The `no-undefined-token` guard had passed** because it pooled
+  declarations from every stylesheet in the tree — but custom properties are SCOPED, so a
+  `--gap:14px` inside `.mini` in one module proved nothing about another module's `.gen`.
+  The guard now admits only the token sheet's `:root` plus the file's own declarations, and
+  fires on a cross-module one.
+- **The certificate had no desktop layout at all.** The generator mapped the spec's `.app`
+  to `.screen` inside the two media queries and missed the base rule and the phone one, so
+  the class never existed in the DOM: no two-column desktop, no preview-above-panel stack
+  on the phone. Measured before the fix: the panel floating at x=684 with the preview
+  1396px below it. No assertion had measured the screen's shape; two do now.
+- **The 9:16 certificate head hid the wrong cell.** The spec's rule hides its first meta
+  cell, the certificate NUMBER, which the 4D ruling keeps out entirely — so with that cell
+  gone the rule hid the ISSUE DATE and the story head showed nothing. README had already
+  recorded that rule as removed; it had not been.
+- **The stats COI card's two columns were one.** The port wraps the two halves in an
+  unstyled `.main`, which made them a single grid item, so the aside sat under the bars in
+  the same column. `display:contents` promotes them without touching markup, and both are
+  now placed explicitly — `grid-row` alone had put them in swapped columns.
+- **The loft home could not combine a filter with a year.** The spec ANDs them and lights
+  both pills, and vanilla ANDs every filter (js/views/birds.js:35-40) — but the port's
+  handlers cleared each other, so «إناث» + «2024» was unreachable. The pills also now say
+  `aria-pressed`, which matters more once two can be lit.
+- **The table's sort direction was invisible.** The spec reveals a caret on the active
+  column and rotates it 180° when descending; the port rendered a bare span and never set
+  the `desc` class, so both rules were dead. `aria-sort` said the direction and nothing
+  showed it.
+- **The certificate CTA and every nav tab had no focus ring, and printing kept the nav.**
+  The specs write those selectors for a `<button>`; the port renders navigations, which are
+  anchors, so the selectors matched nothing. Measured: `outline: 0px none` under keyboard
+  focus. And every spec with a print block hides the navigation — the port's Nav module had
+  no print rule, so a printed pedigree carried the tab bar across it.
+- **The three bottom sheets did not lock the page behind them.** Measured: a wheel over the
+  scrim scrolled the register behind from scrollY 0 to 600. Vanilla locks with a
+  reference-counted flag and the certificate's zoom already did it by hand;
+  `src/components/scrim.ts` now does it for all three, counted, because a ring sheet can
+  open over a pair sheet.
+
+One fix had to be done properly rather than copied. Every spec dialog closes on
+`onclick="if(event.target===this)closeAll()"`, and that one-liner has a hazard: a click is
+pointerdown-then-pointerup, and a sheet that re-lays out between them moves what is under
+the finger. Reproduced — clearing a picker query and then clicking the sheet's own heading
+dismissed the sheet with the work in it. `useScrim` requires the gesture to BEGIN on the
+scrim as well as end there, and `breeding.py` asserts the hazard cannot come back.
+
+THE ONE GAP THAT RECURS, and the ruling it needs: the «نشط» status chip. Four of the
+fourteen specs draw it — the form's status segment, the profile's hero meta row, and the
+prototype's — and the design kit defines the bird's status field as
+«(نشط/تربية/فريق السباق/ميت/مباع/مفقود)» (ZAJIL-DESIGN-KIT.md:101). The DATA LAYER's
+`DEFAULT_STATUSES` is `['breeder', 'race team', 'young bird', 'stock', 'sold', 'lost',
+'dead']` (db/storage.js:116) — no «نشط», and three statuses the kit does not list. The port
+follows the data, and 4A acceptance item 4 accepted dropping the hero chip on that basis.
+So this is not a port omission: it is the kit and the data model disagreeing, and it needs a
+ruling either way — «نشط» becomes a real status (a stored-list migration for every existing
+loft) or the kit's line is corrected. Recorded here because a port cannot settle it.
+
+The other sixteen are presentation-level and need a design ruling rather than a fix. They
+are listed in the Phase 6 report: the «نشط» status chip on the form and the profile hero,
+the per-record document title, the form's field-level error state (a dead branch, because
+both duplicate-ring keys are warnings and never errors), the gallery tile as an interactive
+control, the health banner's dose-line order and its gold due state, the certificate panel's
+placeholder icons and its print-chrome state, the breeding sheet's scroll-back on a refused
+save, the FCI rule line's emphasis and the FCI table's chip and row tint, the loft home's
+emphasised numerals, search magnifier, add-button icon, filter divider and the ring plate's
+empty gold year cell, and the sign-in early-access mail fallback that its own required
+fields make unreachable.
+
+## One gate (Phase 6)
+
+Two things the gate got wrong about ITSELF on its first runs, both fixed, both worth the
+note: its summary filter read `N passed` and so never matched the runners' own
+`N assertions passed` line — it reported the whole ported root suite as its smallest
+constituent, 6. And it ran the root control from `next/`, where that suite's
+CWD-relative `open('sw.js')` cannot find the file (RF-5). A gate that mis-parses a total
+is worse than one that refuses to guess, so a step whose summary it cannot read is a
+FAILURE and says so. Do not run `node guards/run.mjs` while the gate is running: the
+harness build puts `app/test-harness/` in place for a few seconds and the
+`no-harness-route` guard is right to object to it.
+
+    cd next && npm run gate          # everything, with totals
+    cd next && npm run gate -- --live   # …plus the live suites
+
+`scripts/gate.mjs` owns the order and counts the assertions itself. It exists because a
+gate a person assembles by hand is a gate that gets assembled differently each time — and
+because the first thing it did was report two steps that had never been in any gate:
+`npx tsc --noEmit` and `npx eslint`. A step whose summary it cannot parse is a FAILURE, not
+a zero. The root browser suite runs as a CONTROL when a server is up at 8123 (RF-1: one
+root suite hardcodes that port), and says so as a skip when there is not.
+
+## What the first gate run found
+
+`npx eslint` had never run in a gate. Its first run reported 79 errors, and one of them was
+the most serious defect found anywhere in the port.
+
+- **73 × `react-hooks/static-components`** — seven screens declared components inside
+  their render bodies, so React remounted those subtrees on every render. Where the
+  subtree held a text input, **the input lost the caret after one keystroke**. Measured
+  before fixing: typing «برق السريع» into the bird form's name field left «ب». The bird
+  form, the races result sheet and the health event sheet were all unusable for typing.
+  Every screen suite already filled those fields and passed, because Playwright's `fill()`
+  sets a value in one shot and never types a second character. `_layout.py` now has
+  `check_caret`, which types character by character and asks where the caret went; every
+  screen with a text field calls it.
+- **A blind spot worth knowing about:** `react-hooks/static-components` reports at the USE
+  site and does not see a component used only inside a `.map()` callback. `app/birds/view.tsx`
+  therefore reported ZERO problems while declaring five components in its render body,
+  used once per bird in both the phone list and the desktop table. A clean lint is not
+  proof on its own; the adversarial review found those five, and they are hoisted too.
+- **4 × `react-hooks/set-state-in-effect`** — two restructured (the certificate now seeds
+  its format and language during render instead of from mount effects, so there is no
+  frame showing the wrong one), two kept with a one-line directive and the reason in place.
+- **2 × `react-hooks/immutability`** — the races and health date headers were decided by
+  assigning to a variable as the `.map()` ran, and that form collapsed every falsy date to
+  null. A run of results saved with no date got a «—» header EACH, and a first row with no
+  date got none. Deciding it from the previous row fixes both; `races.py` asserts the
+  single «—» header.
+- The verbatim copies (`src/db/**`, `src/engine/**`, `src/i18n.js`, the node test files)
+  are excluded from lint in `eslint.config.mjs`: a finding in one of them is a ROOT
+  finding, not something to fix here, and linting them would invite the edit the isolation
+  contract forbids. `@next/next/no-img-element` is off for the three files that render
+  device-local blobs through object URLs, which is what `images.unoptimized` exists for.
+
+Two more defects came out of closing the coverage gaps rather than from lint:
+
+- **The loft card kept the previous loft's values.** It holds a draft seeded from the loft
+  on mount, and a replace-import can swap the loft record underneath it (`db/io.js`
+  repoints `currentLoftId` when the imported payload does not carry the stored one). So
+  after importing another device's export the card showed the OLD name and location, and
+  Save would have written them onto the new loft. Both it and the certificate's options
+  panel are now keyed by the loft's id, so a loft that changes identity remounts.
+- **The sync status row was invisible on an empty loft.** Vanilla appends it once above the
+  view (js/app.js:75-77) so it shows whatever the screen contains, and every other port
+  screen renders it straight after its header — but the loft home had it inside the
+  non-empty branch. A fancier with an empty loft and a paused or failing sync was told
+  nothing. Found by re-authoring `sync_ui` #1, which had been re-authored into a tautology.
+
 ## Tests
 
     node tests/run.js        # the root engine suite against src/engine/ — 33/33
@@ -353,6 +558,16 @@ Zajil project rules — those live in the root `HANDOFF.md`, `BACKLOG.md` and
 Self-hosted under `public/fonts/` (OFL 1.1, licences beside the faces), wired
 through `app/fonts.ts`. Alexandria is one variable file subset to Arabic +
 Latin; IBM Plex Mono is the two static weights the specs load.
+
+## Post-port optimisation candidates (RULED at Phase 5 acceptance — not Phase 6 work)
+
+Neither of these is a regression: both match what vanilla does today, and both were
+recorded rather than fixed so the decision stays visible.
+
+| candidate | what it costs now | why it is not urgent | what would fix it |
+|---|---|---|---|
+| **A version bump refetches the whole ~2 MB precache** | the cache is keyed by the version and written once, so every hashed `_next/static` file is fetched again even when byte-identical to the previous deploy | vanilla has the same shape at a smaller size, and the fetch is once per release on a connection the fancier is already using to get the new build | per-entry revisioning — a manifest of `{url, revision}` and a cache that carries entries forward when the revision is unchanged. This is the one thing a Workbox-style library would have bought (see the Phase 5 recommendation) |
+| **An update needs two reloads to show** | the first reload activates the new worker, the second renders from it; the About row reports the old version in between | vanilla behaves identically and it is the release ritual today (HANDOFF.md:339) | either prompt from the `updatefound` toast with a reload action, or hold the new worker and swap on `controllerchange`. Both change update UX, which is a design decision, not a refactor |
 
 ## Cutover considerations (Phase 7 — recorded, not acted on)
 
@@ -405,7 +620,7 @@ so three of the four rows are closed; only a deployed origin is still missing.
 | ~~`version_display.py`~~ — **CLOSED at 5** | all 11 ported to `tests/e2e/version_display.py` and green. #8 became a stronger claim than the root's four-file spot check: no shipped file in the whole export carries the version, only the generated worker. | 11 |
 | ~~`service_worker.py`~~ — **CLOSED at 5** | all 5 ported to `tests/e2e/service_worker.py`, plus 7 the port needs and vanilla did not: the precache is populated rather than an empty shell from a failed install, a clean URL finds its OWN document offline, an unknown route falls back to the shell, the harness route serves the harness, and the install split proved both ways. | 5 → 12 |
 | ~~`subpath_hosting.py`~~ — **CLOSED at 5** | all 8 ported to `tests/pwa/subpath_hosting.py` (its own directory because it needs its own build), plus 6 more: assets resolve under the prefix and not at the origin root, the manifest is the prefixed one with a relative scope that follows it, a click stays inside the prefix, a clean URL under the prefix works offline, the version row reports the worker under the prefix, and nothing 4xx/5xx was served while online. | 8 → 14 |
-| `live_deployment.py` | a real deployed origin, built with `NEXT_PUBLIC_BASE_PATH=/Zajildb` | — |
+| `live_deployment.py` — **11 assertions, the ONLY uncovered ones left** | a real deployed origin, built with `NEXT_PUBLIC_BASE_PATH=/Zajildb`. Each has a local counterpart that proves the same behaviour against a python http.server — secure context, the six nav links, no failed requests, the worker's scope, the versioned cache, an installable manifest, the 38-bird load, offline boot, offline data, offline COI, zero page errors — and none of them can prove what GitHub Pages actually serves. See the Phase 6 coverage table. | 11 |
 
 ## Deferred to Phase 4 (recorded so nothing is lost)
 

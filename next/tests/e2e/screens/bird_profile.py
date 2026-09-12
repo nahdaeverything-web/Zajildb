@@ -168,6 +168,60 @@ try:
             pg.goto(f"{ROOT}bird.html?id={rid}&tab=ped", wait_until='load'); pg.wait_for_selector('[data-testid=progeny]')
             direct = pg.locator('[data-testid=prog-direct]').inner_text().strip()
             check('[teaching_loft#8] Remco progeny analysis populated (direct offspring > 0)', direct not in ('', '0', '٠'), direct)
+        # ── [teaching_loft #7, root line 51 — UNCOVERED until Phase 6] عاصف's 25% COI ──
+        # The engine proves 0.25 for g3-asif in next/tests/example-large.test.js:45, and the
+        # root's claim is that the DETAIL SCREEN shows it. The port's only 25% assertion is
+        # برق's, in the SAMPLE loft, from a different inbreeding path (full sibs vs father ×
+        # daughter) — so the screen half of this was carried nowhere.
+        asif = h.evaluate("() => { const db = window.__zajilDb; const b = db.allBirds().find(x => (x.name || '').includes('عاصف')); return b && b.id; }")
+        check('seed: عاصف found in the teaching loft', bool(asif), str(asif))
+        if asif:
+            pg.goto(f'{ROOT}bird.html?id={asif}', wait_until='load'); pg.wait_for_selector('[data-testid=tile-coi]', timeout=8000)
+            ac = pg.locator('[data-testid=tile-coi] [data-testid=coi-badge]')
+            expected = h.evaluate("(id) => window.__zajilEngine.coi.inbreeding(window.__zajilDb.getBird, id, +(window.__zajilDb.state.settings.coiDepth || 10)).coi", asif)
+            check('[teaching_loft #7] عاصف\'s detail screen shows 25% COI — father × daughter, from the engine',
+                  ac.inner_text().strip().startswith('25') and abs(expected - 0.25) < 1e-9,
+                  f'screen {ac.inner_text().strip()!r} engine {expected}')
+            check('…and it is banded severe, like any quarter-COI mating',
+                  ac.get_attribute('data-band') == 'severe', ac.get_attribute('data-band'))
+
+        # ── [data_loss #4, root line 56 — UNCOVERED until Phase 6] object URLs are revoked ──
+        # The gallery mints an object URL per photo it can show, and leaving the view must
+        # give them back. Nothing in the port asserted it: the only gallery test seeds a
+        # BLOBLESS row, so no URL was ever created on the tested path. A leak here is
+        # invisible until a long session runs a device out of memory.
+        leak = ctx.new_page()
+        leak.add_init_script("""
+            window.__urls = { made: [], freed: [] };
+            const mk = URL.createObjectURL.bind(URL), rv = URL.revokeObjectURL.bind(URL);
+            URL.createObjectURL = (b) => { const u = mk(b); window.__urls.made.push(u); return u; };
+            URL.revokeObjectURL = (u) => { window.__urls.freed.push(u); return rv(u); };
+        """)
+        withphoto = h.evaluate("""async () => { const db = await window.__zajilDb;
+            const b = db.allBirds()[0];
+            const bytes = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), c => c.charCodeAt(0));
+            await db.addMedia(b.id, 'photo', 'body', 'real.png', new Blob([bytes], { type: 'image/png' }));
+            return b.id; }""")
+        leak.goto(f'{ROOT}bird.html?id={withphoto}', wait_until='load')
+        leak.wait_for_selector('[data-testid=gallery]', timeout=8000)
+        leak.wait_for_function("() => window.__urls.made.length > 0", timeout=8000)
+        made = leak.evaluate("() => window.__urls.made.length")
+        check('[data_loss #4] the gallery mints an object URL for a photo it can actually show',
+              made >= 1 and leak.locator('[data-testid=gallery] img').count() >= 1,
+              f'{made} made, {leak.locator("[data-testid=gallery] img").count()} img(s)')
+        # Leaving the view through the app's own back link — a CLIENT-side navigation, so
+        # React unmounts the gallery and the effect's cleanup runs while the counters
+        # survive. A document navigation would destroy the page and the evidence with it.
+        leak.click('[data-testid=back-link]')
+        leak.wait_for_selector('[data-testid=bird-row], [data-testid=empty-add]', timeout=8000)
+        leak.wait_for_timeout(1200)
+        freed = leak.evaluate("() => ({ made: window.__urls.made, freed: window.__urls.freed })")
+        outstanding = [u for u in freed['made'] if u not in freed['freed']]
+        check('[data_loss #4] …and leaving the view gives every one of them back',
+              freed['made'] and not outstanding,
+              f"{len(freed['made'])} made, {len(freed['freed'])} freed, {len(outstanding)} outstanding")
+        leak.close()
+
         check('zero page errors', not errs, errs)
         b.close()
 finally:

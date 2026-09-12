@@ -7,7 +7,7 @@ import { useZajilStore, selectRaces, selectBirds } from '@/src/db/react';
 import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { resultQualifies, birdEligibility, FCI_MIN_FANCIERS, FCI_MIN_BIRDS } from '@/src/engine/fci.js';
 import { velocityMPM, haversineMetres } from '@/src/engine/velocity.js';
-import { SyncRow, Loading, toast, undoToast, primaryRing, seasonLabel, seasonStart, pickerModel, SexChip, Tpl, initDB } from '@/src/components';
+import { SyncRow, Loading, toast, undoToast, primaryRing, seasonLabel, seasonStart, pickerModel, SexChip, Tpl, initDB, useScrim, useScrollLock } from '@/src/components';
 import s from './races.module.css';
 
 // Races — design/approved/races-v1.html, behaviour from js/views/races.js.
@@ -37,6 +37,29 @@ const yy = (b: Bird) => { const r = (b.rings || []).find((x) => x.type === 'FCI'
 /** races.js:135 parseCoords — two numbers, any separator. */
 const parseCoords = (v: string) => { const m = String(v || '').trim().match(/(-?\d+(?:\.\d+)?)[\s,،;]+(-?\d+(?:\.\d+)?)/); return m && Math.abs(+m[1]) <= 90 && Math.abs(+m[2]) <= 180 ? { lat: +m[1], lon: +m[2] } : null; };
 const Plus = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>;
+
+// Pill/Fci/Type/Confirm/Acts are declared at module scope deliberately, not inside
+// RacesView's render body. A component declared during render is a new component type
+// on every render, so React unmounts and remounts its whole DOM subtree each time —
+// 20–30 remounts per render on a season's worth of rows, and in a subtree holding a
+// text field the input would lose the caret after a single keystroke. Pill/Fci/Type
+// close over nothing but module-scope values (s, t, fmtNum); Confirm/Acts took the
+// two handlers they used to close over as props. Markup is unchanged.
+const Pill = ({ pos }: { pos?: number | null }) => pos ? <span className={`${s.pill} ${pos <= 10 ? s.top : ''}`} data-testid="pos-pill">{fmtNum(pos, { group: false })}</span> : <span className={`${s.pill} ${s.none}`} data-testid="pos-pill">—</span>;
+const Fci = ({ on }: { on: boolean }) => <span className={`${s.fci} ${on ? s.on : ''}`} data-testid="fci-chip" data-on={on ? '1' : '0'}>{on ? '✓' : '—'}</span>;
+const Type = ({ r }: { r: Race }) => <span className={`${s.type} ${(r.raceType || 'training') === 'training' ? s.train : ''}`} data-testid="type-tag">{t('raceType.' + (r.raceType || 'training'))}</span>;
+const Confirm = ({ inCell, onCancel, onDelete }: { inCell?: boolean; onCancel: () => void; onDelete: () => void }) => (
+  <div className={s.confirm} style={inCell ? { margin: 0, padding: '6px 6px 6px 14px' } : undefined} data-testid="inline-confirm">
+    <span>{t('confirm.deleteGeneric')}</span>
+    <div className={s.b}><button type="button" className={s.no} onClick={onCancel} data-testid="confirm-no">{t('act.cancel')}</button><button type="button" className={s.go} onClick={onDelete} data-testid="confirm-go">{t('act.delete')}</button></div>
+  </div>
+);
+const Acts = ({ end, onEdit, onDelete }: { end?: boolean; onEdit: () => void; onDelete: () => void }) => (
+  <div className={s.acts} style={end ? { justifyContent: 'flex-end' } : undefined}>
+    <button type="button" className={s.act} onClick={onEdit} data-testid="race-edit">{t('act.edit')}</button>
+    <button type="button" className={`${s.act} ${s.x}`} aria-label={t('act.delete')} onClick={onDelete} data-testid="race-delete">✕</button>
+  </div>
+);
 
 export default function RacesView() {
   const params = useSearchParams();
@@ -68,23 +91,7 @@ export default function RacesView() {
     const snap = await Races.remove(r.id);
     undoToast(t('toast.deleted'), t('act.undo'), async () => { await Races.restore(snap); toast(t('toast.undone'), { kind: 'success' }); });
   }
-  const Pill = ({ pos }: { pos?: number | null }) => pos ? <span className={`${s.pill} ${pos <= 10 ? s.top : ''}`} data-testid="pos-pill">{fmtNum(pos, { group: false })}</span> : <span className={`${s.pill} ${s.none}`} data-testid="pos-pill">—</span>;
-  const Fci = ({ on }: { on: boolean }) => <span className={`${s.fci} ${on ? s.on : ''}`} data-testid="fci-chip" data-on={on ? '1' : '0'}>{on ? '✓' : '—'}</span>;
-  const Type = ({ r }: { r: Race }) => <span className={`${s.type} ${(r.raceType || 'training') === 'training' ? s.train : ''}`} data-testid="type-tag">{t('raceType.' + (r.raceType || 'training'))}</span>;
-  const Confirm = ({ r, inCell }: { r: Race; inCell?: boolean }) => (
-    <div className={s.confirm} style={inCell ? { margin: 0, padding: '6px 6px 6px 14px' } : undefined} data-testid="inline-confirm">
-      <span>{t('confirm.deleteGeneric')}</span>
-      <div className={s.b}><button type="button" className={s.no} onClick={() => setConfirmId(null)} data-testid="confirm-no">{t('act.cancel')}</button><button type="button" className={s.go} onClick={() => del(r)} data-testid="confirm-go">{t('act.delete')}</button></div>
-    </div>
-  );
-  const Acts = ({ r, end }: { r: Race; end?: boolean }) => (
-    <div className={s.acts} style={end ? { justifyContent: 'flex-end' } : undefined}>
-      <button type="button" className={s.act} onClick={() => setSheet({ editing: r })} data-testid="race-edit">{t('act.edit')}</button>
-      <button type="button" className={`${s.act} ${s.x}`} aria-label={t('act.delete')} onClick={() => setConfirmId(r.id)} data-testid="race-delete">✕</button>
-    </div>
-  );
 
-  let lastDate: string | null = null;
   return (
     <section className={s.screen}>
       <header className={s.lofthead}><div className={s.in}><div className={s.headrow}>
@@ -120,8 +127,10 @@ export default function RacesView() {
         ) : (
           <>
             <div className={s.list} data-testid="race-rows">
-              {results.map((r) => {
-                const head = r.date !== lastDate ? (lastDate = r.date || null, true) : false;
+              {results.map((r, i) => {
+                // one date header per group, decided from the row BEFORE this one rather
+                // than by assigning to a variable as the map runs (react-hooks/immutability)
+                const head = i === 0 || r.date !== results[i - 1].date;
                 const b = getBird(r.birdId);
                 return (
                   <div key={r.id}>
@@ -138,9 +147,9 @@ export default function RacesView() {
                         <div className={s.stat}><span className={s.k}>{t('race.km')}</span><span className={`${s.v} ${s.num}`}>{r.distanceKm ? fmtNum(r.distanceKm, { dp: 1 }) : '—'}</span></div>
                         <div className={s.stat}><span className={s.k}>{t('race.mpm')}</span><span className={`${s.v} ${s.num}`}>{r.velocity ? fmtNum(r.velocity, { dp: 0 }) : '—'}</span></div>
                         <div className={s.stat}><span className={s.k}>FCI</span><Fci on={(resultQualifies(r) as { qualifies: boolean }).qualifies} /></div>
-                        <Acts r={r} />
+                        <Acts onEdit={() => setSheet({ editing: r })} onDelete={() => setConfirmId(r.id)} />
                       </div>
-                      {confirmId === r.id && <Confirm r={r} />}
+                      {confirmId === r.id && <Confirm onCancel={() => setConfirmId(null)} onDelete={() => del(r)} />}
                     </div>
                   </div>
                 );
@@ -159,7 +168,7 @@ export default function RacesView() {
                     <td className={s.num}>{r.velocity ? fmtNum(r.velocity, { dp: 0 }) : '—'}</td>
                     <td><Pill pos={r.position} /></td>
                     <td><Fci on={(resultQualifies(r) as { qualifies: boolean }).qualifies} /></td>
-                    <td>{confirmId === r.id ? <Confirm r={r} inCell /> : <Acts r={r} end />}</td>
+                    <td>{confirmId === r.id ? <Confirm inCell onCancel={() => setConfirmId(null)} onDelete={() => del(r)} /> : <Acts end onEdit={() => setSheet({ editing: r })} onDelete={() => setConfirmId(r.id)} />}</td>
                   </tr>
                 ))}</tbody>
               </table>
@@ -227,6 +236,8 @@ export default function RacesView() {
 
 /** The result sheet — races.js:116 resultDialog in races-v1's two groups, with the spec's visible errors. */
 function ResultSheet({ editing, birds, onClose }: { editing: Race | null; birds: Bird[]; onClose: () => void }) {
+  const scrim = useScrim(onClose);
+  useScrollLock();
   const r = editing;
   const [birdId, setBirdId] = useState<string | null>(r ? r.birdId : null);
   const [name, setName] = useState(r?.raceName || '');
@@ -282,14 +293,9 @@ function ResultSheet({ editing, birds, onClose }: { editing: Race | null; birds:
     } as Race);
     toast(t('toast.saved'), { kind: 'success' }); onClose();
   }
-  const F = ({ id, label, w, children, msg }: { id?: string; label: string; w?: 'w2' | 'w3'; children: React.ReactNode; msg?: string }) => (
-    <div className={`${s.field} ${w ? s[w] : ''} ${id && errs[id] ? s.err : ''}`} data-testid={id ? `f-${id}` : undefined}>
-      <label>{label}</label>{children}{msg && <div className={s.msg} role="alert">{msg}</div>}
-    </div>
-  );
 
   return (
-    <div className={s.scrim} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} data-testid="scrim">
+    <div className={s.scrim} {...scrim} data-testid="scrim">
       <div className={s.modal} role="dialog" aria-modal="true" aria-label={r ? t('act.edit') : t('race.new')} ref={box} data-testid="result-sheet">
         <div className={s.mhead}><h2 data-testid="sheet-title">{r ? t('act.edit') : t('race.new')}</h2>
           <button type="button" className={s['icon-btn']} aria-label={t('act.close')} onClick={onClose} data-testid="sheet-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>
@@ -332,8 +338,8 @@ function ResultSheet({ editing, birds, onClose }: { editing: Race | null; birds:
           <div className={s.sub}>{t('race.velocity.sub')}</div>
           <div className={s.fields}>
             <F label={t('race.releasePoint')}><input value={relName} onChange={(e) => setRelName(e.target.value)} data-testid="f-relname" /></F>
-            <F id="coords" label={t('race.coords')} w="w2" msg={t('val.coords')}><input className={s.ltr} value={relCoord} onChange={(e) => { setRelCoord(e.target.value); setErrs((x) => ({ ...x, coords: false })); }} placeholder="29.5321, 35.0063" data-testid="i-coords" /></F>
-            <F id="loft" label={t('race.loftCoords')} w="w3" msg={t('val.loftCoords')}><input className={s.ltr} value={loftCoord} onChange={(e) => { setLoftCoord(e.target.value); setErrs((x) => ({ ...x, loft: false })); }} placeholder="31.9539, 35.9106" data-testid="i-loftcoords" /></F>
+            <F id="coords" label={t('race.coords')} w="w2" err={errs.coords} msg={t('val.coords')}><input className={s.ltr} value={relCoord} onChange={(e) => { setRelCoord(e.target.value); setErrs((x) => ({ ...x, coords: false })); }} placeholder="29.5321, 35.0063" data-testid="i-coords" /></F>
+            <F id="loft" label={t('race.loftCoords')} w="w3" err={errs.loft} msg={t('val.loftCoords')}><input className={s.ltr} value={loftCoord} onChange={(e) => { setLoftCoord(e.target.value); setErrs((x) => ({ ...x, loft: false })); }} placeholder="31.9539, 35.9106" data-testid="i-loftcoords" /></F>
             <F label={t('race.releaseTime')}><input className={s.ltr} type="datetime-local" value={relTime} onChange={(e) => setRelTime(e.target.value)} data-testid="f-reltime" /></F>
             <F label={t('race.arrivalTime')}><input className={s.ltr} type="datetime-local" value={arrTime} onChange={(e) => setArrTime(e.target.value)} data-testid="f-arrtime" /></F>
             <F label={`${t('race.distance')} (${t('race.km')})`}><input className={s.ltr} inputMode="decimal" value={dist} onChange={(e) => setDist(e.target.value)} data-testid="f-dist" /></F>
@@ -348,6 +354,18 @@ function ResultSheet({ editing, birds, onClose }: { editing: Race | null; birds:
           <button type="button" className={s.save} onClick={save} data-testid="sheet-save">{t('act.save')}</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// F is declared HERE, at module scope, not inside ResultSheet's render body: a component
+// created during render is a new type on every render, so React remounts its DOM — and F
+// wraps this sheet's text fields, which would lose the caret after one character (typing
+// «برق السريع» left «ب»). The one value it closed over, errs[id], arrives as the err prop.
+function F({ id, label, w, err, children, msg }: { id?: string; label: string; w?: 'w2' | 'w3'; err?: boolean; children: React.ReactNode; msg?: string }) {
+  return (
+    <div className={`${s.field} ${w ? s[w] : ''} ${err ? s.err : ''}`} data-testid={id ? `f-${id}` : undefined}>
+      <label>{label}</label>{children}{msg && <div className={s.msg} role="alert">{msg}</div>}
     </div>
   );
 }

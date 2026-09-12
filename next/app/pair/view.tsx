@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds } from '@/src/db/react';
 import { t, fmtNum } from '@/src/i18n.ext.js';
 import { SyncRow, Loading, initDB } from '@/src/components';
@@ -19,6 +18,16 @@ type Sheet = { kind: 'link' | 'ring'; roundId: string; eggId: string } | null;
 const chipOf = (e: Egg) => e.state === 'hatched' ? <span className={`${s.chip} ${s.hatch}`}><span className={s.ico}>🐣</span>{t('br.egg.hatched')}</span>
   : e.state === 'failed' ? <span className={`${s.chip} ${s.fail}`}><span className={s.ico}>✕</span><span className={s.t}>{t('br.egg.failed')}</span></span>
   : <span className={`${s.chip} ${s.laid}`}><span className={s.ico}>🥚</span>{t('br.egg.laid')}</span>;
+// Confirm and Date_ are declared here, at module scope, on purpose: a component
+// created inside the render body is a new component type on every render, so
+// React remounts its DOM subtree — Date_'s text field would lose the caret after
+// a single keystroke. What they used to close over is passed in instead.
+const Confirm = ({ onGo, onNo, small }: { onGo: () => void; onNo: () => void; small?: boolean }) => (
+  <div className={`${s.confirm} ${small ? s.sm : ''}`} data-testid="inline-confirm"><span>{t('confirm.deleteGeneric')}</span><div className={s.b}><button type="button" className={s.go} onClick={onGo} data-testid="confirm-go">{t('act.delete')}</button><button type="button" className={s.no} onClick={onNo} data-testid="confirm-no">{t('act.cancel')}</button></div></div>
+);
+const Date_ = ({ label, egg, k, pair }: { label: string; egg: Egg; k: 'laidDate' | 'hatchDate' | 'weanDate'; pair: Pair }) => (
+  <span className={s.df}><label>{label}:</label><input type="date" value={egg[k] || ''} onChange={(e) => setEggDate(pair, egg.id, k, e.target.value)} aria-label={label} data-testid={`egg-${k}`} /></span>
+);
 
 export default function PairView() {
   const params = useSearchParams(); const router = useRouter();
@@ -42,12 +51,6 @@ export default function PairView() {
   const chickIds = new Set(rounds.flatMap((r) => r.eggs || []).map((e) => e.chickId).filter(Boolean) as string[]);
   const kids = birds.filter((b) => (b.sireId === pair.sireId && b.damId === pair.damId) || chickIds.has(b.id));   // breeding.js:117 + the linked chicks
   const active = pair.status === 'active';
-  const Confirm = ({ k, onGo, small }: { k: string; onGo: () => void; small?: boolean }) => (
-    <div className={`${s.confirm} ${small ? s.sm : ''}`} data-testid="inline-confirm"><span>{t('confirm.deleteGeneric')}</span><div className={s.b}><button type="button" className={s.go} onClick={onGo} data-testid="confirm-go">{t('act.delete')}</button><button type="button" className={s.no} onClick={() => setConfirm(null)} data-testid="confirm-no">{t('act.cancel')}</button></div></div>
-  );
-  const Date_ = ({ label, egg, k }: { label: string; egg: Egg; k: 'laidDate' | 'hatchDate' | 'weanDate' }) => (
-    <span className={s.df}><label>{label}:</label><input type="date" value={egg[k] || ''} onChange={(e) => setEggDate(pair, egg.id, k, e.target.value)} aria-label={label} data-testid={`egg-${k}`} /></span>
-  );
   const sheetEgg = sheet ? rounds.find((r) => r.id === sheet.roundId)?.eggs?.find((e) => e.id === sheet.eggId) : null;
 
   return (
@@ -77,7 +80,7 @@ export default function PairView() {
                 {x.eggs > 0 && <span className={s.stat} data-testid="pair-stat">🐣 {t('br.hatchedOf', { h: fmtNum(x.hatched), n: fmtNum(x.eggs) })}</span>}
               </div>
               <div className={s.pacts}>
-                {confirm === 'pair' ? <Confirm k="pair" onGo={async () => { setConfirm(null); await deletePair(pair); router.replace(`/breeding?season=${pair.season || ''}`); }} />
+                {confirm === 'pair' ? <Confirm onNo={() => setConfirm(null)} onGo={async () => { setConfirm(null); await deletePair(pair); router.replace(`/breeding?season=${pair.season || ''}`); }} />
                   : <button type="button" className={`${s.act} ${s.x}`} onClick={() => setConfirm('pair')} data-testid="pair-delete">{t('act.delete')}</button>}
                 <button type="button" className={`${s.act} ${s.toggle}`} title={active ? t('br.separate') : t('br.reactivate')} onClick={() => toggleActive(pair)} data-testid="pair-toggle">{active ? t('br.separated') : t('br.active')}</button>
               </div>
@@ -97,11 +100,11 @@ export default function PairView() {
                         <div className={s.eggs}>
                           {eggs.map((e) => {
                             const k = 'e' + e.id; const chick = getBird(e.chickId);
-                            if (confirm === k) return <div key={e.id} className={s.egg} data-testid="egg"><div className={s.l1}>{chipOf(e)}<Confirm k={k} small onGo={async () => { setConfirm(null); await deleteEgg(pair, r.id, e.id); }} /></div></div>;
+                            if (confirm === k) return <div key={e.id} className={s.egg} data-testid="egg"><div className={s.l1}>{chipOf(e)}<Confirm small onNo={() => setConfirm(null)} onGo={async () => { setConfirm(null); await deleteEgg(pair, r.id, e.id); }} /></div></div>;
                             return (
                               <div key={e.id} className={s.egg} data-testid="egg" data-state={e.state}>
                                 <div className={s.l1}>
-                                  {chipOf(e)}<Date_ label={t('br.laidDate')} egg={e} k="laidDate" />
+                                  {chipOf(e)}<Date_ label={t('br.laidDate')} egg={e} k="laidDate" pair={pair} />
                                   <span className={s.more} data-more="1">
                                     <button type="button" className={`${s.act} ${s.q}`} aria-label={t('act.more')} aria-expanded={menu === k} onClick={() => setMenu(menu === k ? null : k)} data-testid="egg-more">⋯</button>
                                     {menu === k && (
@@ -116,7 +119,7 @@ export default function PairView() {
                                   {e.state === 'laid' && <><button type="button" className={`${s.act} ${s.p}`} onClick={() => hatch(pair, e.id)} data-testid="egg-hatch">{t('br.markHatched')}</button><button type="button" className={s.act} onClick={() => fail(pair, e.id)} data-testid="egg-fail">{t('br.markFailed')}</button></>}
                                   {e.state === 'hatched' && (
                                     <>
-                                      <Date_ label={t('br.hatch')} egg={e} k="hatchDate" />
+                                      <Date_ label={t('br.hatch')} egg={e} k="hatchDate" pair={pair} />
                                       {!chick ? <><button type="button" className={`${s.act} ${s.p}`} onClick={() => setSheet({ kind: 'ring', roundId: r.id, eggId: e.id })} data-testid="egg-ring">{t('br.ringChick')}</button><button type="button" className={s.act} onClick={() => setSheet({ kind: 'link', roundId: r.id, eggId: e.id })} data-testid="egg-link">{t('br.linkExisting')}</button></>
                                         : <><Link href={`/bird?id=${chick.id}`} className={s.chick} data-testid="egg-chick"><span className={s.bird}>🐦</span><bdi>{nameOf(chick)}</bdi><Plate b={chick} /></Link>{e.weaned ? <span className={`${s.chip} ${s.wean}`} data-testid="egg-weaned">{t('br.weaned')}</span> : <button type="button" className={`${s.act} ${s.dk}`} onClick={() => wean(pair, e.id)} data-testid="egg-wean">{t('br.wean')}</button>}</>}
                                     </>
@@ -128,7 +131,7 @@ export default function PairView() {
                         </div>
                         <div className={s.addrow} style={{ justifyContent: 'space-between', alignItems: 'center' }}>
                           <button type="button" className={s.ghost} onClick={() => addEgg(pair, r.id)} data-testid="add-egg"><Plus />{t('br.addEgg')}</button>
-                          {confirm === 'r' + r.id ? <Confirm k={'r' + r.id} small onGo={async () => { setConfirm(null); await deleteRound(pair, r.id); }} />
+                          {confirm === 'r' + r.id ? <Confirm small onNo={() => setConfirm(null)} onGo={async () => { setConfirm(null); await deleteRound(pair, r.id); }} />
                             : <button type="button" className={`${s.act} ${s.q}`} style={{ fontSize: 13, letterSpacing: 0, color: 'var(--ink-3)' }} onClick={() => setConfirm('r' + r.id)} data-testid="round-delete">{t('br.deleteRound')}</button>}
                         </div>
                       </div>

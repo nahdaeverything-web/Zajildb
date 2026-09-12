@@ -181,15 +181,21 @@ try:
         check('[ruling 2] …drops every tint to white and both surfaces to pure white',
               all(hc[k] in ('#fff', '#ffffff') for k in ('page', 'surface', 'brandTint', 'goldTint', 'dangerTint')),
               str({k: hc[k] for k in ('page', 'surface', 'brandTint', 'goldTint', 'dangerTint')}))
-        check('[ruling 2] …turns the hairline into a line, and keeps the brand',
-              hc['line'] == '#8c97a2' and hc['brand'] == '#128c6e' and hc['weight'] == '500', str(hc))
+        check('[ruling 2] …and turns the hairline into a line, at full weight',
+              hc['line'] == '#8c97a2' and hc['weight'] == '500', str(hc))
+        # [Phase 5 acceptance ruling 1] white on #128C6E is 4.20:1 and misses AA; the mode
+        # takes --brand-deep, which is 6.12:1 and was already sanctioned. Normal mode keeps
+        # --brand as designed, which is asserted on the way back out below.
+        check('[P5 ruling 1] …and the brand fill goes to --brand-deep, so white text on it reaches AA',
+              hc['brand'] == '#0e6f57', hc['brand'])
         check('[ruling 2] …with NOT ONE new colour: every value is already in the palette',
-              {hc['ink2'], hc['line'], hc['brand']} <= {'#101820', '#8c97a2', '#128c6e'})
+              {hc['ink2'], hc['line'], hc['brand']} <= {'#101820', '#8c97a2', '#0e6f57'})
         pg.click(HC_BOX); pg.wait_for_timeout(400)
         check('…and turning it off takes it back off the document, tokens and all',
               run(pg, "(db) => db.state.settings.highContrast") is False
               and pg.evaluate("() => document.documentElement.classList.contains('high-contrast')") is False
-              and pg.evaluate("() => getComputedStyle(document.documentElement).getPropertyValue('--ink-3').trim().toLowerCase()") == '#8c97a2')
+              and pg.evaluate("() => getComputedStyle(document.documentElement).getPropertyValue('--ink-3').trim().toLowerCase()") == '#8c97a2'
+              and pg.evaluate("() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim().toLowerCase()") == '#128c6e')
         # the token that was read everywhere and declared nowhere (found at 4D acceptance)
         check('every token the stylesheets read actually resolves — --danger-tint and --gold-ink included',
               pg.evaluate("""() => { const cs = getComputedStyle(document.documentElement);
@@ -354,6 +360,103 @@ try:
         pg.click('[data-testid=dialog-cancel]'); pg.wait_for_timeout(400)
         check('…and cancelling leaves the loft alone', run(pg, "(db) => db.allBirds().length") == n_before)
         pg.select_option('[data-testid=import-mode]', 'merge'); pg.wait_for_timeout(150)
+
+        # ── [data_loss #5, root — UNCOVERED until Phase 6] restoring an automatic snapshot ──
+        # The card ships [data-testid=snap-select] and [data-testid=snap-restore] and neither
+        # testid appeared anywhere in this suite. The claim that matters is not "a restore
+        # runs" but that PHOTOS SURVIVE one: a snapshot deliberately carries no media
+        # (exportAll includeMedia:false, db/io.js), and importAll keeps the media store for a
+        # payload marked auto-backup — because wiping it would destroy every photo the
+        # snapshot cannot put back.
+        run(pg, """async (db) => {
+            const b = db.allBirds()[0];
+            await db.addMedia(b.id, 'photo', 'body', 'keeps.png', new Blob(['x']));
+            await db.autoBackup();
+        }""")
+        media_before = run(pg, "async (db) => (await db.mediaForBird(db.allBirds()[0].id)).length")
+        birds_before = run(pg, "(db) => db.allBirds().length")
+        # the card reads the snapshot list once, on mount
+        pg.reload(wait_until='load'); pg.wait_for_selector('[data-testid=card-backup]', timeout=8000)
+        pg.wait_for_timeout(900)
+        check('[data_loss #5] an automatic snapshot is offered for restore, by its own timestamp',
+              pg.locator('[data-testid=snap-select]').is_enabled()
+              and pg.locator('[data-testid=snap-restore]').is_enabled()
+              and pg.locator('[data-testid=snap-select] option').count() >= 1,
+              pg.locator('[data-testid=snap-select]').inner_text().replace('\n', ' ')[:60])
+        pg.click('[data-testid=snap-restore]'); pg.wait_for_selector('[data-testid=dialog]', timeout=5000)
+        check('…and it asks first, naming the snapshot it would put back',
+              any(ch.isdigit() for ch in pg.locator('[data-testid=dialog]').inner_text()),
+              pg.locator('[data-testid=dialog]').inner_text().replace('\n', ' ')[:90])
+        pg.click('[data-testid=dialog-confirm]'); pg.wait_for_timeout(3000)
+        after = run(pg, """async (db) => ({ birds: db.allBirds().length,
+            media: (await db.mediaForBird(db.allBirds()[0].id)).length })""")
+        check('[data_loss #5] PHOTOS SURVIVE the restore — a snapshot carries no media, so it must not wipe it',
+              after['media'] == media_before and media_before > 0,
+              f"{media_before} before, {after['media']} after")
+        check('…and the records came back with it', after['birds'] == birds_before,
+              f"{birds_before} -> {after['birds']}")
+        wait_toasts_clear(pg)
+
+        # ── [data_loss #7, root — UNCOVERED until Phase 6] the loft card after a FOREIGN replace ──
+        # An export from another device carries its own loft ids, so a replace-import can
+        # leave currentLoftId pointing at a loft that no longer exists — which blanks the loft
+        # settings card and misfiles every new record. db/io.js repairs it; the layer half is
+        # covered by import_atomicity.py, and this is the half a person would actually see.
+        foreign = run(pg, """async (db) => {
+            const p = await db.exportAll();
+            const id = 'foreign-loft-uuid';
+            p.lofts = [{ id, name: 'لوفت غريب', location: 'إربد', statuses: db.DEFAULT_STATUSES || [],
+                         createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' }];
+            // parents dropped with the rest: this is a claim about the loft CARD, and three
+            // birds pointing at ancestors the payload does not carry would leave the loft
+            // deliberately broken for the integrity check further down
+            p.birds = (p.birds || []).slice(0, 3).map((b) => ({ ...b, loftId: id, sireId: null, damId: null }));
+            p.pairs = []; p.raceResults = []; p.healthEvents = [];
+            return p;
+        }""")
+        pick(foreign, 'foreign-loft.json')
+        pg.select_option('[data-testid=import-mode]', 'replace'); pg.wait_for_timeout(200)
+        pg.click('[data-testid=import-file]'); pg.wait_for_selector('[data-testid=dialog]', timeout=5000)
+        pg.click('[data-testid=dialog-confirm]'); pg.wait_for_timeout(3500)
+        check('[data_loss #7] after a replace-import of a FOREIGN loft, currentLoftId points at a loft that exists',
+              run(pg, "(db) => !!db.currentLoft() && db.currentLoft().id === 'foreign-loft-uuid'"),
+              str(run(pg, "(db) => db.state.currentLoftId")))
+        check('[data_loss #7] …and the loft card is usable, not blank',
+              pg.locator('[data-testid=ln]').input_value() == 'لوفت غريب'
+              and pg.locator('[data-testid=lc]').input_value() == 'إربد'
+              and pg.locator('[data-testid=loft-save]').is_enabled(),
+              f"name={pg.locator('[data-testid=ln]').input_value()!r} location={pg.locator('[data-testid=lc]').input_value()!r}")
+        check('…and the crumb above the screen names it too, rather than «لوفت بلا اسم»',
+              'لوفت غريب' in pg.locator('[data-testid=crumb]').inner_text(),
+              pg.locator('[data-testid=crumb]').inner_text())
+        wait_toasts_clear(pg)
+
+        # ── [core_flows #9-11, root lines 67-70 — UNCOVERED until Phase 6] the ENGLISH app ──
+        # The language control was only ever asserted to OFFER two options. Nothing clicked
+        # «English», so the whole LTR half of the app shipped untested — and applySettings()
+        # was not even ported until 4D acceptance, which is exactly the kind of thing an
+        # untested capability hides.
+        pg.locator('[data-testid=set-lang] [data-testid=seg-btn][data-value=en]').click()
+        pg.wait_for_timeout(900)
+        doc = pg.evaluate("() => ({ dir: document.documentElement.dir, lang: document.documentElement.lang })")
+        check('[core_flows] choosing English turns the whole document LTR, lang=en',
+              doc == {'dir': 'ltr', 'lang': 'en'}, str(doc))
+        check('…and the screen is in English, not Arabic text in an LTR box',
+              pg.locator('[data-testid=card-settings] h3').inner_text().strip() == 'Settings'
+              and 'Tools' in pg.locator('h1').first.inner_text(),
+              pg.locator('[data-testid=card-settings] h3').inner_text())
+        check('…and it is a stored setting, so it survives a navigation',
+              run(pg, "(db) => db.state.settings.lang") == 'en')
+        pg.goto(f'{ROOT}stats.html', wait_until='load'); pg.wait_for_timeout(2000)
+        check('…on another screen too, which is what makes it the APP language and not a toggle',
+              pg.evaluate("() => document.documentElement.dir") == 'ltr'
+              and pg.evaluate("() => document.documentElement.lang") == 'en')
+        pg.goto(f'{ROOT}tools.html', wait_until='load'); pg.wait_for_timeout(2000)
+        pg.locator('[data-testid=set-lang] [data-testid=seg-btn][data-value=ar]').click()
+        pg.wait_for_timeout(900)
+        back = pg.evaluate("() => ({ dir: document.documentElement.dir, lang: document.documentElement.lang })")
+        check('…and Arabic comes back, RTL and all', back == {'dir': 'rtl', 'lang': 'ar'}, str(back))
+        wait_toasts_clear(pg)
 
         # ── 7. the optional scanner ──
         check('the scanner is off by default and says the app is complete without it',

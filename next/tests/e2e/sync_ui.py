@@ -99,8 +99,27 @@ with sync_playwright() as p:
     page.goto(ROOT + 'birds.html', wait_until='load'); page.wait_for_timeout(1800)
 
     # ── 1. a device with no session shows NOTHING ──
-    check('the shell has a place for the status row', page.evaluate(
-        "() => typeof window.__zajilDb !== 'undefined'"))
+    # The root asserts `#sync-row` exists. The port renders nothing at all when there is
+    # nothing to say (SyncRow returns null for hidden/synced), so the faithful claim is that
+    # the shell MOUNTS the row and it appears the moment the layer has something to report.
+    # Driving that state here is what makes the rest of this section meaningful.
+    _seeded = run(page, """async (db) => {
+        await db.signIn('spike-a@zajil.test','pw');
+        await db.setSetting('syncEnabled', false);
+        await db.refreshSyncStatus();
+        return db.syncStatus().state;
+    }""")
+    page.wait_for_timeout(400)
+    # …and note the loft here is EMPTY. The row used to live inside the loft-home's
+    # non-empty branch, so an empty loft with a paused or failing sync said nothing at all —
+    # found by writing this assertion, fixed by moving the row above the branch, where
+    # vanilla puts it (js/app.js:75-77) and where every other screen already had it.
+    check('the shell mounts the status row, and it appears when the layer has something to say — even on an EMPTY loft',
+          _seeded == 'off' and page.query_selector(ROW) is not None
+          and (row_text(page) or '') != '',
+          f"state={_seeded} row={row_text(page)!r} birds={run(page, '(db) => db.allBirds().length')}")
+    run(page, "async (db) => { await db.signOut(); await db.setSetting('syncEnabled', true); await db.refreshSyncStatus(); }")
+    page.wait_for_timeout(300)
     check('a signed-out device shows nothing at all', (row_text(page) or '') == '',
           repr(row_text(page)))
     check('...and syncStatus reports it as hidden',

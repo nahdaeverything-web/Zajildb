@@ -24,3 +24,17 @@
   .rail { display: flex; }
   .tabbar { display: none !important; }
 }
+
+/* The focus ring the specs name for the nav (pedigree-tree-v1.html:123-124 names
+   `.tabbar button:focus-visible, .rail button:focus-visible`). The port's tabs are
+   next/link anchors, not buttons, so the selector has to say `a`. Measured at Phase 6:
+   a tab under keyboard focus had outline "0px none". */
+.tabbar a:focus-visible, .rail a:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+
+/* Printing. Every spec with a print block hides the navigation (pedigree-tree-v1.html:148,
+   certificate-v1.html:296) — a printed pedigree or certificate with a tab bar across it is
+   not the document that was approved. The navs own themselves, so the rule lives here
+   rather than being repeated in each screen's print block. */
+@media print {
+  .tabbar, .rail { display: none !important; }
+}

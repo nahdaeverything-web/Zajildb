@@ -127,3 +127,31 @@ def check_toast_clear(pg, check, where, clearance=CLEARANCE):
               f"covers chrome {over_chrome[0]['name']}" if over_chrome else
               f"{len(ts)} toast(s), seated {seat}px above {'the bottom edge' if gap is None else 'the chrome'}")
     check(f'[ruling C] {where}: the toast covers nothing and sits {clearance}px above the bottom chrome', ok, detail)
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# THE CARET CHECK — added at Phase 6, after the gate's first run.
+#
+# `npx eslint` had never been part of a gate. Its first run reported 73
+# react-hooks/static-components errors: seven screens declared components inside their
+# render bodies, so React remounted those subtrees on every render. Where the subtree held
+# a text input, the input lost the caret after ONE keystroke. Measured on the bird form:
+# typing «برق السريع» into the name field left «ب».
+#
+# Every screen suite already filled those fields and passed, because Playwright's fill()
+# sets the value in one shot and never types a second character. So the assertion that
+# catches this class of bug has to TYPE, with a delay, and then ask where the caret is.
+# One call per screen that has a text field.
+def check_caret(pg, check, testid, text, where, expect=None):
+    """Type into a field character by character and prove the caret survived.
+
+    A component created during render is a new type on every render, so React unmounts and
+    remounts its DOM — and the field being typed into loses focus after the first
+    character. fill() cannot see it; typing can."""
+    pg.fill(f'[data-testid={testid}]', '')       # a known starting state; the claim is about typing
+    pg.click(f'[data-testid={testid}]')
+    pg.type(f'[data-testid={testid}]', text, delay=45)
+    got = pg.locator(f'[data-testid={testid}]').input_value()
+    focus = pg.evaluate("() => document.activeElement && document.activeElement.getAttribute('data-testid')")
+    want = expect if expect is not None else text
+    check(f'{where}: «{testid}» keeps the caret while it is typed into, character by character',
+          got == want and focus == testid, f'value {got!r} (wanted {want!r}), focus {focus!r}')

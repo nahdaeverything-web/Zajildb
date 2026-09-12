@@ -10,7 +10,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance, check_toast_clear, scroll_to_bottom, wait_toasts_clear
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom, wait_toasts_clear, check_caret
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'breeding')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -119,10 +119,16 @@ try:
         check('[picker_guards#7] a query that matches nothing offers no candidate to pick by accident', pg.locator('[data-testid=f-dam-item]').count() == 0)
         pg.click('[data-testid=sheet-new] h2'); pg.wait_for_timeout(150)
         check('[picker_guards#7] …and abandoning that search leaves the committed dam in place (the port has no way to blank it by typing)', 'اختر أنثى' not in pg.locator('[data-testid=f-dam-btn]').inner_text())
-        check('[picker_guards#8] the sheet is still open for correction, and nothing was written', pg.locator('[data-testid=sheet-new]').count() == 1 and h.evaluate("() => window.__zajilDb.state.pairs.size") == n_pairs)
+        pg.fill('[data-testid=f-nest]', ''); pg.click('[data-testid=sheet-save]'); pg.wait_for_timeout(300)
+        check('[picker_guards#8] a REFUSED save keeps the sheet open for correction and writes no pair',
+              pg.locator('[data-testid=sheet-new]').count() == 1
+              and pg.locator('[data-testid=new-errs]').count() == 1
+              and h.evaluate("() => window.__zajilDb.state.pairs.size") == n_pairs,
+              f"errs={pg.locator('[data-testid=new-errs]').count()} pairs={h.evaluate('() => window.__zajilDb.state.pairs.size')} (was {n_pairs})")
         busy = h.evaluate("() => { const p = [...window.__zajilDb.state.pairs.values()].find(p => p.season === '2026' && p.status === 'active' && p.nestBox); return p.nestBox; }")
         pg.fill('[data-testid=f-nest]', busy); pg.click('[data-testid=sheet-save]'); pg.wait_for_timeout(150)
         check('[spec «أخطاء»] a nest taken by an active pair this season is refused', 'مشغول' in pg.locator('[data-testid=new-errs]').inner_text())
+        check_caret(pg, check, 'f-source', 'لوفت الفحيص', 'breeding sheet')
         pg.fill('[data-testid=f-nest]', '99'); pg.fill('[data-testid=f-source]', 'لوفت الاختبار'); pg.screenshot(path=f'{FID}/new-pair-430.png', full_page=True)
         n0 = h.evaluate("() => window.__zajilDb.state.pairs.size")
         pg.click('[data-testid=sheet-save]'); pg.wait_for_url(re.compile(r'/pair'), timeout=6000); pg.wait_for_selector('[data-testid=pair-card]')
@@ -195,6 +201,32 @@ try:
         pid = pg.evaluate("() => [...window.__zajilDb.state.pairs.values()].find(p => p.season === '2026').id")
         pg.goto(f'{ROOT}pair.html?id={pid}', wait_until='load'); pg.wait_for_selector('[data-testid=pair-card]')
         check_clearance(pg, check, 'pair detail')
+        # [Phase 6, fidelity audit] a tap on the scrim closes the sheet. All three of the
+        # spec's dialogs carry it (breeding-v1.html:355, :383, :397) and the races and health
+        # sheets already did it from the identical pattern; these three did not. Kept
+        # self-contained at the end, because closing a sheet mid-section removes the picks the
+        # assertions after it depend on.
+        pg.goto(f'{LIST}?season=2026', wait_until='load'); pg.wait_for_selector('[data-testid=new-pair-fab]', timeout=8000)
+        pg.click('[data-testid=new-pair-fab]'); pg.wait_for_selector('[data-testid=sheet-new]', timeout=5000)
+        pg.wait_for_timeout(400)
+        pg.click('[data-testid=sheet-new] h2'); pg.wait_for_timeout(300)
+        check('a tap INSIDE the sheet does not dismiss it',
+              pg.locator('[data-testid=sheet-new]').count() == 1)
+        # THE HAZARD the naive one-liner had, and the reason src/components/scrim.ts exists: a
+        # click is pointerdown-then-pointerup, and a sheet that re-lays out between the two —
+        # here a picker list collapsing as its query is cleared — moves what is under the
+        # finger. The pointer went down on the heading and came up on the scrim, and the sheet
+        # closed with the work in it. Reproduced exactly like this at Phase 6.
+        pg.click('[data-testid=f-dam-btn]'); pg.fill('[data-testid=f-dam-input]', 'JO-2099-55555'); pg.wait_for_timeout(300)
+        pg.fill('[data-testid=f-dam-input]', ''); pg.wait_for_timeout(200)
+        pg.click('[data-testid=sheet-new] h2'); pg.wait_for_timeout(400)
+        check('…and a sheet that re-lays out under the finger is NOT dismissed by it',
+              pg.locator('[data-testid=sheet-new]').count() == 1,
+              'the gesture must begin on the scrim as well as end there')
+        pg.mouse.click(5, 5); pg.wait_for_timeout(400)
+        check('…and a tap on the scrim does, as all three of the spec\'s dialogs do',
+              pg.locator('[data-testid=sheet-new]').count() == 0)
+
         check('zero page errors', not errs, errs)
         b.close()
 finally:

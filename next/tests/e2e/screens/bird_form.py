@@ -9,7 +9,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance, check_toast_clear, scroll_to_bottom
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom, check_caret
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'bird-form')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -78,6 +78,23 @@ try:
         check('[picker_guards#1] a hen\'s ring in the SIRE slot says why it cannot be offered — not an empty list', pg.locator('[data-testid=picker-sire] [data-testid=picker-note]').count() == 1 and pg.locator('[data-testid=picker-sire] [data-testid=picker-item]').count() == 0, hen)
         pg.click('[data-testid=parent-sire-create]'); pg.fill('[data-testid=picker-input]', hen); pg.wait_for_timeout(200)
         check('[picker_guards#2] …and creating is refused for it: the offer is disabled, so no clone can be minted', pg.locator('[data-testid=picker-create]').is_disabled() and pg.locator('[data-testid=picker-note]').count() == 1)
+
+        # [picker_duplicates root line 46 — UNCOVERED until Phase 6] a NAME, not a ring.
+        # Every create-offer assertion in the port was ring-based or filter-blocked, so a
+        # refactor narrowing exactMatch to rings alone would have left them all green while
+        # the app happily minted a second bird called «لمى».
+        by_name = snap(pg, "() => { const b = window.__zajilDb.allBirds().find(x => (x.name || '').trim() && x.sex !== 'hen'); return b && b.name; }")
+        pg.goto(NEW, wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
+        pg.click('[data-testid=parent-sire-pick]'); pg.fill('[data-testid=picker-input]', by_name); pg.wait_for_timeout(250)
+        check('[picker_duplicates] an existing bird\'s NAME resolves to that bird — it is offered, and creating is not',
+              pg.locator('[data-testid=picker-sire] [data-testid=picker-item]').count() >= 1
+              and pg.locator('[data-testid=picker-create]').count() == 0,
+              f"name={by_name!r} items={pg.locator('[data-testid=picker-sire] [data-testid=picker-item]').count()}")
+        pg.click('[data-testid=parent-sire-create]'); pg.fill('[data-testid=picker-input]', by_name); pg.wait_for_timeout(250)
+        check('…and in the CREATE slot the offer is disabled rather than minting a second bird of that name',
+              pg.locator('[data-testid=picker-create]').is_disabled()
+              and pg.locator('[data-testid=picker-note]').count() == 1,
+              pg.locator('[data-testid=picker-note]').inner_text().replace('\n', ' ')[:90] if pg.locator('[data-testid=picker-note]').count() else 'no note')
 
         # ── [picker_guards#3–5] Eastern-Arabic digits are a ring, and fold to the same key as Western ones ──
         n_before = snap(pg, "() => window.__zajilDb.allBirds().length")
@@ -172,11 +189,25 @@ try:
         check('…confirming saves the duplicate (allowWarnings) and lands on the profile', snap(pg, "(raw) => window.__zajilDb.allBirds().filter(x => (x.rings||[]).some(r => r.raw === raw)).length", used[0]) == 2)
         # ── hatch hint from the ring year; second ring row; save-and-new carry-over ──
         pg.goto(NEW, wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
+        # [entry_ergonomics, root line 34 — UNCOVERED until Phase 6] the form opens with ONE
+        # ring row. Every existing assertion filled '[data-testid=ring-input] >> nth=0',
+        # which passes with any number of pre-seeded rows.
+        check('[entry_ergonomics] a fresh form opens with exactly one ring row — not zero, not two',
+              pg.locator('[data-testid=ring-row]').count() == 1,
+              str(pg.locator('[data-testid=ring-row]').count()))
+        # the form is the app's main data-entry screen; a field that cannot be typed into is
+        # the whole screen broken, and fill() never noticed
+        check_caret(pg, check, 'f-name', 'برق السريع', 'bird form')
+        check_caret(pg, check, 'ring-input', 'JO-2026-90001', 'bird form')
+        check_caret(pg, check, 'f-colour', 'أزرق مخطط', 'bird form')
+        pg.fill('[data-testid=f-name]', ''); pg.fill('[data-testid=f-colour]', '')
         pg.fill('[data-testid=ring-input] >> nth=0', 'JO-2024-77777'); pg.wait_for_timeout(150)
         check('hatch hint offers the ring year', pg.locator('[data-testid=hatch-hint]').inner_text().strip() == 'استخدام سنة الحلقة: 2024')
         pg.click('[data-testid=hatch-hint]'); pg.wait_for_timeout(100)
         check('…one tap sets 1 Jan of that year', pg.locator('[data-testid=f-hatch]').input_value() == '2024-01-01' and pg.locator('[data-testid=hatch-hint]').count() == 0)
         pg.click('[data-testid=ring-add]'); pg.fill('[data-testid=ring-input] >> nth=1', 'CLUB-77'); pg.select_option('[data-testid=ring-type]', 'club')
+        # the form is the app's main data-entry screen; a field that cannot be typed into
+        # is the whole screen broken, and fill() never noticed
         pg.fill('[data-testid=f-name]', 'طائر الدفعة'); pg.fill('[data-testid=f-colour]', 'أزرق'); pg.fill('[data-testid=f-strain]', 'يانسن')
         pg.click('[data-testid=sex-btn][data-sex=cock]'); pg.click('[data-testid=status-chip][data-status=stock]')
         pg.locator('[data-testid=f-name]').press('Enter'); pg.wait_for_timeout(100)

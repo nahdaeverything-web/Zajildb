@@ -10,7 +10,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance, check_toast_clear, scroll_to_bottom
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom, check_caret
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..', '..'))
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'loft-home')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
@@ -74,13 +74,16 @@ try:
         # ── search (core_flows#3–4, vanilla's fields + ring normalisation) ──
         # the search term comes from the data, not from an assumption about it: a distinctive Arabic name in the loaded loft
         name = pg.evaluate("() => { const db = window.__zajilDb; const b = db.allBirds().find(x => x.name && /[\u0600-\u06FF]/.test(x.name) && x.name.length >= 3); return b ? b.name : ''; }")
+        check_caret(pg, check, 'search-input', 'نجمة', 'loft home')
         pg.fill('[data-testid=search-input]', name); pg.wait_for_timeout(300)
         rows = pg.locator('[data-testid=bird-row]').all_inner_texts()
         check('[core_flows#3] Arabic name search narrows to matching rows', 0 < len(rows) < n_rows and all(name in r for r in rows), f'{name!r} → {len(rows)} of {n_rows}')
         sample_ring = pg.evaluate("() => { const db = window.__zajilDb; const b = db.allBirds().find(x => x.rings && x.rings.length); return b.rings[0].raw; }")   # the birds tab: its mirror holds the import
         loose = sample_ring.lower().replace('-', ' ').replace('/', ' ')
         pg.fill('[data-testid=search-input]', loose); pg.wait_for_timeout(300)
-        check('[core_flows#4] ring search is normalised (separators/case ignored)', pg.locator('[data-testid=bird-row]').count() >= 1, f'{sample_ring!r} as {loose!r}')
+        check('[core_flows#4] ring search is normalised (separators/case ignored) — and matches EXACTLY that bird',
+              pg.locator('[data-testid=bird-row]').count() == 1,
+              f'{sample_ring!r} as {loose!r} matched {pg.locator("[data-testid=bird-row]").count()} rows')
         pg.fill('[data-testid=search-input]', 'zzz-no-such'); pg.wait_for_timeout(300)
         check('no match → quiet «لا نتائج» label', pg.locator('[data-testid=year-label]').first.inner_text().strip() == 'لا نتائج')
         pg.fill('[data-testid=search-input]', ''); pg.wait_for_timeout(300)
@@ -94,9 +97,59 @@ try:
         pg.click('[data-testid=filter-pill][data-filter=race]'); pg.wait_for_timeout(200)
         st = pg.locator('[data-testid=bird-row] [data-testid=status-pill]').all_inner_texts()
         check('pill «فريق السباق» → only race-team birds', len(st) > 0 and set(x.strip() for x in st) == {'فريق السباق'}, set(st))
+        # [Phase 6, fidelity audit] a status/sex pill AND a year pill together. The spec
+        # applies both and lights both (loft-home-v1.html:331-333, :379) and vanilla ANDs
+        # every filter (js/views/birds.js:35-40) — but the port's handlers cleared each
+        # other, so «إناث» + «2024» could not be reached at all.
+        pg.fill('[data-testid=search-input]', ''); pg.wait_for_timeout(250)
+        pg.click('[data-testid=filter-pill][data-filter=all]'); pg.wait_for_timeout(300)
+        n_all = pg.locator('[data-testid=bird-row]').count()
+        pg.click('[data-filter=f]'); pg.wait_for_timeout(350)
+        n_f = pg.locator('[data-testid=bird-row]').count()
+        yr = pg.locator('[data-year]').first.get_attribute('data-year')
+        pg.click(f'[data-year="{yr}"]'); pg.wait_for_timeout(350)
+        n_both = pg.locator('[data-testid=bird-row]').count()
+        lit = pg.evaluate("() => [...document.querySelectorAll('[data-filter],[data-year]')]"
+                          ".filter(e => e.getAttribute('aria-pressed') === 'true')"
+                          ".map(e => e.getAttribute('data-filter') || e.getAttribute('data-year'))")
+        check('a sex filter AND a year filter apply together, narrowing the list',
+              0 < n_both <= n_f < n_all, f'all={n_all} females={n_f} females+{yr}={n_both}')
+        check('…and BOTH pills are lit, and say so to a screen reader',
+              sorted(lit) == sorted(['f', yr]), str(lit))
+        pg.click('[data-filter=all]'); pg.wait_for_timeout(350)
+        check('…and «الكل» is the reset that clears both',
+              pg.locator('[data-testid=bird-row]').count() == n_all
+              and pg.evaluate("() => [...document.querySelectorAll('[data-year]')].every(e => e.getAttribute('aria-pressed') === 'false')"))
+
+        pg.click('[data-testid=filter-pill][data-filter=all]'); pg.wait_for_timeout(250)
         year_pill = pg.locator('[data-testid=filter-pill][data-year]').first; y = year_pill.inner_text()
         year_pill.click(); pg.wait_for_timeout(200)
         check(f'year pill {y} → one generation group only', pg.locator('[data-testid=year-label]').count() == 1 and y in pg.locator('[data-testid=year-label]').first.inner_text())
+        # [Phase 6, fidelity audit] the table's sort caret. The spec puts the label and a
+        # caret inside `<span class="sort">`, reveals it on the active column and rotates it
+        # 180° when descending (loft-home-v1.html:251-256, CSS :109-111). The port rendered a
+        # bare span and never set the desc class, so both rules were dead: aria-sort said the
+        # direction and nothing showed it.
+        pg.set_viewport_size({'width': 1400, 'height': 900}); pg.wait_for_timeout(500)
+        SORT = """() => { const ths = [...document.querySelectorAll('[data-testid=th-sort]')];
+            const act = ths.find(t => t.getAttribute('aria-sort') !== 'none');
+            const off = ths.find(t => t.getAttribute('aria-sort') === 'none');
+            const g = (t) => { const sv = t && t.querySelector('svg'); const cs = sv && getComputedStyle(sv);
+                return { aria: t && t.getAttribute('aria-sort'), svg: !!sv,
+                         opacity: cs && cs.opacity, rotated: !!cs && cs.transform !== 'none' }; };
+            return { active: g(act), inactive: g(off) }; }"""
+        srt = pg.evaluate(SORT)
+        check('the table\'s sorted column shows a caret, and the others do not',
+              srt['active']['svg'] and srt['active']['opacity'] == '1'
+              and srt['inactive']['opacity'] == '0', str(srt))
+        check('…and the caret is rotated when the sort is descending',
+              srt['active']['aria'] == 'descending' and srt['active']['rotated'], str(srt['active']))
+        pg.click('[data-testid=th-sort][data-key=year]'); pg.wait_for_timeout(400)
+        srt2 = pg.evaluate(SORT)
+        check('…and upright when it is ascending, so the direction is visible and not only announced',
+              srt2['active']['aria'] == 'ascending' and not srt2['active']['rotated'], str(srt2['active']))
+        pg.click('[data-testid=th-sort][data-key=year]'); pg.wait_for_timeout(300)
+        pg.set_viewport_size({'width': 430, 'height': 900}); pg.wait_for_timeout(400)
         pg.click('[data-testid=filter-pill][data-filter=all]'); pg.wait_for_timeout(200)
         check('«الكل» restores every row', pg.locator('[data-testid=bird-row]').count() == n_rows)
         # ── [ownership#5] the ownership filter splits the register; the external marker on rows (ruling 14: kit over spec) ──
@@ -118,7 +171,10 @@ try:
         anchor = pg.evaluate("() => { const r=[...document.querySelectorAll('[data-testid=bird-row]')].find(e=>e.getBoundingClientRect().top>=0); return { id: r.getAttribute('href'), top: r.getBoundingClientRect().top }; }")
         pg.evaluate("async () => { const db = await window.__zajilDb; await db.saveBird(db.newBird({ name: 'X-external-1', sex: 'cock', hatchDate: '2026-01-01' })); }")
         pg.wait_for_function("[...document.querySelectorAll('[data-testid=bird-row]')].some(r => r.textContent.includes('X-external-1'))", timeout=3000)
-        check('[change_events#1] an external write refreshes the register (no reload)', True)
+        check('[change_events#1] an external write refreshes the register, with no reload',
+              pg.locator('[data-testid=bird-row]', has_text='X-external-1').count() == 1
+              and pg.evaluate("() => performance.getEntriesByType('navigation').length") == 1,
+              f"{pg.locator('[data-testid=bird-row]', has_text='X-external-1').count()} row(s) for the new bird")
         after = pg.evaluate("(href) => { const r=[...document.querySelectorAll('[data-testid=bird-row]')].find(e=>e.getAttribute('href')===href); return r ? r.getBoundingClientRect().top : null; }", anchor['id'])
         check('[change_events#4/#5] the page did not move: the row in view stays at the same viewport position', after is not None and abs(after - anchor['top']) < 4, f"{anchor['top']:.0f}→{after}")
 

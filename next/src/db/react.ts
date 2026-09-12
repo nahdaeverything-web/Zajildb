@@ -63,6 +63,10 @@ export const selectBird     = (id: string) => (s: State) => s.birds.get(id) ?? n
 export function useMediaForBird(birdId: string | null) {
   const [media, setMedia] = useState<Array<Record<string, unknown>>>([]);
   useEffect(() => {
+    // Clearing the list when the bird id goes away is not a cascade: there is nothing to
+    // render for an id that is gone, and the list itself is an ASYNC read of IndexedDB, so
+    // it cannot be a render-time value.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!birdId) { setMedia([]); return; }
     let live = true;
     const load = () => db.mediaForBird(birdId).then((rows: Array<Record<string, unknown>>) => {

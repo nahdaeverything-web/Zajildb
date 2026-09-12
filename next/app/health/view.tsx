@@ -1,12 +1,12 @@
 'use client';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import * as db from '@/src/db.js';
 import { useZajilStore, selectHealth, selectBirds } from '@/src/db/react';
 import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { todayISO } from '@/src/dates.js';
-import { SyncRow, Loading, toast, undoToast, primaryRing, seasonLabel, pickerModel, SexChip, Tpl, initDB } from '@/src/components';
+import { SyncRow, Loading, toast, undoToast, primaryRing, seasonLabel, pickerModel, SexChip, Tpl, initDB, useScrim, useScrollLock } from '@/src/components';
 import s from './health.module.css';
 
 // Health — design/approved/health-v1.html, behaviour from js/views/health.js.
@@ -33,6 +33,25 @@ const plus365 = (iso: string) => { const d = new Date(iso + 'T00:00:00'); d.setD
 const daysBetween = (a: string, b: string) => Math.round((new Date(b + 'T00:00:00').getTime() - new Date(a + 'T00:00:00').getTime()) / 86400000);
 const Plus = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>;
 
+// Chip / Scope / Confirm / Acts (and F, below) live at module scope DELIBERATELY.
+// A component declared inside another component's render body is a NEW component
+// type on every render, so React unmounts and remounts its whole DOM subtree —
+// pointless churn for these rows, and outright broken for a subtree holding a text
+// field, which loses the caret after a single keystroke. Whatever they used to
+// close over (the delete/edit handlers, setConfirmId) is an explicit prop now.
+const Chip = ({ e }: { e: Ev }) => <span className={`${s.chip} ${s[DOT[e.eventType] || 'chk']}`} data-testid="type-chip" data-type={e.eventType}><span className={`${s.dot} ${s[DOT[e.eventType] || 'chk']}`} />{t('health.' + e.eventType)}</span>;
+const Scope = ({ e }: { e: Ev }) => e.wholeLoft
+  ? <span className={s.scope} data-testid="scope-loft"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9H3z" /></svg>{t('health.wholeLoft')}</span>
+  : (e.birdId ? <Link href={`/bird?id=${e.birdId}`} className={s.birdlink} data-testid="scope-bird"><bdi>{nameOf(getBird(e.birdId))}</bdi></Link> : <span>—</span>);
+const Confirm = ({ onGo, onCancel }: { onGo: () => void; onCancel: () => void }) => (
+  <div className={s.confirm} data-testid="inline-confirm"><span>{t('confirm.deleteGeneric')}</span>
+    <div className={s.b}><button type="button" className={s.go} onClick={onGo} data-testid="confirm-go">{t('act.delete')}</button><button type="button" className={s.no} onClick={onCancel} data-testid="confirm-no">{t('act.cancel')}</button></div></div>
+);
+const Acts = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) => (
+  <div className={s.acts}><button type="button" className={s.act} onClick={onEdit} data-testid="ev-edit">{t('act.edit')}</button>
+    <button type="button" className={`${s.act} ${s.x}`} aria-label={t('act.delete')} onClick={onDelete} data-testid="ev-delete">✕</button></div>
+);
+
 export default function HealthView() {
   const params = useSearchParams();
   const [booted, setBooted] = useState(false);
@@ -56,21 +75,8 @@ export default function HealthView() {
     const snap = await Health.remove(e.id);
     undoToast(t('toast.deleted'), t('act.undo'), async () => { await Health.restore(snap); toast(t('toast.undone'), { kind: 'success' }); });
   }
-  const Chip = ({ e }: { e: Ev }) => <span className={`${s.chip} ${s[DOT[e.eventType] || 'chk']}`} data-testid="type-chip" data-type={e.eventType}><span className={`${s.dot} ${s[DOT[e.eventType] || 'chk']}`} />{t('health.' + e.eventType)}</span>;
-  const Scope = ({ e }: { e: Ev }) => e.wholeLoft
-    ? <span className={s.scope} data-testid="scope-loft"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9H3z" /></svg>{t('health.wholeLoft')}</span>
-    : (e.birdId ? <Link href={`/bird?id=${e.birdId}`} className={s.birdlink} data-testid="scope-bird"><bdi>{nameOf(getBird(e.birdId))}</bdi></Link> : <span>—</span>);
-  const Confirm = ({ e }: { e: Ev }) => (
-    <div className={s.confirm} data-testid="inline-confirm"><span>{t('confirm.deleteGeneric')}</span>
-      <div className={s.b}><button type="button" className={s.go} onClick={() => del(e)} data-testid="confirm-go">{t('act.delete')}</button><button type="button" className={s.no} onClick={() => setConfirmId(null)} data-testid="confirm-no">{t('act.cancel')}</button></div></div>
-  );
-  const Acts = ({ e }: { e: Ev }) => (
-    <div className={s.acts}><button type="button" className={s.act} onClick={() => setSheet({ editing: e })} data-testid="ev-edit">{t('act.edit')}</button>
-      <button type="button" className={`${s.act} ${s.x}`} aria-label={t('act.delete')} onClick={() => setConfirmId(e.id)} data-testid="ev-delete">✕</button></div>
-  );
   const FILTERS: Array<[string, string]> = [['all', t('common.all')], ...EVENT_TYPES.map((k) => [k, t('health.' + k)] as [string, string]), ['loft', t('health.wholeLoft')]];
 
-  let lastDate: string | null = null;
   return (
     <section className={s.screen}>
       <header className={s.lofthead}><div className={s.in}><div className={s.headrow}>
@@ -110,8 +116,10 @@ export default function HealthView() {
         ) : (
           <>
             <div className={s.list} data-testid="ev-rows">
-              {vis.map((e) => {
-                const head = e.date !== lastDate ? (lastDate = e.date || null, true) : false;
+              {vis.map((e, i) => {
+                // one date header per group, decided from the row BEFORE this one rather
+                // than by assigning to a variable as the map runs (react-hooks/immutability)
+                const head = i === 0 || e.date !== vis[i - 1].date;
                 return (
                   <div key={e.id}>
                     {head && <div className={s.datelbl} data-testid="date-group"><bdi>{fmtDate(e.date)}</bdi></div>}
@@ -121,8 +129,8 @@ export default function HealthView() {
                         <div className={s.meta}><Chip e={e} /><Scope e={e} /></div>
                         {e.notes && <div className={s.note}><bdi>{e.notes}</bdi></div>}
                       </div></div>
-                      <div className={s.l2}>{confirmId === e.id ? null : <Acts e={e} />}</div>
-                      {confirmId === e.id && <Confirm e={e} />}
+                      <div className={s.l2}>{confirmId === e.id ? null : <Acts onEdit={() => setSheet({ editing: e })} onDelete={() => setConfirmId(e.id)} />}</div>
+                      {confirmId === e.id && <Confirm onGo={() => del(e)} onCancel={() => setConfirmId(null)} />}
                     </div>
                   </div>
                 );
@@ -137,7 +145,7 @@ export default function HealthView() {
                     <td><Chip e={e} /></td><td><Scope e={e} /></td>
                     <td className={s.med}><bdi>{e.medication || '—'}</bdi></td>
                     <td className={s.note}><bdi>{e.notes || ''}</bdi></td>
-                    <td>{confirmId === e.id ? <Confirm e={e} /> : <Acts e={e} />}</td>
+                    <td>{confirmId === e.id ? <Confirm onGo={() => del(e)} onCancel={() => setConfirmId(null)} /> : <Acts onEdit={() => setSheet({ editing: e })} onDelete={() => setConfirmId(e.id)} />}</td>
                   </tr>
                 ))}</tbody>
               </table>
@@ -151,8 +159,18 @@ export default function HealthView() {
   );
 }
 
+// The field wrapper, at module scope for the reason given above and most sharply
+// here: F wraps the sheet's inputs, so re-declaring it each render remounted them
+// and the caret was lost after one character — «برق السريع» typed into a name
+// field left «ب». It closes over nothing but the CSS module, which is module scope.
+const F = ({ label, children, id }: { label: string; children: ReactNode; id?: string }) => (
+  <div className={s.field} data-testid={id}><label>{label}</label>{children}</div>
+);
+
 /** The event sheet — health.js:60 eventDialog, plus the spec's edit path and its visible error. */
 function EventSheet({ editing, birds, onClose }: { editing: Ev | null; birds: Bird[]; onClose: () => void }) {
+  const scrim = useScrim(onClose);
+  useScrollLock();
   const e = editing;
   const [type, setType] = useState(e?.eventType || 'vaccination');
   const [scope, setScope] = useState<'bird' | 'loft'>(e ? (e.wholeLoft ? 'loft' : 'bird') : 'bird');
@@ -173,11 +191,8 @@ function EventSheet({ editing, birds, onClose }: { editing: Ev | null; birds: Bi
     await Health.save({ ...(e || { id: db.uuid() as string }), eventType: type, wholeLoft, birdId: wholeLoft ? null : birdId, date, medication: med.trim(), notes: notes.trim() } as Ev);
     toast(t('toast.saved'), { kind: 'success' }); onClose();
   }
-  const F = ({ label, children, id }: { label: string; children: ReactNode; id?: string }) => (
-    <div className={s.field} data-testid={id}><label>{label}</label>{children}</div>
-  );
   return (
-    <div className={s.scrim} onClick={(ev) => { if (ev.target === ev.currentTarget) onClose(); }} data-testid="scrim">
+    <div className={s.scrim} {...scrim} data-testid="scrim">
       <div className={s.modal} role="dialog" aria-modal="true" aria-label={e ? t('act.edit') : t('health.new')} data-testid="event-sheet">
         <div className={s.mhead}><h2 data-testid="sheet-title">{e ? t('act.edit') : t('health.new')}</h2>
           <button type="button" className={s['icon-btn']} aria-label={t('act.close')} onClick={onClose} data-testid="sheet-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>

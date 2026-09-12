@@ -10,7 +10,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance, check_toast_clear, wait_toasts_clear
+from _layout import check_clearance, check_toast_clear, wait_toasts_clear, check_caret
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'health')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -120,6 +120,8 @@ try:
         pg.click('[data-testid=bird-pick]'); pg.wait_for_selector('[data-testid=bird-picklist]')
         pg.click('[data-testid=bird-item] >> nth=0'); pg.wait_for_timeout(150)
         check('picking a bird clears the error and fills the field', pg.evaluate("() => getComputedStyle(document.querySelector('[data-testid=f-bird] [role=alert]')).display") == 'none' and pg.locator('[data-testid=sheet-alert]').count() == 0)
+        check_caret(pg, check, 'f-med', 'باراسيتامول', 'health sheet')
+        check_caret(pg, check, 'f-notes', 'جرعة كاملة', 'health sheet')
         pg.fill('[data-testid=f-med]', 'دواء الاختبار'); pg.fill('[data-testid=f-notes]', 'ملاحظة الاختبار'); pg.fill('[data-testid=f-date]', '2026-09-05')
         pg.click('[data-testid=sheet-save]'); pg.wait_for_timeout(500)
         saved = pg.evaluate("() => { const e = [...window.__zajilDb.state.healthEvents.values()].find(x => x.medication === 'دواء الاختبار'); return e && [e.eventType, e.wholeLoft, !!e.birdId, e.date, e.notes]; }")

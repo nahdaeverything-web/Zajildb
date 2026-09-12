@@ -76,7 +76,7 @@ export default function SignInView() {
           <form onSubmit={submit} data-state={state} data-testid="signin-form">
             <div className={s.field}>
               <label htmlFor="email">{t('sync.email')}</label>
-              <input id="email" type="email" autoComplete="email" placeholder="name@example.com" className={state === 'cred' ? s.err : ''}
+              <input id="email" type="email" autoComplete="username" placeholder="name@example.com" className={state === 'cred' ? s.err : ''}
                 aria-invalid={state === 'cred'} disabled={loading} value={email} onChange={(e) => { setEmail(e.target.value); setState(''); }} data-testid="f-email" />
             </div>
             <div className={s.field}>

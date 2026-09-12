@@ -6,7 +6,15 @@
  * Module: it is restored in styles/cert-print.css, imported by app/cert/page.tsx. Element rules
  * (a, button, input, :focus-visible) are scoped under the view root .screen.
  * Port-necessary additions are at the end, each with its reason. See the certificate commit. */
-.screen{ display:block; }
+/* --gap is the spec's own: the column gap AND the connector stub length (certificate-v1.html's :root).
+ * It lived in the spec's :root, which split-generic.mjs strips along with the rest of the
+ * token block — so the port read it four times and declared it nowhere, and every
+ * `padding-inline-start:var(--gap)` resolved to nothing while every
+ * `calc(-1 * var(--gap))` was invalid. The tree lost its column gaps and its connector
+ * lines. Declared here, on the view root, because it is this screen's geometry and not
+ * an app token; found at Phase 6 by the fidelity audit, and the no-undefined-token guard
+ * now respects module scope so it cannot happen again. */
+.screen{ --gap:18px; }   /* display comes from the spec's own layout rule below */
   .screen a{ color:var(--brand-deep); } .screen a:hover{ color:var(--brand); }
   .screen button, .screen input{ font-family:var(--f); }
   .screen button:focus-visible, .screen input:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
@@ -14,13 +22,13 @@
   .mono{ font-family:var(--f-mono); direction:ltr; unicode-bidi:isolate; font-weight:600; white-space:nowrap; }
 
   /* ═══════════ LAYOUT: options panel (start side) + preview ═══════════ */
-  .app{ display:flex; min-height:100vh; align-items:flex-start; }
+  .screen{ display:flex; min-height:100vh; align-items:flex-start; }
   .panel{ width:430px; flex:none; background:var(--page); min-height:100vh; position:sticky; top:0; display:flex; flex-direction:column; border-inline-end:1px solid var(--line); }
   .preview{ flex:1; min-width:0; padding:28px 28px 48px; display:flex; flex-direction:column; gap:28px; }
   @media (max-width:1099px){ .screen{ flex-direction:column; } .panel{ width:100%; position:static; min-height:0; border:none; } }
   /* phone */
   @media (max-width:700px){
-    .app{ flex-direction:column-reverse; }
+    .screen{ flex-direction:column-reverse; }
     .preview{ padding:16px 16px 8px; gap:16px; background:var(--surface); border-bottom:1px solid var(--line); }
     .top{ padding:14px 16px 12px; }
     .opts{ padding:18px 16px 140px; gap:24px; }
@@ -212,7 +220,9 @@
   .story .head h1{ font-size:21px; white-space:nowrap; } .story .head .id{ flex:none; }
   .story .head .sub{ font-size:9.5px; margin-top:3px; }
   .story .head .meta{ flex:1; min-width:0; flex-direction:column; align-items:flex-end; gap:2px; text-align:end; } .story .head .meta .k{ font-size:8.5px; } .story .head .meta .v{ font-size:10.5px; margin-top:0; }
-  .story .head .meta > div:first-child{ display:none; }
+  /* the spec hid its first meta cell, the certificate NUMBER, which the 4D ruling keeps
+     out entirely. With that cell gone the rule hid the ISSUE DATE instead and the story
+     head showed nothing — so it is removed, leaving the one cell the spec leaves. */
   .story .head .meta .depth{ display:none; }
   .story .subj{ display:flex; gap:12px; align-items:center; }
   .story .subj .photo{ width:84px; height:84px; flex:none; margin:0; aspect-ratio:auto; }

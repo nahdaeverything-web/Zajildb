@@ -254,7 +254,12 @@ spec puts its phone block.
    nothing notices. [`BACKLOG.md:301`](../BACKLOG.md#L301) already records a
    HANDOFF-vs-`sw.js` agreement check as unbuilt; this is the same gap with a third
    party to it.
-2. The suite's grep is **unanchored** and takes the FIRST match in the file. `sw.js` has
+2. The suite reads `sw.js` **relative to the working directory**, so it only runs from the
+   repo root. Every other local suite is CWD-independent. Run the root runner from anywhere
+   else and this one suite errors on a file that is simply somewhere else — which is how the
+   port's Phase 6 gate first reported it, having run the root control from `next/`.
+   RF-1 is the same class of defect one level down.
+3. The suite's grep is **unanchored** and takes the FIRST match in the file. `sw.js` has
    no comment spelling that assignment out today, so it happens to read the constant —
    but a comment that did would make the suite green about the wrong string. The port hit
    exactly this: `sw/sw.template.js` described the requirement in prose, and the first
@@ -272,7 +277,9 @@ package version and the app version cannot diverge. Its copy of the suite anchor
 grep (`re.M` with `^`), and `guards/postbuild.mjs` anchors it the same way, with the
 template carrying a note that its own prose must never spell the assignment out.
 
-**Fix at source (Phase 7):** derive `sw.js`'s VERSION from `package.json` at release time
+**Fix at source (Phase 7):** resolve `sw.js` from the file's own location
+(`os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'sw.js')`), as the
+port's copy does; derive `sw.js`'s VERSION from `package.json` at release time
 (or bump both in one commit and guard the agreement, which is BACKLOG.md:301's item), and
 anchor the regex in `tests/e2e/version_display.py:11`:
 ```diff

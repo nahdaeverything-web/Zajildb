@@ -142,13 +142,23 @@ const guards = {
   //    layer's own rule: "Import from db.js, never from here directly".
   'ui-imports'() {
     const bad = [];
+    // Writing to IndexedDB directly skips the op log and the change event, which is what
+    // change_events.py#7 is about. Reads are fine — a view fetching a blob calls idbGet.
+    const RAW_WRITE = /\bdb\.(idbPut|idbDelete|idbClear)\s*\(/;
+    // src/components/settings.ts raises the layer's OWN event after a settings write,
+    // because setSetting deliberately emits nothing (db/storage.js:168) and vanilla's
+    // views call rerender() instead. That is the one sanctioned caller.
+    const EMIT = /\bdb\.emitChange\s*\(/;
+    const EMIT_OK = 'src/components/settings.ts';
     for (const dir of ['app', 'components', 'src/components', 'harness']) {
       if (!existsSync(join(ROOT, dir))) continue;
       for (const f of [...walk(join(ROOT, dir))].filter((p) => ['.ts', '.tsx'].includes(extname(p)))) {
-        lines(f).forEach((l, i) => {
+        codeLines(f).forEach((l, i) => {
           const m = l.match(/from\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]/);
           const spec = m && (m[1] || m[2]);
           if (spec && /(^|\/)src\/db\/(storage|oplog|records|io|sync)(\.js)?$/.test(spec)) bad.push(`${rel(f)}:${i + 1}  ${l.trim()}`);
+          if (RAW_WRITE.test(l)) bad.push(`${rel(f)}:${i + 1}  writes IndexedDB directly, skipping the op log and the change event — ${l.trim()}`);
+          if (EMIT.test(l) && rel(f) !== EMIT_OK) bad.push(`${rel(f)}:${i + 1}  raises a change event outside ${EMIT_OK} — ${l.trim()}`);
         });
       }
     }
@@ -167,24 +177,34 @@ const guards = {
   //     A `var(--x, fallback)` is fine: it says what to do when --x is absent.
   //     Properties set from script (el.style.setProperty('--zw', …)) count as declared.
   'no-undefined-token'() {
-    const declared = new Set();
     const cssFiles = files('.css');
+    const decls = (src) => new Set([...src.matchAll(/(--[A-Za-z0-9_-]+)\s*:/g)].map((m) => m[1]));
+    // GLOBAL: only the token sheet's :root crosses module boundaries. Custom properties are
+    // SCOPED — a `--gap:14px` inside .mini in one module does nothing for another module's
+    // .gen, which is exactly the hole the first version of this guard had: it pooled every
+    // declaration in the tree and so proved nothing. The pedigree tree read --gap four
+    // times, declared it nowhere, and its connector offsets resolved to nothing.
+    const global = new Set();
     for (const f of cssFiles) {
-      for (const m of readFileSync(f, 'utf8').matchAll(/(--[A-Za-z0-9_-]+)\s*:/g)) declared.add(m[1]);
+      if (!/(^|\/)(styles|app)\/(tokens|globals)\.css$/.test(rel(f))) continue;
+      for (const d of decls(readFileSync(f, 'utf8'))) global.add(d);
     }
+    // properties set from script, or declared by next/font at runtime
     for (const f of files('.ts', '.tsx')) {
       const src = readFileSync(f, 'utf8');
-      for (const m of src.matchAll(/setProperty\(\s*['"`](--[A-Za-z0-9_-]+)['"`]/g)) declared.add(m[1]);
-      for (const m of src.matchAll(/['"`](--[A-Za-z0-9_-]+)['"`]\s*:/g)) declared.add(m[1]);
-      // next/font/local declares its property at runtime: `variable: '--font-alexandria'`
-      for (const m of src.matchAll(/variable\s*:\s*['"`](--[A-Za-z0-9_-]+)['"`]/g)) declared.add(m[1]);
+      for (const m of src.matchAll(/setProperty\(\s*['"`](--[A-Za-z0-9_-]+)['"`]/g)) global.add(m[1]);
+      for (const m of src.matchAll(/['"`](--[A-Za-z0-9_-]+)['"`]\s*:/g)) global.add(m[1]);
+      for (const m of src.matchAll(/variable\s*:\s*['"`](--[A-Za-z0-9_-]+)['"`]/g)) global.add(m[1]);
     }
     const bad = [];
     for (const f of cssFiles) {
+      const own = decls(readFileSync(f, 'utf8'));
       codeLines(f).forEach((l, i) => {
-        // only var() with NO fallback: the comma form already handles absence
+        // only var() with NO fallback: the comma form already says what to do when absent
         for (const m of l.matchAll(/var\(\s*(--[A-Za-z0-9_-]+)\s*\)/g)) {
-          if (!declared.has(m[1])) bad.push(`${rel(f)}:${i + 1}  ${m[1]} is read but never declared`);
+          if (!global.has(m[1]) && !own.has(m[1])) {
+            bad.push(`${rel(f)}:${i + 1}  ${m[1]} is read but declared neither here nor in the token sheet`);
+          }
         }
       });
     }

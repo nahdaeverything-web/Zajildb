@@ -109,8 +109,13 @@
  * buys. The class is put on <html> by applySettings() (src/components/settings.ts).
  */
 :root.high-contrast {
-  /* brand unchanged — it is the one colour the mode keeps */
-  --brand: #128C6E;
+  /* RULED at Phase 5 acceptance: the brand goes to --brand-deep HERE ONLY. Normal mode
+   * keeps --brand as designed and approved. White text on the #128C6E fill measures
+   * 4.20:1, which misses WCAG AA for body text, and every primary button in the kit is
+   * white on that fill; #0E6F57 measures 6.12:1 and was already sanctioned, so the mode
+   * that exists for sunlight gets the contrast and nothing new is introduced. It lifts
+   * brand-coloured TEXT on white by the same amount, for the same reason. */
+  --brand: #0E6F57;
   --brand-deep: #0E6F57;
 
   /* text: every muted step collapses to full ink */

@@ -41,6 +41,34 @@ const plus365 = (iso: string) => { const d = new Date(iso + 'T00:00:00'); d.setD
 const seasonYY = (b: Bird) => { const r = (b.rings || []).find((x) => x.type === 'FCI') || (b.rings || [])[0]; return r && r.year ? String(r.year).slice(-2) : ''; };
 const Chev = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>;
 
+// Row/ParentRow/Node/Pill are declared at module scope deliberately, not inside
+// BirdView's render body. A component declared during render is a new component type
+// on every render, so React unmounts and remounts its whole DOM subtree each time —
+// 26 remounts per render on this screen, and in a subtree holding a text field the
+// input would lose the caret after a single keystroke. They close over nothing but
+// module-scope values (s, sh, t, fmtNum, primaryRing, seasonYY, Chev, Link), so
+// nothing had to be threaded through as a prop; markup is unchanged.
+const Row = ({ k, v, data, tid }: { k: string; v: ReactNode; data?: boolean; tid: string }) => (
+  <div className={s.row} data-testid={`row-${tid}`}><span className={s.k}>{k}</span><span className={`${s.v} ${data ? s.data : ''}`}>{v}</span></div>
+);
+const ParentRow = ({ k, b, tid }: { k: string; b: Bird | null | undefined; tid: string }) => (
+  <div className={s.row} data-testid={`row-${tid}`}><span className={s.k}>{k}</span>
+    {b ? <Link className={`${s.v} ${s.link}`} href={`/bird?id=${b.id}`}><bdi>{b.name || primaryRing(b) || b.id.slice(0, 8)}</bdi><Chev /></Link> : <span className={s.v}>—</span>}
+  </div>
+);
+const Node = ({ slot, size, role }: { slot: Slot; size: 'n1' | 'n2' | 'n3'; role?: string }) => {
+  const b = slot?.bird;
+  if (!b) return <span className={`${s.node} ${s[size]}`} data-testid="mini-node">{role && <span className={s.role}>{role}</span>}<span className={`${s.nm} ${sh.muted}`}>{t('common.unknown')}</span></span>;
+  const r = primaryRing(b);
+  return (
+    <Link className={`${s.node} ${s[size]}`} href={`/bird?id=${b.id}`} data-testid="mini-node">
+      {role && <span className={s.role}>{role}</span>}<span className={s.nm}><bdi>{b.name || r || b.id.slice(0, 8)}</bdi></span>
+      {size === 'n1' ? (r && <span className={`${s.plate} ${s.sm}`}><span className={s.season}>{seasonYY(b)}</span><span className={s.num}>{r}</span></span>) : <span className={s.rg}>{r}</span>}
+    </Link>
+  );
+};
+const Pill = ({ pos }: { pos: number }) => <span className={`${s.pill} ${pos <= 3 ? s.gold : pos <= 10 ? s.top : ''}`}>{fmtNum(pos, { group: false })}</span>;
+
 export default function BirdView() {
   const params = useSearchParams(); const router = useRouter();
   const id = params.get('id') || '';
@@ -159,26 +187,6 @@ export default function BirdView() {
   const lastVac = events.filter((e) => e.eventType === 'vaccination' && e.date)[0];
   const evKind = (e: HealthEvent) => (e.eventType === 'treatment' || e.eventType === 'illness') ? s.treat : e.eventType === 'check' ? s.note : '';
 
-  const Row = ({ k, v, data, tid }: { k: string; v: ReactNode; data?: boolean; tid: string }) => (
-    <div className={s.row} data-testid={`row-${tid}`}><span className={s.k}>{k}</span><span className={`${s.v} ${data ? s.data : ''}`}>{v}</span></div>
-  );
-  const ParentRow = ({ k, b, tid }: { k: string; b: Bird | null | undefined; tid: string }) => (
-    <div className={s.row} data-testid={`row-${tid}`}><span className={s.k}>{k}</span>
-      {b ? <Link className={`${s.v} ${s.link}`} href={`/bird?id=${b.id}`}><bdi>{b.name || primaryRing(b) || b.id.slice(0, 8)}</bdi><Chev /></Link> : <span className={s.v}>—</span>}
-    </div>
-  );
-  const Node = ({ slot, size, role }: { slot: Slot; size: 'n1' | 'n2' | 'n3'; role?: string }) => {
-    const b = slot?.bird;
-    if (!b) return <span className={`${s.node} ${s[size]}`} data-testid="mini-node">{role && <span className={s.role}>{role}</span>}<span className={`${s.nm} ${sh.muted}`}>{t('common.unknown')}</span></span>;
-    const r = primaryRing(b);
-    return (
-      <Link className={`${s.node} ${s[size]}`} href={`/bird?id=${b.id}`} data-testid="mini-node">
-        {role && <span className={s.role}>{role}</span>}<span className={s.nm}><bdi>{b.name || r || b.id.slice(0, 8)}</bdi></span>
-        {size === 'n1' ? (r && <span className={`${s.plate} ${s.sm}`}><span className={s.season}>{seasonYY(b)}</span><span className={s.num}>{r}</span></span>) : <span className={s.rg}>{r}</span>}
-      </Link>
-    );
-  };
-  const Pill = ({ pos }: { pos: number }) => <span className={`${s.pill} ${pos <= 3 ? s.gold : pos <= 10 ? s.top : ''}`}>{fmtNum(pos, { group: false })}</span>;
   const coiPieces = t('profile.coiLine', { n: fmtNum(depth), c: fmtPercent(avk.completeness / 100, 0) }).split('{pct}');
 
   return (

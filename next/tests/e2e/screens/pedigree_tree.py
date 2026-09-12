@@ -8,7 +8,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance, check_toast_clear, scroll_to_bottom
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom, check_caret
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'pedigree-tree')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -58,6 +58,51 @@ try:
         check('common ancestors carry the dot marker (data-common) on every appearance', pg.locator('[data-testid=node][data-common="1"]').count() == exp['commonSlots'] and exp['common'] > 0, f'{exp["commonSlots"]} marked slots for {exp["common"]} birds')
         sx = pg.locator('[data-testid=node-subject]').bounding_box(); ax = pg.locator('[data-testid=node][data-gen="4"]').first.bounding_box()
         check('[core_flows#4] RTL: the subject sits RIGHT of the deepest ancestors', sx and ax and sx['x'] > ax['x'], f"subj.x={sx and sx['x']:.0f} anc.x={ax and ax['x']:.0f}")
+        # [example_data root line 81 — UNCOVERED until Phase 6] the tree's legend. The spec
+        # replaced vanilla's SEX legend with an order / common-ancestor / unknown one
+        # (pedigree-tree-v1), and nothing asserted either. So the port's own legend is
+        # asserted, and the departure from the root assertion is stated in the name.
+        # [Phase 6] the connector system. The spec declares `--gap:20px` in its :root as "the
+        # column gap AND the connector stub length"; split-generic.mjs strips :root, so the
+        # port read --gap four times and declared it nowhere. Every
+        # `padding-inline-start:var(--gap)` resolved to nothing and every
+        # `calc(-1 * var(--gap))` was invalid, so the tree had no column gaps and no
+        # connector lines — a silent failure, because CSS drops what it cannot parse.
+        conn = pg.evaluate("""() => { const slot = document.querySelector('[class*=slot]');
+            const gen = document.querySelectorAll('[class*=gen]')[1];
+            if (!slot || !gen) return null;
+            const cs = getComputedStyle(slot, '::before');
+            return { gap: getComputedStyle(document.querySelector('[data-testid=chart]')).getPropertyValue('--gap').trim(),
+                     stub: cs.width, rule: cs.borderTopWidth, inset: cs.insetInlineStart,
+                     column: getComputedStyle(gen).paddingInlineStart }; }""")
+        check('the tree draws the spec\'s connectors — a 20px stub, a hairline rule, and a 20px column gap',
+              conn and conn['gap'] == '20px' and conn['stub'] == '20px'
+              and conn['rule'] == '1px' and conn['inset'] == '-20px', str(conn))
+
+        leg = pg.locator('[data-testid=legend]').inner_text()
+        check('[example_data, re-authored] a legend under the tree — order, the common-ancestor dot, the unknown dash',
+              'الأب أعلى' in leg and 'سلف مشترك' in leg and 'غير مسجل' in leg,
+              ' '.join(leg.split()))
+
+        # [core_flows root line 70 — UNCOVERED until Phase 6] the LTR mirror. The RTL case is
+        # measured above; the mirror was measured nowhere, because nothing in the port's tests
+        # ever put the APP into English. It is not a CSS flourish: the chart follows its
+        # container's `dir`, so getting it wrong puts the subject on the wrong side of its
+        # own ancestors.
+        pg.evaluate("async () => { const db = await window.__zajilDb; await db.setSetting('lang', 'en'); }")
+        pg.reload(wait_until='load'); pg.wait_for_selector('[data-testid=node-subject]', timeout=8000)
+        pg.wait_for_timeout(700)
+        lsx = pg.locator('[data-testid=node-subject]').bounding_box()
+        lax = pg.locator('[data-testid=node][data-gen="4"]').first.bounding_box()
+        check('[core_flows] LTR: with the app in English the subject sits LEFT of the deepest ancestors',
+              pg.evaluate("() => document.documentElement.dir") == 'ltr' and lsx and lax and lsx['x'] < lax['x'],
+              f"dir={pg.evaluate('() => document.documentElement.dir')} subj.x={lsx and lsx['x']:.0f} anc.x={lax and lax['x']:.0f}")
+        check('…and the ruler reads in English with it',
+              pg.locator('[data-testid=ruler-label]').first.inner_text().strip() in ('Subject', 'Bird'),
+              pg.locator('[data-testid=ruler-label]').first.inner_text())
+        pg.evaluate("async () => { const db = await window.__zajilDb; await db.setSetting('lang', 'ar'); }")
+        pg.reload(wait_until='load'); pg.wait_for_selector('[data-testid=node-subject]', timeout=8000)
+        pg.wait_for_timeout(500)
         unk = pg.locator('[data-testid=node][data-known="0"]')
         if unk.count():
             check('an unknown slot offers «سلف غير مسجل — إضافة» → the child\'s edit form', unk.first.get_attribute('aria-label') == 'سلف غير مسجل — إضافة' and (unk.first.get_attribute('href') or '').startswith('/bird/edit?id='))
@@ -93,6 +138,7 @@ try:
         check('[teaching_loft#3] 5-gen tree fully populated (62 known ancestors, 0 unknown) via ?gens=5', known == 62 and unknown == 0 and deep['known'] == 62, f'known={known} unknown={unknown}')
         check('[teaching_loft#4] COI headline 12.5%', '12.5' in pg.locator('[data-testid=coi-headline] [data-testid=coi-badge]').inner_text())
         check('[teaching_loft#5] COI breakdown lists ≥4 common ancestors', pg.locator('[data-testid=breakdown-row]').count() >= 4, pg.locator('[data-testid=breakdown-row]').count())
+        check_caret(pg, check, 'finder-input', 'نجمة', 'relationship finder')
         pg.fill('[data-testid=finder-input]', 'نجمة'); pg.wait_for_timeout(150); pg.click('[data-testid=finder-item] >> nth=0'); pg.wait_for_timeout(150)
         rel = pg.locator('[data-testid=rel-result]')
         check('[teaching_loft#6] full-sib pairing → «أشقاء» + severe level', rel.count() == 1 and 'أشقاء' in pg.locator('[data-testid=rel-key]').inner_text() and rel.get_attribute('data-level') == 'severe', pg.locator('[data-testid=rel-key]').inner_text() if rel.count() else 'no result')

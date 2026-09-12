@@ -9,7 +9,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance
+from _layout import check_clearance, check_caret
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'sign-in')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -34,6 +34,18 @@ try:
 
         # ── NOT CONFIGURED (the shipped build has no project — sync-config.js is empty by design) ──
         pg.goto(SIGNIN, wait_until='load'); pg.wait_for_selector('[data-testid=signin-form]', timeout=6000)
+        # [sync_ui #24 — UNCOVERED until Phase 6] the root's predicate WAS the selector:
+        # input[type=email] and input[type=password]. The port asserted only that the two
+        # fields exist, which a pair of plain text inputs satisfies — and a password in a
+        # text input is readable over a shoulder in a loft.
+        check('[sync_ui #24] the password field is MASKED and the email field is an email field',
+              pg.locator('[data-testid=f-password]').get_attribute('type') == 'password'
+              and pg.locator('[data-testid=f-email]').get_attribute('type') == 'email',
+              f"email={pg.locator('[data-testid=f-email]').get_attribute('type')} password={pg.locator('[data-testid=f-password]').get_attribute('type')}")
+        check('…and the browser is told what they are, so a password manager can fill them',
+              pg.locator('[data-testid=f-email]').get_attribute('autocomplete') == 'username'
+              and pg.locator('[data-testid=f-password]').get_attribute('autocomplete') == 'current-password',
+              f"{pg.locator('[data-testid=f-email]').get_attribute('autocomplete')} / {pg.locator('[data-testid=f-password]').get_attribute('autocomplete')}")
         check('the screen renders signed out: brand, tagline, email + password, «تسجيل الدخول»',
               pg.locator('[data-testid=f-email]').count() == 1 and pg.locator('[data-testid=f-password]').count() == 1
               and pg.locator('[data-testid=signin-submit]').inner_text().strip() == 'تسجيل الدخول' and 'سجل لوفتك' in pg.locator('[data-testid=pane-signin]').inner_text())
@@ -48,6 +60,8 @@ try:
               vis['barTop'] is not None and vis['bottom'] <= vis['barTop'], vis)
         check('[ruling 1] every tab is reachable from here, signed out', pg.locator('nav a').count() >= 6)
         shots(pg, 'signed-out')
+        check_caret(pg, check, 'f-email', 'someone@example.com', 'sign-in')
+        check_caret(pg, check, 'f-password', 'a-long-passphrase', 'sign-in')
         pg.fill('[data-testid=f-email]', 'someone@example.com'); pg.fill('[data-testid=f-password]', 'whatever')
         pg.click('[data-testid=signin-submit]'); pg.wait_for_timeout(800)
         check('[spec «المزامنة غير مهيأة»] with no project configured, signing in says exactly that — never a status code',
@@ -71,6 +85,23 @@ try:
         cfg.fill('[data-testid=f-email]', 'someone2@example.com'); cfg.wait_for_timeout(150)
         check('typing clears the error, as the spec\'s state machine does', cfg.locator('[data-testid=msg-cred]').count() == 0 and cfg.locator('[data-testid=f-email]').get_attribute('aria-invalid') == 'false')
 
+        # [sync_ui #33 — UNCOVERED until Phase 6] ENTER submits. The only Enter press on a
+        # sign-in form anywhere in the port was in auth_live.py, which run_all gates behind
+        # --live-auth — so the keyboard path shipped untested against a stubbed server. It
+        # is the path a fancier on a phone keyboard actually uses.
+        ent = ctx.new_page()
+        ent.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};")
+        ent.route(f'{STUB}/**', lambda route: route.fulfill(status=400, content_type='application/json',
+                                                            body='{"error":"invalid_grant"}'))
+        ent.goto(SIGNIN, wait_until='load'); ent.wait_for_selector('[data-testid=signin-form]')
+        ent.fill('[data-testid=f-email]', 'someone@example.com')
+        ent.fill('[data-testid=f-password]', 'wrong')
+        ent.press('[data-testid=f-password]', 'Enter')
+        ent.wait_for_selector('[data-testid=msg-cred]', timeout=6000)
+        check('[sync_ui #33] ENTER in the password field submits the form — no mouse needed',
+              ent.locator('[data-testid=msg-cred]').count() == 1)
+        ent.close()
+
         # ── NETWORK (the project is configured but unreachable) ──
         net = ctx.new_page()
         net.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};")
@@ -81,6 +112,14 @@ try:
         check('[spec «لا يوجد اتصال»] an unreachable project says the network is the problem, and that the data is safe',
               'لا يوجد اتصال' in net.locator('[data-testid=msg-net]').inner_text() and 'محفوظة على الجهاز' in net.locator('[data-testid=msg-net]').inner_text())
         check('…and the button becomes «إعادة المحاولة», as the spec draws it', net.locator('[data-testid=signin-submit]').inner_text().strip() == 'إعادة المحاولة')
+        # [sync_ui #30 — UNCOVERED until Phase 6] the root read the button's ENABLED state
+        # after a failure. The port only read its text — and the submit button is
+        # disabled={loading}, which is exactly the stuck-spinner the root was guarding
+        # against: a form that says «إعادة المحاولة» and cannot be pressed is worse than one
+        # that says nothing.
+        check('[sync_ui #30] …and the button is usable again, not left spinning',
+              net.locator('[data-testid=signin-submit]').is_enabled(),
+              'disabled' if net.locator('[data-testid=signin-submit]').is_disabled() else 'enabled')
         net.screenshot(path=f'{FID}/state-net-430.png', full_page=True)
         net.close()
 

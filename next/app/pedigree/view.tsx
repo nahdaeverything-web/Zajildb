@@ -31,6 +31,30 @@ const GENS = [3, 4, 5] as const;
 const HEIGHT: Record<number, number> = { 3: 500, 4: 800, 5: 1600 };
 const yy = (b: Bird) => { const r = (b.rings || []).find((x) => x.type === 'FCI') || (b.rings || [])[0]; return r && r.year ? String(r.year).slice(-2) : ''; };
 const Plate = ({ b }: { b: Bird }) => { const raw = primaryRing(b); return raw ? <span className={s.plate}><span className={s.yr}>{yy(b)}</span><span className={s.no}>{raw}</span></span> : null; };
+// Node is declared at module scope deliberately. A component created inside a
+// render body is a brand-new component type on every render, so React unmounts
+// and remounts its whole DOM subtree — 20-30 pointless remounts per render here,
+// and a text field inside such a subtree loses the caret after one keystroke.
+// What it used to close over now arrives as props: `child` is the slot one
+// generation down (the ancestor's child), `isCommon` the common-ancestor test.
+const Node = ({ slot, g, child, isCommon }: { slot: Slot; g: number; child: Slot; isCommon: (bid: string) => boolean }): ReactNode => {
+  const size = s['n' + (g + 1)] || s.n6;
+  const b = slot?.bird;
+  if (!b) {
+    // an unknown ancestor: the spec's slot offers «add» — the port opens the CHILD's edit form, where the parent is picked or created
+    const inner = <><span>{t('ped.unknownAncestor')}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></>;
+    return child && child.bird
+      ? <Link href={`/bird/edit?id=${child.id}`} className={`${s.node} ${size} ${s.unknown}`} aria-label={t('ped.unknown.add')} data-testid="node" data-gen={g} data-known="0">{inner}</Link>
+      : <span className={`${s.node} ${size} ${s.unknown}`} data-testid="node" data-gen={g} data-known="0">{inner}</span>;
+  }
+  const name = <bdi>{b.name || primaryRing(b) || b.id.slice(0, 8)}</bdi>;
+  return (
+    <Link href={`/bird?id=${b.id}`} className={`${s.node} ${size}`} data-testid={g === 0 ? 'node-subject' : 'node'} data-gen={g} data-known="1" data-common={isCommon(b.id) ? '1' : undefined}>
+      {g === 0 ? <><span className={s.nm}>{name}</span><Plate b={b} />{b.hatchDate && <span className={s.dt}>{fmtDate(b.hatchDate)}</span>}</>
+        : <>{isCommon(b.id) ? <span className={s.ci}><i className={s.dot} /><span className={s.nm}>{name}</span></span> : <span className={s.nm}>{name}</span>}<span className={s.rg}>{primaryRing(b)}</span></>}
+    </Link>
+  );
+};
 
 export default function PedigreeView() {
   const params = useSearchParams(); const router = useRouter();
@@ -66,26 +90,6 @@ export default function PedigreeView() {
   const rel = otherId ? (describeRelationship(getBird, id, otherId, depth) as { key: string; params: Record<string, unknown>; hypotheticalCOI: number }) : null;
   const level = rel ? (pairingWarningLevel(rel.hypotheticalCOI) as string) : null;
 
-  const Node = ({ slot, g, i }: { slot: Slot; g: number; i: number }): ReactNode => {
-    const size = s['n' + (g + 1)] || s.n6;
-    const b = slot?.bird;
-    if (!b) {
-      // an unknown ancestor: the spec's slot offers «add» — the port opens the CHILD's edit form, where the parent is picked or created
-      const child = g > 0 ? grid[g - 1][Math.floor(i / 2)] : null;
-      const inner = <><span>{t('ped.unknownAncestor')}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></>;
-      return child && child.bird
-        ? <Link href={`/bird/edit?id=${child.id}`} className={`${s.node} ${size} ${s.unknown}`} aria-label={t('ped.unknown.add')} data-testid="node" data-gen={g} data-known="0">{inner}</Link>
-        : <span className={`${s.node} ${size} ${s.unknown}`} data-testid="node" data-gen={g} data-known="0">{inner}</span>;
-    }
-    const name = <bdi>{b.name || primaryRing(b) || b.id.slice(0, 8)}</bdi>;
-    return (
-      <Link href={`/bird?id=${b.id}`} className={`${s.node} ${size}`} data-testid={g === 0 ? 'node-subject' : 'node'} data-gen={g} data-known="1" data-common={isCommon(b.id) ? '1' : undefined}>
-        {g === 0 ? <><span className={s.nm}>{name}</span><Plate b={b} />{b.hatchDate && <span className={s.dt}>{fmtDate(b.hatchDate)}</span>}</>
-          : <>{isCommon(b.id) ? <span className={s.ci}><i className={s.dot} /><span className={s.nm}>{name}</span></span> : <span className={s.nm}>{name}</span>}<span className={s.rg}>{primaryRing(b)}</span></>}
-      </Link>
-    );
-  };
-
   return (
     <section className={s.screen}>
       <div className={s.top}><div className={s.bar}>
@@ -115,7 +119,7 @@ export default function PedigreeView() {
       </div></div>
       <SyncRow />
       <div className={s.body}>
-        <div className={s.legend}><span>{t('ped.legend.order')}</span><span><i className={s.dot} />{t('ped.legend.common')}</span><span><i className={s.dash} />{t('ped.legend.unknown')}</span></div>
+        <div className={s.legend} data-testid="legend"><span>{t('ped.legend.order')}</span><span><i className={s.dot} />{t('ped.legend.common')}</span><span><i className={s.dash} />{t('ped.legend.unknown')}</span></div>
         <div className={s.gensel} role="group" aria-label={t('ped.generations')} data-testid="gensel">
           {GENS.map((g) => <button key={g} type="button" aria-pressed={gens === g} onClick={() => setGens(g)} data-testid="gen-btn" data-gens={g}>{fmtNum(g, { group: false })}</button>)}
         </div>
@@ -123,10 +127,11 @@ export default function PedigreeView() {
         <div className={s.chartwrap}><div className={`${s.chart} ${gens === 5 ? s.deep : gens === 3 ? s.shallow : ''}`} data-testid="chart">
           <div className={s.ruler}>{grid.map((_, g) => <div key={g} data-testid="ruler-label">{rulerLabel(g)}</div>)}</div>
           <div className={s.gens} style={{ height: HEIGHT[gens] }}>
-            <div className={`${s.gen} ${s.g1}`}><Node slot={grid[0][0]} g={0} i={0} /></div>
+            <div className={`${s.gen} ${s.g1}`}><Node slot={grid[0][0]} g={0} child={null} isCommon={isCommon} /></div>
             {grid.slice(1).map((col, gi) => {
               const g = gi + 1; const pairs = [];
-              for (let i = 0; i < col.length; i += 2) pairs.push(<div key={i} className={s.pair}><div className={s.slot}><Node slot={col[i]} g={g} i={i} /></div><div className={s.slot}><Node slot={col[i + 1]} g={g} i={i + 1} /></div></div>);
+              // both members of a pair are the parents of the same slot one generation down, so they share one `child` (i is even, so Math.floor(i / 2) === Math.floor((i + 1) / 2))
+              for (let i = 0; i < col.length; i += 2) { const child = grid[g - 1][Math.floor(i / 2)]; pairs.push(<div key={i} className={s.pair}><div className={s.slot}><Node slot={col[i]} g={g} child={child} isCommon={isCommon} /></div><div className={s.slot}><Node slot={col[i + 1]} g={g} child={child} isCommon={isCommon} /></div></div>); }
               return <div key={g} className={`${s.gen} ${s['g' + (g + 1)] || s.g6}`}>{pairs}</div>;
             })}
           </div>

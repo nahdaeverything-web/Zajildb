@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import * as db from '@/src/db.js';
@@ -54,6 +54,102 @@ const fieldLabel = { ring: 'bird.ring', sire: 'bird.sire', dam: 'bird.dam', form
 const Dot = ({ sex }: { sex?: string }) => <span className={s.dot}><svg viewBox="0 0 100 100" fill={sex === 'hen' ? '#C9971F' : '#128C6E'} aria-hidden="true"><path d="M18 78c14 4 34 4 46-4 10-7 16-18 17-30 0-4-2-6-5-6-2 0-4 1-5 3l-4 8c-6 10-16 16-28 18-8 1-15 5-21 11z" /><path d="M62 34c3-6 9-9 15-8 3 0 5 2 5 5 0 2-1 3-3 4l-6 2c-4 2-8 1-11-3z" /></svg></span>;
 const Plate = ({ b }: { b: Bird }) => { const r = (b.rings || []).find((x) => x.type === 'FCI') || (b.rings || [])[0]; const raw = primaryRing(b); return raw ? <span className={s.plate}><span className={s.yr}>{r && r.year ? String(r.year).slice(-2) : ''}</span><span className={s.no}>{raw}</span></span> : null; };
 
+// FormField and Slot are declared HERE, at module scope, deliberately. A component
+// declared inside another component's render body is a new component type on every
+// render, so React unmounts and remounts its whole DOM subtree each time: the name
+// field lost its caret after a single keystroke (a typed name kept only its first
+// letter) and each parent slot threw away 20-30 nodes per render. Everything these
+// two used to close over arrives as an explicit prop instead.
+
+/**
+ * The form's labelled field. Deliberately NOT the shared Field component of
+ * @/src/components, and named apart from it so the two are never mistaken for one
+ * another: the shared one is styled by shared.module.css — a different CSS module,
+ * so different hashed class names, and different rules (this screen's .field
+ * margin, its label and its textarea live in form.module.css) — it always emits
+ * its error/warn class slots into the class attribute, and it drops `hint`
+ * whenever an error or warning is set. This screen carries its own error and warn
+ * markup inside `children` (the ring error, the duplicate warnbox) and needs
+ * `hint` unconditionally (the hatch-from-ring-year hint), so the shared component
+ * is not a drop-in replacement: swapping it in would change the rendered markup.
+ */
+const FormField = ({ label, children, hint, testid }: { label: string; children: ReactNode; hint?: ReactNode; testid?: string }) => (
+  <div className={s.field} data-testid={testid}><label>{label}</label>{children}{hint}</div>
+);
+
+// ── the parent picker (ui.js:205 birdPicker, in the spec's slot grammar) ──
+// the picker's rules live once, in src/components/picker.ts (ui.js:205)
+const Slot = ({ role, b, picker, setPicker, all, pool, pickerRef, err, onPick, onQuickCreate, onClear }: {
+  role: Role; b: Bird | null | undefined;
+  picker: Picker; setPicker: (p: Picker) => void;
+  all: Bird[];                                    // every bird: pickerModel looks outside the pool to explain a blocked match
+  pool: Bird[];                                   // the birds THIS slot may select
+  pickerRef: RefObject<HTMLDivElement | null>;    // the outside-click ref, attached only while this slot's picker is open
+  err?: string;
+  onPick: (role: Role, id: string) => void; onQuickCreate: (role: Role, q: string) => void; onClear: (role: Role) => void;
+}) => {
+  const open = picker && picker.role === role ? picker : null;
+  const q = open ? open.q : '';
+  const model = pickerModel({ all, pool, q, allowCreate: open?.mode === 'create', selected: b ? b.id : null });
+  const blocked = open && open.mode === 'pick' ? model.blocked : null;
+  const cands = open && open.mode === 'pick' ? model.cands : [];
+  return (
+    <div ref={open ? pickerRef : undefined} data-testid={`slot-${role}`}>
+      {b ? (
+        <div className={s.prow} data-testid={`parent-${role}`}>
+          <Dot sex={b.sex} />
+          <span className={s.mid}><span className={s.role}>{t('bird.' + role)}</span><span className={s.nm} data-testid={`parent-${role}-name`}><bdi>{b.name || primaryRing(b) || b.id.slice(0, 8)}</bdi></span><Plate b={b} /></span>
+          <button type="button" className={s.act} onClick={() => setPicker({ role, mode: 'pick', q: '' })} data-testid={`parent-${role}-change`}>{t('act.change')}</button>
+          <button type="button" className={s.act} onClick={() => onClear(role)} data-testid={`parent-${role}-clear`}>{t('bird.clearParent')}</button>
+        </div>
+      ) : null}
+      {b && err && <div className={s['err-msg']} role="alert" style={{ marginTop: -4, marginBottom: 10 }}>{err}</div>}
+      {!b && (
+        <div className={s.pempty} data-testid={`parent-${role}-empty`}>
+          <div className={s.head}><span className={`${s.dot}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></span>
+            <div><div className={s.role}>{t('bird.' + role)}</div><div className={s.nm}>{t('form.parent.none')}</div></div></div>
+          {err && <div className={s['err-msg']} role="alert">{err}</div>}
+          <div className={s.btns}>
+            <button type="button" className={`${s.primary} ${open && open.mode === 'pick' ? s.on : ''}`} onClick={() => setPicker({ role, mode: 'pick', q: '' })} data-testid={`parent-${role}-pick`}>{t('form.parent.pick')}</button>
+            <button type="button" className={`${s.ghost} ${open && open.mode === 'create' ? s.on : ''}`} onClick={() => setPicker({ role, mode: 'create', q: '' })} data-testid={`parent-${role}-create`}>{t('form.parent.quick')}</button>
+          </div>
+        </div>
+      )}
+      {open && (
+        <div className={s.picker} data-testid={`picker-${role}`}>
+          <div className={s.field}>
+            <input autoFocus value={q} onChange={(e) => setPicker({ ...open, q: e.target.value })} placeholder={open.mode === 'pick' ? t('bird.chooseBird') : t('bird.ring') + ' / ' + t('bird.name')} aria-label={open.mode === 'pick' ? t('form.parent.pick') : t('form.parent.quick')} data-testid="picker-input" />
+          </div>
+          {open.mode === 'pick' ? (
+            <>
+              {blocked && <div className={s.note} data-testid="picker-note">{t('picker.existsButFiltered', { name: birdLabelText(blocked), sex: t('sex.' + (blocked.sex || 'unknown')) })}</div>}
+              <div className={s.list}>
+                {cands.map((c) => (
+                  <button key={c.id} type="button" className={s.prow} onClick={() => onPick(role, c.id)} data-testid="picker-item">
+                    <Dot sex={c.sex} /><span className={s.mid}><span className={s.nm}><bdi>{c.name || primaryRing(c) || c.id.slice(0, 8)}</bdi></span><Plate b={c} /></span><SexChip sex={c.sex} />
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* ui.js:278 — a query that already resolves to a real bird is never an offer to create a
+                  second record for it, even when THIS slot could not select that bird. The action guards
+                  itself too (createFromQuery re-checks), but the offer must not be there in the first place. */}
+              {model.clash && <div className={s.note} data-testid="picker-note">{model.blocked
+                ? t('picker.existsButFiltered', { name: birdLabelText(model.clash), sex: t('sex.' + (model.clash.sex || 'unknown')) })
+                : t('warn.dupRing.body', { name: birdLabelText(model.clash) })}</div>}
+              <button type="button" className={s.create} disabled={!model.canCreate} onClick={() => onQuickCreate(role, q.trim())} data-testid="picker-create">
+                + {t('picker.createNew', { q: q.trim() })}<small>{t('picker.createHint')}</small>
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function BirdForm() {
   const pathname = usePathname() ?? ''; const params = useSearchParams(); const router = useRouter();
   const isNew = /\/bird\/new(\.html)?\/?$/.test(pathname);   // a plain file server serves the export as /bird/new.html; a static host as /bird/new
@@ -75,8 +171,12 @@ export default function BirdForm() {
   const photoIn = useRef<HTMLInputElement>(null); const docIn = useRef<HTMLInputElement>(null);
 
   // bird-form.js:13-26 — the draft: a clone to edit, or a fresh record with the entry-point intents applied
+  // The draft is seeded FROM the data layer, which cannot be read until initDB() resolves —
+  // so there is no render-time value to compute it from. `seeded` states the once-ness
+  // instead of depending on the very state this sets, which made the effect run twice.
+  const seeded = useRef(false);
   useEffect(() => {
-    if (!booted || draft) return;
+    if (!booted || seeded.current) return;
     const existing = editId ? getBird(editId) : null;
     if (editId && !existing) { router.replace('/birds'); return; }
     const d: Bird = existing ? JSON.parse(JSON.stringify(existing)) : (db.newBird({}) as Bird);
@@ -85,8 +185,12 @@ export default function BirdForm() {
       if (qs && getBird(qs)) d.sireId = qs;
       if (qd && getBird(qd)) d.damId = qd;
     }
+    seeded.current = true;
+    // The source is an external system and `seeded` makes this run exactly once per mount,
+    // so this is a one-time synchronisation rather than the cascade the rule is about.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft(d); setRings(d.rings && d.rings.length ? d.rings.map((r) => ({ ...r })) : [{}]);
-  }, [booted, draft, editId, params, router]);
+  }, [booted, editId, params, router]);
 
   // the picker closes on an outside click (ui.js:352) — abandoning a search never touches the committed parent
   useEffect(() => {
@@ -96,7 +200,7 @@ export default function BirdForm() {
   }, [picker]);
 
   const siblingOf = siblingOfId ? getBird(siblingOfId) : null;
-  const statuses = useMemo(() => (booted ? (db.loftStatuses() as string[]) : []), [booted]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const statuses = useMemo(() => (booted ? (db.loftStatuses() as string[]) : []), [booted]);
 
   /** bird-form.js:140 collect — the record as it would be saved. */
   const collect = (d: Bird = draft!): Bird => {
@@ -175,79 +279,14 @@ export default function BirdForm() {
     }
   };
 
-  // ── the parent picker (ui.js:205 birdPicker, in the spec's slot grammar) ──
-  // the picker's rules live once, in src/components/picker.ts (ui.js:205)
+  // ── the parent picker's wiring: the state the module-scope <Slot> renders from ──
   const pool = (role: Role) => birds.filter((b) => b.id !== draft.id && b.sex !== (role === 'sire' ? 'hen' : 'cock'));
   const pick = (role: Role, id: string) => { set(role === 'sire' ? { sireId: id } : { damId: id }); setErrs({ ...errs, [role]: undefined }); setPicker(null); };
   async function quickCreate(role: Role, q: string) {
     const b = await createFromQuery(q, role === 'sire' ? 'cock' : 'hen');   // re-checks for an exact match first, so a second tap cannot mint a duplicate
     pick(role, b.id);
   }
-  const Slot = ({ role, b }: { role: Role; b: Bird | null | undefined }) => {
-    const open = picker && picker.role === role ? picker : null;
-    const q = open ? open.q : '';
-    const model = pickerModel({ all: birds, pool: pool(role), q, allowCreate: open?.mode === 'create', selected: b ? b.id : null });
-    const blocked = open && open.mode === 'pick' ? model.blocked : null;
-    const cands = open && open.mode === 'pick' ? model.cands : [];
-    return (
-      <div ref={open ? pickerRef : undefined} data-testid={`slot-${role}`}>
-        {b ? (
-          <div className={s.prow} data-testid={`parent-${role}`}>
-            <Dot sex={b.sex} />
-            <span className={s.mid}><span className={s.role}>{t('bird.' + role)}</span><span className={s.nm} data-testid={`parent-${role}-name`}><bdi>{b.name || primaryRing(b) || b.id.slice(0, 8)}</bdi></span><Plate b={b} /></span>
-            <button type="button" className={s.act} onClick={() => setPicker({ role, mode: 'pick', q: '' })} data-testid={`parent-${role}-change`}>{t('act.change')}</button>
-            <button type="button" className={s.act} onClick={() => { set(role === 'sire' ? { sireId: null } : { damId: null }); setPicker(null); }} data-testid={`parent-${role}-clear`}>{t('bird.clearParent')}</button>
-          </div>
-        ) : null}
-        {b && errs[role] && <div className={s['err-msg']} role="alert" style={{ marginTop: -4, marginBottom: 10 }}>{errs[role]}</div>}
-        {!b && (
-          <div className={s.pempty} data-testid={`parent-${role}-empty`}>
-            <div className={s.head}><span className={`${s.dot}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></span>
-              <div><div className={s.role}>{t('bird.' + role)}</div><div className={s.nm}>{t('form.parent.none')}</div></div></div>
-            {errs[role] && <div className={s['err-msg']} role="alert">{errs[role]}</div>}
-            <div className={s.btns}>
-              <button type="button" className={`${s.primary} ${open && open.mode === 'pick' ? s.on : ''}`} onClick={() => setPicker({ role, mode: 'pick', q: '' })} data-testid={`parent-${role}-pick`}>{t('form.parent.pick')}</button>
-              <button type="button" className={`${s.ghost} ${open && open.mode === 'create' ? s.on : ''}`} onClick={() => setPicker({ role, mode: 'create', q: '' })} data-testid={`parent-${role}-create`}>{t('form.parent.quick')}</button>
-            </div>
-          </div>
-        )}
-        {open && (
-          <div className={s.picker} data-testid={`picker-${role}`}>
-            <div className={s.field}>
-              <input autoFocus value={q} onChange={(e) => setPicker({ ...open, q: e.target.value })} placeholder={open.mode === 'pick' ? t('bird.chooseBird') : t('bird.ring') + ' / ' + t('bird.name')} aria-label={open.mode === 'pick' ? t('form.parent.pick') : t('form.parent.quick')} data-testid="picker-input" />
-            </div>
-            {open.mode === 'pick' ? (
-              <>
-                {blocked && <div className={s.note} data-testid="picker-note">{t('picker.existsButFiltered', { name: birdLabelText(blocked), sex: t('sex.' + (blocked.sex || 'unknown')) })}</div>}
-                <div className={s.list}>
-                  {cands.map((c) => (
-                    <button key={c.id} type="button" className={s.prow} onClick={() => pick(role, c.id)} data-testid="picker-item">
-                      <Dot sex={c.sex} /><span className={s.mid}><span className={s.nm}><bdi>{c.name || primaryRing(c) || c.id.slice(0, 8)}</bdi></span><Plate b={c} /></span><SexChip sex={c.sex} />
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                {/* ui.js:278 — a query that already resolves to a real bird is never an offer to create a
-                    second record for it, even when THIS slot could not select that bird. The action guards
-                    itself too (createFromQuery re-checks), but the offer must not be there in the first place. */}
-                {model.clash && <div className={s.note} data-testid="picker-note">{model.blocked
-                  ? t('picker.existsButFiltered', { name: birdLabelText(model.clash), sex: t('sex.' + (model.clash.sex || 'unknown')) })
-                  : t('warn.dupRing.body', { name: birdLabelText(model.clash) })}</div>}
-                <button type="button" className={s.create} disabled={!model.canCreate} onClick={() => quickCreate(role, q.trim())} data-testid="picker-create">
-                  + {t('picker.createNew', { q: q.trim() })}<small>{t('picker.createHint')}</small>
-                </button>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-  const Field = ({ label, children, hint, testid }: { label: string; children: ReactNode; hint?: ReactNode; testid?: string }) => (
-    <div className={s.field} data-testid={testid}><label>{label}</label>{children}{hint}</div>
-  );
+  const clearParent = (role: Role) => { set(role === 'sire' ? { sireId: null } : { damId: null }); setPicker(null); };
 
   return (
     <section className={s.screen}>
@@ -274,8 +313,8 @@ export default function BirdForm() {
                 <input ref={docIn} type="file" accept="image/*,.pdf" multiple hidden onChange={(e) => { const fs = [...(e.target.files || [])]; setPending([...pending, ...fs.map((f) => ({ kind: 'document' as const, subtype: 'other', file: f }))]); e.target.value = ''; }} />
               </div>
             </div>
-            <Field label={t('bird.name')}><input value={draft.name || ''} onChange={(e) => set({ name: e.target.value })} placeholder={t('form.name.placeholder')} data-testid="f-name" /></Field>
-            <Field label={t('bird.ring')} testid="f-ring-field">
+            <FormField label={t('bird.name')}><input value={draft.name || ''} onChange={(e) => set({ name: e.target.value })} placeholder={t('form.name.placeholder')} data-testid="f-name" /></FormField>
+            <FormField label={t('bird.ring')} testid="f-ring-field">
               {rings.map((r, i) => (
                 <div key={i} className={i === 0 ? undefined : s.ringrow} data-testid="ring-row">
                   <input ref={i === 0 ? firstRing : undefined} className={`${s.data} ${i === 0 && dup ? s.warn : ''} ${i === 0 && errs.ring ? s.err : ''}`} dir="ltr" lang="en" autoCapitalize="characters" autoCorrect="off" spellCheck={false} placeholder="JO-2026-12345"
@@ -295,40 +334,40 @@ export default function BirdForm() {
                 </div>
               )}
               <button type="button" className={s.linkbtn} onClick={() => setRings([...rings, { type: 'national' }])} data-testid="ring-add">+ {t('bird.ring')}</button>
-            </Field>
-            <Field label={t('bird.sex')}>
+            </FormField>
+            <FormField label={t('bird.sex')}>
               <div className={s.seg} role="group" data-testid="sex-seg">
                 {(['cock', 'hen', 'unknown'] as const).map((sx) => <button key={sx} type="button" aria-pressed={(draft.sex || 'unknown') === sx} onClick={() => set({ sex: sx })} data-testid="sex-btn" data-sex={sx}>{t('sex.' + sx)}</button>)}
               </div>
-            </Field>
+            </FormField>
             {!draft.external && (
-              <Field label={t('bird.status')} testid="f-status">
+              <FormField label={t('bird.status')} testid="f-status">
                 <div className={s.chips} role="group">
                   {statuses.map((st) => <button key={st} type="button" aria-pressed={(draft.status === REFERENCE_STATUS ? 'stock' : draft.status) === st} onClick={() => set({ status: st })} data-testid="status-chip" data-status={st}>{statusLabel(st)}</button>)}
                 </div>
-              </Field>
+              </FormField>
             )}
-            <Field label={t('bird.colour')}><input value={draft.colour || ''} onChange={(e) => set({ colour: e.target.value })} placeholder={t('form.colour.placeholder')} list="dl-colours" data-testid="f-colour" /></Field>
-            <Field label={t('bird.hatchDate')} hint={!draft.hatchDate && ringYear ? <><button type="button" className={s.linkbtn} onClick={() => set({ hatchDate: ringYear + '-01-01' })} data-testid="hatch-hint">{t('bird.useRingYear', { year: String(ringYear) })}</button><div className={s.hintline}>{t('bird.approxFromRing')}</div></> : null}>
+            <FormField label={t('bird.colour')}><input value={draft.colour || ''} onChange={(e) => set({ colour: e.target.value })} placeholder={t('form.colour.placeholder')} list="dl-colours" data-testid="f-colour" /></FormField>
+            <FormField label={t('bird.hatchDate')} hint={!draft.hatchDate && ringYear ? <><button type="button" className={s.linkbtn} onClick={() => set({ hatchDate: ringYear + '-01-01' })} data-testid="hatch-hint">{t('bird.useRingYear', { year: String(ringYear) })}</button><div className={s.hintline}>{t('bird.approxFromRing')}</div></> : null}>
               <input type="date" className={s.data} value={draft.hatchDate || ''} onChange={(e) => set({ hatchDate: e.target.value })} data-testid="f-hatch" />
-            </Field>
+            </FormField>
           </div>
           {/* vanilla's remaining fields (bird-form.js:280-285), in the spec's field grammar */}
           <div className={s.card} style={{ marginTop: 14 }} data-testid="more-fields">
             <div className={s.field} style={{ marginTop: 0 }}><label>{t('bird.strain')}</label><input value={draft.strain || ''} onChange={(e) => set({ strain: e.target.value })} list="dl-strains" data-testid="f-strain" /></div>
-            <Field label={t('bird.eyeSign')}><input value={draft.eyeSign || ''} onChange={(e) => set({ eyeSign: e.target.value })} data-testid="f-eye" /></Field>
-            <Field label={t('bird.breeder')}><input value={draft.breeder || ''} onChange={(e) => set({ breeder: e.target.value })} list="dl-breeders" data-testid="f-breeder" /></Field>
-            <Field label={t('bird.owner')}><input value={draft.owner || ''} onChange={(e) => set({ owner: e.target.value })} data-testid="f-owner" /></Field>
-            <Field label={t('bird.acquiredFrom')}><input value={draft.acquiredFrom || ''} onChange={(e) => set({ acquiredFrom: e.target.value })} data-testid="f-acq" /></Field>
-            <Field label={t('bird.acquiredDate')}><input type="date" className={s.data} value={draft.acquiredDate || ''} onChange={(e) => set({ acquiredDate: e.target.value })} data-testid="f-acq-date" /></Field>
+            <FormField label={t('bird.eyeSign')}><input value={draft.eyeSign || ''} onChange={(e) => set({ eyeSign: e.target.value })} data-testid="f-eye" /></FormField>
+            <FormField label={t('bird.breeder')}><input value={draft.breeder || ''} onChange={(e) => set({ breeder: e.target.value })} list="dl-breeders" data-testid="f-breeder" /></FormField>
+            <FormField label={t('bird.owner')}><input value={draft.owner || ''} onChange={(e) => set({ owner: e.target.value })} data-testid="f-owner" /></FormField>
+            <FormField label={t('bird.acquiredFrom')}><input value={draft.acquiredFrom || ''} onChange={(e) => set({ acquiredFrom: e.target.value })} data-testid="f-acq" /></FormField>
+            <FormField label={t('bird.acquiredDate')}><input type="date" className={s.data} value={draft.acquiredDate || ''} onChange={(e) => set({ acquiredDate: e.target.value })} data-testid="f-acq-date" /></FormField>
             <datalist id="dl-strains">{[...new Set(birds.map((b) => b.strain).filter(Boolean))].sort().map((v) => <option key={v} value={v} />)}</datalist>
             <datalist id="dl-colours">{[...new Set(birds.map((b) => b.colour).filter(Boolean))].sort().map((v) => <option key={v} value={v} />)}</datalist>
             <datalist id="dl-breeders">{[...new Set(birds.map((b) => b.breeder).filter(Boolean))].sort().map((v) => <option key={v} value={v} />)}</datalist>
           </div>
 
           <div className={s.seclbl}>{t('tab.pedigree')}</div>
-          <Slot role="sire" b={sire} />
-          <Slot role="dam" b={dam} />
+          <Slot role="sire" b={sire} pool={pool('sire')} err={errs.sire} picker={picker} setPicker={setPicker} all={birds} pickerRef={pickerRef} onPick={pick} onQuickCreate={quickCreate} onClear={clearParent} />
+          <Slot role="dam" b={dam} pool={pool('dam')} err={errs.dam} picker={picker} setPicker={setPicker} all={birds} pickerRef={pickerRef} onPick={pick} onQuickCreate={quickCreate} onClear={clearParent} />
           <div className={s['toggle-card']} data-testid="external-card">
             <div className={s.mid}><div className={s.t}>{t('form.external.title')}</div><p>{t('form.external.body')}</p></div>
             <button type="button" className={s.switch} role="switch" aria-checked={!!draft.external} aria-label={t('form.external.title')} onClick={() => set({ external: !draft.external })} data-testid="external-switch"><span /></button>

@@ -145,6 +145,23 @@ try:
               f"pairs={num('[data-testid=kpi-pairs]')} eggs={num('[data-testid=kpi-eggs]')}")
         rate = round(exp['hatched'] / exp['eggs'] * 100, 1) if exp['eggs'] else 0
         check(f'[README departure 5] …and «نسبة الفقس» is hatched / eggs = {rate}%', num('[data-testid=kpi-rate]').startswith(str(rate)), f"{num('[data-testid=kpi-rate]')} vs {rate}%")
+        # [Phase 6, fidelity audit] the COI card's two columns at >=1100. The spec puts the bars
+        # in a 3fr column and the aside beside them in a 2fr (stats-v1.html CSS). The port wraps
+        # the two halves in an unstyled .main, which made them ONE grid item — so the aside sat
+        # UNDER the bars, in the same column, and the card's designed shape never appeared.
+        pg.set_viewport_size({'width': 1400, 'height': 900}); pg.wait_for_timeout(600)
+        two = pg.evaluate("""() => { const card = document.querySelector('[data-testid=coi-card]');
+            const bars = document.querySelector('[data-testid=coi-bars]');
+            const top = card && card.querySelector('[data-testid=top-coi]');
+            if (!card || !bars || !top) return null;
+            const r = (e) => { const b = e.getBoundingClientRect(); return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width) }; };
+            return { bars: r(bars), aside: r(top.parentElement) }; }""")
+        check('[spec layout] @1400: the COI bars and the aside are two COLUMNS, bars in the wider one',
+              two and abs(two['bars']['y'] - two['aside']['y']) < 60
+              and two['bars']['x'] != two['aside']['x']
+              and two['bars']['w'] > two['aside']['w'], str(two))
+        pg.set_viewport_size({'width': 430, 'height': 900}); pg.wait_for_timeout(400)
+
         check_clearance(pg, check, 'stats')
         shots(pg, 'data')
 

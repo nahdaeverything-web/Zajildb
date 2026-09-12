@@ -10,7 +10,8 @@
     "guards": "node guards/run.mjs",
     "prebuild": "node guards/run.mjs && node scripts/clean-out.mjs",
     "build:harness": "node scripts/build-harness.mjs",
-    "postbuild": "node scripts/build-sw.mjs && node guards/postbuild.mjs"
+    "postbuild": "node scripts/build-sw.mjs && node guards/postbuild.mjs",
+    "gate": "node scripts/gate.mjs"
   },
   "dependencies": {
     "next": "16.3.4",

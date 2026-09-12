@@ -125,8 +125,11 @@
     .tile .n{ font-size:48px; }
     .tile.total .n{ font-size:48px; }
     .coi{ grid-column:1 / -1; display:grid; grid-template-columns:3fr 2fr; gap:0 40px; }
+    /* the port wraps the two halves in an unstyled .main; without this the wrapper is the
+       single grid item and the aside sits UNDER the bars instead of beside them */
+    .coi .main{ display:contents; }
     .coi .head{ grid-column:1 / -1; }
-    .coi .aside{ grid-row:2; border-inline-start:1px solid var(--line); padding-inline-start:40px; }
+    .coi .aside{ grid-row:2; grid-column:2; border-inline-start:1px solid var(--line); padding-inline-start:40px; }
     .coi .aside .coistat{ margin-top:0; padding-top:0; border-top:none; }
     .brow{ grid-template-columns:minmax(120px,auto) 1fr 40px; }
     .brow .trk{ height:26px; }

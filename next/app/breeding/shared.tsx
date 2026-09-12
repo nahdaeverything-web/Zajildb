@@ -7,7 +7,7 @@ import { validatePairSexes } from '@/src/engine/validate.js';
 import { describeRelationship, pairingWarningLevel } from '@/src/engine/relationship.js';
 import { parseRing } from '@/src/engine/rings.js';
 import { todayISO } from '@/src/dates.js';
-import { toast, undoToast, primaryRing, birdLabelText, COIValue, SexChip, pickerModel, createFromQuery } from '@/src/components';
+import { toast, undoToast, primaryRing, birdLabelText, COIValue, SexChip, pickerModel, createFromQuery, useScrim, useScrollLock } from '@/src/components';
 import s from './breeding.module.css';
 
 // Breeding — design/approved/breeding-v1.html, behaviour from js/views/breeding.js.
@@ -72,8 +72,10 @@ export async function deleteEgg(p: Pair, roundId: string, eggId: string) {
 // ── the sheet (spec .scrim/.modal): bottom sheet on the phone, centred at ≥1100; Escape closes ──
 export function Sheet({ title, onClose, children, wide, hint, testid }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; hint?: ReactNode; testid: string }) {
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }; document.addEventListener('keydown', k); return () => document.removeEventListener('keydown', k); }, [onClose]);
+  const scrim = useScrim(onClose);
+  useScrollLock();
   return (
-    <div className={s.scrim} data-testid="scrim">
+    <div className={s.scrim} {...scrim} data-testid="scrim">
       <div className={`${s.modal} ${wide ? s.wide : ''}`} role="dialog" aria-modal="true" aria-label={title} data-testid={testid}>
         <div className={s.mhead}><h2>{title}</h2><button type="button" className={s['icon-btn']} aria-label={t('act.close')} onClick={onClose} data-testid="sheet-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>
         {hint && <p className={s.hintline}>{hint}</p>}

@@ -9,7 +9,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance, check_toast_clear, scroll_to_bottom, wait_toasts_clear
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom, wait_toasts_clear, check_caret
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'races')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -78,6 +78,28 @@ try:
         check('count line «n نتائج · b طيور» from the results', pg.locator('[data-testid=count-line]').inner_text().strip() == f'{n} نتائج · {nb} طيور', pg.locator('[data-testid=count-line]').inner_text())
         dates = h.evaluate("() => new Set([...window.__zajilDb.state.raceResults.values()].map(r => r.date)).size")
         check('rows grouped by date, newest first, one label per date', pg.locator('[data-testid=date-group]').count() == dates and pg.evaluate("() => { const ds = [...document.querySelectorAll('[data-testid=race-tr] td:first-child')].map(td => td.textContent); return ds.join('|'); }") != '', f'{dates} groups')
+        # [Phase 6] ONE label per group, including the undated group. The header used to be
+        # decided by assigning to a variable as the map ran, and that form collapsed every
+        # falsy date to null — so a run of results saved with no date got a «—» header EACH,
+        # and a first row with no date got none at all. Now it is decided from the previous
+        # row, which is also what react-hooks/immutability was asking for.
+        undated = pg.evaluate("""async () => { const db = await window.__zajilDb;
+            const a = db.allBirds()[0], c = db.allBirds()[1] || db.allBirds()[0];
+            const ids = [];
+            for (const [i, who] of [[0, a], [1, c], [2, a]]) {
+                const r = await db.Races.save({ birdId: who.id, raceName: 'undated-' + i, date: '', raceType: 'club' });
+                ids.push(r.id);
+            }
+            return ids; }""")
+        pg.goto(f'{RACES}?season=all', wait_until='load'); pg.wait_for_selector('[data-testid=race-rows]', timeout=8000)
+        pg.wait_for_timeout(700)
+        labels = pg.locator('[data-testid=date-group]').all_inner_texts()
+        check('one date label per GROUP — three results with no date share a single «—» header, not one each',
+              labels.count('—') == 1, f'{labels.count("—")} «—» labels among {len(labels)}')
+        pg.evaluate("""async (ids) => { const db = await window.__zajilDb;
+            for (const id of ids) await db.Races.remove(id); }""", undated)
+        pg.goto(f'{RACES}?season=all', wait_until='load'); pg.wait_for_selector('[data-testid=race-rows]', timeout=8000)
+        pg.wait_for_timeout(400)
         first_pos = h.evaluate("() => { const rs = [...window.__zajilDb.state.raceResults.values()].sort((a,b)=>(b.date||'').localeCompare(a.date||'')); return rs[0].position; }")
         pill = pg.locator('[data-testid=race-row] [data-testid=pos-pill]').first
         check('position pill: a rank ≤10 is the brand pill, no rank is «—»', (pill.inner_text().strip() == str(first_pos)) if first_pos else pill.inner_text().strip() == '—', f'position={first_pos}')
@@ -150,6 +172,8 @@ try:
         check('calculate → distance and velocity from the ENGINE, written into both fields', pg.locator('[data-testid=f-dist]').input_value() == want['km'] and pg.locator('[data-testid=f-vel]').input_value() == str(want['mpm']), want)
         check('…and the green line states both values', f"{want['km']} km" in pg.locator('[data-testid=calc-ok]').inner_text() and f"{want['mpm']} m/min" in pg.locator('[data-testid=calc-ok]').inner_text(), pg.locator('[data-testid=calc-ok]').inner_text()[:80])
         check('…and both coordinate fields are no longer in error', pg.evaluate("() => getComputedStyle(document.querySelector('[data-testid=f-coords] [role=alert]')).display") == 'none')
+        check_caret(pg, check, 'f-name', 'سباق الجفر', 'races sheet')
+        check_caret(pg, check, 'f-org', 'نادي عمّان', 'races sheet')
         pg.fill('[data-testid=f-name]', 'سباق الاختبار'); pg.fill('[data-testid=f-date]', '2026-09-04')
         pg.select_option('[data-testid=f-type]', 'federation'); pg.fill('[data-testid=f-pos]', '3')
         pg.fill('[data-testid=f-fanciers]', '25'); pg.fill('[data-testid=f-birds]', '200'); pg.fill('[data-testid=f-relname]', 'القويرة')

@@ -2,7 +2,15 @@
  * Dropped: the :root, body and universal resets, .phone (the layout frames the page), .tabbar/.rail (Nav.module.css owns the nav),
  * @page (not expressible in a CSS Module). Element rules (a, h1) are scoped under the view root .screen. Port-necessary
  * additions are at the end, each with its reason. See the pedigree commit. */
-.screen{ display:block; }
+/* --gap is the spec's own: the column gap AND the connector stub length (pedigree-tree-v1.html:18).
+ * It lived in the spec's :root, which split-generic.mjs strips along with the rest of the
+ * token block — so the port read it four times and declared it nowhere, and every
+ * `padding-inline-start:var(--gap)` resolved to nothing while every
+ * `calc(-1 * var(--gap))` was invalid. The tree lost its column gaps and its connector
+ * lines. Declared here, on the view root, because it is this screen's geometry and not
+ * an app token; found at Phase 6 by the fidelity audit, and the no-undefined-token guard
+ * now respects module scope so it cannot happen again. */
+.screen{ display:block; --gap:20px; }
 
   .screen a{ color:var(--brand-deep); } .screen a:hover{ color:var(--brand); }
 
@@ -86,9 +94,12 @@
     .icon-btn:hover{ background:var(--brand-tint); }
     .node:hover{ background:var(--brand-tint); border-color:var(--brand); }
     .btn-outline:hover{ background:var(--ink); color:#fff; }
-    .btn-primary:hover, .cta button:hover{ background:var(--brand-deep); }
+    .btn-primary:hover, .cta button:hover, .cta a:hover{ background:var(--brand-deep); }
   }
-  .icon-btn:focus-visible, .node:focus-visible, .btn:focus-visible, .cta button:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
+  /* `.cta a` as well as `.cta button`: the spec draws the certificate CTA as a button and
+     the port renders it as a navigation, which is an anchor — so a button-only selector
+     matched nothing and the spec's focus ring never appeared (measured at Phase 6). */
+  .icon-btn:focus-visible, .node:focus-visible, .btn:focus-visible, .cta button:focus-visible, .cta a:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
 
   /* Part 3 — tablet */
   @media (min-width:701px){

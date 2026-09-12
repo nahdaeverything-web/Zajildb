@@ -20,7 +20,11 @@
 import json, os, sys
 from playwright.sync_api import sync_playwright
 
-HARNESS = os.environ.get('ZAJIL_URL', 'http://127.0.0.1:8123/test-harness.html')
+import sys as _sys
+_sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'sync'))
+from _serve import serve as _serve            # noqa: E402
+
+_srv, HARNESS = (None, os.environ['ZAJIL_URL']) if os.environ.get('ZAJIL_URL') else _serve()
 ROOT = HARNESS.replace('test-harness.html', '')
 URL = os.environ.get('ZAJIL_LIVE_SUPABASE_URL', '')
 KEY = os.environ.get('ZAJIL_LIVE_PUBLISHABLE_KEY', '')
@@ -142,6 +146,9 @@ with sync_playwright() as p:
 
 print(f'\n{ok} passed, {fail} failed')
 sys.exit(1 if fail else 0)
+
+if _srv:
+    _srv.terminate()
 
 print(f'\n{ok} passed, {fail} failed')
 raise SystemExit(1 if fail else 0)

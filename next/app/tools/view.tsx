@@ -65,7 +65,7 @@ export default function ToolsView() {
           <section key={g.id} className={s.group} id={g.id} data-testid="group">
             <div className={s.gh}><h2>{t(g.title)}</h2><span className={s.c}>{t(g.sub)}</span></div>
             <div className={s.cards}>
-              {g.id === 'g-settings' && <><SettingsCard settings={settings} /><SyncCard settings={settings} /><LoftCard loft={loft} /></>}
+              {g.id === 'g-settings' && <><SettingsCard settings={settings} /><SyncCard settings={settings} /><LoftCard key={loft?.id || 'none'} loft={loft} /></>}
               {g.id === 'g-data' && <><DuplicatesCard birds={birds} /><ExamplesCard /><BackupCard settings={settings} /></>}
               {g.id === 'g-adv' && <><ScannerCard settings={settings} /><AboutCard version={version} /><DevCard /></>}
             </div>

@@ -26,6 +26,10 @@ try {
   if (code === 0) code = spawnSync('node', ['guards/postbuild.mjs'], { stdio: 'inherit', env: { ...process.env, NEXT_PUBLIC_HARNESS: '1' } }).status ?? 1;
 } finally {
   rmSync(DST, { recursive: true, force: true });
+  // …and the type validator Next generated for it, which now names a route that is gone.
+  // Left behind, it makes a bare `npx tsc --noEmit` report two errors about app/test-harness
+  // that no source file can explain. A normal build regenerates it.
+  rmSync('.next/types/validator.ts', { force: true });
   writeFileSync(GLOBALS, stub);                               // the shipped stub is back
 }
 process.exit(code);

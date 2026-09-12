@@ -38,6 +38,21 @@ async function loadExample(file: string) {
   toast(t('bird.exampleLoaded', { n: counts.birds }), { timeout: 7000, kind: 'info' });
 }
 
+// Declared at module scope deliberately, like every other component in the app. These five
+// are used once per bird in BOTH the phone list and the desktop table, so a render-body
+// declaration remounted 5 x 38 x 2 subtrees on every keystroke in the search box.
+//
+// They are also why a clean `npx eslint` is not proof on its own: react-hooks/static-components
+// reports at the USE site and does not see a component used only inside a .map() callback, so
+// this file reported zero problems while carrying the same defect the other seven were fixed
+// for. Found by the Phase 6 adversarial review, not by the linter.
+const Plate = ({ ring }: { ring: string }) => <span className={s.plate}><span className={s.yr}>{ring.split(' ')[1] ?? ''}</span><span className={s.no}>{ring}</span></span>;
+const Sx = ({ k }: { k: Row['sexK'] }) => <span className={`${s.sx} ${s[k]}`} data-sex={k === 'm' ? 'cock' : k === 'f' ? 'hen' : 'unknown'} aria-label={t(sexKey[k])}><span className={s.g}>{sexIcon[k]}</span>{t(sexKey[k])}</span>;
+const St = ({ r }: { r: Row }) => <span className={`${s.st} ${s[r.stK]}`} data-testid="status-pill">{r.stLabel}</span>;
+// birds.js:102 chip-ext — the external marker, ruled in at 4A acceptance (kit over spec: reference birds are a real feature)
+const Ext = () => <span className={s.ext} data-testid="ext-tag">{t('bird.externalShort')}</span>;
+const Res = ({ r }: { r: Row }) => r.last ? <span className={s.res}><span className={`${s.pl} ${r.last.pl <= 10 ? s.top : ''}`}>{fmtNum(r.last.pl, { group: false })}</span><span className={s.w}>{r.last.w}</span></span> : <span className={`${s.res} ${s.none}`}>{t('race.noneShort')}</span>;
+
 export default function BirdsView() {
   // the desktop table row navigates through the router, like every Link in the app: a raw
   // `location.href = '/bird?id='` is not rewritten by basePath and does not resolve on a
@@ -84,14 +99,8 @@ export default function BirdsView() {
   const empty = booted && rows.length === 0;
   const onSort = (k: SortKey) => { if (k === sortK) setDesc(!desc); else { setSortK(k); setDesc(k === 'year' || k === 'res'); } };
   const pill = (label: string, active: boolean, onClick: () => void, extra: Record<string, string> = {}) => (
-    <button key={label + JSON.stringify(extra)} type="button" className={`${s.fp} ${active ? s.on : ''}`} onClick={onClick} data-testid="filter-pill" {...extra}>{label}</button>
+    <button key={label + JSON.stringify(extra)} type="button" className={`${s.fp} ${active ? s.on : ''}`} aria-pressed={active} onClick={onClick} data-testid="filter-pill" {...extra}>{label}</button>
   );
-  const Plate = ({ ring }: { ring: string }) => <span className={s.plate}><span className={s.yr}>{ring.split(' ')[1] ?? ''}</span><span className={s.no}>{ring}</span></span>;
-  const Sx = ({ k }: { k: Row['sexK'] }) => <span className={`${s.sx} ${s[k]}`} data-sex={k === 'm' ? 'cock' : k === 'f' ? 'hen' : 'unknown'} aria-label={t(sexKey[k])}><span className={s.g}>{sexIcon[k]}</span>{t(sexKey[k])}</span>;
-  const St = ({ r }: { r: Row }) => <span className={`${s.st} ${s[r.stK]}`} data-testid="status-pill">{r.stLabel}</span>;
-  // birds.js:102 chip-ext — the external marker, ruled in at 4A acceptance (kit over spec: reference birds are a real feature)
-  const Ext = () => <span className={s.ext} data-testid="ext-tag">{t('bird.externalShort')}</span>;
-  const Res = ({ r }: { r: Row }) => r.last ? <span className={s.res}><span className={`${s.pl} ${r.last.pl <= 10 ? s.top : ''}`}>{fmtNum(r.last.pl, { group: false })}</span><span className={s.w}>{r.last.w}</span></span> : <span className={`${s.res} ${s.none}`}>{t('race.noneShort')}</span>;
 
   return (
     <section className={s.screen}>
@@ -107,6 +116,7 @@ export default function BirdsView() {
           )}
         </div>
       </div>
+      <SyncRow />
       {!booted ? null : empty ? (
         <Empty title={t('empty.firstRun.cta')} body={t('empty.loft.body')}
           cta={{ label: t('empty.firstRun.cta'), href: '/bird/new', testid: 'empty-cta' }}
@@ -115,15 +125,18 @@ export default function BirdsView() {
       ) : (
         <div>
           <div className={s.filters} role="group">
+            {/* A status/sex pill and a year pill are ANDed, as vanilla ANDs every filter
+                (js/views/birds.js:35-40) and as the spec draws it, lighting both. The handlers
+                used to clear each other, so «إناث» + «2024» could not be reached at all.
+                «الكل» stays the reset, and each pill toggles itself off. */}
             {pill(t('common.all'), filter === 'all' && !year, () => { setFilter('all'); setYear(null); }, { 'data-filter': 'all' })}
-            {pill(t('filter.males'), filter === 'm', () => { setFilter('m'); setYear(null); }, { 'data-filter': 'm' })}
-            {pill(t('filter.females'), filter === 'f', () => { setFilter('f'); setYear(null); }, { 'data-filter': 'f' })}
-            {pill(statusLabel('race team'), filter === 'race', () => { setFilter('race'); setYear(null); }, { 'data-filter': 'race' })}
-            {pill(statusLabel('breeder'), filter === 'breed', () => { setFilter('breed'); setYear(null); }, { 'data-filter': 'breed' })}
-            {pill(t('filter.externalOnly'), filter === 'ext', () => { setFilter('ext'); setYear(null); }, { 'data-filter': 'ext' })}
-            {years.map((y) => pill(y, year === y, () => { setYear(year === y ? null : y); setFilter('all'); }, { 'data-year': y }))}
+            {pill(t('filter.males'), filter === 'm', () => setFilter(filter === 'm' ? 'all' : 'm'), { 'data-filter': 'm' })}
+            {pill(t('filter.females'), filter === 'f', () => setFilter(filter === 'f' ? 'all' : 'f'), { 'data-filter': 'f' })}
+            {pill(statusLabel('race team'), filter === 'race', () => setFilter(filter === 'race' ? 'all' : 'race'), { 'data-filter': 'race' })}
+            {pill(statusLabel('breeder'), filter === 'breed', () => setFilter(filter === 'breed' ? 'all' : 'breed'), { 'data-filter': 'breed' })}
+            {pill(t('filter.externalOnly'), filter === 'ext', () => setFilter(filter === 'ext' ? 'all' : 'ext'), { 'data-filter': 'ext' })}
+            {years.map((y) => pill(y, year === y, () => setYear(year === y ? null : y), { 'data-year': y }))}
           </div>
-          <SyncRow />
           <div className={s.list} data-testid="bird-list">
             {groups.length === 0 ? <div className={s.yearlbl} data-testid="year-label"><span className={s.y}>{t('loft.noResults')}</span></div> : groups.map(([y, rs]) => (
               <div key={y}>
@@ -141,7 +154,9 @@ export default function BirdsView() {
             <table>
               <thead><tr>
                 {([['ring', 'col.ring'], ['name', 'bird.name'], ['sex', 'bird.sex'], ['status', 'bird.status'], ['year', 'col.generation'], ['res', 'col.lastResult']] as Array<[SortKey, string]>).map(([k, key]) => (
-                  <th key={k} className={sortK === k ? s.on : ''} onClick={() => onSort(k)} data-testid="th-sort" data-key={k} aria-sort={sortK === k ? (desc ? 'descending' : 'ascending') : 'none'}><span>{t(key)}</span></th>
+                  <th key={k} className={`${sortK === k ? s.on : ''} ${sortK === k && desc ? s.desc : ''}`} onClick={() => onSort(k)} data-testid="th-sort" data-key={k} aria-sort={sortK === k ? (desc ? 'descending' : 'ascending') : 'none'}>
+                    <span className={s.sort}>{t(key)}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6" /></svg></span>
+                  </th>
                 ))}
               </tr></thead>
               <tbody>
