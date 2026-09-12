@@ -1,6 +1,1 @@
-{
-  "bird-profile-v1.html": {
-    "صورة": "photo-tile aria-label: the port labels each tile with vanilla's photo.{subtype} (الجسم/العين/الجناح/أخرى) rather than the generic «صورة». Recorded.",
-    "التربية الداخلية 3.1% من خمسة أجيال · أربعة مكتملة": "pedigree-tab COI line: the spec spells the numbers out and closes with a count of complete generations; the port renders profile.coiLine with the engine's depth and vanilla's completeness % (ped.completeness), and adds vanilla's AVK line. Awaiting ruling."
-  }
-}
+{}

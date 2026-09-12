@@ -191,3 +191,14 @@
 .reasons b{ color:var(--ink); font-weight:800; }
 /* date-grouped phone rows carry the group label; the desktop table shows the date in its own column */
 .list{ display:block; }
+
+/* ruling 3 (4C acceptance): the season control the log is filtered by. races-v1 draws no such control —
+ * this is breeding-v1's .seasonrow, the kit's own grammar for exactly this, so the two screens match. */
+.seasonrow{ display:flex; align-items:center; gap:10px; margin-top:12px; }
+.seasonrow .k{ font-size:14px; font-weight:800; color:var(--ink-2); }
+.seasonrow .selwrap{ position:relative; display:inline-block; }
+.seasonrow select{ border:2px solid var(--line); border-radius:12px; background:var(--page); color:var(--ink); min-height:44px; padding:0 40px 0 16px;
+                   font-size:15px; font-weight:800; font-family:var(--f); -webkit-appearance:none; appearance:none; cursor:pointer; outline:none; }
+.seasonrow select:focus{ border-color:var(--brand); background:#fff; }
+.seasonrow .selwrap::after{ content:""; position:absolute; inset-inline-end:16px; top:50%; width:8px; height:8px; border-inline-end:2.4px solid var(--ink-3);
+                            border-bottom:2.4px solid var(--ink-3); transform:translateY(-70%) rotate(45deg); pointer-events:none; }

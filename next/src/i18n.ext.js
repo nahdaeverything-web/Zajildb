@@ -78,11 +78,19 @@ export const EXT = {
   'profile.verified.body':    { ar: 'في زاجل منذ {since}. كل تعديل محفوظ بتاريخه وجهازه، والشهادة تُبنى من السجل نفسه.', en: 'In Zajil since {since}. Every edit is kept with its date and device, and the certificate is built from this very record.' },
   'profile.basics':           { ar: 'البيانات الأساسية', en: 'Basic details' },
   'profile.added':            { ar: 'أُضيف', en: 'Added' },
-  'profile.coiLine':          { ar: 'التربية الداخلية {pct} من {n} أجيال · اكتمال الشجرة {c}', en: 'Inbreeding {pct} over {n} generations · pedigree {c} complete' },
+  // Ruling 7 (4C acceptance): phrased as the vanilla dictionary phrases COI elsewhere —
+  // ped.coiAtN «معامل التربية الداخلية حتى {n} أجيال» and ped.completeness «اكتمال الشجرة».
+  'profile.coiLine':          { ar: 'معامل التربية الداخلية حتى {n} أجيال: {pct} · اكتمال الشجرة {c}', en: 'Pedigree COI at {n} generations: {pct} · pedigree {c} complete' },
   'profile.fullTree':         { ar: 'شجرة النسب الكاملة', en: 'Full pedigree tree' },
   'race.best':                { ar: 'أفضل نتيجة', en: 'Best result' },
   'race.kmMpm':               { ar: '{km} km · {mpm} m/min', en: '{km} km · {mpm} m/min' },
   'col.release':              { ar: 'الإطلاق', en: 'Release' },
+  // Ruling 7 (4C acceptance): the app's own word for a single photo — the gallery's heading
+  // stays vanilla's bird.photos «الصور», and each tile is labelled with this.
+  'media.photo':              { ar: 'صورة', en: 'Photo' },
+  // Ruling 7 (4C acceptance): the app's own word for a single photo — the gallery's heading
+  // stays vanilla's bird.photos «الصور», and each tile is labelled with this.
+  'media.photo':              { ar: 'صورة', en: 'Photo' },
   'health.next':              { ar: 'التطعيم القادم', en: 'Next vaccination' },
   'health.next.estimate':     { ar: 'تقديري — سنة من آخر تطعيم', en: 'Estimate — one year after the last vaccination' },
 
@@ -162,6 +170,8 @@ export const EXT = {
   // design/README.md (it fixes two silent failures: the required bird and unparseable coordinates).
   'race.countLine':           { ar: '{n} نتائج · {b} طيور', en: '{n} results · {b} birds' },
   'race.noneThisSeason':      { ar: 'لا نتائج هذا الموسم', en: 'No results this season' },
+  // Ruling 3 (4C acceptance): the log is filtered to the season the header states; this is the way out of that filter.
+  'race.allSeasons':          { ar: 'كل المواسم', en: 'All seasons' },
   'race.empty.body':          { ar: 'سجّل أول نتيجة لهذا الموسم من «نتيجة جديدة».', en: 'Record the first result of the season from “New result”.' },
   'race.velocity.sub':        { ar: 'أدخل الوقت والمسافة، أو احسب المسافة والسرعة من الإحداثيات.', en: 'Enter the time and distance, or compute both from the coordinates.' },
   'race.calcDone':            { ar: 'حُسبت المسافة {km} والسرعة {mpm} من الإحداثيات ووقتَي الإطلاق والوصول.', en: 'Distance {km} and velocity {mpm} computed from the coordinates and the release and arrival times.' },

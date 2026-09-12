@@ -60,6 +60,25 @@ try:
         check('undo action fires and the undo toast is dismissed', pg.locator('[data-testid=toast][data-kind=success]').count() == 1 and pg.locator('[data-testid=toast-action]').count() == 0)
         pg.wait_for_timeout(4500)
 
+        # [ruling 6, 4C acceptance] at most two toasts are visible; a third drops the oldest.
+        # §02 draws a stack and vanilla appends without a cap, but the clearance proved under
+        # ruling C holds at two — a third reaches into the last row of a short list.
+        pg.click('[data-testid=fire-toast-success]'); pg.wait_for_timeout(80)
+        pg.click('[data-testid=fire-toast-error]'); pg.wait_for_timeout(80)
+        check('[ruling 6] two toasts stack, as the spec draws them', pg.locator('[data-testid=toast]').count() == 2)
+        pg.click('[data-testid=fire-toast-info]'); pg.wait_for_timeout(120)
+        kinds = pg.locator('[data-testid=toast]').evaluate_all("els => els.map(e => e.dataset.kind)")
+        check('[ruling 6] a third replaces the OLDEST — never three at once', len(kinds) == 2 and kinds == ['error', 'info'], kinds)
+        band = pg.evaluate("""() => { const ts = [...document.querySelectorAll('[data-testid=toast]')];
+            const top = Math.min(...ts.map(t => t.getBoundingClientRect().top));
+            const nav = [...document.querySelectorAll('nav')].find(n => getComputedStyle(n).display !== 'none' && /tabbar/.test(n.className));
+            return { height: Math.round(Math.max(...ts.map(t => t.getBoundingClientRect().bottom)) - top), gap: nav ? Math.round(nav.getBoundingClientRect().top - Math.max(...ts.map(t => t.getBoundingClientRect().bottom))) : null }; }""")
+        # the bound is not a guess: every screen reserves at least the spec's panel padding (170px) plus the
+        # layout's own (84px) under its last element, so a capped stack must be shorter than that to stay clear.
+        check('[ruling 6] …the capped stack is shorter than the clearance every screen reserves (254px), and still seats at 12px',
+              band['height'] < 254 and 11 <= band['gap'] <= 13, band)
+        pg.wait_for_timeout(6500)
+
         # §03 dialogs: resolve on cancel / confirm / Escape; focus trapped
         pg.click('[data-testid=open-dlg-simple]')
         check('simple dialog opens (role=dialog, aria-modal)', pg.locator('[data-testid=dialog][role=dialog][aria-modal=true]').is_visible())

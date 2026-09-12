@@ -244,7 +244,7 @@ export default function BirdView() {
                     <div key={m.id} className={s.phwrap} data-testid="media-tile">
                       {!m.hasBlob ? <MediaPlaceholder kind={m.kind === 'photo' ? 'photo' : 'file'} filename={m.name} />
                         : !urls[m.id] ? <div className={s.ph} />
-                        : m.kind === 'photo' ? <div className={`${s.ph} ${s.img}`} data-testid="media-photo"><img src={urls[m.id]} alt={t('photo.' + (m.subtype || 'other'))} loading="lazy" /><span>{m.name}</span></div>
+                        : m.kind === 'photo' ? <div className={`${s.ph} ${s.img}`} role="img" aria-label={`${t('media.photo')} — ${t('photo.' + (m.subtype || 'other'))}`} data-testid="media-photo"><img src={urls[m.id]} alt={`${t('media.photo')} — ${t('photo.' + (m.subtype || 'other'))}`} loading="lazy" /><span>{m.name}</span></div>
                         : <a className={`${s.ph} ${s.img}`} href={urls[m.id]} download={m.name || 'document'} data-testid="media-file">📄<span>{m.name || 'document'}</span></a>}
                       <button type="button" className={s.del} aria-label={t('act.delete')} onClick={() => delMedia(m)} data-testid="media-delete">✕</button>
                     </div>

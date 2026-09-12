@@ -23,11 +23,22 @@ const listeners = new Set<() => void>();
 const set = (patch: Partial<State>) => { state = { ...state, ...patch, version: state.version + 1 }; for (const l of listeners) l(); };
 let seq = 0;
 
+/**
+ * At most two toasts are visible; a third drops the oldest (ruling 6, 4C
+ * acceptance). The spec's stack is a column and vanilla appends without a cap,
+ * but the measured clearance under ruling C holds at two, and three Arabic
+ * toasts at once is not a scenario a fancier meets — the third would reach into
+ * the last row of a short list. The dropped toast's timer is harmless: it fires
+ * on an id that is already gone.
+ */
+export const MAX_TOASTS = 2;
+
 export function toast(msg: string, opts: { timeout?: number; actionLabel?: string; onAction?: () => void; kind?: ToastKind } = {}) {
   const kind = opts.kind ?? 'plain';
   const id = ++seq;
   const timeout = opts.timeout ?? (kind === 'error' ? 6000 : 4000);
-  set({ toasts: [...state.toasts, { id, msg, kind, actionLabel: opts.actionLabel, onAction: opts.onAction }] });
+  const next = [...state.toasts, { id, msg, kind, actionLabel: opts.actionLabel, onAction: opts.onAction }];
+  set({ toasts: next.slice(-MAX_TOASTS) });
   if (timeout) setTimeout(() => dismissToast(id), timeout);
   return id;
 }

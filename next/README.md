@@ -35,6 +35,35 @@ until a cutover ruling.
   now carries `data-bottom-chrome`, and `ShellHost` seats the stack 12px above
   the highest one it measures — live, so it stays right across breakpoints and
   across a navigation that happens while a toast is up.
+- **Rulings at 4C acceptance** (the addendum rulings C and D are above):
+  1. **entry_ergonomics#1 is RETIRED, not forced.** It asserts that the rings
+     section leads the bird form; the approved `add-edit-bird-v2.html` orders
+     the basics card photo → name → ring. The spec is the reason, and it wins.
+     Every other assertion of that suite is mapped in `bird_form.py`.
+  2. **Coordinates**: vanilla's separator tolerance is kept (it accepts
+     «29.5321 35.0063 N») AND the spec's ±90 / ±180 range check is applied on
+     top — an impossible coordinate errors rather than producing a nonsense
+     distance.
+  3. **The races log is filtered to the selected season**, and the season
+     control offers «كل المواسم». A header stating a season above unfiltered
+     rows was the quiet mismatch. The FCI checker is NOT filtered — it answers
+     «is this bird eligible», not «this season» — and the control is hidden on
+     that tab.
+  4. **The health banner** derives from the most recent vaccination of any
+     scope: it is the last vaccination that matters, whoever it covered.
+  5. **Interim mappings, accepted and recorded**: the stats race card counts a
+     season's *meetings* as its distinct race names, and the breeding card
+     matches pairs by `season === String(seasonStart())` — the stored plain
+     year. Both resolve when a real season field lands after the port.
+  6. **The toast stack is capped at two visible**; a third replaces the oldest
+     (`MAX_TOASTS` in `src/components/shell.ts`). §02 draws a stack and vanilla
+     appends without a cap, but the clearance ruling C measured holds at two.
+  7. **The pending-string category is empty.** The photo-tile label became a
+     key in the app's own voice (`media.photo`), and the pedigree-tab COI line
+     is now phrased as the vanilla dictionary phrases COI elsewhere
+     (`ped.coiAtN` + `ped.completeness`), so the spec's spelled-out variant is
+     ruled rather than pending.
+
 - **Rulings at 4A acceptance** (each recorded where it applies):
   `nav.breeding` is a deliberate rename to «التزاوج» (i18n.ext.js overrides
   vanilla's «التربية»; every spec and the kit say so) · ONE season rule

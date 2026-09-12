@@ -52,10 +52,29 @@ try:
 
         # ── LOG on the sample data [core_flows#9: 12 results] ──
         load(h, './sample-data.json')
-        pg.goto(RACES, wait_until='load'); pg.wait_for_selector('[data-testid=race-row]', timeout=6000)
+        pg.goto(RACES, wait_until='load'); pg.wait_for_selector('[data-testid=season-row]', timeout=6000)
         n = h.evaluate("() => window.__zajilDb.state.raceResults.size")
         nb = h.evaluate("() => new Set([...window.__zajilDb.state.raceResults.values()].map(r => r.birdId)).size")
-        check(f'[core_flows#9] the log lists every result ({n})', pg.locator('[data-testid=race-row]').count() == n == 12, f'{pg.locator("[data-testid=race-row]").count()} rows')
+        # [ruling 3] the log shows the season the header states — nothing else
+        seasons = h.evaluate("""() => { const s = new Map(); for (const r of window.__zajilDb.state.raceResults.values()) {
+            if (!r.date) continue; const y = +r.date.slice(0,4), m = +r.date.slice(5,7); const k = String(m >= 7 ? y : y - 1);
+            s.set(k, (s.get(k) || 0) + 1); } const now = new Date(); const cur = String(now.getMonth() + 1 >= 7 ? now.getFullYear() : now.getFullYear() - 1);
+            return { bySeason: [...s.entries()].sort((a, b) => b[0].localeCompare(a[0])), current: cur, inCurrent: s.get(cur) || 0 }; }""")
+        check('[ruling 3] the header states a season and the log obeys it — not every row under a season heading',
+              pg.locator('[data-testid=race-row]').count() == seasons['inCurrent'] and pg.locator('[data-testid=season-select]').input_value() == seasons['current'],
+              f"{pg.locator('[data-testid=race-row]').count()} rows in season {seasons['current']} of {n} total")
+        check('[ruling 3] the season control offers every season on record plus «كل المواسم»',
+              [x.strip() for x in pg.locator('[data-testid=season-select] option').all_inner_texts()][-1] == 'كل المواسم'
+              and pg.locator('[data-testid=season-select] option').count() == len(set([k for k, _ in seasons['bySeason']]) | {seasons['current']}) + 1,
+              [x.strip() for x in pg.locator('[data-testid=season-select] option').all_inner_texts()])
+        pg.select_option('[data-testid=season-select]', 'all'); pg.wait_for_timeout(250)
+        check('[ruling 3] …and the eyebrow says «كل المواسم» when that is what is shown', 'كل المواسم' in pg.locator('[data-testid=season-line]').inner_text())
+        check(f'[core_flows#9] «كل المواسم» lists every result ({n})', pg.locator('[data-testid=race-row]').count() == n == 12, f'{pg.locator("[data-testid=race-row]").count()} rows')
+        older = seasons['bySeason'][0][0] if seasons['bySeason'][0][0] != seasons['current'] else seasons['bySeason'][1][0]
+        want_older = dict(seasons['bySeason'])[older]
+        pg.select_option('[data-testid=season-select]', older); pg.wait_for_timeout(250)
+        check(f'[ruling 3] picking season {older} shows exactly its {want_older} results', pg.locator('[data-testid=race-row]').count() == want_older, f"{pg.locator('[data-testid=race-row]').count()} rows")
+        pg.select_option('[data-testid=season-select]', 'all'); pg.wait_for_timeout(250)
         check('count line «n نتائج · b طيور» from the results', pg.locator('[data-testid=count-line]').inner_text().strip() == f'{n} نتائج · {nb} طيور', pg.locator('[data-testid=count-line]').inner_text())
         dates = h.evaluate("() => new Set([...window.__zajilDb.state.raceResults.values()].map(r => r.date)).size")
         check('rows grouped by date, newest first, one label per date', pg.locator('[data-testid=date-group]').count() == dates and pg.evaluate("() => { const ds = [...document.querySelectorAll('[data-testid=race-tr] td:first-child')].map(td => td.textContent); return ds.join('|'); }") != '', f'{dates} groups')
@@ -83,12 +102,15 @@ try:
         check('qualified birds are the tinted cards; the rule line states 20 / 150', pg.locator('[data-testid=fci-card][data-qualified="1"]').count() == exp['q'] and '20' in pg.locator('[data-testid=fci-rule]').inner_text() and '150' in pg.locator('[data-testid=fci-rule]').inner_text(), f"{exp['q']} qualified")
         check('every non-qualifying result states its engine reason under the card', pg.locator('[data-testid=fci-why] div').count() == exp['why'] and exp['why'] > 0, f"{exp['why']} reasons")
         check('a bird without an FCI ring shows the red ✗ chip', pg.locator('[data-testid=fci-ring][data-on="0"]').count() >= 1)
+        # the checker answers «is this bird eligible», not «this season» — it reads every result, and hides the season control
+        check('[ruling 3] the FCI tab is NOT season-filtered, and the season control is hidden on it', pg.locator('[data-testid=season-row]').count() == 0 and exp['n'] >= 5)
         shots(pg, 'fci')
         check_clearance(pg, check, 'races · FCI')
         pg.set_viewport_size({'width': 1400, 'height': 900}); pg.wait_for_timeout(200)
         check('desktop: the FCI table replaces the cards', pg.locator('[data-testid=fci-table]').is_visible() and pg.locator('[data-testid=fci-tr]').count() == exp['n'] and not pg.locator('[data-testid=fci-cards]').is_visible())
         pg.set_viewport_size({'width': 430, 'height': 900}); pg.wait_for_timeout(200)
         pg.click('[data-testid=tab-log]'); pg.wait_for_timeout(150)
+        pg.select_option('[data-testid=season-select]', 'all'); pg.wait_for_timeout(250)
 
         # ── the result sheet (spec data-v="modal") ──
         pg.click('[data-testid=new-result-fab]'); pg.wait_for_selector('[data-testid=result-sheet]')
@@ -163,8 +185,9 @@ try:
         # ── the teaching loft [teaching_loft#10: 17 results] ──
         wipe(h); load(h, './example-loft-large.json')
         n2 = h.evaluate("() => window.__zajilDb.state.raceResults.size")
-        pg.goto(RACES, wait_until='load'); pg.wait_for_selector('[data-testid=race-row]')
-        check(f'[teaching_loft#10] the teaching loft\'s results all render ({n2})', pg.locator('[data-testid=race-row]').count() == n2 == 17, f'{pg.locator("[data-testid=race-row]").count()} rows')
+        pg.goto(RACES, wait_until='load'); pg.wait_for_selector('[data-testid=season-row]')
+        pg.select_option('[data-testid=season-select]', 'all'); pg.wait_for_timeout(300)
+        check(f'[teaching_loft#10] the teaching loft\'s results all render under «كل المواسم» ({n2})', pg.locator('[data-testid=race-row]').count() == n2 == 17, f'{pg.locator("[data-testid=race-row]").count()} rows')
         pg.goto(f'{RACES}?tab=fci', wait_until='load'); pg.wait_for_selector('[data-testid=fci-card]')
         check('[teaching_loft#11] ?tab=fci opens the checker and it lists ≥5 birds', pg.locator('[data-testid=tab-fci]').get_attribute('aria-selected') == 'true' and pg.locator('[data-testid=fci-card]').count() >= 5, pg.locator('[data-testid=fci-card]').count())
         check('zero page errors', not errs, errs)

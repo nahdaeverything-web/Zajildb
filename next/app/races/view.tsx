@@ -7,7 +7,7 @@ import { useZajilStore, selectRaces, selectBirds } from '@/src/db/react';
 import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { resultQualifies, birdEligibility, FCI_MIN_FANCIERS, FCI_MIN_BIRDS } from '@/src/engine/fci.js';
 import { velocityMPM, haversineMetres } from '@/src/engine/velocity.js';
-import { SyncRow, Loading, toast, undoToast, primaryRing, seasonLabel, pickerModel, SexChip, Tpl } from '@/src/components';
+import { SyncRow, Loading, toast, undoToast, primaryRing, seasonLabel, seasonStart, pickerModel, SexChip, Tpl } from '@/src/components';
 import s from './races.module.css';
 
 // Races — design/approved/races-v1.html, behaviour from js/views/races.js.
@@ -44,19 +44,23 @@ export default function RacesView() {
   const [tab, setTab] = useState<'log' | 'fci'>(params.get('tab') === 'fci' ? 'fci' : 'log');
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [sheet, setSheet] = useState<{ editing: Race | null } | null>(null);
+  // ruling 3: the log shows the season the header states. 'all' is the way out of that filter.
+  const [season, setSeason] = useState<string>(params.get('season') || String(seasonStart()));
   useEffect(() => { db.initDB().then(() => setBooted(true)); }, []);
   const races = useZajilStore(selectRaces) as Race[];
   const birds = useZajilStore(selectBirds) as Bird[];
   if (!booted) return <section className={s.screen}><Loading /></section>;
 
-  const results = [...races].sort((a, b) => (b.date || '').localeCompare(a.date || ''));   // races.js:48
+  const sorted = [...races].sort((a, b) => (b.date || '').localeCompare(a.date || ''));   // races.js:48
+  const seasons = [...new Set(sorted.map((r) => (r.date ? seasonStart(r.date) : 0)).filter(Boolean))].sort((a, b) => b - a).map(String);
+  const results = season === 'all' ? sorted : sorted.filter((r) => r.date && String(seasonStart(r.date)) === season);
   const empty = results.length === 0;
   const loft = db.currentLoft() as { name?: string } | null;
   const nBirds = new Set(results.map((r) => r.birdId)).size;
 
   // races.js:88 — a bird appears in the checker once it has an FCI ring or any result
-  const fciRows = birds.map((b) => ({ b, e: birdEligibility(b, results.filter((r) => r.birdId === b.id)) as { hasRing: boolean; qualifyingResults: Race[]; nonQualifying: Array<{ result: Race; reasons: string[] }> } }))
-    .filter(({ b, e }) => e.hasRing || results.some((r) => r.birdId === b.id))
+  const fciRows = birds.map((b) => ({ b, e: birdEligibility(b, sorted.filter((r) => r.birdId === b.id)) as { hasRing: boolean; qualifyingResults: Race[]; nonQualifying: Array<{ result: Race; reasons: string[] }> } }))
+    .filter(({ b, e }) => e.hasRing || sorted.some((r) => r.birdId === b.id))
     .sort((x, y) => (y.e.hasRing ? 1 : 0) - (x.e.hasRing ? 1 : 0) || y.e.qualifyingResults.length - x.e.qualifyingResults.length);
 
   async function del(r: Race) {
@@ -85,9 +89,19 @@ export default function RacesView() {
     <section className={s.screen}>
       <header className={s.lofthead}><div className={s.in}><div className={s.headrow}>
         <div>
-          <div className={s.season}>{seasonLabel()} · {loft?.name || t('loft.unnamed')}</div>
+          <div className={s.season} data-testid="season-line">{season === 'all' ? t('race.allSeasons') : seasonLabel(`${season}-07-01`)} · {loft?.name || t('loft.unnamed')}</div>
           <h1>{t('nav.races')}</h1>
           <div className={s.count} data-testid="count-line">{empty ? t('race.noneThisSeason') : t('race.countLine', { n: fmtNum(results.length), b: fmtNum(nBirds) })}</div>
+          {tab === 'log' && (
+            <div className={s.seasonrow} data-testid="season-row">
+              <span className={s.k}>{t('br.season')}:</span>
+              <span className={s.selwrap}><select value={season} onChange={(e) => setSeason(e.target.value)} aria-label={t('br.season')} data-testid="season-select">
+                <option value={String(seasonStart())}>{seasonLabel()}</option>
+                {seasons.filter((y) => y !== String(seasonStart())).map((y) => <option key={y} value={y}>{seasonLabel(`${y}-07-01`)}</option>)}
+                <option value="all">{t('race.allSeasons')}</option>
+              </select></span>
+            </div>
+          )}
         </div>
         <button type="button" className={s['btn-add']} onClick={() => setSheet({ editing: null })} data-testid="new-result-desktop"><Plus />{t('race.new')}</button>
       </div></div></header>
