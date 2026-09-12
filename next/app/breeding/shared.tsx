@@ -5,9 +5,9 @@ import * as db from '@/src/db.js';
 import { t, fmtNum, fmtDate, fmtPercent } from '@/src/i18n.ext.js';
 import { validatePairSexes } from '@/src/engine/validate.js';
 import { describeRelationship, pairingWarningLevel } from '@/src/engine/relationship.js';
-import { parseRing, ringKey } from '@/src/engine/rings.js';
+import { parseRing } from '@/src/engine/rings.js';
 import { todayISO } from '@/src/dates.js';
-import { toast, undoToast, primaryRing, birdLabelText, COIValue, SexChip } from '@/src/components';
+import { toast, undoToast, primaryRing, birdLabelText, COIValue, SexChip, pickerModel, createFromQuery } from '@/src/components';
 import s from './breeding.module.css';
 
 // Breeding — design/approved/breeding-v1.html, behaviour from js/views/breeding.js.
@@ -93,11 +93,8 @@ export function BirdPick({ label, value, filter, placeholder, onPick, testid, er
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => { if (!open) return; const f = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false); }; document.addEventListener('mousedown', f); return () => document.removeEventListener('mousedown', f); }, [open]);
   const all = [...(db.state.birds.values() as Iterable<Bird>)]; const pool = all.filter(filter);
-  const needle = q.trim().toLowerCase(); const rk = ringKey(q);
-  const match = (list: Bird[]) => list.find((b) => (rk && (b.rings || []).some((r) => ringKey(r as never) === rk)) || (b.name || '').trim().toLowerCase() === needle || birdLabelText(b).trim().toLowerCase() === needle) || null;
-  const cands = (needle ? pool.filter((b) => (b.name || '').toLowerCase().includes(needle) || (b.strain || '').toLowerCase().includes(needle) || (rk && (b.rings || []).some((r) => ringKey(r as never).includes(rk)))) : pool).slice(0, 30);
-  const clash = needle ? match(all) : null; const blocked = clash && !match(pool) ? clash : null;
-  const canCreate = !!(allowCreate && needle && !clash);
+  // the rules live once, in src/components/picker.ts (ui.js:205) — every screen's picker obeys the same ones
+  const { cands, blocked, canCreate } = pickerModel({ all, pool, q, allowCreate: !!allowCreate, selected: value });
   const pick = (id: string) => { onPick(id); setOpen(false); setQ(''); };
   const chosen = getBird(value);
   return (
@@ -112,7 +109,7 @@ export function BirdPick({ label, value, filter, placeholder, onPick, testid, er
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('act.search')} aria-label={label} data-testid={`${testid}-input`} />
           {blocked && <div className={s.note} data-testid="picker-note">{t('picker.existsButFiltered', { name: birdLabelText(blocked), sex: t('sex.' + (blocked.sex || 'unknown')) })}</div>}
           <div className={s.items}>{cands.map((b) => <button key={b.id} type="button" onClick={() => pick(b.id)} data-testid={`${testid}-item`}><span><bdi>{nameOf(b)}</bdi> <Plate b={b} /></span><SexChip sex={b.sex} /></button>)}</div>
-          {canCreate && <button type="button" className={s.create} onClick={async () => { const hasDigit = /[0-9٠-٩]/.test(q); const stub = db.newBird({ external: true, sex: allowCreate, name: hasDigit ? '' : q.trim(), rings: hasDigit ? [parseRing(q.trim())] : [] }) as Bird; await db.saveBird(stub); pick(stub.id); }} data-testid={`${testid}-create`}>+ {t('picker.createNew', { q: q.trim() })}</button>}
+          {canCreate && <button type="button" className={s.create} onClick={async () => { const b = await createFromQuery(q, allowCreate); pick(b.id); }} data-testid={`${testid}-create`}>+ {t('picker.createNew', { q: q.trim() })}</button>}
         </div>
       )}
     </div>
@@ -195,7 +192,7 @@ export function LinkSheet({ pair, egg, onClose, onDone }: { pair: Pair; egg: Egg
   return (
     <Sheet title={t('br.linkExisting')} onClose={onClose} hint={t('br.linkExistingHint')} testid="sheet-link">
       <div className={s.fields}>
-        <BirdPick label={t('bird.one')} value={birdId} filter={(b) => b.id !== pair.sireId && b.id !== pair.damId} placeholder={t('br.pickBird')} onPick={setBirdId} testid="f-link" />
+        <BirdPick label={t('bird.one')} value={birdId} filter={(b) => b.id !== pair.sireId && b.id !== pair.damId} placeholder={t('pick.fromLoft')} onPick={setBirdId} testid="f-link" />
         {why && <Alert kind="blocked" items={[t('br.linkBlocked', { reason: why })]} testid="link-blocked" />}
       </div>
       <div className={s.mact}><button type="button" className={s.cancel} onClick={onClose} data-testid="sheet-cancel">{t('act.cancel')}</button><button type="button" className={s.save} disabled={!bird || !!why} onClick={confirm} data-testid="sheet-save">{t('act.confirm')}</button></div>

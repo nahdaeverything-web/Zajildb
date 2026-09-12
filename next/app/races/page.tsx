@@ -1,3 +1,6 @@
+import { Suspense } from 'react';
+import View from './view';
+
 export default function Page() {
-  return <section style={{ padding: 24 }}><h1>السباقات</h1><p>Phase 0 placeholder — /races</p></section>;
+  return <Suspense fallback={null}><View /></Suspense>;
 }

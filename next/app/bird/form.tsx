@@ -5,8 +5,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds } from '@/src/db/react';
 import { t, statusLabel } from '@/src/i18n.ext.js';
-import { parseRing, RING_TYPES, ringKey } from '@/src/engine/rings.js';
-import { Loading, toast, confirmDialog, primaryRing, birdLabelText, seasonLabel, SexChip } from '@/src/components';
+import { parseRing, RING_TYPES } from '@/src/engine/rings.js';
+import { Loading, toast, confirmDialog, primaryRing, birdLabelText, seasonLabel, SexChip, pickerModel, createFromQuery } from '@/src/components';
 import s from './form.module.css';
 
 // Add / edit bird — design/approved/add-edit-bird-v2.html, behaviour from
@@ -176,23 +176,19 @@ export default function BirdForm() {
   };
 
   // ── the parent picker (ui.js:205 birdPicker, in the spec's slot grammar) ──
+  // the picker's rules live once, in src/components/picker.ts (ui.js:205)
   const pool = (role: Role) => birds.filter((b) => b.id !== draft.id && b.sex !== (role === 'sire' ? 'hen' : 'cock'));
-  const exactMatch = (q: string, list: Bird[]) => { const needle = q.trim().toLowerCase(); if (!needle) return null; const rk = ringKey(q); return list.find((b) => (rk && (b.rings || []).some((r) => ringKey(r as never) === rk)) || (b.name || '').trim().toLowerCase() === needle || birdLabelText(b).trim().toLowerCase() === needle) || null; };
-  const candidates = (role: Role, q: string) => { const needle = q.trim().toLowerCase(); const rk = ringKey(q); let list = pool(role); if (needle) list = list.filter((b) => (b.name || '').toLowerCase().includes(needle) || (b.strain || '').toLowerCase().includes(needle) || (rk && (b.rings || []).some((r) => ringKey(r as never).includes(rk)))); return list.slice(0, 30); };
   const pick = (role: Role, id: string) => { set(role === 'sire' ? { sireId: id } : { damId: id }); setErrs({ ...errs, [role]: undefined }); setPicker(null); };
   async function quickCreate(role: Role, q: string) {
-    // never a second record for a ring that already exists — select the existing bird instead (ui.js:306)
-    const dupe = exactMatch(q, birds); if (dupe) { pick(role, dupe.id); return; }
-    const hasDigit = /[0-9٠-٩]/.test(q);
-    const stub = db.newBird({ external: true, sex: role === 'sire' ? 'cock' : 'hen', name: hasDigit ? '' : q, rings: hasDigit ? [parseRing(q)] : [] }) as Bird;
-    await db.saveBird(stub); pick(role, stub.id);
+    const b = await createFromQuery(q, role === 'sire' ? 'cock' : 'hen');   // re-checks for an exact match first, so a second tap cannot mint a duplicate
+    pick(role, b.id);
   }
   const Slot = ({ role, b }: { role: Role; b: Bird | null | undefined }) => {
     const open = picker && picker.role === role ? picker : null;
     const q = open ? open.q : '';
-    const clash = open && open.mode === 'pick' && q.trim() ? exactMatch(q, birds) : null;
-    const blocked = clash && !exactMatch(q, pool(role)) ? clash : null;
-    const cands = open && open.mode === 'pick' ? candidates(role, q) : [];
+    const model = pickerModel({ all: birds, pool: pool(role), q, allowCreate: open?.mode === 'create', selected: b ? b.id : null });
+    const blocked = open && open.mode === 'pick' ? model.blocked : null;
+    const cands = open && open.mode === 'pick' ? model.cands : [];
     return (
       <div ref={open ? pickerRef : undefined} data-testid={`slot-${role}`}>
         {b ? (

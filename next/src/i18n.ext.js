@@ -129,7 +129,7 @@ export const EXT = {
   'br.notSaved':              { ar: 'لم يُحفظ الزوج. صحّح ما يلي:', en: 'The pair was not saved. Fix the following:' },
   'br.pickSire':              { ar: 'اختر ذكرًا', en: 'Choose a cock' },
   'br.pickDam':               { ar: 'اختر أنثى', en: 'Choose a hen' },
-  'br.pickBird':              { ar: 'اختر طيرًا من اللوفت', en: 'Choose a bird from the loft' },
+  'pick.fromLoft':            { ar: 'اختر طيرًا من اللوفت', en: 'Choose a bird from the loft' },   // breeding's link sheet and the race sheet draw the same field
   'br.nest.placeholder':      { ar: '4', en: '4' },
   'br.source.placeholder':    { ar: 'مثل: لوفت أبو خالد — الزرقاء', en: 'e.g. Abu Khalid loft — Zarqa' },
   'br.name.placeholder':      { ar: 'مثل: برق', en: 'e.g. Lightning' },
@@ -155,6 +155,23 @@ export const EXT = {
   'br.deleteEgg':             { ar: 'حذف البيضة', en: 'Delete the egg' },
   'br.weanDate':              { ar: 'تاريخ الفطام', en: 'Wean date' },
   'act.more':                 { ar: 'المزيد', en: 'More' },
+
+  // ── races-v1 (4C) ──
+  // Vanilla carries the field labels, the race types, the FCI rule and every FCI reason;
+  // these are the strings races-v1 introduces. The spec's inline errors are ruled in by
+  // design/README.md (it fixes two silent failures: the required bird and unparseable coordinates).
+  'race.countLine':           { ar: '{n} نتائج · {b} طيور', en: '{n} results · {b} birds' },
+  'race.noneThisSeason':      { ar: 'لا نتائج هذا الموسم', en: 'No results this season' },
+  'race.empty.body':          { ar: 'سجّل أول نتيجة لهذا الموسم من «نتيجة جديدة».', en: 'Record the first result of the season from “New result”.' },
+  'race.velocity.sub':        { ar: 'أدخل الوقت والمسافة، أو احسب المسافة والسرعة من الإحداثيات.', en: 'Enter the time and distance, or compute both from the coordinates.' },
+  'race.calcDone':            { ar: 'حُسبت المسافة {km} والسرعة {mpm} من الإحداثيات ووقتَي الإطلاق والوصول.', en: 'Distance {km} and velocity {mpm} computed from the coordinates and the release and arrival times.' },
+  'val.notSaved':             { ar: 'لم تُحفظ النتيجة. راجع الحقول المحددة بالأحمر.', en: 'The result was not saved. Check the fields marked in red.' },
+  'val.birdRequired':         { ar: 'الطير مطلوب — اختر طيرًا قبل الحفظ.', en: 'The bird is required — choose one before saving.' },
+  'val.coords':               { ar: 'تعذّر قراءة الإحداثيات. اكتبها بالصيغة: خط العرض، فاصلة، خط الطول — مثل 29.5321, 35.0063', en: 'The coordinates could not be read. Write them as latitude, comma, longitude — e.g. 29.5321, 35.0063' },
+  'val.loftCoords':           { ar: 'تعذّر قراءة إحداثيات اللوفت. الصيغة: 31.9539, 35.9106', en: 'The loft coordinates could not be read. The format is 31.9539, 35.9106' },
+  'fci.ringShort':            { ar: 'حلقة FCI', en: 'FCI ring' },
+  'fci.nonQualifyingShort':   { ar: 'غير مؤهلة', en: 'Non-qualifying' },
+  'fci.empty.body':           { ar: 'تظهر الطيور هنا بعد تسجيل أول نتيجة.', en: 'Birds appear here once the first result is recorded.' },
 
   // ── rulings at 4A acceptance ──
   // nav.breeding: a DELIBERATE RENAME from vanilla's «التربية». Every approved

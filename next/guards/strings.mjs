@@ -18,7 +18,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SPECS = join(ROOT, '..', 'design', 'approved');
 
 // ── shipped screens: added as each screen lands ──
-export const SHIPPED = ['shared-states-v1.html', 'loft-home-v1.html', 'bird-profile-v1.html', 'add-edit-bird-v2.html', 'pedigree-tree-v1.html', 'breeding-v1.html'];
+export const SHIPPED = ['shared-states-v1.html', 'loft-home-v1.html', 'bird-profile-v1.html', 'add-edit-bird-v2.html', 'pedigree-tree-v1.html', 'breeding-v1.html', 'races-v1.html'];
 
 const AR = /[؀-ۿ]/;
 // FORMAT tags fold into their parent (they never carry a standalone UI string);
@@ -74,9 +74,23 @@ const pending = existsSync(pendingFile) ? JSON.parse(readFileSync(pendingFile, '
 // entry is the record. { spec: { string: ruling } }
 const ruledFile = join(ROOT, 'guards', 'strings.ruled.json');
 const ruled = existsSync(ruledFile) ? JSON.parse(readFileSync(ruledFile, 'utf8')) : {};
+// A label the spec writes as one string but the app builds from TWO dictionary keys —
+// «المسافة كم» is race.distance + race.km, «السرعة (م/د)» is race.velocity + race.mpm.
+// Both halves must themselves resolve to a key, so this accepts no new wording.
+function isComposite(v) {
+  if (/[—·|]/.test(v)) return false;   // a separator means a title or a summary line, not a two-key label
+  const clean = (x) => norm(x.replace(/^[(\u061B]+|[)]+$/g, '').replace(/^\(|\)$/g, ''));
+  const parts = v.split(/\s+/);
+  for (let i = 1; i < parts.length; i++) {
+    const a = clean(parts.slice(0, i).join(' ')), b = clean(parts.slice(i).join(' '));
+    if (a && b && values.has(a) && values.has(b)) return true;
+  }
+  return false;
+}
 export function resolve(v, spec) {
   if (values.has(v)) return 'key';
   if (templates.some(([rx]) => rx.test(v))) return 'template';
+  if (isComposite(v)) return 'composite';
   if ((mock[spec] || []).includes(v)) return 'mock';
   if (ruled[spec] && v in ruled[spec]) return 'ruled';
   if (pending[spec] && v in pending[spec]) return 'pending';
@@ -85,15 +99,15 @@ export function resolve(v, spec) {
 const argv = process.argv.slice(2);
 const only = argv.includes('--only') ? argv[argv.indexOf('--only') + 1] : null;
 const emit = argv.includes('--emit-mock') ? argv[argv.indexOf('--emit-mock') + 1] : null;
-if (emit) { const strs = extract(readFileSync(join(SPECS, emit), 'utf8')); const un = [...strs].filter((v) => !values.has(v) && !templates.some(([rx]) => rx.test(v)) && !(pending[emit] && v in pending[emit]) && !(ruled[emit] && v in ruled[emit])); console.log(JSON.stringify(un, null, 0)); process.exit(0); }
+if (emit) { const strs = extract(readFileSync(join(SPECS, emit), 'utf8')); const un = [...strs].filter((v) => !values.has(v) && !templates.some(([rx]) => rx.test(v)) && !isComposite(v) && !(pending[emit] && v in pending[emit]) && !(ruled[emit] && v in ruled[emit])); console.log(JSON.stringify(un, null, 0)); process.exit(0); }
 let failed = 0;
 for (const spec of SHIPPED) {
   if (only && spec !== only) continue;
   const strs = extract(readFileSync(join(SPECS, spec), 'utf8'));
   const miss = [...strs].filter((v) => !resolve(v, spec));
-  const n = { key: 0, template: 0, mock: 0, ruled: 0, pending: 0 }; for (const v of strs) { const r = resolve(v, spec); if (r) n[r]++; }
+  const n = { key: 0, template: 0, composite: 0, mock: 0, ruled: 0, pending: 0 }; for (const v of strs) { const r = resolve(v, spec); if (r) n[r]++; }
   if (miss.length) { failed++; console.log(`✗ strings:${spec}  ${miss.length} unresolved of ${strs.size}`); for (const v of miss) console.log('    ' + v); }
-  else console.log(`${n.pending ? '⚠' : '✓'} strings:${spec}  ${strs.size} strings — ${n.key} keys · ${n.template} templates · ${n.mock} mock${n.ruled ? ` · ${n.ruled} ruled` : ''}${n.pending ? ` · ${n.pending} PENDING a ruling` : ''}`);
+  else console.log(`${n.pending ? '⚠' : '✓'} strings:${spec}  ${strs.size} strings — ${n.key} keys · ${n.template} templates${n.composite ? ` · ${n.composite} composites` : ''} · ${n.mock} mock${n.ruled ? ` · ${n.ruled} ruled` : ''}${n.pending ? ` · ${n.pending} PENDING a ruling` : ''}`);
   for (const v of strs) if (resolve(v, spec) === 'pending') console.log(`    ⚠ pending: ${v}  — ${pending[spec][v]}`);
 }
 console.log(failed ? `\n${failed} screen(s) FAILED the string guard` : '\nstring guard passes');
