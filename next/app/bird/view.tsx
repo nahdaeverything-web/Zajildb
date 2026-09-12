@@ -8,7 +8,7 @@ import { t, fmtDate, fmtNum, fmtPercent, statusLabel } from '@/src/i18n.ext.js';
 import { inbreeding, ancestorLoss } from '@/src/engine/coi.js';
 import { descendantDepths, pedigreeGrid } from '@/src/engine/pedigree.js';
 import { birdEligibility } from '@/src/engine/fci.js';
-import { SyncRow, Loading, MediaPlaceholder, COIValue, BirdLabel, primaryRing, birdLabelText, toast, undoToast, confirmDialog, seasonStart, downloadJSON } from '@/src/components';
+import { SyncRow, Loading, MediaPlaceholder, COIValue, BirdLabel, primaryRing, birdLabelText, toast, undoToast, confirmDialog, seasonStart, downloadJSON, initDB } from '@/src/components';
 import sh from '@/src/components/shared.module.css';
 import s from './bird.module.css';
 
@@ -49,7 +49,7 @@ export default function BirdView() {
   const [booted, setBooted] = useState(false);
   const [menu, setMenu] = useState(false);
   const [noteText, setNoteText] = useState('');
-  useEffect(() => { db.initDB().then(() => setBooted(true)); }, []);
+  useEffect(() => { initDB().then(() => setBooted(true)); }, []);
   const bird = useZajilStore(selectBird(id)) as Bird | null;
   const st = useZajilStore((x) => x);
   const media = useMediaForBird(id || null) as Media[];

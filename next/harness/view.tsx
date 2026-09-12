@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import * as db from '@/src/db.js';
+import { initDB } from '@/src/components/boot';
 import * as coi from '@/src/engine/coi.js';
 import * as fci from '@/src/engine/fci.js';
 import * as integrity from '@/src/engine/integrity.js';
@@ -44,7 +45,7 @@ export default function HarnessView() {
   useEffect(() => {
     let stop: (() => void) | null = null;
     window.__zajilSyncLoop = null;
-    window.__zajilReady = db.initDB().then(() => {
+    window.__zajilReady = initDB().then(() => {
       setStatus('ready');
       if (syncFlag) { stop = db.startSyncLoop(); window.__zajilSyncLoop = stop; }
     }, (e: unknown) => setStatus('failed: ' + String(e)));

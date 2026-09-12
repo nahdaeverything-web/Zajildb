@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import * as db from '@/src/db.js';
 import { t } from '@/src/i18n.ext.js';
 import { COUNTRIES_REGION, COUNTRIES_REST } from '@/src/countries.js';
-import { Loading } from '@/src/components';
+import { Loading, initDB } from '@/src/components';
 import { useAppVersion } from '@/src/components/version';
 import s from './signin.module.css';
 
@@ -36,7 +36,7 @@ export default function SignInView() {
   const [state, setState] = useState<State>('');
   const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
   const version = useAppVersion();
-  useEffect(() => { db.initDB().then(() => setBooted(true)); }, []);
+  useEffect(() => { initDB().then(() => setBooted(true)); }, []);
   if (!booted) return <section className={s.screen}><Loading /></section>;
 
   const auth = db.authState() as { signedIn: boolean; email: string | null };
@@ -47,6 +47,11 @@ export default function SignInView() {
     setState('loading');
     try {
       await db.signIn(email.trim(), password);
+      setPassword('');                                // never leave it in the DOM (js/views/tools.js:266)
+      // The existing first-login flow, unchanged: syncNow() runs the same cycle the
+      // background loop runs, which takes §6's first-login branch on its own. There is
+      // no second code path for "just signed in" (js/views/tools.js:267-270).
+      await db.syncNow();
       router.replace('/tools');                       // the sync card is where a signed-in session is managed
     } catch (err) {
       const kind = (err as { kind?: string }).kind;   // AuthError: 'rejected' | 'network' | 'config'

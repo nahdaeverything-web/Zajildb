@@ -1,5 +1,6 @@
 export { toast, undoToast, confirmDialog, closeDialog, dismissToast } from './shell';
 export { default as ShellHost } from './ShellHost';
+export { default as SyncNotices } from './SyncNotices';
 export { default as SyncRow } from './SyncRow';
 export { default as Empty } from './Empty';
 export { default as Loading } from './Loading';
@@ -11,3 +12,6 @@ export { seasonStart, seasonLabel } from './season';
 export { downloadJSON } from './download';
 export { pickerModel, candidates, exactMatch, createFromQuery } from './picker';
 export { Tpl } from './Tpl';
+export { applySettings, saveSetting } from './settings';
+export { default as AppSettings } from './AppSettings';
+export { initDB } from './boot';

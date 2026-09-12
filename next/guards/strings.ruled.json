@@ -54,5 +54,13 @@
   "sign-in-v1.html": {
     "لا يوجد اتصال — تحقّق من الشبكة بياناتك محفوظة على الجهاز. أعد المحاولة عند توفر الاتصال.": "The spec folds the offline message and its sub-line into one element, so the extractor sees them as one string; the port renders the same two keys (signin.offline + signin.offlineBody) in the same shape.",
     "ملاحظة": "RULED (4A acceptance, item 14): synonyms — vanilla common.notes wins for the field label."
+  },
+  "tools-v1.html": {
+    "البريد الإلكتروني أو كلمة المرور غير صحيحة. HTTP 401": "RULING 1 (Phase 4 order): the inline sign-in form inside this card is SUPERSEDED by /sign-in, whose spec states outright that a raw status code must never reach the screen. Not rendered.",
+    "تعذّر الاتصال بالخادم — تحقّق من الشبكة وحاول مجددًا. HTTP 0": "RULING 1: part of the superseded inline sign-in form (and it carries a raw status code). Not rendered.",
+    "المزامنة غير مهيأة على هذا الجهاز. HTTP 503": "RULING 1: part of the superseded inline sign-in form (and it carries a raw status code). Not rendered.",
+    "هذا السجل مرتبط بـ 1 علاقة (صحة)": "RULED (4A acceptance, item 14): plural agreement — the port renders one dup.linkedTo template «{n} علاقات ({kinds})» for every count, as the dictionary does elsewhere.",
+    "ميزة اختيارية تتطلب خادم رؤية حاسوبية — يحلّل صور الشهادات الورقية ويقترح الأنساب.": "RULED (4A acceptance, item 14): synonyms — vanilla scan.hint wins for the scanner description (it also names the Arabic-handwriting requirement, which the spec drops).",
+    "نسختان": "RULED (4B addendum, ruling D): the spec prints its MOCK group's own label. A two-copy dual noun kept as a literal is wrong at every other count, so the port renders the number plus the invariant noun — the grammar ruling D fixed for the tiles."
   }
 }

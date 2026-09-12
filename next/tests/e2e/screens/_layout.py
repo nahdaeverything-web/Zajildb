@@ -20,7 +20,11 @@ CHROME_BAND = 240       # only chrome anchored near the bottom of the viewport c
 
 PROBE = """(band) => {
   const vh = innerHeight, vw = innerWidth;
-  const vis = (el) => { const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0; };
+  // checkVisibility, not computed display: a CLOSED <details> keeps layout boxes for
+  // its contents in Chromium, and counting those as page content reports a collision
+  // with a bar the fancier can see neither of.
+  const vis = (el) => (el.checkVisibility ? el.checkVisibility({ contentVisibilityAuto: true, opacityProperty: true, visibilityProperty: true })
+    : (() => { const cs = getComputedStyle(el); return cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0; })());
   const box = (el) => { const r = el.getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom), left: Math.round(r.left), right: Math.round(r.right) }; };
   const name = (el) => el.getAttribute('data-testid') || el.getAttribute('data-bottom-chrome') || (typeof el.className === 'string' && el.className.split(' ')[0]) || el.tagName;
   const fixedAncestor = (el) => { let p = el; while (p && p !== document.body) { if (getComputedStyle(p).position === 'fixed') return p; p = p.parentElement; } return null; };

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds } from '@/src/db/react';
 import { t, fmtNum } from '@/src/i18n.ext.js';
-import { SyncRow, Loading } from '@/src/components';
+import { SyncRow, Loading, initDB } from '@/src/components';
 import { type Pair, type Round, type Egg, type Bird, getBird, nameOf, Plate, StatusChip, stats, Chev, Plus, LinkSheet, RingSheet,
   toggleActive, addRound, addEgg, hatch, fail, wean, unlink, setEggDate, deletePair, deleteRound, deleteEgg } from '../breeding/shared';
 import s from '../breeding/breeding.module.css';
@@ -28,7 +28,7 @@ export default function PairView() {
   const [confirm, setConfirm] = useState<string | null>(null);
   const [menu, setMenu] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
-  useEffect(() => { db.initDB().then(() => setBooted(true)); }, []);
+  useEffect(() => { initDB().then(() => setBooted(true)); }, []);
   const pair = useZajilStore((x) => x.pairs.get(id) as Pair | undefined) ?? null;
   const birds = useZajilStore(selectBirds) as Bird[];
   useEffect(() => { if (booted && !pair) router.replace('/breeding'); }, [booted, pair, router]);

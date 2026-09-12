@@ -5,7 +5,7 @@ import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds } from '@/src/db/react';
 import { t, fmtNum, statusLabel } from '@/src/i18n.ext.js';
 import { ringKey } from '@/src/engine/rings.js';
-import { SyncRow, Empty, toast, primaryRing, seasonLabel } from '@/src/components';
+import { SyncRow, Empty, toast, primaryRing, seasonLabel, initDB } from '@/src/components';
 import sh from '@/src/components/shared.module.css';
 import s from './birds.module.css';
 
@@ -43,7 +43,7 @@ export default function BirdsView() {
   const [q, setQ] = useState(''); const [filter, setFilter] = useState<string>('all'); const [year, setYear] = useState<string | null>(null);
   const [sortK, setSortK] = useState<SortKey>('year'); const [desc, setDesc] = useState(true);
   const [booted, setBooted] = useState(false);
-  useEffect(() => { db.initDB().then(() => setBooted(true)); }, []);
+  useEffect(() => { initDB().then(() => setBooted(true)); }, []);
 
   const rows = useMemo<Row[]>(() => {
     const lastByBird = new Map<string, Race>();

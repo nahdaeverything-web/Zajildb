@@ -21,6 +21,10 @@ until a cutover ruling.
   Since 4B `npm run build:harness` runs the same prebuild guards before its
   build (it spawns `next build` directly, outside the npm lifecycle, so it
   had skipped them — an unsanctioned hex reached a green harness build).
+  Since 4D also `no-hardcoded-version`: no source file may carry a
+  `zajil-vX.Y.Z` string (version_display #8). The About row shows whatever
+  the SERVICE WORKER reports, so a constant in the source is a second source
+  of truth that goes stale the first time a build ships without it.
 - `output: 'export'` — no server, ever. Record views take `?id=`, never `[id]`.
 - **Ruling C (4B addendum) — fixed elements must not hide content.** Every
   screen test proves it geometrically at 430x900 and 900x900 (never on a
@@ -113,6 +117,46 @@ until a cutover ruling.
   carried — real rings are not all JO-YYYY-NNNNN). Deletes for the pair, a
   round or an egg confirm inline (spec) and undo through the shell; the
   stored `season` stays a plain year and is shown as the spec shows it.
+- **Tools & settings (4D)** — nine cards in the spec's three groups behind its
+  sticky index, at `/tools`. RULING 1 (Phase 4 order): the sync card's
+  signed-out state is the explanation line plus a «تسجيل الدخول» button that
+  navigates to `/sign-in`; the inline form the spec draws inside the card is
+  superseded, and the not-configured state is unchanged and carries no button
+  (there is nothing on that device to sign into). RULING 2: breeder name,
+  phone, website and `logoMediaId` join the loft record through `Lofts.save`,
+  so the certificate's branding block has real fields to read; the logo is
+  device-local media like a photo, so its bytes go to the media store and only
+  its metadata reaches the op log. The dev panel is collapsed and runs the
+  COPIED engine suite (`tests/engine.test.js`, 21 tests — the count vanilla's
+  panel runs, not the node runner's 33). Three things the port was missing and
+  this screen exposed, all fixed here:
+    - `applySettings()` (js/app.js:50) was never ported, so numerals, the date
+      mode, the language and high contrast were stored and then ignored. It now
+      lives in `src/components/settings.ts`, is applied at boot by
+      `<AppSettings />` and re-applied after an import. `saveSetting()` is
+      vanilla's `setSetting(...) then rerender()`: `setSetting` deliberately
+      emits nothing (db/storage.js:168), so the write re-applies the locale and
+      raises the LAYER'S OWN change event, which the React bridge already
+      listens to. `signOut()` and `setSyncEnabled()` emit nothing either, so the
+      card calls `refreshSyncStatus()` after them exactly as js/views/tools.js
+      calls `refresh()`.
+    - `initDB()` is not re-entrant: it mints the default loft when it finds no
+      loft, so two calls in flight both mint one, and a second device then stops
+      adopting the remote loft (db/sync.js:830). Vanilla calls it once in
+      `boot()`; the port has a screen and the shell mounting independently, so
+      `src/components/boot.ts` makes the single call a single PROMISE that every
+      caller awaits. Caught by convergence.py, not by reasoning.
+    - The loft and settings cards declared their field components inside the
+      render body, so React remounted each input on every keystroke and a text
+      field lost the caret after one character.
+  HIGH CONTRAST — OPEN QUESTION: the capability is carried (the class is applied
+  to the document, 4A acceptance item 8), but no approved spec defines the
+  mode's palette; tools-v1 names only the control. Vanilla's overrides
+  (css/app.css:28) are Phase-1 hexes the palette guard rejects. Raised in the 4D
+  report; the palette attaches to `applySettings()` unchanged once ruled.
+  DEVIATION [ruling D]: the spec's duplicate group is labelled «نسختان» — its own
+  mock's two-copy count, which lies at every other count — so the port renders
+  the number plus the invariant noun, the grammar ruling D fixed for the tiles.
 - Everything outside `next/` is read-only during the port. `next/` imports
   nothing from `../js`, `../css` or `../tools` (guarded); the engine and the
   dataset id mapper are byte-identical copies under `src/engine/` and `tests/`.
@@ -177,4 +221,4 @@ every line.
 | `data_loss.py` | drives `#/bird/new`, clicks | 8 |
 | `pull.py` | one `#/bird/` navigation (line 356) — the URL-and-module rule stays clean rather than carrying a documented exception | 58 |
 | `auth_live.py` | fills `.sync-signin` and clicks the sign-in button (lines 111–113) | 18 |
-| `convergence.py:248-252` — 2 of 36 | the duplicate-ring **toast**: asserts on `.toast` DOM text, which `js/app.js:213-214` renders from `takeSyncDuplicateNotice()` via `i18n.t('sync.duplicates')` and the shell's toast. The layer's half (the notice is counted once) passes at line 241. RULED Phase 4; a harness that grows fake shell components to satisfy assertions is fitted to the test, not the layer. | 2 |
+| ~~`convergence.py:248-252`~~ — **CLOSED at 4D** | the duplicate-ring toast now has a shell to be raised in: `src/components/SyncNotices.tsx` reproduces js/app.js:195-217 (the sync-interrupt message and the sync-complete duplicate notice, both vanilla's PLAIN toast), mounted once in the layout. The three assertions were re-authored onto the port's `[data-testid=toast]` and pass; convergence.py is 36/36. | 2 |

@@ -6,7 +6,7 @@ import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds } from '@/src/db/react';
 import { t, statusLabel } from '@/src/i18n.ext.js';
 import { parseRing, RING_TYPES } from '@/src/engine/rings.js';
-import { Loading, toast, confirmDialog, primaryRing, birdLabelText, seasonLabel, SexChip, pickerModel, createFromQuery } from '@/src/components';
+import { Loading, toast, confirmDialog, primaryRing, birdLabelText, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
 import s from './form.module.css';
 
 // Add / edit bird — design/approved/add-edit-bird-v2.html, behaviour from
@@ -60,7 +60,7 @@ export default function BirdForm() {
   const editId = isNew ? null : (params.get('id') || '');
   const siblingOfId = isNew ? params.get('siblingOf') : null;
   const [booted, setBooted] = useState(false);
-  useEffect(() => { db.initDB().then(() => setBooted(true)); }, []);
+  useEffect(() => { initDB().then(() => setBooted(true)); }, []);
   const birds = useZajilStore(selectBirds) as Bird[];
 
   const [draft, setDraft] = useState<Bird | null>(null);

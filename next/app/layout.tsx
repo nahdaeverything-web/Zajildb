@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { alexandria, plexMono } from './fonts';
 import Nav from '@/components/Nav';
 import ShellHost from '@/src/components/ShellHost';
+import SyncNotices from '@/src/components/SyncNotices';
+import AppSettings from '@/src/components/AppSettings';
 import HarnessGlobals from '@/src/harness-globals';
 import '../styles/tokens.css';
 import './globals.css';
@@ -22,6 +24,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className={s.main}>{children}</main>
         <Nav />
         <ShellHost />
+        <SyncNotices />
+        <AppSettings />
         <HarnessGlobals />
       </body>
     </html>

@@ -7,7 +7,7 @@ import { useZajilStore, selectRaces, selectBirds } from '@/src/db/react';
 import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { resultQualifies, birdEligibility, FCI_MIN_FANCIERS, FCI_MIN_BIRDS } from '@/src/engine/fci.js';
 import { velocityMPM, haversineMetres } from '@/src/engine/velocity.js';
-import { SyncRow, Loading, toast, undoToast, primaryRing, seasonLabel, seasonStart, pickerModel, SexChip, Tpl } from '@/src/components';
+import { SyncRow, Loading, toast, undoToast, primaryRing, seasonLabel, seasonStart, pickerModel, SexChip, Tpl, initDB } from '@/src/components';
 import s from './races.module.css';
 
 // Races — design/approved/races-v1.html, behaviour from js/views/races.js.
@@ -46,7 +46,7 @@ export default function RacesView() {
   const [sheet, setSheet] = useState<{ editing: Race | null } | null>(null);
   // ruling 3: the log shows the season the header states. 'all' is the way out of that filter.
   const [season, setSeason] = useState<string>(params.get('season') || String(seasonStart()));
-  useEffect(() => { db.initDB().then(() => setBooted(true)); }, []);
+  useEffect(() => { initDB().then(() => setBooted(true)); }, []);
   const races = useZajilStore(selectRaces) as Race[];
   const birds = useZajilStore(selectBirds) as Bird[];
   if (!booted) return <section className={s.screen}><Loading /></section>;

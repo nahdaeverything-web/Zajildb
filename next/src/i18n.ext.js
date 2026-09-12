@@ -262,6 +262,60 @@ export const EXT = {
   'signin.early.doneBody':    { ar: 'سنتواصل قريبًا.', en: 'We will be in touch soon.' },
   'signin.early.back':        { ar: 'العودة إلى تسجيل الدخول', en: 'Back to sign in' },
 
+  // ── tools-v1 (4D) ──
+  // Vanilla carries nearly every label here (tools.title, set.*, sync.*, backup.*, dup.*,
+  // scan.*, about.*, dev.*, integrity.*); these are the strings tools-v1 introduces —
+  // its three groups and index, the shorter card-level wordings, and RULING 2's loft
+  // branding fields.
+  'tools.index':              { ar: 'فهرس الصفحة', en: 'Page index' },
+  'tools.settings':           { ar: 'الإعدادات', en: 'Settings' },
+  'tools.group.settings':     { ar: 'إعدادات', en: 'Settings' },
+  'tools.group.settingsSub':  { ar: 'اللغة والعرض · الحساب · اللوفت', en: 'Language and display · account · loft' },
+  'tools.group.data':         { ar: 'بيانات', en: 'Data' },
+  'tools.group.dataSub':      { ar: 'فحص · تعلّم · نسخ احتياطي', en: 'Checks · learning · backup' },
+  'tools.group.advanced':     { ar: 'متقدّم', en: 'Advanced' },
+  'tools.group.advancedSub':  { ar: 'ميزات اختيارية · المطوّر · حول', en: 'Optional features · developer · about' },
+  'lang.ar':                  { ar: 'العربية', en: 'Arabic' },
+  'lang.en':                  { ar: 'English', en: 'English' },
+  'set.numerals.westernShort': { ar: 'غربية', en: 'Western' },
+  'set.numerals.easternShort': { ar: 'مشرقية', en: 'Eastern' },
+  // RULING 2 (Phase 4 order): the loft's branding, which the certificate reads.
+  'set.breederName':          { ar: 'اسم المربّي', en: 'Breeder name' },
+  'set.phone':                { ar: 'الهاتف', en: 'Phone' },
+  'set.website':              { ar: 'الموقع الإلكتروني', en: 'Website' },
+  'set.logo':                 { ar: 'شعار اللوفت', en: 'Loft logo' },
+  'set.logoSet':              { ar: 'شعار محفوظ على هذا الجهاز', en: 'A logo is saved on this device' },
+  'set.logoNone':             { ar: 'لا شعار', en: 'No logo' },
+  'set.logoHint':             { ar: 'يُحفظ الشعار على هذا الجهاز كالصور — يظهر في الشهادة ولا يُرفع إلى الخادم.', en: 'The logo is kept on this device like a photo — it appears on the certificate and is never uploaded.' },
+  'sync.signInToSync':        { ar: 'سجّل الدخول لمزامنة بياناتك بين أجهزتك.', en: 'Sign in to sync your records across your devices.' },
+  'dup.noneShort':            { ar: 'لا توجد أرقام حلقات مكررة.', en: 'No duplicate ring numbers.' },
+  'dup.foundShort':           { ar: 'وُجد {n} رقم حلقة مكرر. احتفظ بالسجل المرتبط واحذف النسخة الزائدة.', en: '{n} duplicate ring number(s). Keep the linked record and delete the surplus copy.' },
+  // [ruling D] the spec prints «نسختان» — its MOCK's own two-copy group. Kept as a
+  // literal it lies at every other count, so it becomes the number plus the invariant
+  // noun, which is the grammar ruling D already fixed for the tiles.
+  'dup.copies':               { ar: '{n} نسخة', en: '{n} copies' },
+  'dup.linkedTo':             { ar: 'هذا السجل مرتبط بـ {n} علاقات ({kinds})', en: 'This record has {n} links ({kinds})' },
+  'example.title':            { ar: 'تحميل بيانات تجريبية للتعلّم', en: 'Load sample data for learning' },
+  'example.hint':             { ar: 'بيانات للتعلّم فقط. تُدمج مع بياناتك دون حذف شيء — ويمكن حذف طيورها لاحقًا كأي طير.', en: 'Learning data only. It merges with yours and deletes nothing — and its birds can be deleted later like any other.' },
+  'example.small':            { ar: 'مثال صغير', en: 'A small example' },
+  'example.smallN':           { ar: '{n} طيرًا', en: '{n} birds' },
+  'example.large':            { ar: 'لوفت تعليمي كامل', en: 'A full teaching loft' },
+  'example.largeN':           { ar: '{n} طيرًا، {g} أجيال', en: '{n} birds, {g} generations' },
+  'backup.snapshot':          { ar: 'النسخة', en: 'Snapshot' },
+  'backup.noSnapshots':       { ar: 'لا نسخ تلقائية بعد', en: 'No automatic snapshots yet' },
+  'backup.importModeLabel':   { ar: 'طريقة الاستيراد', en: 'Import mode' },
+  'backup.file':              { ar: 'الملف', en: 'File' },
+  'backup.chooseFile':        { ar: 'اختيار ملف', en: 'Choose a file' },
+  'backup.noFile':            { ar: 'لم يُختر ملف — .json', en: 'No file chosen — .json' },
+  'backup.importBtn':         { ar: 'استيراد', en: 'Import' },
+  'about.versionLabel':       { ar: 'الإصدار', en: 'Version' },
+  'dev.cardTitle':            { ar: 'أدوات المطوّر', en: 'Developer tools' },
+  'dev.cardSub':              { ar: 'فحوصات المحرّك · للمطوّرين فقط', en: 'Engine checks · developers only' },
+  'act.less':                 { ar: 'أقل', en: 'Less' },
+  // the stepper's «+»: vanilla's act.more is «المزيد» (more ITEMS), which is the wrong word for a stepper
+  'act.increase':             { ar: 'أكثر', en: 'More' },
+  'backup.lastExportLabel':   { ar: 'آخر تصدير', en: 'Last export' },
+
   // ── rulings at 4A acceptance ──
   // nav.breeding: a DELIBERATE RENAME from vanilla's «التربية». Every approved
   // spec and the kit NAVIGATION NOTE say «التزاوج»; ruled at 4A acceptance.

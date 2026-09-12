@@ -246,7 +246,7 @@ with sync_playwright() as p:
     # from the sync-complete event, so reading it back through the API here
     # would only prove the test can beat the app to it.
     D.wait_for_timeout(600)
-    toasts = D.eval_on_selector_all('.toast', 'ns => ns.map(n => n.textContent)')
+    toasts = D.eval_on_selector_all('[data-testid="toast"]', 'ns => ns.map(n => n.textContent)')
     check('...and the fancier is told, once, in Arabic',
           any('تمت المزامنة' in x and 'مكررة' in x for x in toasts), str(toasts))
     check('...with the count in the message',
@@ -254,7 +254,7 @@ with sync_playwright() as p:
 
     run(D, "async (db) => { await db.setSetting('syncCursor', 0); await db.syncOnce(); }")
     D.wait_for_timeout(600)
-    again = D.eval_on_selector_all('.toast', 'ns => ns.map(n => n.textContent)')
+    again = D.eval_on_selector_all('[data-testid="toast"]', 'ns => ns.map(n => n.textContent)')
     check('...and NOT told again on the next sync',
           len([x for x in again if 'تمت المزامنة' in x]) <= len([x for x in toasts if 'تمت المزامنة' in x]),
           str(again))

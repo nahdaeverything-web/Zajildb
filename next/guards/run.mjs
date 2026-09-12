@@ -159,6 +159,21 @@ const guards = {
   //    SHIPPED spec renders must be a key, a template, recorded mock content
   //    or a pending ruling; anything else fails the build. Its report (⚠
   //    pending lines) is passed through so a pending ruling is never silent.
+  // 10. (4D) No source file carries the app version. version_display #8: the
+  //     number on the About row is whatever the SERVICE WORKER reports, so a
+  //     constant in the source is a second source of truth that goes stale the
+  //     first time a build ships without it. The pattern is the one the app's
+  //     own cache names use (zajil-vX.Y.Z); assembled from parts so this guard
+  //     cannot match itself.
+  'no-hardcoded-version'() {
+    const re = new RegExp('zajil' + '-v\\d+\\.\\d+\\.\\d+');
+    const bad = [];
+    for (const f of files('.js', '.mjs', '.ts', '.tsx')) {
+      if (/^(guards|tests)\//.test(rel(f))) continue;   // the guard and its proof name the shape on purpose
+      codeLines(f).forEach((l, i) => { if (re.test(l)) bad.push(`${rel(f)}:${i + 1}  ${l.trim()}`); });
+    }
+    return bad;
+  },
   strings() {
     const r = spawnSync(process.execPath, [join(ROOT, 'guards', 'strings.mjs')], { encoding: 'utf8' });
     const out = (r.stdout || '') + (r.stderr || '');

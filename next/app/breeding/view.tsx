@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import * as db from '@/src/db.js';
 import { useZajilStore, selectPairs } from '@/src/db/react';
 import { t, fmtNum } from '@/src/i18n.ext.js';
-import { SyncRow, Loading } from '@/src/components';
+import { SyncRow, Loading, initDB } from '@/src/components';
 import { type Pair, Names, Plates, StatusChip, Summary, Chev, Plus, NewPairSheet, seasonOptions, currentYear } from './shared';
 import s from './breeding.module.css';
 
@@ -18,7 +18,7 @@ export default function BreedingView() {
   const [booted, setBooted] = useState(false);
   const [season, setSeason] = useState(params.get('season') || currentYear());
   const [sheet, setSheet] = useState(false);
-  useEffect(() => { db.initDB().then(() => setBooted(true)); }, []);
+  useEffect(() => { initDB().then(() => setBooted(true)); }, []);
   const pairs = useZajilStore(selectPairs) as Pair[];
   useZajilStore((x) => x.birds.size);   // names / plates come from the birds
   if (!booted) return <section className={s.screen}><Loading /></section>;

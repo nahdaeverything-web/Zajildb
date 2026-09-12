@@ -6,7 +6,7 @@ import * as db from '@/src/db.js';
 import { useZajilStore, selectHealth, selectBirds } from '@/src/db/react';
 import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { todayISO } from '@/src/dates.js';
-import { SyncRow, Loading, toast, undoToast, primaryRing, seasonLabel, pickerModel, SexChip, Tpl } from '@/src/components';
+import { SyncRow, Loading, toast, undoToast, primaryRing, seasonLabel, pickerModel, SexChip, Tpl, initDB } from '@/src/components';
 import s from './health.module.css';
 
 // Health — design/approved/health-v1.html, behaviour from js/views/health.js.
@@ -39,7 +39,7 @@ export default function HealthView() {
   const [filter, setFilter] = useState<string>(params.get('filter') || 'all');
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [sheet, setSheet] = useState<{ editing: Ev | null } | null>(null);
-  useEffect(() => { db.initDB().then(() => setBooted(true)); }, []);
+  useEffect(() => { initDB().then(() => setBooted(true)); }, []);
   const events = useZajilStore(selectHealth) as Ev[];
   const birds = useZajilStore(selectBirds) as Bird[];
   if (!booted) return <section className={s.screen}><Loading /></section>;

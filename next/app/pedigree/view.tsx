@@ -9,7 +9,7 @@ import { pedigreeGrid } from '@/src/engine/pedigree.js';
 import { inbreeding, ancestorLoss, coiBreakdown } from '@/src/engine/coi.js';
 import { describeRelationship, pairingWarningLevel } from '@/src/engine/relationship.js';
 import { ringKey } from '@/src/engine/rings.js';
-import { SyncRow, Loading, COIValue, BirdLabel, SexChip, primaryRing, birdLabelText, seasonLabel, toast, downloadJSON } from '@/src/components';
+import { SyncRow, Loading, COIValue, BirdLabel, SexChip, primaryRing, birdLabelText, seasonLabel, toast, downloadJSON, initDB } from '@/src/components';
 import s from './pedigree.module.css';
 
 // Pedigree tree — design/approved/pedigree-tree-v1.html, behaviour from
@@ -39,7 +39,7 @@ export default function PedigreeView() {
   const [gens, setGens] = useState<number>(GENS.includes(want as 3 | 4 | 5) ? want : 4);
   const [booted, setBooted] = useState(false);
   const [q, setQ] = useState(''); const [otherId, setOtherId] = useState<string | null>(null);
-  useEffect(() => { db.initDB().then(() => setBooted(true)); }, []);
+  useEffect(() => { initDB().then(() => setBooted(true)); }, []);
   const bird = useZajilStore(selectBird(id)) as Bird | null;
   const birds = useZajilStore(selectBirds) as Bird[];
   const st = useZajilStore((x) => x);
