@@ -70,6 +70,41 @@ with sync_playwright() as p:
     page.goto(URL, wait_until='load'); page.wait_for_timeout(1500)
     check('OFFLINE reload works under subpath', page.locator('.bird-row').count() == 38,
           str(page.locator('.bird-row').count()))
+
+    # ── a path DEEPER than the scope root, offline then online ──────────────
+    # Vanilla routes entirely on location.hash, so a deep path is never a Zajil
+    # URL — it is what a PATH-ROUTED app (the React port) leaves behind on an
+    # origin. The worker used to answer it with the shell AT THAT ADDRESS, which
+    # anchors index.html's './js/app.js' one directory too deep: 404, blank page.
+    # Measured before the fix: 0 nav links and two 404s, here and at the root.
+    # The subpath is the harder case — a redirect to '/' instead of '/zajil/'
+    # would leave the deployment entirely — so it is the one asserted.
+    page.goto(URL + 'bird/edit', wait_until='load'); page.wait_for_timeout(1200)
+    check('OFFLINE a deep path redirects to the scope root, not a blank shell',
+          page.url == URL and page.locator('.nav-link').count() == 6,
+          f'{page.url} · {page.locator(".nav-link").count()} nav links')
+    ctx.set_offline(False)
+    page.goto(URL + 'bird/edit', wait_until='load'); page.wait_for_timeout(1200)
+    check('ONLINE the same, and the app is usable rather than merely served',
+          page.url == URL and page.locator('.nav-link').count() == 6,
+          f'{page.url} · {page.locator(".nav-link").count()} nav links')
+    # the fragment must survive, or a parked hash route is lost on the way back
+    page.goto(URL + 'bird/edit#/tools', wait_until='load'); page.wait_for_timeout(1200)
+    # exact, not startswith: '/zajil/bird/edit#/tools' also starts with URL and
+    # ends with the fragment, so a looser form passes on the UNFIXED app — it did.
+    check('…and a fragment on the deep path survives the redirect',
+          page.url == URL + '#/tools' and page.locator('.nav-link').count() == 6,
+          page.url)
+
+    # ── the 404 detector, asserted where it can still see anything ───────────
+    # `failed` accumulates for the page's whole life, but the only check reading
+    # it used to be the second one — before the import, the pedigree navigation,
+    # the offline reload and everything above. A 404 after that point was
+    # recorded and never looked at, which is exactly the shape of the bug this
+    # suite now covers: the blank page 404s TWICE and raises no page error, so
+    # `errs` cannot see it either. Asserted again here, at the end, over
+    # everything that happened.
+    check('no 4xx/5xx responses, across the WHOLE run', not failed, '; '.join(failed[:4]))
     check('zero page errors', not errs, '; '.join(errs[:2]))
     b.close()
 print(f'\n{ok} passed, {fail} failed')
