@@ -70,7 +70,9 @@ export const EXT = {
   'tab.overview':             { ar: 'عام', en: 'Overview' },
   'tab.pedigree':             { ar: 'النسب', en: 'Pedigree' },
   'tile.coi':                 { ar: 'التربية الداخلية', en: 'Inbreeding' },
-  'tile.races':               { ar: 'سباقًا', en: 'races' },
+  // Ruling D (4B addendum): a tile label is an invariant noun under the number —
+  // never the accusative tamyīz the spec drew («سباقًا»), which is wrong at 0 and 1.
+  'tile.races':               { ar: 'سباق', en: 'races' },
   'tile.hatch':               { ar: 'الفقس', en: 'Hatched' },
   'profile.verified.title':   { ar: 'سجل موثق', en: 'Verified record' },
   'profile.verified.body':    { ar: 'في زاجل منذ {since}. كل تعديل محفوظ بتاريخه وجهازه، والشهادة تُبنى من السجل نفسه.', en: 'In Zajil since {since}. Every edit is kept with its date and device, and the certificate is built from this very record.' },
@@ -101,7 +103,9 @@ export const EXT = {
   'form.notes.placeholder':   { ar: 'سلالة، مصدر الطائر، ملاحظات التدريب…', en: 'Strain, where the bird came from, training notes…' },
 
   // ── pedigree-tree-v1 (4B) ──
-  'ped.tile.ancestors':       { ar: 'سلفًا من {total}', en: 'ancestors of {total}' },
+  // Ruling D: invariant noun, as tile.races. «أجيال مكتملة» is already invariant (a plural
+  // noun phrase, not an inflection of the count) and stays as the spec drew it.
+  'ped.tile.ancestors':       { ar: 'سلف من {total}', en: 'ancestors of {total}' },
   'ped.tile.complete':        { ar: 'أجيال مكتملة', en: 'complete generations' },
   'ped.legend.order':         { ar: 'الأب أعلى · الأم أسفل', en: 'Sire above · dam below' },
   'ped.legend.common':        { ar: 'سلف مشترك', en: 'Common ancestor' },

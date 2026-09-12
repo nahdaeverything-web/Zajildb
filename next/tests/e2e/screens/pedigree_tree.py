@@ -46,7 +46,8 @@ try:
         check('crumb = the bird, h1 «شجرة النسب», subject line with plate + sex', pg.locator('[data-testid=crumb]').inner_text().strip() == 'برق' and pg.locator('h1').inner_text().strip() == 'شجرة النسب' and 'ذكر' in pg.locator('[data-testid=subject]').inner_text())
         coi = pg.locator('[data-testid=tile-coi] [data-testid=coi-badge]')
         check('[core_flows#3 on the tree] برق COI tile = 25.0%, band severe', coi.inner_text().strip().startswith('25') and coi.get_attribute('data-band') == 'severe', coi.inner_text())
-        check(f'tiles: «{exp["filled"]} سلفًا من {exp["total"]}» and «{exp["complete"]} أجيال مكتملة» from ancestorLoss / the 4-gen grid', pg.locator('[data-testid=tile-ancestors]').inner_text().split()[0] == str(exp['filled']) and f'من {exp["total"]}' in pg.locator('[data-testid=tile-ancestors]').inner_text() and pg.locator('[data-testid=tile-complete]').inner_text().split()[0] == str(exp['complete']), pg.locator('[data-testid=tile-ancestors]').inner_text().replace('\n', ' '))
+        # [ruling D] invariant noun: «سلف من 30», never the spec's accusative «سلفًا من 30»
+        check(f'[ruling D] tiles: «{exp["filled"]} · سلف من {exp["total"]}» and «{exp["complete"]} أجيال مكتملة» from ancestorLoss / the 4-gen grid', [x.strip() for x in pg.locator('[data-testid=tile-ancestors]').inner_text().split('\n')] == [str(exp['filled']), f'سلف من {exp["total"]}'] and pg.locator('[data-testid=tile-complete]').inner_text().split()[0] == str(exp['complete']), pg.locator('[data-testid=tile-ancestors]').inner_text().replace('\n', ' '))
         # ── chart: four ancestor generations by default ──
         labels = [x.strip() for x in pg.locator('[data-testid=ruler-label]').all_inner_texts()]
         # ruling 14: vanilla ped.subject «الطير» wins over the spec's «الطائر» for the first ruler label

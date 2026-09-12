@@ -53,6 +53,8 @@ try:
         coi = pg.locator('[data-testid=tile-coi] [data-testid=coi-badge]')
         check('[core_flows#5] برق COI tile = 25.0% (full-sib mating), band severe', coi.inner_text().strip().startswith('25') and coi.get_attribute('data-band') == 'severe', coi.inner_text())
         check('tiles: races count and hatch year present', pg.locator('[data-testid=tile-races]').count() == 1 and pg.locator('[data-testid=tile-hatch]').count() == 1)
+        # [ruling D] the tile label is an invariant noun — «سباق», never the spec's accusative «سباقًا» (wrong at 0, which is exactly this bird)
+        check('[ruling D] races tile at a count of 0 reads «0 سباق»', [x.strip() for x in pg.locator('[data-testid=tile-races]').inner_text().split('\n')] == ['0', 'سباق'], pg.locator('[data-testid=tile-races]').inner_text().replace('\n', ' '))
         # ── tabs ──
         tabs = pg.locator('[role=tab]').all_inner_texts()
         check('four tabs: عام · النسب · السباقات · الصحة', [t.strip() for t in tabs] == ['عام', 'النسب', 'السباقات', 'الصحة'], tabs)
@@ -100,6 +102,7 @@ try:
         racer = h.evaluate("() => { const db = window.__zajilDb; const n = new Map(); for (const r of db.state.raceResults.values()) n.set(r.birdId, (n.get(r.birdId) || 0) + 1); return [...n.entries()].sort((a, b) => b[1] - a[1])[0]; }")
         pg.goto(f"{ROOT}bird.html?id={racer[0]}&tab=race", wait_until='load'); pg.wait_for_selector('[data-testid=race-best]', timeout=6000)
         check('races tab (bird with results): best result + ≥1 season table, ranks as pills', pg.locator('[data-testid=season-card]').count() >= 1 and pg.locator('[data-testid=race-row]').count() == racer[1], racer[1])
+        check(f'[ruling D] the same tile label at a count of {racer[1]} is still «سباق»', [x.strip() for x in pg.locator('[data-testid=tile-races]').inner_text().split('\n')] == [str(racer[1]), 'سباق'], pg.locator('[data-testid=tile-races]').inner_text().replace('\n', ' '))
         # ruling 6: one season rule — split-year label with the 1 July turnover, computed here from the bird's own result dates
         exp = pg.evaluate("(id) => { const s = new Set(); for (const r of window.__zajilDb.state.raceResults.values()) if (r.birdId === id && r.date) { const y = +r.date.slice(0, 4), m = +r.date.slice(5, 7); s.add(m >= 7 ? y : y - 1); } return [...s].sort((a, b) => b - a); }", racer[0])
         heads = [h.strip() for h in pg.locator('[data-testid=season-card] h2').all_inner_texts()]

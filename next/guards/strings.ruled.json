@@ -17,7 +17,8 @@
     "الصورة الرئيسية": "RULED (4A acceptance, item 8): cover photo dropped — not rendered. Was: cover-photo aria-label: no vanilla media field marks a primary photo, so the .ph.cover badge and this label are not rendered. Awaiting ruling.",
     "الترتيب": "RULED (4A acceptance, item 14): synonyms — vanilla race.position wins. Was: race-table column: vanilla race.position «المركز» wins over spec «الترتيب». Recorded.",
     "ملاحظة": "RULED (4A acceptance, item 9): health kinds are vanilla's four only. Was: health kind chip: no vanilla event type for «ملاحظة» (vanilla: تطعيم/علاج/مرض/فحص); the port maps treatment/illness to the spec's red kind, check to the grey one. Awaiting ruling on adding event types.",
-    "فيتامينات": "RULED (4A acceptance, item 9): health kinds are vanilla's four only. Was: health kind chip: no vanilla event type for «فيتامينات». Awaiting ruling on adding event types (with the note kind)."
+    "فيتامينات": "RULED (4A acceptance, item 9): health kinds are vanilla's four only. Was: health kind chip: no vanilla event type for «فيتامينات». Awaiting ruling on adding event types (with the note kind).",
+    "سباقًا": "RULED D (4B addendum): a tile label is an invariant noun under the number — tile.races is «سباق». The spec's accusative tamyīz «سباقًا» is wrong at 0 and 1 and is not rendered."
   },
   "add-edit-bird-v2.html": {
     "إضافة طائر": "RULED (4A acceptance, item 14): synonyms — vanilla act.newBird wins for the title and the loft-home add button; act.addBird retired. Was: «إضافة طائر»",
@@ -33,7 +34,8 @@
     "المزيد": "RULED (kit v3.1 NAVIGATION NOTE, 2026-09-02): this spec's rail is the superseded five-item nav; the shell renders the six ruled destinations."
   },
   "pedigree-tree-v1.html": {
-    "الطائر": "RULED (4A acceptance, item 14): synonyms — vanilla ped.subject wins for the first ruler label. Was: «الطائر»"
+    "الطائر": "RULED (4A acceptance, item 14): synonyms — vanilla ped.subject wins for the first ruler label. Was: «الطائر»",
+    "سلفًا من": "RULED D (4B addendum): same rule — ped.tile.ancestors is «سلف من {total}». The spec's «سلفًا من 30» is not rendered."
   },
   "breeding-v1.html": {
     "الزوج": "RULED (4A acceptance, item 14): synonyms — vanilla br.pair wins for the table header. Was: «الزوج»",
