@@ -333,3 +333,112 @@ anchor the regex in `tests/e2e/version_display.py:11`:
 -SW_VERSION = re.search(r"const VERSION = '([^']+)'", open('sw.js').read()).group(1)
 +SW_VERSION = re.search(r"^const VERSION = '([^']+)'", open('sw.js').read(), re.M).group(1)
 ```
+
+---
+
+## RF-6 — twelve document-relative URLs, and the blank page they produced
+
+**Numbered RF-6, not RF-5: the Phase 7 acceptance asked for "RF-5", but that number is
+already the two-disagreeing-version-strings finding above.**
+
+**FIXED at source on `main` (`a98b228`) — not by changing these twelve, but by removing the
+only condition under which they are wrong.**
+
+**Where:** every one of these resolves against the DOCUMENT's url:
+
+| | file:line | value | resolves to, at `/bird/edit` | consequence |
+|---|---|---|---|---|
+| 1 | [`index.html:18`](../index.html#L18) | `src="./js/app.js"` | `/bird/js/app.js` | **blank page** — the whole app |
+| 2 | [`index.html:12`](../index.html#L12) | `href="./css/app.css"` | `/bird/css/app.css` | unstyled |
+| 3 | [`index.html:9`](../index.html#L9) | `href="./manifest.webmanifest"` | `/bird/manifest.webmanifest` | no install |
+| 4-5 | [`index.html:10-11`](../index.html#L10) | `href="./icons/icon-192.png"` ×2 | `/bird/icons/…` | no icon |
+| 6 | [`js/app.js:267`](../js/app.js#L267) | `register('./sw.js')` | `/bird/sw.js` | **the worker can never re-register or update** |
+| 7-9 | [`js/views/birds.js:16,121,122`](../js/views/birds.js#L16) | `'./sample-data.json'`, `'./example-loft-large.json'` | `/bird/…` | the teaching loft dies |
+| 10-12 | [`js/views/tools.js:374-375`](../js/views/tools.js#L374) | the same two datasets | `/bird/…` | the Tools buttons die |
+
+`import` is **not** affected — a static or dynamic import resolves against the MODULE's url,
+measured across all 99 specifiers under `js/**`, every one served correctly from `/js/…`
+while the document sat at `/bird/edit`.
+
+**Why they were harmless until now.** Vanilla routes entirely on `location.hash`, so its
+document is only ever AT the scope root — where `./` is right. The single code path that
+could serve it anywhere else was [`sw.js`](../sw.js)'s navigation fallback, which answered a
+cache-missing navigation with the shell at the requested address. That is now a redirect to
+the scope root, so the document is never at the wrong url and all twelve are correct again.
+
+**Why it mattered.** The React port creates path documents (`/bird/edit`, `/bird/new`). A
+vanilla redeploy over an origin the port has served puts anyone parked on a two-level path
+straight into the blank page, and reloading repeats it.
+
+**Fixed at source:** yes — `a98b228`, `sw.js` only, with four assertions in
+`tests/e2e/subpath_hosting.py` each proven to fire.
+
+**Two couplings the redirect creates, both currently safe, both measured:**
+
+1. **`tests/e2e/schema_upgrade.py:17` navigates to a deep path on purpose** —
+   `page.goto(BASE + '__seed__')`, chosen because it is a same-origin page that does NOT
+   boot the app, so `initDB()` cannot create a v2 database before the suite opens v1. Under
+   the redirect that path would go to the scope root, which DOES boot the app, and opening
+   v1 would block forever. It is safe **only because it is the FIRST navigation in a fresh
+   context**, before any worker exists to intercept it, and line 65 boots the app afterwards
+   without ever returning. Measured 11/0 with the fix, twice, independently. **Anyone
+   reordering that suite so a worker is active first will get a hang with no obvious cause.**
+   A comment in place would be cheap insurance; not added here, because it is a second
+   change to `main` and only one was authorised.
+2. **The tree ships 19 tracked HTML documents under the worker's scope**
+   (`design/approved/*.html` and the drafts), so they deploy to `…/Zajildb/design/…`. They
+   were **already unreachable** with a worker installed: the baseline answers a navigation
+   to one of them with the cached shell, measured by title. The redirect changes the symptom
+   from "the app at a lying URL" to "the app at an honest URL"; it does not take anything
+   away that was there. If those files ever need to be reachable, the fix is a network-first
+   attempt for navigations, which costs offline latency and is a separate decision.
+
+---
+
+## The refuted ruling — recorded because the refutation came from the tree itself
+
+Phase 7 acceptance ruling 6 directed that vanilla's `./js/app.js` be made **root-absolute**
+on `main`, so the rollback path would be safe before it was needed. The intent was right and
+**the mechanism was refuted by this repository's own assertions**, which is the reason it is
+worth writing down.
+
+`tests/e2e/subpath_hosting.py` — eight assertions that predate the ruling — run against a
+root-absolute copy of the tree:
+
+```
+  ✗ app boots under /zajil/
+  ✗ no 4xx/5xx responses   404 …/css/app.css; 404 …/js/app.js
+  ✗ service worker scoped to the subdirectory   none
+  ✗ manifest resolves
+  ✗ 38 birds under subpath
+Traceback … line 66, in <module>   Locator.inner_text: Timeout 30000ms exceeded
+```
+
+Five failures then a hard crash. The cause: vanilla is served at
+`nahdaeverything-web.github.io/**Zajildb**/`, a subpath, so `/js/app.js` leaves the
+deployment entirely. Measured at a simulated subpath: blank white page, 0 nav links,
+**zero service-worker registrations** — and the same ruling's companion decision (ruling 1)
+requires that origin to keep serving as the **export bridge**, the only route from an
+existing fancier's records to the new origin. The fix would have taken down the thing the
+plan depends on.
+
+Two further facts the ruling could not have known, both measured: there are **twelve**
+document-relative URLs and not one (RF-6 above), so `index.html` alone was never enough;
+and no static variant works at both prefixes — `<base href="/">` is root-absoluteness
+respelled, `<base href="/Zajildb/">` mirrors the break to the apex root.
+
+**Verified in two engines.** Chromium and **WebKit 26.0** — Safari's engine, which is where
+these fanciers actually are — agree in all eight cells: patched redirects to the scope root
+with six nav links at the subpath and at the origin root, online and offline; baseline stays
+on the deep path with zero. One methodological finding came out of it, worth keeping:
+**playwright's `set_offline` is unusable with WebKit's service worker.** It breaks navigation
+outright — even a plain offline reload at the scope root throws — and it reported the
+UNPATCHED tree as passing, which is impossible. Offline was therefore measured by **shutting
+the HTTP server down**, a real transport failure that needs no emulation. Any future
+WebKit-side offline assertion has to do the same.
+
+**The lesson is about where the knowledge of "where the app lives" belongs.** Root-absolute
+paths hardcode an origin layout into the shipped shell, so one `index.html` cannot serve two
+deployments. The worker derives it at runtime from `self.location`, so it is correct at any
+prefix without being told. That is why the accepted fix is three lines in `sw.js` and not
+eight edits across four files.

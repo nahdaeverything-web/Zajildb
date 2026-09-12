@@ -102,12 +102,31 @@ So the suite splits in two, and §g orders both:
 - the **vanilla original**, URL-parameterised, becomes the rollback verifier;
 - a **ported copy** under `next/tests/e2e/` becomes the deploy gate.
 
+> **RULED (Phase 7 acceptance, 2): the split is accepted, both at stage 2**, with four
+> required fixes in the ported copy. They are not polish; each one closes a way the gate
+> could pass on a broken deploy:
+>
+> | fix | what it closes |
+> |---|---|
+> | read **`ZAJIL_LIVE_URL`** | the env var `run_all.py` already documents and nothing reads. Without it the suite names one origin forever and cannot gate an apex deploy at all |
+> | drop **`networkidle`** | HANDOFF records it hanging under a service worker — a worker that keeps a connection alive means the suite never reaches its first assertion, and a hang reads as a broken test rather than a broken deploy |
+> | assert the **EXACT expected cache version** | `any('zajil-' in c)` is satisfied by the §0.1 collision, by a stale cache, and by the wrong release entirely. The gate must name the version it expects and compare |
+> | walk **more than the root path** | every deep route, because §f.3 shows deep paths are precisely where a bad deploy and a bad rollback both strand people, and the root path is the one place both look fine |
+
 Four things neither copy proves, all load-bearing: it opens a **fresh browser profile**, so
 the entire hard case — an old worker already installed, cache-first, two reloads — is
 invisible to it; its cache assertion is `any('zajil-' in c)`, which the §0.1 collision
 passes; it only ever walks the **root path**, never `/birds`, `/tools` or `/bird/edit`,
 which are where §f strands people; and it uses `wait_until='networkidle'`, which HANDOFF
 records as hanging under a service worker.
+
+> **Neither copy sees the returning user.** Both open a fresh profile, so neither exercises
+> the case that actually decides a cutover: a device that already has the *other* app's
+> worker installed and its cache warm. That case gets its own step in §g (stage 4), kept
+> separate from the migration proof at stage 3 because they prove different things — stage 3
+> proves the DATA arrives, stage 4 proves the APP changes hands. Ruling 2 pointed at
+> "stage 3" for this; it is numbered separately rather than folded in, so that neither proof
+> can be reported green on the strength of the other.
 
 ---
 
@@ -266,7 +285,13 @@ what makes invite-only true rather than aspirational. `POST /auth/v1/signup` mus
 
 **Allow anonymous sign-ins is a separate toggle and must also be off.** Disabling signups
 does not disable it; it is an independent option (`external_anonymous_users_enabled`), and
-leaving it on means the invite-only posture has a second door. Keep the **Email** provider
+leaving it on means the invite-only posture has a second door.
+
+> **RULED (Phase 7 acceptance, 5): its own line on the production checklist, with its own
+> verification** — stage 7b. Not folded into the signups check, because the two are
+> independent settings and a single "auth is locked down" tick is exactly how the second one
+> stays on. Verified by a client call and by reading the flag back, and **re-checked after
+> every later settings change**, since nothing in the app would ever reveal it. Keep the **Email** provider
 enabled — the client only ever calls `grant_type=password` and `grant_type=refresh_token` —
 and every OAuth and phone provider off, since nothing in the client can initiate them.
 
@@ -325,6 +350,13 @@ consequences, and the second is the useful one:
 
 ### d.2 What an export does and does not carry
 
+> **RULED (Phase 7 acceptance, 4): the `settings` omission is ACCEPTED and must be
+> DOCUMENTED in the migration instructions** — the fancier re-picks language, numerals and
+> COI depth once, on the far side. Writing it down is what turns a silent reset into an
+> expected step; the instruction sheet §d.4 asks for has to name the three by name, because
+> a fancier who finds Arabic-Indic numerals gone and is not told will conclude the import
+> failed and try again.
+
 Verified against `src/db/io.js`. **Carried:** all five data stores whole, **the photos**
 (each media row re-emitted with a base64 `dataURL`), tombstones so deletions survive, and
 per-record provenance. **Not carried: `settings` — no key at all.** Language, numerals,
@@ -340,10 +372,36 @@ Two costs of the recommended path, both real:
   BACKLOG measured this shape at ~400 MB of blob reads and ~530 MB of transient strings for
   200 photos at 2 MB. `autoBackup` was fixed by skipping media; **the user-facing export was
   not**, and this is the one moment it matters. A large loft on a phone may stall or fail.
+
+  > **RULED (Phase 7 acceptance, 4): FIX before cutover.** "A 200-photo loft silently
+  > freezing at the one moment it matters is not acceptable." Two parts, and only one of them
+  > is settled:
+  >
+  > - **The busy state is not a design question.** `ExamplesCard` in the same file already
+  >   has `setBusy`; the export button copies it. Do that.
+  > - **The chunking mechanism IS a design question, and the ruling names the requirement,
+  >   not the approach.** At least three shapes would satisfy it — reading and encoding media
+  >   in batches with a yield between them so the main thread stays responsive and progress
+  >   can be reported; assembling the payload as a stream into a Blob instead of one
+  >   `JSON.stringify` over the whole loft; or moving the encode into a Worker. They differ
+  >   in what the person sees, in whether progress can be shown at all, and in how much of
+  >   `io.js` — which is **byte-identical to vanilla's** and guarded as such — has to change.
+  >   That last point is the constraint that matters: `exportAll()` is shared code, so a
+  >   change here is a change to the vanilla app too, or it is a deliberate divergence that
+  >   ends the byte-identity the port has held since Phase 0. **Not invented here.** It needs
+  >   a ruling, and it is listed as an open decision at the end of this plan.
 - **The port does not render the export-freshness nudge.** The string `backup.warn30`
   («مرّ أكثر من ٣٠ يومًا على آخر تصدير») exists in the port's dictionary but **no component
   renders it**; vanilla banners it on every route. The one in-app prompt that puts an export
   in a user's hands lives only on the app being retired.
+
+  > **RULED (Phase 7 acceptance, 4): RESTORE it in the port before cutover.** Vanilla's
+  > `renderBackupBanner()` is the reference and the string already exists, so this invents
+  > nothing: the banner shows on every route when the last export is over thirty days old and
+  > the loft is not empty. It carries more weight after this plan than before it — §d asks
+  > every existing fancier to export once to migrate, and §h asks Samir to keep a copy off
+  > both origins. Both of those are habits, and this is the only thing in the app that
+  > forms one.
 - **The migration path itself is proven nowhere.** `tools.py` proves a merge round trip into
   a database that already holds the same records — so `importAll` skips every media row —
   and the foreign-loft case deliberately strips media. **A full export with real photo bytes
@@ -449,6 +507,17 @@ own repo rather than a domain move between repos with a fresh certificate to wai
 The alternative — one repo, domain attached, Pages source switched to the port — is simpler
 to hold in your head and strictly worse on every count above.
 
+> **RULED (Phase 7 acceptance, 1): accepted as recommended.** The port gets its own
+> repository, `zajildb.com` points there, and `Zajildb` keeps serving vanilla at its existing
+> URL **untouched**. Side by side during the pilot; rollback is a redeploy.
+>
+> **The old origin is therefore NOT retired at cutover.** The export bridge of §d is the
+> only route from a fancier's existing records to the new origin, and it exists only while
+> `nahdaeverything-web.github.io` still serves something. Retiring it strands every loft
+> that has not yet migrated, silently and permanently — there is no second chance and no
+> way to notice from the new origin. It stays alive until §h's condition 9 has held for
+> every known user, and that decision is a separate one, taken later, on evidence.
+
 ### e.2 The Supabase API domain
 
 `*.supabase.co` **was regionally blocked in the UAE during 2025**, and Zajil's audience is
@@ -484,6 +553,16 @@ this and recommend a self-owned proxy instead. Supabase's own material does not 
 So a custom domain is the right first move and may not be sufficient; the fallback, if the
 chain turns out to be blocked, is a proxy on a host we control. Worth knowing before it is
 needed rather than during.
+
+> **RULED (Phase 7 acceptance, 7): recorded as UNRESOLVED, with the self-owned proxy as the
+> named fallback. Not to be solved now** — it is a launch-time question and may not bite
+> Jordan at all. What that means concretely: the plan does not carry a proxy design, nobody
+> builds one speculatively, and the trigger for revisiting is a real report of the API being
+> unreachable from a user's network. The thing to keep is the *diagnosis*, because RF-3
+> proves a regional DNS block and an auto-paused project present to the client identically —
+> `AuthError('network')`, nothing more. So the first question on any such report is which of
+> the two it is, and the answer comes from resolving the host from the affected network, not
+> from the app.
 
 Counter-consideration, in the other direction: the project already sits behind Cloudflare,
 so an *IP*-level block would take out a large fraction of the internet. The DNS/SNI vector
@@ -551,10 +630,30 @@ vanish.
 3. the module never loads, `#app` holds only a `<noscript>` → **blank white page**;
 4. reloading repeats it exactly. Only typing the site root recovers.
 
-One-level paths (`/birds`, `/tools`) are fine. This is a real, if narrow, hole in the
-rollback, and the cheapest mitigation is a root-absolute `src="/js/app.js"` in vanilla's
-`index.html` — a one-character-class change to the app being rolled back to, which should be
-made *before* it is ever needed, not during.
+One-level paths (`/birds`, `/tools`) are fine.
+
+> **CLOSED (Phase 7 acceptance, ruling 6 as corrected): fixed on `main` at `a98b228`.**
+>
+> This paragraph originally proposed a root-absolute `src="/js/app.js"` and called it "a
+> one-character-class change". Both halves were wrong, and the tree's own assertions said
+> so: vanilla is served at a **subpath**, so root-absolute paths leave the deployment
+> entirely — `subpath_hosting.py` fails five assertions and then crashes — and there are
+> **twelve** document-relative URLs, not one (RF-6), five of them outside `index.html`.
+>
+> The fix is three lines in `sw.js`: a navigation below the scope root now redirects there
+> rather than being answered with the shell at an address where every `./` is wrong. It is
+> prefix-agnostic because it derives the root from `self.location`, so it is correct at
+> `/Zajildb/` and at an apex root without being told which it is — and it is right by the
+> app's own routing contract, since vanilla routes purely on the hash and a deep path is
+> therefore not a vanilla URL at all. Verified in Chromium and WebKit 26.0, online and
+> offline, at both prefixes; four assertions added to `subpath_hosting.py`, each proven to
+> fire. Root suite 548/0, node 141/141.
+>
+> The more valuable half is in RF-6: the failure was **invisible to every signal the suite
+> read**. A module script that 404s raises no `pageerror`, so "zero page errors" passes on a
+> blank page — measured — and the suite's 404 detector was asserted before its last three
+> navigations, so a later 404 was recorded and never looked at. Both safety nets are now
+> asserted at the end of the run.
 
 **And one way the port itself can quietly destroy offline mode.** If a port build's
 `SCOPE !== BUILT_FOR`, `precache()` returns early **without caching anything**, while
@@ -583,30 +682,39 @@ walks the **root path**, never the deep ones f.3 strands.
 
 ## g. The order of operations
 
-Nothing in stages 1–6 touches a user. The first step a user can see is stage 7, and the
-first that is slow to undo is stage 8.
+Nothing in stages 1–8 touches a user. The first step a user can see is stage 9, and the
+first that is slow to undo is stage 11.
 
 | # | Step | Gate before moving on |
 |---|---|---|
 | 1 | Bump `next/package.json` to the release version | `version_display.py`; the About row reports the new string |
-| 2 | **Port `live_deployment.py` into `next/tests/e2e/` and make both copies read `ZAJIL_LIVE_URL`** (§0.4) — without this there is no first gate | the ported copy green against a local static serve of the export; the vanilla copy green against the live `/Zajildb/` |
-| 3 | **Write the empty-target import test** (§d.2) — a full export with real photo bytes into a database with nothing in it | green in the gate |
-| 4 | Build the config injection mechanism (§a.3) and its guard consequences | the full gate green; `config_injection.py` still proves the repo unconfigured |
-| 5 | Create the production Supabase project: settings (signups off, **anonymous off**, email provider on), the consolidated migration, the verification query | the four queries, **then** `push_live.py` + `pull_live.py` + `auth_live.py` against it — objects, then paths |
-| 6 | Create the pilot account through the admin API; confirm `POST /auth/v1/signup` → 422 | `auth_live.py` signs in, refreshes and signs out against production |
-| 7 | **The old origin gets its migration notice** — early, because its cache-first worker means it lands on the second reload and never for anyone who does not reload (§d.4) | the notice is visible on a device that already had the app installed |
-| 8 | Point `api.zajildb.com` at the project; wait for the certificate | the same three live suites, re-run against the custom host |
-| 9 | Point `zajildb.com` at the **port's own repository** (§e.1a); wait out HTTPS (~1h); enable Enforce HTTPS | the origin serves over HTTPS and a worker can register at all; `curl -I` the old URL and record whether it redirects |
-| 10 | **Deploy the port** to `zajildb.com`, configured, base path empty | **the ported `live_deployment.py` — the first gate** |
-| 11 | A real push and pull from a real device on the live origin | **`push_live.py` / `pull_live.py` against production — the second gate** |
-| 12 | The export/import path is walked end to end by a person, on a real phone with real photos | a file exported at the old origin imports at the new one with its photos |
-| 13 | Samir's own loft moves | §h |
+| 2 | **Split `live_deployment.py`** (§0.4, ruling 2): the vanilla original becomes the rollback verifier; a ported copy under `next/tests/e2e/` becomes the deploy gate. Both read `ZAJIL_LIVE_URL`, neither uses `networkidle`, both assert the **exact** expected cache version, both walk the deep routes | the ported copy green against a local static serve of the export; the vanilla copy green against the live `/Zajildb/` |
+| 3 | **THE MIGRATION PROOF** — a full export carrying real photo bytes, taken on one origin, imported into an **EMPTY** database on the other, verified **record for record including the media blobs** (§d.2) | green in the gate. **Ruling 3: nothing moves before this passes.** This is the gate that matters most |
+| 4 | **The returning-user proof** (ruling 2's note): a device with the *other* app's worker installed and its cache warm, taken through the handover in both directions | the app changes hands in two reloads, at the root **and** at a deep path (§f.3) |
+| 5 | Restore `backup.warn30` in the port; fix the export's busy state — and land the ruling on the chunking mechanism (§d.2, ruling 4) | the banner appears at 30 days on a non-empty loft; a 200-photo export does not freeze the screen |
+| 6 | Build the config injection mechanism (§a.3) and its guard consequences | the full gate green; `config_injection.py` still proves the repo unconfigured |
+| 7 | Create the production Supabase project: the consolidated migration, then the settings | the four introspection queries, **then** `push_live.py` + `pull_live.py` + `auth_live.py` against it — objects, then paths |
+| 7a | **Public signups disabled** | `POST /auth/v1/signup` → **422 `signup_disabled`**, checked against the live project, not read off a dashboard |
+| 7b | **Anonymous sign-ins disabled** (ruling 5 — its own line, its own check, because it is an *independent* toggle and disabling signups does not disable it) | a client call to `POST /auth/v1/signup` with no credentials, and the project's `external_anonymous_users_enabled` read back as false. Re-checked after every later settings change |
+| 7c | Email provider enabled; every OAuth and phone provider off | `auth_live.py`'s password grant succeeds, and no other provider is listed as enabled |
+| 8 | Create the pilot account through the admin API, `email_confirm: true` | `auth_live.py` signs in, refreshes and signs out against production |
+| 9 | **The old origin gets its migration notice** — early, because its cache-first worker means it lands on the second reload and never for anyone who does not reload (§d.4) | the notice is visible on a device that already had the app installed |
+| 10 | Point `api.zajildb.com` at the project; wait for the certificate | the same three live suites, re-run against the custom host |
+| 11 | Point `zajildb.com` at the **port's own repository** (§e.1a); wait out HTTPS (~1h); enable Enforce HTTPS | the origin serves over HTTPS and a worker can register at all; `curl -I` the old URL and record whether it redirects |
+| 12 | **Deploy the port** to `zajildb.com`, configured, base path empty | **the ported `live_deployment.py` — the first gate** |
+| 13 | A real push and pull from a real device on the live origin | **`push_live.py` / `pull_live.py` against production — the second gate** |
+| 14 | The export/import path is walked end to end by a person, on a real phone with real photos | a file exported at the old origin imports at the new one with its photos |
+| 15 | Samir's own loft moves | §h |
 
-Stage 7 moved ahead of the domain work deliberately: it is the only step whose effect is
+Stage 3 is the load-bearing one and it comes early on purpose: it is the only step that
+proves a fancier's records and photos actually survive the move, and it needs nothing
+deployed to run. Ruling 3 is explicit — **nothing moves before it passes.**
+
+Stage 9 moved ahead of the domain work deliberately: it is the only step whose effect is
 delayed by days rather than minutes, because it has to propagate through a cache that never
 revalidates.
 
-Stage 9 is the one that cannot be undone in ten minutes — DNS propagates and a certificate
+Stage 11 is the one that cannot be undone in ten minutes — DNS propagates and a certificate
 has to be issued. Everything before it is rehearsal; everything after it is a redeploy,
 provided §e.1a's two-repo layout is what was built.
 
@@ -633,9 +741,11 @@ data that matters and he is the person who cannot be told "restore from your exp
    the version bump does not fix. A rollback plan that has never been run is a hope.
 7. **The version bump is in the shipped worker** — the About row on the live site reports
    the release version, not `1.9.1`. §0.1 is the whole reason.
-8. **Public signups are still refused** on the production project, **and anonymous sign-ins
-   are still off** — both re-checked after all the domain work, because they are the two
-   settings that would be quietly catastrophic.
+8. **Public signups are still refused** on the production project — `POST /auth/v1/signup`
+   answers 422, checked against the live project.
+8a. **Anonymous sign-ins are still off** — checked separately, on its own, after all the
+   domain work (ruling 5). It is an independent toggle, nothing in the app would ever reveal
+   it, and it is the one door that could be open while every other check reads green.
 9. **The export bridge still answers.** The old origin serves, and a page under it can still
    read the old `zajil` database (§d.1) — verified, not assumed, after the domain move.
 
@@ -688,3 +798,17 @@ the only in-app prompt that puts an export in a fancier's hands — which §d no
 twice over, once for the migration and once for the "keep a copy off both origins" habit.
 **Recommendation: restore it before the cutover**, not after; it is a small component and it
 is the difference between a backup culture and a backup intention.
+
+---
+
+## Open decisions — the things this plan deliberately does not settle
+
+Each one is named in place above. Collected here so none of them is discovered late.
+
+| | Decision | Why it is not settled here |
+|---|---|---|
+| 1 | **The port's release version** (§0.1) | `2.0.0` is assumed throughout and is the honest answer, but the number is a judgement about what the release *is*, not a fact about the code. What is NOT open: that it must differ from `1.9.1`. |
+| 2 | **The export's chunking mechanism** (§d.2, ruling 4) | The ruling names the requirement — a 200-photo loft must not freeze — and three shapes satisfy it. They differ in what the fancier sees and in how much of `io.js` changes. `io.js` is **byte-identical to vanilla's** and guarded as such, so this is also a decision about whether that identity ends. Inventing it would be inventing a design decision. |
+| 3 | **The Supabase CNAME chain** (§e.2, ruling 7) | Recorded UNRESOLVED by ruling, with the self-owned proxy as the named fallback and no speculative work. |
+| 4 | **When the old origin is retired** (§e.1a, ruling 1) | Ruling 1 settles that it is *not* retired at cutover. When it may be is a later decision, on evidence about who has migrated — a number this repo does not hold. |
+| 5 | **The 16 presentation differences** (appendix) | Awaiting the single pass ruling 2 of Phase 6 acceptance reserved. |
