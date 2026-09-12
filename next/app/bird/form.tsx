@@ -228,9 +228,17 @@ export default function BirdForm() {
                 </div>
               </>
             ) : (
-              <button type="button" className={s.create} disabled={!q.trim()} onClick={() => quickCreate(role, q.trim())} data-testid="picker-create">
-                + {t('picker.createNew', { q: q.trim() })}<small>{t('picker.createHint')}</small>
-              </button>
+              <>
+                {/* ui.js:278 — a query that already resolves to a real bird is never an offer to create a
+                    second record for it, even when THIS slot could not select that bird. The action guards
+                    itself too (createFromQuery re-checks), but the offer must not be there in the first place. */}
+                {model.clash && <div className={s.note} data-testid="picker-note">{model.blocked
+                  ? t('picker.existsButFiltered', { name: birdLabelText(model.clash), sex: t('sex.' + (model.clash.sex || 'unknown')) })
+                  : t('warn.dupRing.body', { name: birdLabelText(model.clash) })}</div>}
+                <button type="button" className={s.create} disabled={!model.canCreate} onClick={() => quickCreate(role, q.trim())} data-testid="picker-create">
+                  + {t('picker.createNew', { q: q.trim() })}<small>{t('picker.createHint')}</small>
+                </button>
+              </>
             )}
           </div>
         )}

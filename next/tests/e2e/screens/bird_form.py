@@ -46,6 +46,7 @@ try:
         check('status chips = the loft\'s statuses (vanilla loftStatuses), «نشط» not among them', pg.locator('[data-testid=status-chip]').count() == n_st and 'نشط' not in pg.locator('[data-testid=f-status]').inner_text())
         check('[ownership#1] the ownership control is present (external switch, off)', pg.locator('[data-testid=external-switch]').get_attribute('aria-checked') == 'false')
         check('[ownership#2] status visible for an owned bird', pg.locator('[data-testid=f-status]').is_visible())
+        check('[entry_ergonomics#11] the strain datalist offers the loft\'s distinct strains', pg.locator('#dl-strains option').count() >= 2, pg.locator('#dl-strains option').count())
         for w in (430, 900, 1400):
             pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/new-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
@@ -62,6 +63,48 @@ try:
         pg.click('[data-testid=parent-sire-create]'); pg.fill('[data-testid=picker-input]', 'BE-2001-9000002'); pg.click('[data-testid=picker-create]'); pg.wait_for_timeout(500)
         ext2 = snap(pg, "() => { const b = window.__zajilDb.allBirds().find(x => (x.rings||[]).some(r => r.raw === 'BE-2001-9000002')); return b && [b.external, b.status, b.sex]; }")
         check('[record_factory#1] quick-create mints an external cock with reference status and fills the slot', ext2 == [True, 'reference', 'cock'] and pg.locator('[data-testid=parent-sire]').count() == 1, ext2)
+        # ── [entry_ergonomics#6–7] an unmatched ARABIC NAME is a name, not a ring ──
+        pg.goto(NEW, wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
+        pg.click('[data-testid=parent-sire-create]'); pg.fill('[data-testid=picker-input]', 'طير غير موجود'); pg.wait_for_timeout(150)
+        check('[entry_ergonomics#6] an unmatched query offers the inline create, so backfilling never means abandoning the form', pg.locator('[data-testid=picker-create]').is_enabled())
+        pg.click('[data-testid=picker-create]'); pg.wait_for_timeout(500)
+        stub = snap(pg, "() => { const b = window.__zajilDb.allBirds().find(x => x.name === 'طير غير موجود'); return b && [b.external, b.status, b.sex, (b.rings||[]).length]; }")
+        check('[entry_ergonomics#7] …the stub is filed as a NAME (no ring), external, reference, and lands in the slot', stub == [True, 'reference', 'cock', 0] and 'طير غير موجود' in pg.locator('[data-testid=parent-sire-name]').inner_text(), stub)
+
+        # ── [picker_guards#1–2] a match this slot cannot take explains itself and is never a clone offer ──
+        hen = snap(pg, "() => { const b = window.__zajilDb.allBirds().find(x => x.sex === 'hen' && (x.rings||[]).length); return b && b.rings[0].raw; }")
+        pg.goto(NEW, wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
+        pg.click('[data-testid=parent-sire-pick]'); pg.fill('[data-testid=picker-input]', hen); pg.wait_for_timeout(200)
+        check('[picker_guards#1] a hen\'s ring in the SIRE slot says why it cannot be offered — not an empty list', pg.locator('[data-testid=picker-sire] [data-testid=picker-note]').count() == 1 and pg.locator('[data-testid=picker-sire] [data-testid=picker-item]').count() == 0, hen)
+        pg.click('[data-testid=parent-sire-create]'); pg.fill('[data-testid=picker-input]', hen); pg.wait_for_timeout(200)
+        check('[picker_guards#2] …and creating is refused for it: the offer is disabled, so no clone can be minted', pg.locator('[data-testid=picker-create]').is_disabled() and pg.locator('[data-testid=picker-note]').count() == 1)
+
+        # ── [picker_guards#3–5] Eastern-Arabic digits are a ring, and fold to the same key as Western ones ──
+        n_before = snap(pg, "() => window.__zajilDb.allBirds().length")
+        pg.fill('[data-testid=picker-input]', 'JO-٢٠٩٩-٧٧٧٧'); pg.wait_for_timeout(200)
+        check('[picker_guards#3] an Eastern-Arabic ring matches nothing yet, so the create is offered', pg.locator('[data-testid=picker-create]').is_enabled())
+        pg.click('[data-testid=picker-create]'); pg.wait_for_timeout(500)
+        east = snap(pg, "() => { const b = window.__zajilDb.allBirds().find(x => (x.rings||[]).some(r => (r.raw||'').includes('٧٧٧٧'))); return b && [(b.rings||[]).length, b.name]; }")
+        check('[picker_guards#4] …and it is stored as a RING, with no name', east == [1, ''], east)
+        pg.goto(NEW, wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
+        pg.click('[data-testid=parent-sire-create]'); pg.fill('[data-testid=picker-input]', 'JO-2099-7777'); pg.wait_for_timeout(200)
+        check('[picker_guards#5] the SAME ring in Western digits resolves to that bird — the create offer is gone', pg.locator('[data-testid=picker-create]').is_disabled())
+        pg.click('[data-testid=picker-input]'); pg.fill('[data-testid=picker-input]', 'JO-2099-7777'); pg.wait_for_timeout(150)
+        check('[picker_duplicates#7] …and no second record was ever minted for it', snap(pg, "() => window.__zajilDb.allBirds().filter(x => (x.rings||[]).some(r => /7777|٧٧٧٧/.test(r.raw||''))).length") == 1 and snap(pg, "() => window.__zajilDb.allBirds().length") == n_before + 1)
+
+        # ── [picker_duplicates#2–3] a filled slot never re-offers creation, however many times it is tapped ──
+        pg.goto(NEW, wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
+        pg.click('[data-testid=parent-dam-pick]'); pg.wait_for_timeout(150); pg.click('[data-testid=picker-item] >> nth=0'); pg.wait_for_timeout(150)
+        offers = 0
+        for _ in range(5):
+            pg.click('[data-testid=parent-dam-change]'); pg.wait_for_timeout(120)
+            offers += pg.locator('[data-testid=picker-create]').count()
+            pg.click('[data-testid=form-title]'); pg.wait_for_timeout(100)
+        check('[picker_duplicates#2–3] re-tapping a filled slot five times never offers to create (0 offers)', offers == 0, f'{offers} offers')
+        pg.click('[data-testid=parent-dam-change]'); pg.wait_for_timeout(150)
+        check('[picker_guards#6] …and re-opening it BROWSES the loft rather than showing an empty search', pg.locator('[data-testid=picker-item]').count() > 0, pg.locator('[data-testid=picker-item]').count())
+        pg.goto(NEW, wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')   # hand the next block a clean form
+
         # ── [example_data#4] pick flow: list opens, closes after pick, closes on outside click ──
         pg.click('[data-testid=parent-dam-pick]'); pg.wait_for_timeout(150)
         # vanilla's dam filter excludes cocks only (bird-form.js:98) — unknown-sex birds stay eligible
@@ -157,6 +200,15 @@ try:
         upd = snap(pg, "(id) => { const b = window.__zajilDb.getBird(id); return [b.colour, (b.notes||[]).length]; }", saved['id'])
         check('edit saves the change and appends the note through saveBird', upd == ['أحمر', 1], upd)
         check('cancel on the edit form returns to the profile', (pg.goto(f"{ROOT}bird/edit.html?id={saved['id']}", wait_until='load'), pg.wait_for_selector('[data-testid=cancel-btn]'), pg.click('[data-testid=cancel-btn]'), pg.wait_for_timeout(500))[0] is not None and ('/bird' in pg.url))
+        # ── [entry_ergonomics#12–13] a plain save leaves for the bird, and the back gesture returns to the LIST ──
+        pg.goto(f'{ROOT}birds.html', wait_until='load'); pg.wait_for_selector('[data-testid=bird-row]')
+        pg.goto(NEW, wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
+        pg.fill('[data-testid=ring-input] >> nth=0', 'JO-2026-77003'); pg.click('[data-testid=save-btn]')
+        pg.wait_for_url(re.compile(r'/bird\?id='), timeout=6000); pg.wait_for_selector('[data-testid=profile-hero]')
+        check('[entry_ergonomics#12] a plain save lands on the new bird', '/bird?id=' in pg.url)
+        pg.go_back(); pg.wait_for_timeout(700)
+        check('[entry_ergonomics#13] …and going back returns to the LIST, never to a stale form (replace, not push)', '/birds' in pg.url and pg.locator('[data-testid=bird-row]').count() > 0, pg.url)
+
         check('zero page errors', not errs, errs)
         b.close()
 finally:
