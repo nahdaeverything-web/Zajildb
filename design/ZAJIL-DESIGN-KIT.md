@@ -98,9 +98,19 @@ styling; a bird with no races yet.
 
 ## 4. 🎨 Add / edit bird (إضافة أو تعديل طائر)
 ⚙ Fields: name (Arabic) · ring number · sex (ذكر/أنثى/غير معروف) · status
-(نشط/تربية/فريق السباق/ميت/مباع/مفقود) · color/description · hatch date · sire
+(تربية/فريق السباق/فرخ/احتياط/مباع/مفقود/نافق) · color/description · hatch date · sire
 (select existing bird or quick-create) · dam (same) · external-to-loft toggle
 (reference-only ancestor) · notes · photo add.
+⚠ The status list above is the LOFT'S OWN, stored per loft and seeded from
+`DEFAULT_STATUSES` in `js/db/storage.js` — this line must match that array and nothing
+else. A never-owned ancestor additionally carries «مرجع نسب» (`REFERENCE_STATUS`), which
+is appended rather than seeded so it cannot be picked for a real bird by accident.
+Corrected 2026-09-13 (Phase 6 acceptance): this line previously read
+«نشط/تربية/فريق السباق/ميت/مباع/مفقود», which invented a «نشط» status the data layer has
+never had, wrote «ميت» for «نافق», and omitted «فرخ» and «احتياط». Four approved specs draw
+a «نشط» chip — `add-edit-bird-v1`, `add-edit-bird-v2`, `bird-profile-v1` and
+`zajil-prototype` — and it is MOCK CONTENT in all four: no build of Zajil, vanilla or port,
+has ever rendered it. See `next/ROOT-FINDINGS.md` SF-2.
 ⚙ Behaviors to show: duplicate-ring warning (non-blocking, amber); validation errors
 inline per field; save + cancel; the same form reused for "add sibling" (parents
 pre-filled).
