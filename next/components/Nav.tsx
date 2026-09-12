@@ -36,7 +36,9 @@ function isOn(pathname: string, tab: (typeof TABS)[number]) {
 
 // The bird form is a modal flow: add-edit-bird-v2 draws its own fixed action
 // bar where the tab bar sits and no tab bar at all (the rail stays at ≥1100).
-const NO_TABBAR = ['/bird/new', '/bird/edit'];
+// The certificate is the same shape — certificate-v1 marks its options panel
+// "app screen, no tab bar" and draws its own fixed «مشاركة / طباعة» bar there.
+const NO_TABBAR = ['/bird/new', '/bird/edit', '/cert'];
 
 export default function Nav() {
   // a plain file server serves the export as /birds.html, /bird/new.html; a static host as the clean path — compare the clean one

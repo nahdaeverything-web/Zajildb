@@ -110,7 +110,10 @@ export default function BirdView() {
     setMenu(false);
     db.exportBirdWithAncestry(id, { includeRaces: true, includeMedia: true }).then((payload: unknown) => {
       downloadJSON(payload, `zajil-bird-${ring.replace(/[^\w-]+/g, '_') || id.slice(0, 8)}.json`); toast(t('toast.exported'), { kind: 'success' });
-    });
+      // db/io.js:237 rejects when an ancestor's photo metadata has no bytes on this device —
+      // the ordinary state after a sync. Raised in the 4D report; a share that cannot be made
+      // must say so rather than doing nothing.
+    }).catch(() => toast(t('err.exportFailed'), { kind: 'error' }));
   }
   // bird-detail.js:233 — per-photo delete with undo (ruling 8: a capability the spec's silence does not remove)
   async function delMedia(m: Media) {

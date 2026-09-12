@@ -157,6 +157,51 @@ until a cutover ruling.
   DEVIATION [ruling D]: the spec's duplicate group is labelled «نسختان» — its own
   mock's two-copy count, which lies at every other count — so the port renders
   the number plus the invariant noun, the grammar ruling D fixed for the tiles.
+- **Certificate (4D)** — `/cert?id=`, from certificate-v1 with the wiring of
+  js/views/cert.js. The options panel on the start side and the scaled preview,
+  both formats (A4 landscape and the 9:16 phone sheet, each a different sheet
+  rather than the same one cropped), 3/4/5 generations, the three photo
+  switches, the branding block that RULING 2's loft fields feed, the QR slot,
+  the print rules, the phone's «تكبير» reading mode, and the `@page` rule —
+  restored the way the spec itself does it, as a `<style>` element whose text
+  follows the format (certificate-v1.html:303, rewritten at :504), because a
+  CSS Module cannot hold `@page` and a page box has nothing to scope to.
+  CONTENT LANGUAGE is independent of the app language, as vanilla's cert.js
+  already had it: the sheet is rendered with the dictionary switched and the app
+  language put back, so an English certificate prints inside an Arabic app with
+  the app's own direction untouched. The certificate counts the SUBJECT as
+  generation 1, so its rows read `pedigreeGrid` from index g-1 and its COI line
+  is computed over depth-1 ancestor generations — which is what makes
+  «{n} أجيال · {f} من {tot} سلفًا» a true statement about the sheet in hand (the
+  spec's own «5 أجيال · 30 سلفًا»).
+  The tab bar is hidden here, as on the bird form: certificate-v1 marks its
+  panel "app screen, no tab bar" and draws its own fixed «مشاركة / طباعة» bar
+  where the tab bar sits. The rail stays at ≥1100.
+  DEVIATIONS, all raised in the 4D report, none resolved silently:
+    - The spec's head prints a certificate number («ZJ-2026-00417»). Zajil has
+      no certificate register, so the cell is not rendered; the story rule that
+      hid it (`.head .meta > div:first-child`) went with it.
+    - «مشاركة» in the spec toasts "share a PDF / a 9:16 image". The app can
+      produce neither, so the button carries the app's one share — the profile's
+      export — rather than promising a file that does not exist.
+    - The spec's body ground `#DDE2E6` was RULED NOT sanctioned in Phase 0.2
+      (document chrome, not an app surface), so the screen uses `--page` and the
+      preview draws the sheet's edge with the palette's own hairline.
+    - SPEC DEFECT: certificate-v1 puts its ≤700px block BEFORE the base rules
+      for `.zoom-btn` and `.cta`, so at one-class specificity the base rule wins
+      and the phone rules never apply — «تكبير» stays `display:none` and the
+      action bar stays sticky. Both are restated at the end of the module, where
+      they win. The intent is not in doubt: the Phase 4 order asks for «تكبير»
+      on the phone, and the spec's own `.opts{padding-bottom:140px}` exists to
+      clear a FIXED bar.
+    - LAYER DEFECT (js/db/io.js:237, outside `next/`, so not fixed here):
+      `exportBirdWithAncestry` with `includeMedia` reads every media row through
+      `blobToDataURL`, and a row whose bytes are on ANOTHER device has no blob —
+      the ordinary state after a sync (SYNC-DESIGN §7: metadata syncs, blobs do
+      not). `readAsDataURL(undefined)` throws, so the whole share rejects. Until
+      it is fixed, both share paths (certificate and profile) say so instead of
+      failing silently, and the certificate suite asserts that a share always
+      answers either way.
 - Everything outside `next/` is read-only during the port. `next/` imports
   nothing from `../js`, `../css` or `../tools` (guarded); the engine and the
   dataset id mapper are byte-identical copies under `src/engine/` and `tests/`.

@@ -126,6 +126,51 @@ export const EXT = {
   'ped.gen.nth':              { ar: 'الجيل {n}', en: 'Generation {n}' },
   'ped.unknown.add':          { ar: 'سلف غير مسجل — إضافة', en: 'Ancestor not recorded — add' },
 
+  // ── certificate-v1 (4D) ──
+  // Vanilla wins where it already says the same thing: cert.title «شهادة نسب» (the spec's
+  // «شهادة النسب» is the same sentence), cert.date, act.print, act.share, act.change,
+  // ped.generations, ped.gen.* for the ruler, bird.sex / bird.hatchDate / bird.colour /
+  // bird.strain for the facts, common.unknown for an unrecorded ancestor.
+  'ped.gen.subject':          { ar: 'الطائر', en: 'Subject' },
+  'cert.sub':                 { ar: 'زاجل · سجل اللوفت الموثق', en: 'Zajil · verified loft record' },
+  'cert.format':              { ar: 'التنسيق', en: 'Format' },
+  'cert.format.a4':           { ar: 'A4 عرضي', en: 'A4 landscape' },
+  'cert.format.story':        { ar: 'صورة للهاتف', en: 'Phone image' },
+  'cert.contentLang':         { ar: 'لغة المحتوى', en: 'Content language' },
+  'cert.contentLangHint':     { ar: 'مستقلة عن لغة التطبيق', en: 'Independent of the app language' },
+  'cert.photosHint':          { ar: 'تبقى الملفات على جهازك', en: 'Files stay on your device' },
+  'cert.loftData':            { ar: 'بيانات اللوفت', en: 'Loft details' },
+  'cert.loftDataHint':        { ar: 'من إعدادات اللوفت · تُعدَّل قبل الطباعة', en: 'From the loft settings · editable before printing' },
+  'cert.showLoft':            { ar: 'إظهار بيانات اللوفت على الشهادة', en: 'Show the loft details on the certificate' },
+  'cert.showLoftHint':        { ar: 'بطاقة المربّي على الطائر المباع', en: 'The breeder card on a bird that is sold' },
+  'cert.noPhoto':             { ar: 'لا صورة بعد', en: 'No photo yet' },
+  'cert.fromBird':            { ar: 'من ملف الطائر', en: 'From the bird record' },
+  'cert.pickPhoto':           { ar: 'اختيار صورة', en: 'Choose a photo' },
+  'cert.pickHere':            { ar: 'اختيار هنا', en: 'Choose one here' },
+  'cert.photoAway':           { ar: 'الصورة على جهاز آخر', en: 'Photo is on another device' },
+  'cert.preview':             { ar: 'المعاينة', en: 'Preview' },
+  'cert.size.a4':             { ar: '297×210 مم', en: '297×210 mm' },
+  'cert.size.story':          { ar: '9:16 · 1080×1920', en: '9:16 · 1080×1920' },
+  'cert.gensN':               { ar: '{n} أجيال', en: '{n} generations' },
+  'cert.depth':               { ar: 'عمق الشجرة', en: 'Depth' },
+  'act.zoom':                 { ar: 'تكبير', en: 'Zoom' },
+  'cert.zoomTitle':           { ar: 'معاينة مكبرة', en: 'Enlarged preview' },
+  'cert.zoomHint':            { ar: 'اسحب للتنقل · قرّب بإصبعين', en: 'Drag to pan · pinch to zoom' },
+  'cert.zoomFit':             { ar: 'ملاءمة', en: 'Fit' },
+  // the COI block: ped.coi already names the coefficient, and the sub-line states what it
+  // was computed over — the CERTIFICATE'S OWN depth, which is what the sentence claims.
+  'cert.coiLabel':            { ar: 'معامل التربية الداخلية', en: 'Inbreeding coefficient' },
+  'cert.coiOver':             { ar: 'محسوب على {n} أجيال · {f} من {tot} سلفًا', en: 'Over {n} generations · {f} of {tot} ancestors' },
+  'cert.verifiedSince':       { ar: 'سجل موثق في زاجل منذ {d}', en: 'Verified Zajil record since {d}' },
+  'cert.issuedFrom':          { ar: 'صدرت من سجل اللوفت في {d}', en: 'Issued from the loft record on {d}' },
+  'cert.note':                { ar: 'الأسماء والحلقات كما هي مسجلة في اللوفت. الحلقة: الدولة · السنة · الرقم.', en: 'Names and rings as recorded in the loft. Ring: country · year · number.' },
+  'cert.breederLine':         { ar: 'المربّي: {n}', en: 'Breeder: {n}' },
+  'cert.qrTitle':             { ar: 'الصفحة العامة للطائر', en: 'Public bird page' },
+  'cert.qrSoon':              { ar: 'قريبًا', en: 'Coming soon' },
+  'cert.logoAlt':             { ar: 'شعار اللوفت', en: 'Loft logo' },
+  'cert.photoOf':             { ar: 'صورة {n}', en: 'Photo of {n}' },
+  'err.exportFailed':         { ar: 'تعذّر تجهيز الملف للمشاركة.', en: 'The file could not be prepared for sharing.' },
+
   // ── breeding-v1 (4B) ──
   // Vanilla wins for the save buttons (act.save / act.saveAnyway), «الطير» (bird.one), the delete toasts (toast.deleted)
   // and the split «مصدر الزوج» label (br.acquiredFrom whole); the spec variants are on strings.ruled.json (ruling 14).
