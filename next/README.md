@@ -25,6 +25,15 @@ until a cutover ruling.
   `zajil-vX.Y.Z` string (version_display #8). The About row shows whatever
   the SERVICE WORKER reports, so a constant in the source is a second source
   of truth that goes stale the first time a build ships without it.
+  Since 4D acceptance also `no-undefined-token`: a stylesheet may not read a
+  custom property that is declared nowhere. CSS fails silently here — an
+  undeclared property is an empty value, not an error — so only a guard can
+  see it. It found two on its first run: `--danger-tint`, read by six modules,
+  and `--gold-ink`, read by the shared sync row and the dialog's warning list.
+  Both were SANCTIONED in Phase 0.2 and declared in neither place, so every
+  danger ground and both gold inks had been painting with nothing. A
+  `var(--x, fallback)` is accepted, and properties set from script or by
+  `next/font`'s `variable:` count as declared.
 - `output: 'export'` — no server, ever. Record views take `?id=`, never `[id]`.
 - **Ruling C (4B addendum) — fixed elements must not hide content.** Every
   screen test proves it geometrically at 430x900 and 900x900 (never on a
@@ -149,11 +158,22 @@ until a cutover ruling.
     - The loft and settings cards declared their field components inside the
       render body, so React remounted each input on every keystroke and a text
       field lost the caret after one character.
-  HIGH CONTRAST — OPEN QUESTION: the capability is carried (the class is applied
-  to the document, 4A acceptance item 8), but no approved spec defines the
-  mode's palette; tools-v1 names only the control. Vanilla's overrides
-  (css/app.css:28) are Phase-1 hexes the palette guard rejects. Raised in the 4D
-  report; the palette attaches to `applySettings()` unchanged once ruled.
+  HIGH CONTRAST — RULED at 4D acceptance, and now implemented in
+  `styles/tokens.css` under `:root.high-contrast`. No approved spec defines the
+  mode's colours, so they are **derived from the tokens** rather than carried
+  from vanilla's Phase-1 hexes (css/app.css:28), which the palette guard
+  rejects: the brand stays, every muted ink step collapses to `--ink` at weight
+  500, borders take `--ink-3`'s value so a hairline becomes a line, both
+  surfaces go pure white, and every tint is dropped to white. **Not one new
+  colour** — every value was already sanctioned, which is what token-derived
+  buys, so the guard's list did not have to grow. `screens/tools.py` measures
+  the tokens themselves rather than trusting the class name, and
+  `fidelity/high-contrast/` holds the before/after captures.
+  Two measured places the ruled palette leaves below WCAG AA, reported for a
+  design pass rather than changed here: white on `--brand` is 4.20:1
+  (`--brand-deep` would be 6.12:1 and is already sanctioned), and `--gold` used
+  as TEXT is 2.65:1 on white (`--gold-ink` is 6.37:1) — the latter is
+  pre-existing and reads the same in normal mode.
   DEVIATION [ruling D]: the spec's duplicate group is labelled «نسختان» — its own
   mock's two-copy count, which lies at every other count — so the port renders
   the number plus the invariant noun, the grammar ruling D fixed for the tiles.
@@ -178,30 +198,38 @@ until a cutover ruling.
   panel "app screen, no tab bar" and draws its own fixed «مشاركة / طباعة» bar
   where the tab bar sits. The rail stays at ≥1100.
   DEVIATIONS, all raised in the 4D report, none resolved silently:
-    - The spec's head prints a certificate number («ZJ-2026-00417»). Zajil has
-      no certificate register, so the cell is not rendered; the story rule that
-      hid it (`.head .meta > div:first-child`) went with it.
-    - «مشاركة» in the spec toasts "share a PDF / a 9:16 image". The app can
-      produce neither, so the button carries the app's one share — the profile's
-      export — rather than promising a file that does not exist.
+    - RULED at 4D acceptance: the spec's certificate NUMBER («ZJ-2026-00417») is
+      not rendered, and no register is invented. A number implies an authority
+      that can verify it, and Zajil has none yet. The cell is out, and the story
+      rule that hid it (`.head .meta > div:first-child`) went with it. The number
+      and the QR slot are recorded together as **reserved for a future
+      verification surface**: the QR box is drawn and says «قريبًا», and when a
+      public bird page exists it is the thing a number would point at.
+    - RULED at 4D acceptance: «مشاركة» keeps the app's one share, the profile's
+      export. Real PDF and 9:16 image generation is a **post-port feature**, and
+      the QR / public-page surface above is its natural companion — the same
+      commit that can render a sheet to a file is the one that can give it a URL.
     - The spec's body ground `#DDE2E6` was RULED NOT sanctioned in Phase 0.2
       (document chrome, not an app surface), so the screen uses `--page` and the
       preview draws the sheet's edge with the palette's own hairline.
-    - SPEC DEFECT: certificate-v1 puts its ≤700px block BEFORE the base rules
-      for `.zoom-btn` and `.cta`, so at one-class specificity the base rule wins
-      and the phone rules never apply — «تكبير» stays `display:none` and the
-      action bar stays sticky. Both are restated at the end of the module, where
-      they win. The intent is not in doubt: the Phase 4 order asks for «تكبير»
-      on the phone, and the spec's own `.opts{padding-bottom:140px}` exists to
-      clear a FIXED bar.
-    - LAYER DEFECT (js/db/io.js:237, outside `next/`, so not fixed here):
-      `exportBirdWithAncestry` with `includeMedia` reads every media row through
-      `blobToDataURL`, and a row whose bytes are on ANOTHER device has no blob —
-      the ordinary state after a sync (SYNC-DESIGN §7: metadata syncs, blobs do
-      not). `readAsDataURL(undefined)` throws, so the whole share rejects. Until
-      it is fixed, both share paths (certificate and profile) say so instead of
-      failing silently, and the certificate suite asserts that a share always
-      answers either way.
+    - SPEC DEFECT, logged as **SF-1** in `ROOT-FINDINGS.md` and accepted at 4D:
+      certificate-v1 puts its ≤700px block BEFORE the base rules for `.zoom-btn`
+      and `.cta`, so at one-class specificity the base rule wins and the phone
+      rules never apply — «تكبير» stays `display:none` and the action bar stays
+      sticky. Both are restated at the end of the module, where they win. It
+      applies to certificate-v1 only; no other approved spec orders its blocks
+      this way.
+    - ROOT DEFECT, logged as **RF-4** in `ROOT-FINDINGS.md` with the diff:
+      `js/db/io.js:237` reads every media row through `blobToDataURL`, and a row
+      whose bytes are on ANOTHER device has no blob — the ordinary state after a
+      sync (SYNC-DESIGN §7: metadata syncs, blobs do not).
+      `readAsDataURL(undefined)` throws, so the whole share rejects. **Nothing
+      outside `next/` was changed**: `js/db/io.js` is byte-identical to `main`,
+      the isolation diff is empty, and the root browser suite is 544/544. What
+      the port changed is its own two share paths, which now say so instead of
+      failing silently (`app/cert/view.tsx:216`, `app/bird/view.tsx:116`), and
+      the certificate suite asserts the contract that holds either way: a share
+      always answers.
 - Everything outside `next/` is read-only during the port. `next/` imports
   nothing from `../js`, `../css` or `../tools` (guarded); the engine and the
   dataset id mapper are byte-identical copies under `src/engine/` and `tests/`.
@@ -257,7 +285,7 @@ skipped silently.
 
 | list | root | where it is now |
 |---|---|---|
-| `sync_ui.py` | 62 | **41** ported whole to `tests/e2e/sync_ui.py` (the status row, the interrupt rule, the الأدوات card, the backoff curve, the unconfigured build). Four kinds of change and no others: the module token, the shell's DOM (`#sync-row` → `[data-testid=sync-row]`; the healthy row is not rendered at all rather than rendered `display:none`, which is what "not taking up space" asserted), the routes, and RULING 1. **21** moved with the form RULING 1 superseded: the signed-out card, the create-account prohibition, the unconfigured state and the sign-out flow are in `screens/tools.py`; the form's own three error states are in `screens/sign_in.py`. |
+| `sync_ui.py` | 60 | **41** ported whole to `tests/e2e/sync_ui.py` (the status row, the interrupt rule, the الأدوات card, the backoff curve, the unconfigured build). Four kinds of change and no others: the module token, the shell's DOM (`#sync-row` → `[data-testid=sync-row]`; the healthy row is not rendered at all rather than rendered `display:none`, which is what "not taking up space" asserted), the routes, and RULING 1. **19** moved with the form RULING 1 superseded: the signed-out card, the create-account prohibition, the unconfigured state and the sign-out flow are in `screens/tools.py`; the form's own error states are in `screens/sign_in.py`. The file holds 62 `check(` calls but two sit in an if/else, so 60 execute — which is what the root runner reports, and 60 = 41 + 19. |
 | `version_display.py` | 11 | **#2 #3 #9 #10** re-authored in `screens/tools.py` (the About row renders, is never blank, and shows the «غير معروف» fallback with no service worker). **#8** became the `no-hardcoded-version` guard, proved to fire. **#1 #4 #5 #6 #7** need a registered service worker answering `GET_VERSION` — PWA phase, listed below. |
 | `auth_live.py` | 18 | **ported whole**, opt-in behind `--live-auth`, with the six form assertions re-authored onto `/sign-in` (RULING 1). NOT RUN here: the sign-in screen runs the first-login cycle, so a live run WRITES to the real project, exactly like `--live-push`. That is an explicit authorisation, not a gate. |
 | `convergence.py:248-252` | 2 | **CLOSED.** `src/components/SyncNotices.tsx` reproduces js/app.js:195-217 and the assertions were re-authored onto the port's toast. convergence.py is 36/36. |

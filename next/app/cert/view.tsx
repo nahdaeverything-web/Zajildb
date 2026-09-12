@@ -19,13 +19,16 @@ import s from './cert.module.css';
 // Design-review scaffolding NOT carried: the strip of three photo-state variants (v0/v1/v3)
 // and the mock toast; both are how the prototype shows its states side by side.
 //
-// DEVIATION, raised in the 4D report: the spec's head prints a certificate number
-// («ZJ-2026-00417»). Zajil has no certificate register, and a number that nothing can be
-// checked against is a claim the record cannot back, so the cell is not rendered and the
-// story rule that hid it (`.head .meta > div:first-child`) went with it.
-// DEVIATION, raised: «مشاركة» in the spec toasts "share a PDF / a 9:16 image". The app can
-// produce neither yet, so the button carries the app's ONE share — the profile's export
-// (bird-detail.js:83) — rather than promising a file that does not exist.
+// RULED at 4D acceptance: the spec's head prints a certificate number («ZJ-2026-00417»)
+// and the port does not render it. A number implies an authority that can verify it, and
+// Zajil has no register, so inventing one would be a claim the record cannot back. The
+// cell is out, and the story rule that hid it (`.head .meta > div:first-child`) went with
+// it. The number and the QR slot are RESERVED FOR A FUTURE VERIFICATION SURFACE: when a
+// public bird page exists, it is the thing a number would point at.
+// RULED at 4D acceptance: «مشاركة» keeps the app's ONE share, the profile's export
+// (bird-detail.js:83). Real PDF and 9:16 image generation is a post-port feature, and the
+// QR / public-page surface is its natural companion — the commit that can render this
+// sheet to a file is the one that can give it a URL.
 
 type Bird = {
   id: string; name?: string; sex?: string; hatchDate?: string; colour?: string; strain?: string;

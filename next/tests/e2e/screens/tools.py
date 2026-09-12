@@ -168,10 +168,34 @@ try:
               run(pg, "(db) => db.state.settings.highContrast") is True)
         check('…and is APPLIED to the document, as vanilla applySettings() does',
               pg.evaluate("() => document.documentElement.classList.contains('high-contrast')") is True)
+        # [4D acceptance ruling 2] the palette is TOKEN-DERIVED, so what the mode changes is
+        # measured on the tokens themselves rather than trusted to a class name.
+        hc = pg.evaluate("""() => { const cs = getComputedStyle(document.documentElement);
+            const g = (n) => cs.getPropertyValue(n).trim().toLowerCase();
+            return { ink2: g('--ink-2'), ink3: g('--ink-3'), page: g('--page'), surface: g('--surface'),
+                     line: g('--line'), brand: g('--brand'), brandTint: g('--brand-tint'),
+                     goldTint: g('--gold-tint'), dangerTint: g('--danger-tint'),
+                     weight: getComputedStyle(document.body).fontWeight }; }""")
+        check('[ruling 2] high contrast collapses every muted ink step to full --ink',
+              hc['ink2'] == '#101820' and hc['ink3'] == '#101820', str({k: hc[k] for k in ('ink2', 'ink3')}))
+        check('[ruling 2] …drops every tint to white and both surfaces to pure white',
+              all(hc[k] in ('#fff', '#ffffff') for k in ('page', 'surface', 'brandTint', 'goldTint', 'dangerTint')),
+              str({k: hc[k] for k in ('page', 'surface', 'brandTint', 'goldTint', 'dangerTint')}))
+        check('[ruling 2] …turns the hairline into a line, and keeps the brand',
+              hc['line'] == '#8c97a2' and hc['brand'] == '#128c6e' and hc['weight'] == '500', str(hc))
+        check('[ruling 2] …with NOT ONE new colour: every value is already in the palette',
+              {hc['ink2'], hc['line'], hc['brand']} <= {'#101820', '#8c97a2', '#128c6e'})
         pg.click(HC_BOX); pg.wait_for_timeout(400)
-        check('…and turning it off takes it back off the document',
+        check('…and turning it off takes it back off the document, tokens and all',
               run(pg, "(db) => db.state.settings.highContrast") is False
-              and pg.evaluate("() => document.documentElement.classList.contains('high-contrast')") is False)
+              and pg.evaluate("() => document.documentElement.classList.contains('high-contrast')") is False
+              and pg.evaluate("() => getComputedStyle(document.documentElement).getPropertyValue('--ink-3').trim().toLowerCase()") == '#8c97a2')
+        # the token that was read everywhere and declared nowhere (found at 4D acceptance)
+        check('every token the stylesheets read actually resolves — --danger-tint and --gold-ink included',
+              pg.evaluate("""() => { const cs = getComputedStyle(document.documentElement);
+                  return ['--danger-tint', '--gold-ink', '--brand-tint', '--gold-tint', '--line', '--ink-3']
+                    .every(n => cs.getPropertyValue(n).trim() !== ''); }"""),
+              pg.evaluate("() => getComputedStyle(document.documentElement).getPropertyValue('--danger-tint').trim()"))
 
         # ── 3. [RULING 2] the loft card carries the certificate's branding fields ──
         pg.fill('[data-testid=ln]', 'لوفت الزاجل')

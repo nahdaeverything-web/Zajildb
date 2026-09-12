@@ -1,11 +1,18 @@
-# Root findings surfaced by the port
+# Root and spec findings surfaced by the port
 
-Inconsistencies in the **vanilla** tree (everything outside `next/`) that the
-React port surfaced while copying and re-proving it. The root is read-only
-during the port, so nothing here is fixed at source. Each entry names the
-file and line, what is wrong, why it matters, and what the port did about it
-on its own side. They land in the root `BACKLOG.md` as one docs commit at
-Phase 7.
+Two kinds of entry, both surfaced by the React port while copying the vanilla
+tree and re-proving it against the approved designs:
+
+- **ROOT findings** — inconsistencies in the **vanilla** tree (everything
+  outside `next/`).
+- **SPEC findings** — defects in an **approved design file** under
+  `design/approved/`. Ruled in at 4D acceptance. The specs are frozen, so
+  these are not edited either; the port states what it did instead, and why
+  the intent was not in doubt.
+
+Neither tree is written to during the port. Each entry names the file and
+line, what is wrong, why it matters, and what the port did about it on its own
+side. They land in the root `BACKLOG.md` as one docs commit at Phase 7.
 
 Rule for adding to this file: an entry needs a `file:line`, a reproduction,
 and the port-side handling. An observation without evidence does not go in.
@@ -97,3 +104,134 @@ the next person checks the dashboard before debugging DNS.
 checklist) and does not pause. For the dev project: either keep it warm
 (any authenticated request inside the window) or expect to unpause it before
 a live run. Worth one line in the live suites' header comments.
+
+---
+
+## RF-4 — a bird share fails outright when an ancestor's photo is on another device
+
+**Where:** [`js/db/io.js:237`](../js/db/io.js#L237), reached from
+[`js/db/io.js:222`](../js/db/io.js#L222) `exportBirdWithAncestry(birdId, { includeMedia: true })`
+```js
+mediaOut.push({ ...m, blob: undefined, dataURL: await blobToDataURL(m.blob) });
+```
+and [`js/db/io.js:18`](../js/db/io.js#L18)
+```js
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);          // blob is undefined here
+  });
+}
+```
+
+**What:** a media row whose bytes are on **another device** has metadata and no
+`blob`. `readAsDataURL(undefined)` throws a `TypeError` inside the promise
+executor, so the promise rejects and the **whole export** fails. Not the one
+photo: the entire share, birds and pedigree and races included.
+
+**Why it matters:** this is not an edge case, it is the designed steady state.
+SYNC-DESIGN §7 is explicit that **metadata syncs and blobs do not**, so every
+record pulled from another device arrives exactly this way. A fancier on a
+second device therefore cannot share any bird whose ancestor carries a photo
+taken on the first. The live app has this today: the profile's «مشاركة»
+(`js/views/bird-detail.js:83`) calls the same function with the same options,
+and vanilla attaches no rejection handler, so the button does nothing at all —
+no file, no message.
+
+**Reproduction** (the port's certificate suite does this, and asserts around it —
+`next/tests/e2e/screens/certificate.py`):
+```js
+const m = await db.addMedia(sireId, 'photo', 'body', 'sire.png', new Blob(['x']));
+const row = await db.idbGet('media', m.id);
+delete row.blob;                       // what a pull leaves behind
+await db.idbPut('media', row);
+await db.exportBirdWithAncestry(birdId, { includeRaces: true, includeMedia: true });
+// → TypeError: Failed to execute 'readAsDataURL' on 'FileReader'
+```
+
+**Port handling:** the root is read-only, so the copy at `next/src/db/io.js` is
+**byte-identical to main** and was not touched. What the port changed is its own
+side: both share paths now attach a rejection handler and say so —
+`next/app/cert/view.tsx:216` and `next/app/bird/view.tsx:116`, raising
+`err.exportFailed` («تعذّر تجهيز الملف للمشاركة.»). A share that cannot be made
+must not silently do nothing. `next/tests/e2e/screens/certificate.py` asserts the
+contract that holds either way: **a share always answers**, with the file or with
+the reason.
+
+**Fix at source (Phase 7):** skip the rows with no local bytes and export the rest,
+rather than failing the export. The metadata is still worth carrying, so the
+receiving device knows a photo exists:
+```diff
+   if (includeMedia) {
+     for (const id of ids) {
+       for (const m of await mediaForBird(id)) {
+-        mediaOut.push({ ...m, blob: undefined, dataURL: await blobToDataURL(m.blob) });
++        // SYNC-DESIGN §7: metadata syncs, blobs do not. A row pulled from another
++        // device has no bytes HERE, which is normal — carry the metadata and say
++        // the file is elsewhere rather than failing the whole export.
++        mediaOut.push({ ...m, blob: undefined,
++                        dataURL: m.blob ? await blobToDataURL(m.blob) : null });
+       }
+     }
+   }
+```
+`importAll` already validates every `dataURL` before touching the database
+([`js/db/io.js:108-119`](../js/db/io.js#L108)), so the null case must be admitted
+there in the same commit:
+```diff
+-    let blob;
+-    try { blob = await dataURLToBlob(m.dataURL); }
+-    catch (err) { throw new Error(`bad-media: ${m.name || m.id} could not be decoded`); }
+-    if (!blob || typeof blob.size !== 'number') throw new Error(`bad-media: ${m.name || m.id}`);
++    let blob = null;
++    if (m.dataURL) {
++      try { blob = await dataURLToBlob(m.dataURL); }
++      catch (err) { throw new Error(`bad-media: ${m.name || m.id} could not be decoded`); }
++      if (!blob || typeof blob.size !== 'number') throw new Error(`bad-media: ${m.name || m.id}`);
++    }
+```
+with `media.elsewhereFile` («الملف على جهاز آخر») already in the dictionary for the
+receiving end to render.
+
+---
+
+## SF-1 — `certificate-v1.html` puts its phone media query before the base rules it overrides
+
+**Applies to:** `design/approved/certificate-v1.html` **only**. No other approved
+spec has this ordering.
+
+**Where:** [`design/approved/certificate-v1.html`](../design/approved/certificate-v1.html) —
+the `@media (max-width:700px)` block declares
+```css
+.zoom-btn{ display:inline-flex; }
+.cta{ position:fixed; bottom:0; inset-inline:0; z-index:15; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); }
+```
+and the base rules that follow it declare
+```css
+.zoom-btn{ display:none; … }
+.cta{ position:sticky; bottom:0; … }
+```
+
+**What:** both pairs are single-class selectors, so specificity ties and the
+**later** rule wins at every width. The phone rules therefore never apply. In the
+prototype as shipped, «تكبير» is `display:none` on every screen size, and the
+action bar is `sticky` rather than `fixed` on the phone.
+
+**Why it matters:** the button is the phone's only way to read a scaled-down A4
+sheet, and the Phase 4 order names it («mobile scaled preview with «تكبير»»). The
+intent is not in doubt from the file itself either: the spec's own
+`.opts{ padding: 20px 20px 200px }` and its phone `.opts{ padding:18px 16px 140px }`
+exist to clear a bar that is **fixed**, which a sticky bar does not need.
+
+**Port handling:** both phone rules are restated at the end of
+`next/app/cert/cert.module.css`, where they win, with the defect named in place.
+Nothing else changed. `next/tests/e2e/screens/certificate.py` then measures the
+result rather than trusting it: «تكبير» is visible at 430, the action bar reports
+`position: fixed`, and ruling C's probe finds the bar and measures a real 299px
+clearance above it instead of finding no bar at all.
+
+**Fix at source (design):** move the `@media (max-width:700px)` block after the
+base declarations for `.zoom-btn` and `.cta`, which is where every other approved
+spec puts its phone block.

@@ -31,6 +31,16 @@
   --gold: #C9971F;
   --gold-tint: #FBF3DF;
   --danger: #C43D2B;
+  /* --danger-tint was SANCTIONED in Phase 0.2 (see the extensions note below) and used by
+   * six modules, but never declared here. `var(--danger-tint)` therefore resolved to
+   * nothing and every danger ground painted transparent. Found at 4D acceptance while
+   * defining the high-contrast palette; the no-undefined-token guard now makes the class
+   * of mistake impossible. */
+  --danger-tint: #F8E6E3;
+  /* --gold-ink: same story — SANCTIONED in Phase 0.2 as "dark gold ink on gold-tint
+   * (--gold-ink)", read by the shared sync row and the dialog's warning list, declared
+   * nowhere, so both painted with the inherited colour instead. */
+  --gold-ink: #7A5A0E;
 
   /* ── sex chips — RULED sanctioned as real UI (loft-home-v1, prototype).
    * Raised in Phase 0.2 as unlisted; ruled in after Phase 1 acceptance. */
@@ -86,3 +96,40 @@
  * (Scoped by a CSS comment in the tools spec, which is not yet archived —
  * see the report: tools-v1.html is on hold pending a ruling.)
  * ────────────────────────────────────────────────────────────────────── */
+
+/* ─────────────────── HIGH CONTRAST — RULED at 4D acceptance ───────────────────
+ * tools-v1 names the control «التباين العالي (ضوء الشمس)» and no approved spec
+ * defines the mode's colours. Ruled: derive them from the tokens above rather
+ * than carry vanilla's Phase-1 hexes (css/app.css:28), which the palette guard
+ * rejects. Brand stays, text goes to --ink at full weight, borders take --ink-3's
+ * value, surfaces go pure white, and every tint is dropped to white.
+ *
+ * NOT ONE NEW COLOUR. Every value below already appears in the palette above, so
+ * the guard's sanctioned set did not have to grow — which is what "token-derived"
+ * buys. The class is put on <html> by applySettings() (src/components/settings.ts).
+ */
+:root.high-contrast {
+  /* brand unchanged — it is the one colour the mode keeps */
+  --brand: #128C6E;
+  --brand-deep: #0E6F57;
+
+  /* text: every muted step collapses to full ink */
+  --ink-2: #101820;
+  --ink-3: #101820;
+
+  /* surfaces: pure white, no page/surface distinction left to see */
+  --page: #FFFFFF;
+  --surface: #FFFFFF;
+
+  /* borders: --ink-3's value, so a hairline becomes a line */
+  --line: #8C97A2;
+
+  /* every tint dropped to white; the ink and border tokens carry the meaning now */
+  --brand-tint: #FFFFFF;
+  --gold-tint: #FFFFFF;
+  --danger-tint: #FFFFFF;
+  --sex-m-bg: #FFFFFF;
+  --sex-f-bg: #FFFFFF;
+}
+/* vanilla's own weight bump (css/app.css:39) — the ruling says "full weight" */
+:root.high-contrast body { font-weight: 500; }

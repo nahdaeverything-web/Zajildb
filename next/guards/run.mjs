@@ -159,6 +159,37 @@ const guards = {
   //    SHIPPED spec renders must be a key, a template, recorded mock content
   //    or a pending ruling; anything else fails the build. Its report (⚠
   //    pending lines) is passed through so a pending ruling is never silent.
+  // 10. (4D) Every custom property a stylesheet READS must be DECLARED somewhere.
+  //     Found the hard way: six modules painted `var(--danger-tint)`, the token was
+  //     sanctioned in Phase 0.2 but never declared in tokens.css, and every danger
+  //     ground rendered transparent. CSS fails silently here — an undeclared property
+  //     is not an error, it is an empty value — so only a guard can see it.
+  //     A `var(--x, fallback)` is fine: it says what to do when --x is absent.
+  //     Properties set from script (el.style.setProperty('--zw', …)) count as declared.
+  'no-undefined-token'() {
+    const declared = new Set();
+    const cssFiles = files('.css');
+    for (const f of cssFiles) {
+      for (const m of readFileSync(f, 'utf8').matchAll(/(--[A-Za-z0-9_-]+)\s*:/g)) declared.add(m[1]);
+    }
+    for (const f of files('.ts', '.tsx')) {
+      const src = readFileSync(f, 'utf8');
+      for (const m of src.matchAll(/setProperty\(\s*['"`](--[A-Za-z0-9_-]+)['"`]/g)) declared.add(m[1]);
+      for (const m of src.matchAll(/['"`](--[A-Za-z0-9_-]+)['"`]\s*:/g)) declared.add(m[1]);
+      // next/font/local declares its property at runtime: `variable: '--font-alexandria'`
+      for (const m of src.matchAll(/variable\s*:\s*['"`](--[A-Za-z0-9_-]+)['"`]/g)) declared.add(m[1]);
+    }
+    const bad = [];
+    for (const f of cssFiles) {
+      codeLines(f).forEach((l, i) => {
+        // only var() with NO fallback: the comma form already handles absence
+        for (const m of l.matchAll(/var\(\s*(--[A-Za-z0-9_-]+)\s*\)/g)) {
+          if (!declared.has(m[1])) bad.push(`${rel(f)}:${i + 1}  ${m[1]} is read but never declared`);
+        }
+      });
+    }
+    return [...new Set(bad)];
+  },
   // 10. (4D) No source file carries the app version. version_display #8: the
   //     number on the About row is whatever the SERVICE WORKER reports, so a
   //     constant in the source is a second source of truth that goes stale the
