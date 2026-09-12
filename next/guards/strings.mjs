@@ -18,7 +18,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SPECS = join(ROOT, '..', 'design', 'approved');
 
 // ── shipped screens: added as each screen lands ──
-export const SHIPPED = ['shared-states-v1.html', 'loft-home-v1.html', 'bird-profile-v1.html', 'add-edit-bird-v2.html', 'pedigree-tree-v1.html', 'breeding-v1.html', 'races-v1.html'];
+export const SHIPPED = ['shared-states-v1.html', 'loft-home-v1.html', 'bird-profile-v1.html', 'add-edit-bird-v2.html', 'pedigree-tree-v1.html', 'breeding-v1.html', 'races-v1.html', 'health-v1.html'];
 
 const AR = /[؀-ۿ]/;
 // FORMAT tags fold into their parent (they never carry a standalone UI string);

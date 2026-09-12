@@ -173,6 +173,23 @@ export const EXT = {
   'fci.nonQualifyingShort':   { ar: 'غير مؤهلة', en: 'Non-qualifying' },
   'fci.empty.body':           { ar: 'تظهر الطيور هنا بعد تسجيل أول نتيجة.', en: 'Birds appear here once the first result is recorded.' },
 
+  // ── health-v1 (4C) ──
+  // Vanilla carries the four event types, the scope words, the field labels and the empty line.
+  // design/README.md rules two deliberate departures in: an EDIT path (vanilla's dialog can only
+  // create) and visible inline errors (vanilla's save returns false in silence). The third — the
+  // next-vaccination block — is ruling 4 (4.0): last vaccination + 365 days, labelled an estimate.
+  'health.countLine':         { ar: '{n} أحداث · آخرها {d}', en: '{n} events · latest {d}' },
+  'health.noneYet':           { ar: 'لا أحداث بعد', en: 'No events yet' },
+  'health.empty.body':        { ar: 'سجّل أول تطعيم أو علاج من «حدث جديد».', en: 'Record the first vaccination or treatment from “New event”.' },
+  'health.noMatch':           { ar: 'لا أحداث تطابق التصفية.', en: 'No events match this filter.' },
+  'health.doseLine':          { ar: 'آخر جرعة {last} · يُستحق {due}', en: 'Last dose {last} · due {due}' },
+  'health.daysUntil':         { ar: 'يومًا حتى الموعد', en: 'days until it is due' },
+  'health.med.placeholder':   { ar: 'مثل: أمبروليوم — كوكسيديا', en: 'e.g. amprolium — coccidiosis' },
+  'health.notes.placeholder': { ar: 'الجرعة، المدة، ما لاحظته…', en: 'Dose, duration, what you observed…' },
+  'act.filter':               { ar: 'تصفية', en: 'Filter' },
+  'val.notSavedEvent':        { ar: 'لم يُحفظ الحدث. راجع الحقل المحدد بالأحمر.', en: 'The event was not saved. Check the field marked in red.' },
+  'val.birdRequiredScope':    { ar: 'الطير مطلوب — اختر طيرًا أو غيّر النطاق إلى «اللوفت كامل».', en: 'The bird is required — choose one, or change the scope to “Whole loft”.' },
+
   // ── rulings at 4A acceptance ──
   // nav.breeding: a DELIBERATE RENAME from vanilla's «التربية». Every approved
   // spec and the kit NAVIGATION NOTE say «التزاوج»; ruled at 4A acceptance.

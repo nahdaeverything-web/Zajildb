@@ -7,7 +7,7 @@ import { useZajilStore, selectRaces, selectBirds } from '@/src/db/react';
 import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { resultQualifies, birdEligibility, FCI_MIN_FANCIERS, FCI_MIN_BIRDS } from '@/src/engine/fci.js';
 import { velocityMPM, haversineMetres } from '@/src/engine/velocity.js';
-import { SyncRow, Loading, toast, undoToast, primaryRing, seasonLabel, pickerModel, SexChip } from '@/src/components';
+import { SyncRow, Loading, toast, undoToast, primaryRing, seasonLabel, pickerModel, SexChip, Tpl } from '@/src/components';
 import s from './races.module.css';
 
 // Races — design/approved/races-v1.html, behaviour from js/views/races.js.
@@ -37,11 +37,6 @@ const yy = (b: Bird) => { const r = (b.rings || []).find((x) => x.type === 'FCI'
 /** races.js:135 parseCoords — two numbers, any separator. */
 const parseCoords = (v: string) => { const m = String(v || '').trim().match(/(-?\d+(?:\.\d+)?)[\s,،;]+(-?\d+(?:\.\d+)?)/); return m && Math.abs(+m[1]) <= 90 && Math.abs(+m[2]) <= 180 ? { lat: +m[1], lon: +m[2] } : null; };
 const Plus = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>;
-/** A {param} template rendered with the values in <b>, as the spec sets them. */
-function tpl(key: string, parts: Record<string, string>) {
-  const marked = t(key, Object.fromEntries(Object.keys(parts).map((k) => [k, `\u0000${k}\u0000`])));
-  return marked.split('\u0000').map((chunk: string, i: number) => (i % 2 ? <b key={i}>{parts[chunk]}</b> : <span key={i}>{chunk}</span>));
-}
 
 export default function RacesView() {
   const params = useSearchParams();
@@ -331,7 +326,7 @@ function ResultSheet({ editing, birds, onClose }: { editing: Race | null; birds:
             <F label={`${t('race.velocity')} (${t('race.mpm')})`}><input className={s.ltr} inputMode="numeric" value={vel} onChange={(e) => setVel(e.target.value)} data-testid="f-vel" /></F>
           </div>
           <button type="button" className={s.calc} onClick={calc} data-testid="calc-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11A8 8 0 1 0 12 20M20 5v6h-6" /></svg>{t('race.calcVelocity')}</button>
-          {calcOk && <div className={s['calc-ok']} data-testid="calc-ok">{tpl('race.calcDone', { km: calcOk.km, mpm: calcOk.mpm })}</div>}
+          {calcOk && <div className={s['calc-ok']} data-testid="calc-ok"><Tpl k="race.calcDone" parts={{ km: calcOk.km, mpm: calcOk.mpm }} /></div>}
         </div>
 
         <div className={s.mact}>

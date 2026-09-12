@@ -10,3 +10,4 @@ export { BirdLabel, SexChip, COIValue, Plate, primaryRing, birdLabelText, sexIco
 export { seasonStart, seasonLabel } from './season';
 export { downloadJSON } from './download';
 export { pickerModel, candidates, exactMatch, createFromQuery } from './picker';
+export { Tpl } from './Tpl';
