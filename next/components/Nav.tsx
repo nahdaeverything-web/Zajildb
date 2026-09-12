@@ -49,7 +49,7 @@ export default function Nav() {
   const modalFlow = NO_TABBAR.some((p) => pathname === p || pathname.startsWith(p + '/'));
   return (
     <>
-      {!modalFlow && <nav className={s.tabbar} aria-label="التنقل">{items}</nav>}
+      {!modalFlow && <nav className={s.tabbar} data-bottom-chrome="tabbar" aria-label="التنقل">{items}</nav>}
       <nav className={s.rail} aria-label="التنقل">{items}</nav>
     </>
   );

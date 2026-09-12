@@ -333,7 +333,7 @@ export default function BirdForm() {
           <div className={s.seclbl}>{t('common.notes')}</div>
           <textarea className={s.notes} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('form.notes.placeholder')} aria-label={t('bird.addNote')} data-testid="f-notes" />
 
-          <div className={s.actions}><div className={s.inner}>
+          <div className={s.actions} data-bottom-chrome="actions"><div className={s.inner}>
             <button type="button" className={s.cancel} onClick={cancel} data-testid="cancel-btn">{t('act.cancel')}</button>
             {isNew && <button type="button" className={s.alt} disabled={busy} onClick={() => submit(true)} data-testid="save-new-btn">{t('act.saveAndNew')}</button>}
             <button type="submit" className={s.save} disabled={busy} data-testid="save-btn">{t('act.save')}</button>

@@ -10,6 +10,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..', '..'))
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'loft-home')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
@@ -54,6 +55,8 @@ try:
         check('[example_data#2] example data loaded via UI → rows render', n_rows >= 30, n_rows)
         check('[teaching_loft#2] 38 birds loaded (count line)', pg.locator('[data-testid=count-line]').inner_text().startswith('38'), pg.locator('[data-testid=count-line]').inner_text())
         check('toast confirms the load (bird.exampleLoaded)', pg.locator('[data-testid=toast]').count() >= 1)
+        # [ruling C] the load toast is up over a full list: scrolled to the bottom it must not cover the last row's tap target
+        check_toast_clear(pg, check, 'loft home with 38 rows')
 
         # ── FULL STATE (spec data-v="full") ──
         check('count line: «N طائرًا · M ذكرًا · F أنثى»', all(x in pg.locator('[data-testid=count-line]').inner_text() for x in ('طائرًا', 'ذكرًا', 'أنثى')))
@@ -61,7 +64,9 @@ try:
         check('[ownership#2] status pill visible on a row', pg.locator('[data-testid=bird-row] [data-testid=status-pill]').count() >= 1)
         labels = pg.locator('[data-testid=year-label]').all_inner_texts()
         check('rows grouped by generation, newest first, with counts', len(labels) >= 2 and all('جيل' in l for l in labels))
-        check('phone: FAB «إضافة طائر» present', pg.locator('[data-testid=fab-add]').is_visible())
+        fab = pg.locator('[data-testid=fab-add] a').bounding_box()
+        check('phone: FAB «طير جديد» present, the spec\'s 58px pill', pg.locator('[data-testid=fab-add]').is_visible() and fab and fab['height'] >= 58, f"{fab and round(fab['height'])}px tall")
+        check_clearance(pg, check, 'loft home')
         for w in (430, 900):
             pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/full-{w}.png', full_page=False)
         pg.set_viewport_size({'width': 430, 'height': 900})

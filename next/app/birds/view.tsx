@@ -153,7 +153,7 @@ export default function BirdsView() {
               </tbody>
             </table>
           </div>
-          <div className={s.fab} data-testid="fab-add"><Link href="/bird/new">{t('act.newBird')}</Link></div>
+          <div className={s.fab} data-bottom-chrome="fab" data-testid="fab-add"><Link href="/bird/new"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>{t('act.newBird')}</Link></div>
         </div>
       )}
       <span className={sh.muted} hidden>{version ? '' : ''}</span>

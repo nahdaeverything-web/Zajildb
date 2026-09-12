@@ -71,7 +71,7 @@ export default function BreedingView() {
           </>
         )}
       </section>
-      <div className={s.fab}><button type="button" onClick={() => setSheet(true)} data-testid="new-pair-fab"><Plus />{t('br.newPair')}</button></div>
+      <div className={s.fab} data-bottom-chrome="fab"><button type="button" onClick={() => setSheet(true)} data-testid="new-pair-fab"><Plus />{t('br.newPair')}</button></div>
       {sheet && <NewPairSheet season={season} seasons={seasons} onClose={() => setSheet(false)} onSaved={(id) => { setSheet(false); router.push(`/pair?id=${id}`); }} />}
     </section>
   );

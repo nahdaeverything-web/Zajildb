@@ -10,6 +10,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom, wait_toasts_clear
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'breeding')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -142,10 +143,13 @@ try:
         pg.fill('[data-testid=egg-hatchDate]', '2026-03-05'); pg.locator('[data-testid=egg-hatchDate]').dispatch_event('change'); pg.wait_for_timeout(300)
         check('editing the hatch date also corrects the chick\'s record', pg.evaluate("() => window.__zajilDb.allBirds().find(x => x.name === 'فرخ الاختبار').hatchDate") == '2026-03-05')
         shots(pg, 'detail-full')
+        wait_toasts_clear(pg)   # measure the delete's own toast, not the ring/save toasts still expiring behind it
         pg.click('[data-testid=egg-more] >> nth=1'); pg.click('[data-testid=egg-delete]'); pg.wait_for_selector('[data-testid=inline-confirm]')
         check('[spec] «حذف البيضة» → inline «تأكيد الحذف؟»', pg.locator('[data-testid=inline-confirm]').count() == 1)
         pg.click('[data-testid=confirm-go]'); pg.wait_for_timeout(300)
         check('…deletes the egg; the toast offers «تراجع»', pg.locator('[data-testid=egg]').count() == 1 and pg.locator('[data-testid=toast-action]').count() == 1)
+        # [ruling C] the undo toast on the pair detail, where the tab bar is the only bottom chrome
+        check_toast_clear(pg, check, 'pair detail (undo toast)')
         pg.click('[data-testid=toast-action]'); pg.wait_for_timeout(300)
         check('…undo puts it back', pg.locator('[data-testid=egg]').count() == 2)
         pg.wait_for_timeout(4500)
@@ -173,6 +177,10 @@ try:
         nl = h.evaluate("() => [...window.__zajilDb.state.pairs.values()].filter(p => p.season === '2026').length")
         pg.goto(LIST, wait_until='load'); pg.wait_for_selector('[data-testid=pair-row]')
         check(f'[teaching_loft#9] 2026 breeding shows the teaching loft\'s pairs ({nl})', pg.locator('[data-testid=pair-row]').count() == nl == 3)
+        check_clearance(pg, check, 'breeding list')
+        pid = pg.evaluate("() => [...window.__zajilDb.state.pairs.values()].find(p => p.season === '2026').id")
+        pg.goto(f'{ROOT}pair.html?id={pid}', wait_until='load'); pg.wait_for_selector('[data-testid=pair-card]')
+        check_clearance(pg, check, 'pair detail')
         check('zero page errors', not errs, errs)
         b.close()
 finally:

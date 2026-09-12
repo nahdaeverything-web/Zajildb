@@ -22,6 +22,19 @@ until a cutover ruling.
   build (it spawns `next build` directly, outside the npm lifecycle, so it
   had skipped them — an unsanctioned hex reached a green harness build).
 - `output: 'export'` — no server, ever. Record views take `?id=`, never `[id]`.
+- **Ruling C (4B addendum) — fixed elements must not hide content.** Every
+  screen test proves it geometrically at 430x900 and 900x900 (never on a
+  full-page capture, where a fixed bar is painted at its scroll position and
+  only *looks* mid-page): scrolled to the end, no interactive element is under
+  a fixed bar, and a toast covers neither the screen's chrome nor the last
+  element. Helper: `tests/e2e/screens/_layout.py`. The clearance comes from the
+  specs' own bottom paddings (100–200px measured) — none needed changing. What
+  did need fixing was the toast: shared-states drew it 12px above the tab bar
+  because its gallery had nothing else fixed, so on real screens it sat on top
+  of the certificate CTAs, both FABs and the form's action bar. Each such bar
+  now carries `data-bottom-chrome`, and `ShellHost` seats the stack 12px above
+  the highest one it measures — live, so it stays right across breakpoints and
+  across a navigation that happens while a toast is up.
 - **Rulings at 4A acceptance** (each recorded where it applies):
   `nav.breeding` is a deliberate rename to «التزاوج» (i18n.ext.js overrides
   vanilla's «التربية»; every spec and the kit say so) · ONE season rule

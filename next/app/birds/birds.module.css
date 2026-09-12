@@ -136,3 +136,9 @@ tr.gone td.nm{ color:var(--ink-3); }
 }
 /* ruling 14 (4A acceptance): the external marker — vanilla's chip-ext (birds.js:102) carried into the spec's row; kit over spec */
 .ext{ display:inline-flex; align-items:center; height:30px; padding:0 10px; border-radius:999px; font-size:12px; font-weight:800; white-space:nowrap; background:var(--page); color:var(--ink-3); border:1px dashed var(--ink-3); }
+/* The spec's FAB is a <button>; the port's navigates, so it is an <a> and the spec's `.fab button` rules never reached it —
+ * it rendered as a bare 23px link instead of the 58px dark pill (caught by the ruling-C geometry probe, not by eye).
+ * Same declarations, applied to the anchor. */
+.fab a{ border:none; border-radius:18px; background:var(--ink); color:#fff; font-size:16px; font-weight:800; min-height:58px; padding:0 24px;
+        cursor:pointer; display:flex; align-items:center; gap:10px; text-decoration:none; }
+@media (hover:hover){ .fab a:hover{ background:var(--brand-deep); color:#fff; } }

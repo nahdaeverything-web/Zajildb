@@ -8,6 +8,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'pedigree-tree')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -65,6 +66,12 @@ try:
         check('nodes link to the profile', pg.locator('[data-testid=node][data-known="1"]').first.get_attribute('href').startswith('/bird?id='))
         # ── carried panels ──
         check('[core_flows#4] COI breakdown table rendered with the engine\'s rows', pg.locator('[data-testid=breakdown-row]').count() == exp['rows'] and exp['rows'] == 2, f'{pg.locator("[data-testid=breakdown-row]").count()} rows')
+        check_clearance(pg, check, 'pedigree tree')
+        with pg.expect_download(timeout=10000):
+            pg.click('[data-testid=share-btn]')
+        pg.wait_for_selector('[data-testid=toast]', timeout=5000)
+        check_toast_clear(pg, check, 'pedigree tree (export toast over the certificate CTA)')
+        pg.wait_for_timeout(4500)
         check('CTA + head action → /cert?id=; print and share present', pg.locator('[data-testid=cta-cert]').get_attribute('href').startswith('/cert?id=') and pg.locator('[data-testid=print-btn]').count() == 1 and pg.locator('[data-testid=share-btn]').count() == 1)
         for w in (430, 900, 1400):
             pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/tree-{w}.png', full_page=True)

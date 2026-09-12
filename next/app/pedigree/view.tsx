@@ -173,7 +173,7 @@ export default function PedigreeView() {
           </div>
         </div>
       </div>
-      <div className={s.cta}><Link href={`/cert?id=${id}`} data-testid="cta-cert">{t('act.certificate')}</Link></div>
+      <div className={s.cta} data-bottom-chrome="cta"><Link href={`/cert?id=${id}`} data-testid="cta-cert">{t('act.certificate')}</Link></div>
     </section>
   );
 }

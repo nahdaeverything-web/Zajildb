@@ -393,7 +393,7 @@ export default function BirdView() {
         </section>
       </div>
 
-      <div className={s['cta-wrap']}><Link href={`/cert?id=${id}`} className={s.cta} data-testid="cta-cert">{t('act.certificate')}</Link></div>
+      <div className={s['cta-wrap']} data-bottom-chrome="cta"><Link href={`/cert?id=${id}`} className={s.cta} data-testid="cta-cert">{t('act.certificate')}</Link></div>
     </section>
   );
 }

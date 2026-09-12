@@ -9,6 +9,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'bird-profile')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -69,6 +70,8 @@ try:
         check('[ruling 8] the media row is gone from the gallery and the store', pg.locator('[data-testid=media-tile]').count() == 0 and pg.evaluate("async (id) => (await window.__zajilDb.mediaForBird(id)).length", ids['barq']) == 0)
         pg.click('[data-testid=toast-action]'); pg.wait_for_timeout(400)
         check('[ruling 8] undo restores the row into the gallery', pg.locator('[data-testid=media-tile] [data-testid=media-elsewhere]').count() == 1)
+        # [ruling C] that undo toast is up on a screen with its own fixed CTA — it must clear the CTA, not sit on it
+        check_toast_clear(pg, check, 'bird profile (undo toast over the certificate CTA)')
         pg.wait_for_timeout(4500)   # let the confirmation toast expire before the screenshots
         rows = pg.locator('[data-testid=basics] [data-testid^=row-]').count()
         check('basic details rows (loft · colour · hatch · sire · dam · added)', rows >= 5, rows)
@@ -77,6 +80,7 @@ try:
         n_notes = pg.locator('[data-testid=note]').count()
         pg.fill('[data-testid=note-input]', 'ملاحظة اختبار — من البروفايل'); pg.click('[data-testid=note-add]'); pg.wait_for_timeout(400)
         saved = pg.evaluate("(id) => (window.__zajilDb.getBird(id).notes || []).some(n => n.text === 'ملاحظة اختبار — من البروفايل')", ids['barq'])
+        check_clearance(pg, check, 'bird profile · overview')
         check('[ruling 10] add-note appends to bird.notes and the card re-renders', saved and pg.locator('[data-testid=note]').count() == n_notes + 1 and pg.locator('[data-testid=note-input]').input_value() == '', pg.locator('[data-testid=note]').count())
         for w in (430, 900, 1400):
             pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/overview-{w}.png', full_page=True)

@@ -9,6 +9,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'bird-form')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -141,6 +142,9 @@ try:
         saved = snap(pg, "() => window.__zajilDb.allBirds().find(x => x.name === 'طائر الدفعة')")
         check('save-and-new: the bird is saved with both rings (types kept), the toast says «حُفظ … — أدخل التالي»', bool(saved) and len(saved['rings']) == 2 and saved['rings'][1]['type'] == 'club' and 'أدخل التالي' in pg.locator('[data-testid=toast]').inner_text())
         check('…the form resets carrying colour/strain/status/sex-less and the ring prefix JO-2024-', pg.locator('[data-testid=f-name]').input_value() == '' and pg.locator('[data-testid=f-colour]').input_value() == 'أزرق' and pg.locator('[data-testid=f-strain]').input_value() == 'يانسن' and pg.locator('[data-testid=ring-input] >> nth=0').input_value() == 'JO-2024-' and pg.locator('[data-testid=status-chip][data-status=stock]').get_attribute('aria-pressed') == 'true')
+        # [ruling C] the form's own fixed action bar is the bottom chrome here — the toast must clear it, and the last field must clear both
+        check_toast_clear(pg, check, 'bird form (save-and-new toast over the action bar)')
+        check_clearance(pg, check, 'bird form · new')
         check('…and focus sits in the ring field', pg.evaluate("() => document.activeElement && document.activeElement.dataset.testid") == 'ring-input')
         # ── edit: prefilled, a change persists, note appended ──
         pg.goto(f"{ROOT}bird/edit.html?id={saved['id']}", wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
