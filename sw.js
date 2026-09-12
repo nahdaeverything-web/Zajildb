@@ -92,6 +92,25 @@ self.addEventListener('fetch', (e) => {
       // Navigations fall back to the shell (SPA); everything else tries the
       // network and back-fills the cache for next time.
       if (e.request.mode === 'navigate') {
+        // A navigation we hold no copy of is not a Zajil URL. Zajil routes
+        // ENTIRELY on location.hash (route(), js/app.js) — every real route is
+        // the scope root plus a fragment — so a path DEEPER than the scope root
+        // can only be a leftover from something else that owned this origin.
+        //
+        // Serving the shell at that address is what breaks: index.html's
+        // references are document-relative, so './js/app.js' under /bird/edit
+        // resolves to /bird/js/app.js, 404s, and the page is blank. A module
+        // script that 404s raises no error event, so nothing reports it.
+        //
+        // The root comes from self.location, NOT registration.scope: the SHELL
+        // entries are precached as Requests built inside this worker, so they
+        // resolve against the WORKER SCRIPT's url — new URL('./', self.location)
+        // is exactly the key './' was stored under. A scope widened at
+        // register() time would point outside it and reintroduce the bug.
+        const root = new URL('./', self.location);
+        // Never redirect the root at itself: a shell missing from the cache
+        // would become a redirect loop instead of a plain failure.
+        if (url.pathname !== root.pathname) return Response.redirect(root.href, 302);
         return caches.open(VERSION).then((c) => c.match('./index.html'))
           .then((shell) => shell || fetch(e.request));
       }
