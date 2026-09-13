@@ -628,25 +628,29 @@ not portable and never were.** Case 6 means they change every day; case 7 means 
 the machine that made them. Treat them as "what Samir's machine rendered on the day", which
 is a useful thing for a human to look at and a useless thing to diff.
 
-### Nineteen of the PNGs are orphans, and two of them are a trap
+### The nineteen orphans — DELETED, and one claim about them was wrong
 
-`fidelity/` holds **162** PNGs. The 34 capture sites write **143**. The other nineteen —
-`fidelity/high-contrast/` (12) and `fidelity/pwa/` (7) — are committed and **no suite writes
-them**. They were captured by hand: the high-contrast set during 4D acceptance (`a428bb3`),
-the PWA set during Phase 5 (`48faa77`). The only `high-contrast` string anywhere in `tests/`
-is a class assertion in `tools.py:170`, not a capture.
+`fidelity/` held **162** PNGs while the 34 capture sites write **143**. The other nineteen —
+`fidelity/high-contrast/` (12) and `fidelity/pwa/` (7) — were committed and **no suite wrote
+them**: captured by hand, the high-contrast set at 4D acceptance (`a428bb3`), the PWA set at
+Phase 5 (`48faa77`). The only `high-contrast` string in `tests/` is a class assertion at
+`tools.py:170`, not a capture.
 
-**So they are frozen before the Phase 6 fidelity fixes (`2c4b3b7`)** — before the two dead
-tree-connector systems were repaired, before the certificate got its desktop layout at all,
-before the focus rings and the print rules. Read as "what the app looks like", they show
-screens that no longer exist. They do not drift, which makes them look MORE trustworthy than
-the 143 that do, and they are the least trustworthy of the set. Either a suite should
-regenerate them or they should go; until one of those happens, this paragraph is the warning.
+They were frozen from **before the Phase 6 fidelity fixes** (`2c4b3b7`) — before the two dead
+tree-connector systems were repaired, before the certificate had a desktop layout at all,
+before the focus rings and the print rules. They never drifted, which made them look more
+trustworthy than the 143 that do while being the least trustworthy of the set. **Ruled at the
+pre-launch close: deleted.** If those views are worth capturing, a suite regenerates them.
+`fidelity/` is now 143 PNGs and every one of them has a suite that writes it.
 
-One smaller artefact bug in the same family: `loft-home/full-1400.png` is written **twice**
-by one suite — once inside the width loop at `loft_home.py:71` and again at `:193`, after the
-table has been sorted by name. The committed file is the second state, so the name says
-"full at 1400" and the picture is "full at 1400, re-sorted". The first write is dead work.
+**A correction, because it was recorded here on an agent's word and it was wrong.** An
+earlier draft of this section said `loft-home/full-1400.png` was written twice, at
+`loft_home.py:71` and again at `:193`. It was not — that loop is `for w in (430, 900)` and
+always has been. The file is written once. What WAS real is the state it was written in: the
+single capture sat at the end of the desktop block, *after* two clicks on «الاسم» had sorted
+the table by name and then reversed it, so the filename said "full at 1400" and the picture
+was "full at 1400, sorted by name, descending". The capture now happens immediately after the
+table is asserted present, on its default sort.
 
 
 

@@ -183,6 +183,11 @@ try:
         heads = pg.locator('[data-testid=th-sort]').all_inner_texts()
         check('1400: six table headers', [h_.strip() for h_ in heads] == ['الحلقة', 'الاسم', 'الجنس', 'الحالة', 'الجيل', 'آخر نتيجة'], heads)
         check('1400: phone list and FAB hidden, table shown', pg.locator('[data-testid=fab-add]').is_hidden() and pg.locator('[data-testid=table-row]').count() >= 30)
+        # captured HERE, in the state the filename claims: the full register at 1400 on its
+        # DEFAULT sort. It used to be captured at the end of this block, after two clicks on
+        # «الاسم» had re-sorted the table and reversed it — so the file said "full-1400" and
+        # the picture was "full-1400, sorted by name, descending".
+        shot(pg, path=f'{FID}/full-1400.png', full_page=False)
         first_before = pg.locator('[data-testid=table-row]').first.inner_text()
         pg.click('[data-testid=th-sort][data-key=name]'); pg.wait_for_timeout(200)
         names = pg.locator('[data-testid=table-row] [data-testid=cell-name]').all_inner_texts()
@@ -190,7 +195,6 @@ try:
         pg.click('[data-testid=th-sort][data-key=name]'); pg.wait_for_timeout(200)
         names2 = pg.locator('[data-testid=table-row] [data-testid=cell-name]').all_inner_texts()
         check('[ruling 6] second click reverses the sort', names2 == list(reversed(names)))
-        shot(pg, path=f'{FID}/full-1400.png', full_page=False)
         check('zero page errors', not errs, errs)
 
         # ── SMALL STATE (spec data-v="small": ≤ 8 birds) ──

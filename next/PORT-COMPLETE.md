@@ -233,10 +233,10 @@ them as "what one machine rendered on the day". `README.md` has the full table.
   the UI. Seeding those would mean reaching past the UI the assertion exercises. They drift,
   and `README.md` lists them.
 
-**Nineteen of the 162 PNGs are orphans.** `fidelity/high-contrast/` (12) and `fidelity/pwa/`
-(7) are committed and no suite writes them — they were captured by hand at 4D and Phase 5,
-so they are frozen from **before** the Phase 6 fidelity fixes and show screens that no longer
-exist. They never drift, which makes them look more trustworthy than the 143 that do.
+**`fidelity/` is 143 PNGs and every one has a suite that writes it.** Nineteen orphans —
+`high-contrast/` and `pwa/`, captured by hand at 4D and Phase 5 and therefore frozen from
+before the Phase 6 fidelity fixes — were deleted at the pre-launch close. They never drifted,
+which made them look more trustworthy than the 143 that do.
 
 **The clock freeze was implemented, measured, and removed.** `page.clock.set_fixed_time()`
 wipes the performance timeline — `performance.getEntriesByType('navigation').length` goes
