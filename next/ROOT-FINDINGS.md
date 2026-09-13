@@ -442,3 +442,92 @@ paths hardcode an origin layout into the shipped shell, so one `index.html` cann
 deployments. The worker derives it at runtime from `self.location`, so it is correct at any
 prefix without being told. That is why the accepted fix is three lines in `sw.js` and not
 eight edits across four files.
+
+---
+
+## RF-7 — the register's sort is not total: same-year birds are ordered by uuid
+
+**Not a defect. A design question, recorded so it is a decision rather than an accident.**
+
+**Where:** [`next/app/birds/view.tsx:90-94`](app/birds/view.tsx#L90) — the desktop table's
+default sort is `sortK = 'year'`, `desc = true`, comparing the year and nothing else:
+
+```js
+return [...filtered].sort((a, b) => { const x = k(a), y = k(b); return (x > y ? 1 : x < y ? -1 : 0) * (desc ? -1 : 1); });
+```
+
+**What:** a loft's birds are mostly hatched across a handful of seasons, so most comparisons
+are ties. `Array.prototype.sort` is stable, so ties keep source order — and source order is
+`db.state.birds`, populated from IndexedDB, which returns rows in **key order: the uuid**.
+
+**Measured.** Eight birds in two years, three trials, ids left to `uuid()`:
+
+```
+trial 1 TABLE order: 7,5,1,3,4,6,2,0     map order: 4,7,5,6,1,3,2,0   (by uuid)
+trial 2 TABLE order: 5,3,7,1,6,4,0,2     map order: 6,5,4,3,7,1,0,2
+trial 3 TABLE order: 5,3,1,7,0,4,2,6     map order: 0,5,3,4,2,1,7,6
+```
+
+Years sort correctly every time (2025 group, then 2024). Inside each year the table order
+matches the uuid order exactly, in all three.
+
+**Why it is NOT a bug.** A bird's uuid never changes, so for a given loft the order is
+**stable** — it does not reshuffle between page loads. It is arbitrary, not unstable.
+
+**Why it is worth a decision.** The order a fancier sees inside a season is meaningless to
+them: not by ring, not by name, not by age, not by when it was added. The phone grouping
+already has an answer for this — it orders by `createdAt` descending
+([`view.tsx:95`](app/birds/view.tsx#L95)) — so the two surfaces disagree about what "no sort
+chosen" means. A secondary key on the table (ring, or `createdAt`, to match the phone) would
+make them agree. **Vanilla's table should be checked for the same shape before ruling.**
+
+**It is not one comparator, it is a pattern.** An independent audit found the same
+tie-falls-through-to-store-order shape at:
+[`app/races/view.tsx:77`](app/races/view.tsx#L77) and `:87` (date desc — ties on equal or
+empty dates), [`app/breeding/view.tsx:26`](app/breeding/view.tsx#L26) (nest box),
+[`app/health/view.tsx:66`](app/health/view.tsx#L66) and
+[`app/bird/view.tsx:107`](app/bird/view.tsx#L107) (date desc),
+[`app/bird/view.tsx:176`](app/bird/view.tsx#L176) (progeny top five) and `:288` (notes by
+`at`). They are latent rather than visible today because imported fixture data keeps the ids
+it was created with ([`src/db/io.js:104-106`](../js/db/io.js#L104)), so only records made
+with a fresh `uuid()` expose it. **The fix, if ruled, is one clause — a final
+`|| a.id.localeCompare(b.id)` — applied consistently rather than per screen.**
+
+**How it surfaced:** `fidelity/loft-home/small-1400.png` was a different picture on every
+run. The first hypothesis — colliding `createdAt` in a fast fixture — was wrong, and seeding
+`createdAt` changed nothing. Seeding the **ids** made it pixel-identical.
+
+---
+
+## RF-8 — the committed fidelity captures encode the timezone of the machine that made them
+
+**Not a product defect. An artefact defect, and the reason the PNGs cannot be diffed across
+machines.**
+
+**Where:** `fmtDate` → `fmtGregorian` ([`src/i18n.js:534-546`](src/i18n.js#L534)) calls
+`parseLocalDate`. A **date-only** string is parsed as local midnight and is therefore safe by
+design ([`src/dates.js:44-52`](src/dates.js#L44)) — that is what the module exists for. A
+value **with a time component** keeps instant semantics, and `toLocaleDateString` then
+renders it in the machine's own zone.
+
+**Measured.** `sample-data.json` stores `createdAt: "2026-08-01T09:00:00.000Z"`. At UTC+03
+the bird profile renders «في زاجل منذ **1 آب 2026** (18 صفر 1448 هـ)». The same capture taken
+under `TZ=Pacific/Midway` (UTC−11) renders «**31 تموز 2026** (17 صفر 1448 هـ)». The
+certificate's «سجل موثق … منذ» line shifts identically.
+
+**So the committed baseline is Samir's `+03`.** Anyone running the gate west of roughly
+UTC−9 regenerates a different `bird-profile/overview-*`, `certificate/*` and `tools/*`, and
+will see them as modified files with no change of their own.
+
+**A frozen clock does not fix it** — `page.clock` sets the instant, not the zone.
+`browser.new_context(timezone_id='Asia/Amman')` does, it is one argument, and it is
+side-effect-free. It would also produce byte-identical output on this machine, since that is
+already the zone here. **Not applied**: it touches the context creation in every suite, and
+the Phase 7 close authorised the capture change only. Recorded so it is a decision.
+
+**Related, from the same audit and worth ruling with it:** a `Locator.screenshot()` taken
+before a `full_page` screenshot makes the fixed tab bar's inclusion in the full-page image a
+coin flip — measured **1 of 6** with element shots first against **6 of 6** without, and
+`animations='disabled'` does not change it. `shared_states.py` takes nine element shots
+before its full-page shot, which is why `shared-states/full-*` carries a band nobody had
+attributed.

@@ -9,7 +9,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance, check_toast_clear, scroll_to_bottom
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom, shot
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'bird-profile')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -83,7 +83,7 @@ try:
         check_clearance(pg, check, 'bird profile · overview')
         check('[ruling 10] add-note appends to bird.notes and the card re-renders', saved and pg.locator('[data-testid=note]').count() == n_notes + 1 and pg.locator('[data-testid=note-input]').input_value() == '', pg.locator('[data-testid=note]').count())
         for w in (430, 900, 1400):
-            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/overview-{w}.png', full_page=True)
+            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/overview-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
         # ── pedigree tab ──
         pg.click('[data-testid=tab-ped]'); pg.wait_for_timeout(150)
@@ -92,7 +92,7 @@ try:
         check('pedigree tab: «شجرة النسب الكاملة» → /pedigree?id=', pg.locator('[data-testid=full-tree-link]').get_attribute('href').startswith('/pedigree?id='))
         check('[core_flows#6] progeny analysis present', pg.locator('[data-testid=progeny]').count() == 1)
         for w in (430, 900, 1400):
-            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/pedigree-{w}.png', full_page=True)
+            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/pedigree-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
         # ── races tab ──
         pg.click('[data-testid=tab-race]'); pg.wait_for_timeout(150)
@@ -101,7 +101,7 @@ try:
             check('races tab: best result block + season table', pg.locator('[data-testid=race-best]').count() == 1 and pg.locator('[data-testid=season-card]').count() >= 1, nres)
         else:
             check('races tab: empty state «لا نتائج مسجلة.»', 'لا نتائج' in pg.locator('[data-testid=panel-race]').inner_text())
-        pg.screenshot(path=f'{FID}/races-empty-430.png', full_page=True)
+        shot(pg, path=f'{FID}/races-empty-430.png', full_page=True)
         # the designed races tab (best result + season tables): the sample bird with the most results
         racer = h.evaluate("() => { const db = window.__zajilDb; const n = new Map(); for (const r of db.state.raceResults.values()) n.set(r.birdId, (n.get(r.birdId) || 0) + 1); return [...n.entries()].sort((a, b) => b[1] - a[1])[0]; }")
         pg.goto(f"{ROOT}bird.html?id={racer[0]}&tab=race", wait_until='load'); pg.wait_for_selector('[data-testid=race-best]', timeout=6000)
@@ -116,7 +116,7 @@ try:
         fci = pg.locator('[data-testid=fci-row]').inner_text()
         check('[ruling 10] «نتائج مؤهلة: n / total» row present with the engine\'s numbers', 'نتائج مؤهلة' in fci and f'{q[0]} / {q[1]}' in fci, fci.replace('\n', ' '))
         for w in (430, 900, 1400):
-            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/races-{w}.png', full_page=True)
+            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/races-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
         pg.goto(f"{ROOT}bird.html?id={ids['barq']}", wait_until='load'); pg.wait_for_selector('[data-testid=profile-hero]')
         # ── health tab: interim next-vaccination rule (ruling 4) ──
@@ -127,7 +127,7 @@ try:
         nev = pg.evaluate("(id) => { const db = window.__zajilDb; const b = db.getBird(id); return [...db.state.healthEvents.values()].filter(e => e.birdId === id || (e.wholeLoft && e.loftId === b.loftId)).length; }", ids['barq'])
         check('health log lists own + whole-loft events with vanilla type labels', nev >= 2 and pg.locator('[data-testid=health-event]').count() == nev and 'تطعيم' in pg.locator('[data-testid=health-log]').inner_text() and 'علاج' in pg.locator('[data-testid=health-log]').inner_text(), f'{nev} events')
         for w in (430, 900, 1400):
-            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/health-{w}.png', full_page=True)
+            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/health-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
         # ── ?tab= selects a tab (spec script) ──
         pg.goto(f"{ROOT}bird.html?id={ids['barq']}&tab=race", wait_until='load'); pg.wait_for_selector('[data-testid=profile-hero]')

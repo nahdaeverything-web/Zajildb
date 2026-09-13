@@ -8,6 +8,8 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'sync'))
 from _serve import serve
+sys.path.insert(0, os.path.join(HERE, '..', 'e2e', 'screens'))
+from _layout import shot                      # the same capture discipline as the screen suites
 OUT = os.path.abspath(os.path.join(HERE, '..', '..', 'fidelity', 'shared-states')); os.makedirs(OUT, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -24,8 +26,8 @@ try:
             check(f'{w}: gallery renders, dir=rtl', pg.evaluate("document.documentElement.dir") == 'rtl')
             for sec in SECTIONS:
                 el = pg.locator(f'[data-testid={sec}]'); el.scroll_into_view_if_needed(); pg.wait_for_timeout(120)
-                el.screenshot(path=f'{OUT}/{sec[2:]}-{w}.png')
-            pg.screenshot(path=f'{OUT}/full-{w}.png', full_page=True)
+                shot(el, f'{OUT}/{sec[2:]}-{w}.png', pg=pg)
+            shot(pg, f'{OUT}/full-{w}.png', full_page=True)
             check(f'{w}: zero page errors', not errs, errs)
             if w >= 1100:
                 # the service worker's install toast is a real toast on a first load, and

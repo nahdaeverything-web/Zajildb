@@ -10,7 +10,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance, check_toast_clear, scroll_to_bottom, check_caret
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom, check_caret, shot
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..', '..'))
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'loft-home')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
@@ -45,7 +45,7 @@ try:
         check('empty state: count line reads «لا طيور بعد»', pg.locator('[data-testid=count-line]').inner_text().strip() == 'لا طيور بعد')
         check('empty state: search, filters and FAB hidden', pg.locator('[data-testid=search-input]').count() == 0 and pg.locator('[data-testid=fab-add]').count() == 0)
         for w in (430, 900, 1400):
-            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/empty-{w}.png', full_page=True)
+            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/empty-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
 
         # ── [example_data#2] example data loaded via the UI ──
@@ -68,7 +68,7 @@ try:
         check('phone: FAB «طير جديد» present, the spec\'s 58px pill', pg.locator('[data-testid=fab-add]').is_visible() and fab and fab['height'] >= 58, f"{fab and round(fab['height'])}px tall")
         check_clearance(pg, check, 'loft home')
         for w in (430, 900):
-            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/full-{w}.png', full_page=False)
+            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/full-{w}.png', full_page=False)
         pg.set_viewport_size({'width': 430, 'height': 900})
 
         # ── search (core_flows#3–4, vanilla's fields + ring normalisation) ──
@@ -190,18 +190,28 @@ try:
         pg.click('[data-testid=th-sort][data-key=name]'); pg.wait_for_timeout(200)
         names2 = pg.locator('[data-testid=table-row] [data-testid=cell-name]').all_inner_texts()
         check('[ruling 6] second click reverses the sort', names2 == list(reversed(names)))
-        pg.screenshot(path=f'{FID}/full-1400.png', full_page=False)
+        shot(pg, path=f'{FID}/full-1400.png', full_page=False)
         check('zero page errors', not errs, errs)
 
         # ── SMALL STATE (spec data-v="small": ≤ 8 birds) ──
         wipe(h)
+        # id AND createdAt are SEEDED, so this fixture's order is total. Measured, after a
+        # wrong guess: small-1400.png is the DESKTOP TABLE, which sorts by YEAR alone — and
+        # these eight birds occupy two years, so every comparison inside a year is a tie.
+        # Array.sort is stable, so ties keep source order, and source order is the IndexedDB
+        # key order, i.e. uuid. Three trials with seeded createdAt still gave three different
+        # pictures, and in each the table order matched the uuid order exactly. Fresh uuids
+        # every run were the whole cause. (For a real loft this is stable but arbitrary: same-
+        # year birds sort by an id nobody can see. That is a design question, not a bug — see
+        # ROOT-FINDINGS.)
         h.evaluate("""async () => { const db = await window.__zajilDb;
-            for (let i = 0; i < 8; i++) await db.saveBird(db.newBird({ name: 'صغير-' + i, sex: i % 2 ? 'hen' : 'cock', hatchDate: '202' + (4 + (i % 2)) + '-03-01' })); }""")
+            for (let i = 0; i < 8; i++) await db.saveBird(db.newBird({ name: 'صغير-' + i, sex: i % 2 ? 'hen' : 'cock', hatchDate: '202' + (4 + (i % 2)) + '-03-01',
+                id: '00000000-0000-4000-8000-00000000000' + i, createdAt: '2026-03-01T08:0' + i + ':00.000Z' })); }""")
         pg.set_viewport_size({'width': 430, 'height': 900}); pg.goto(BIRDS, wait_until='load')
         pg.wait_for_function("document.querySelectorAll('[data-testid=bird-row]').length === 8", timeout=5000)
         check('small: 8 rows, count line «8 طائرًا · 4 ذكرًا · 4 أنثى»', pg.locator('[data-testid=count-line]').inner_text().strip() == '8 طائرًا · 4 ذكرًا · 4 أنثى', pg.locator('[data-testid=count-line]').inner_text())
         for w in (430, 900, 1400):
-            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/small-{w}.png', full_page=False)
+            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/small-{w}.png', full_page=False)
         b.close()
 finally:
     srv.terminate()

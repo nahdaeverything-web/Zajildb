@@ -30,7 +30,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 sys.path.insert(0, HERE)
 from _serve import serve                      # noqa: E402
-from _layout import check_clearance, check_toast_clear, wait_toasts_clear   # noqa: E402
+from _layout import check_clearance, check_toast_clear, wait_toasts_clear, shot   # noqa: E402
 
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'tools')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
@@ -52,7 +52,7 @@ PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4
 def shots(pg, name, widths=(430, 900, 1400)):
     for w in widths:
         pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(250)
-        pg.screenshot(path=f'{FID}/{name}-{w}.png', full_page=True)
+        shot(pg, path=f'{FID}/{name}-{w}.png', full_page=True)
     pg.set_viewport_size({'width': 430, 'height': 900}); pg.wait_for_timeout(150)
 
 

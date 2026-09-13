@@ -9,7 +9,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance, check_toast_clear, scroll_to_bottom, wait_toasts_clear, check_caret
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom, wait_toasts_clear, check_caret, shot
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'races')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -31,7 +31,7 @@ def load(pg, file):
     pg.evaluate("async (f) => { const db = await window.__zajilDb; await db.importAll(await (await fetch(f)).json(), 'merge'); }", file)
 def shots(pg, name, widths=(430, 900, 1400)):
     for w in widths:
-        pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(200); pg.screenshot(path=f'{FID}/{name}-{w}.png', full_page=True)
+        pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(200); shot(pg, path=f'{FID}/{name}-{w}.png', full_page=True)
     pg.set_viewport_size({'width': 430, 'height': 900})
 
 try:
@@ -158,7 +158,7 @@ try:
         pg.wait_for_timeout(700)   # the spec scrolls back with behavior:'smooth'
         check('…and the sheet scrolled back to the first bad field', pg.evaluate("() => document.querySelector('[data-testid=result-sheet]').scrollTop") < 40, pg.evaluate("() => document.querySelector('[data-testid=result-sheet]').scrollTop"))
         check('…and no result was written', h.evaluate("() => window.__zajilDb.state.raceResults.size") == n)
-        pg.screenshot(path=f'{FID}/sheet-errors-430.png', full_page=True)
+        shot(pg, path=f'{FID}/sheet-errors-430.png', full_page=True)
 
         # ── the calculator's success path: engine haversine + velocity ──
         pg.click('[data-testid=bird-pick]'); pg.wait_for_selector('[data-testid=bird-picklist]')

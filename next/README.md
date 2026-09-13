@@ -570,6 +570,64 @@ Two more defects came out of closing the coverage gaps rather than from lint:
   non-empty branch. A fancier with an empty loft and a paused or failing sync was told
   nothing. Found by re-authoring `sync_ui` #1, which had been re-authored into a tautology.
 
+## `fidelity/` — what those PNGs are, and why most of them drift
+
+**They are REVIEW ARTEFACTS, not a visual-regression signal.** They are committed, and the
+suites overwrite them on every run, so a modified PNG means "the suite ran", not "something
+changed". Do not read one as a regression, and do not commit one as evidence of a change.
+
+RULED at the Phase 7 close: freeze the clock for the CAPTURE ONLY, never pin the suite to a
+permanent constant — a fixed instant some assertion silently depends on is a lie that fails
+once a year in a way nobody will diagnose. Where a value a capture-time freeze cannot reach
+is shown, seed it in the fixture; where neither is clean, let it drift and **say so**. This
+is the saying-so, and it is longer than expected, because a four-agent audit found seven
+causes where two were visible.
+
+**What was done.** All 34 captures now go through `shot()` in
+`tests/e2e/screens/_layout.py`, which passes `animations='disabled'`. Run-to-run on one
+machine that took the drift from **16 captures to 8**: the seven `shared-states` spinner
+captures became reproducible, and `loft-home/small-1400` was fixed by seeding fixture ids.
+
+**The clock half of the ruling was implemented, measured, and REMOVED.**
+`page.clock.set_fixed_time()` **wipes the performance timeline** —
+`performance.getEntriesByType('navigation').length` goes 1 → 0 and never comes back — which
+is exactly how `loft_home`'s `change_events#1` proves the register refreshed *with no
+reload*. It turned a green suite red, which is how it was caught rather than shipped. (Two
+traps for anyone who retries it: Playwright's **Python** clock takes **seconds**, so a
+millisecond value pins the page to the year 58691; and it only affects rendering if installed
+*before* the page renders, which is not what "freeze around the shutter" means.)
+
+### The seven causes, and what each actually needs
+
+| | cause | fixed by |
+|---|---|---|
+| 1 | **CSS animation frames** — the spinners | `animations='disabled'` ✅ **done** |
+| 2 | **UUID order leaking into sort order** — see RF-7 | a total comparator, or seeded fixture ids. Done for `loft-home/small-*` only |
+| 3 | **Wall-clock timestamps rendered into the DOM** — a note's `at`, `lastSyncAt`, the auto-backup id | fixture-seeded values. **Not done**: reaching past the UI the assertion exercises |
+| 4 | **Fixed chrome randomly missing from `full_page` shots** | a preceding `Locator.screenshot()` makes the tab bar's inclusion a coin flip — measured **1 of 6** with element shots first, **6 of 6** without. Needs the full-page shot taken before the element shots, or on a fresh navigation. **Not done** |
+| 5 | **The service-worker install toast** | a race on the FIRST page of each context only. `service_workers='block'`, or `wait_toasts_clear()` *before* the capture rather than after. **Not done** |
+| 6 | **Data derived from *today*** | drifts across a **day boundary**, not run to run. Re-running all 12 suites at a date one day earlier changed **43 of 143** captures — all 8 certificate PNGs, and `certificate/story-ar-430` even changed *width* 436 → 450 px as a longer date widened the document. Only a pre-navigation clock freeze fixes this, which is what the ruling forbids. **Left drifting, by ruling** |
+| 7 | **The machine's timezone** — see RF-8 | `new_context(timezone_id='Asia/Amman')`. **Not done** |
+
+### What still drifts run-to-run on this machine
+
+Eight captures, all case 3 — a timestamp the app rendered from an action the suite performed
+through the UI:
+
+| capture | the value |
+|---|---|
+| `bird-profile/overview-{430,900,1400}` | the note the suite types into `note-input`, stamped by the app's own note path |
+| `tools/signed-in-{430,900,1400}` | `lastSyncAt`, from a real sign-in against the mock |
+| `tools/{full-900, dev-open-900}` | the auto-backup id in the restore `<select>` — **900 only**, because at 430 and 1400 the select clips the time off |
+
+Seeding those means reaching past the UI the assertion is exercising. They drift, honestly,
+and they are listed by name. An honest drifting capture beats a frozen lie.
+
+**The bigger point, which the audit made and the run-to-run number hides: these captures are
+not portable and never were.** Case 6 means they change every day; case 7 means they encode
+the machine that made them. Treat them as "what Samir's machine rendered on the day", which
+is a useful thing for a human to look at and a useless thing to diff.
+
 ## Tests
 
     node tests/run.js        # the root engine suite against src/engine/ — 33/33

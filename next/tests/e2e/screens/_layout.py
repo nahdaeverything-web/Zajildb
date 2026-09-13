@@ -51,6 +51,7 @@ PROBE = """(band) => {
 }"""
 
 
+
 def _overlaps(a, b):
     return not (a['bottom'] <= b['top'] or a['top'] >= b['bottom'] or a['right'] <= b['left'] or a['left'] >= b['right'])
 
@@ -155,3 +156,43 @@ def check_caret(pg, check, testid, text, where, expect=None):
     want = expect if expect is not None else text
     check(f'{where}: «{testid}» keeps the caret while it is typed into, character by character',
           got == want and focus == testid, f'value {got!r} (wanted {want!r}), focus {focus!r}')
+
+
+# ── fidelity captures: as deterministic as they can honestly be ────────────────
+#
+# The PNGs under next/fidelity/ are COMMITTED, so every non-deterministic pixel shows up as
+# a modified file on every run and drowns any real visual change. Two causes were measured:
+# spinner frames, and rendered clock times.
+#
+# RULED (Phase 7 close): freeze the clock for the CAPTURE ONLY and restore real time after —
+# never pin the suite to a permanent constant, because a fixed instant that some assertion
+# silently depends on is a lie that fails once a year in a way nobody will diagnose. Where a
+# capture shows a timestamp a capture-time freeze cannot reach, seed it from a fixed date in
+# the fixture; where neither is clean, let the capture drift and SAY SO.
+#
+# The clock half of that ruling was implemented, measured, and then REMOVED, because it is
+# both useless here and destructive:
+#
+#   · USELESS — freezing at capture time cannot change text already rendered into the DOM,
+#     and Zajil has no ticking relative-time component (no setInterval anywhere in src/ or
+#     app/), so nothing repaints from the clock while the shutter is open.
+#   · DESTRUCTIVE — `page.clock.set_fixed_time()` WIPES THE PERFORMANCE TIMELINE. Measured:
+#         after goto                       navigation entries = 1
+#         after screenshot(animations=...)  navigation entries = 1
+#         after set_fixed_time              navigation entries = 0   ← and it never comes back
+#     `performance.getEntriesByType('navigation').length == 1` is precisely how the suites
+#     prove "the register refreshed WITH NO RELOAD" (loft_home change_events#1). Installing
+#     the fake clock destroys the evidence. It turned a green suite red, which is how this
+#     was found rather than shipped.
+#
+# So what remains is the half that works: animations='disabled' — finite animations are
+# fast-forwarded, infinite ones (the spinners) reset to their first frame. Captures whose
+# drift is a rendered timestamp are handled in the fixture or left drifting; next/README.md
+# lists which, and why.
+def shot(target, path, pg=None, **kw):
+    """Screenshot with animations stopped, so a spinner frame is not a diff.
+
+    `target` may be a Page or a Locator; `pg` is accepted for call-site symmetry and is
+    unused — it exists so a locator capture reads the same as a page capture."""
+    kw.setdefault('animations', 'disabled')
+    target.screenshot(path=path, **kw)

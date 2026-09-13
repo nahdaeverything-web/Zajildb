@@ -20,7 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 sys.path.insert(0, HERE)
 from _serve import serve                       # noqa: E402
-from _layout import check_clearance, check_toast_clear, wait_toasts_clear, check_caret   # noqa: E402
+from _layout import check_clearance, check_toast_clear, wait_toasts_clear, check_caret, shot   # noqa: E402
 
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'certificate')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
@@ -43,7 +43,7 @@ def run(pg, fn, arg=None):
 def shots(pg, name, widths=(430, 900, 1400)):
     for w in widths:
         pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(350)
-        pg.screenshot(path=f'{FID}/{name}-{w}.png', full_page=True)
+        shot(pg, path=f'{FID}/{name}-{w}.png', full_page=True)
     pg.set_viewport_size({'width': 1400, 'height': 900}); pg.wait_for_timeout(250)
 
 
@@ -300,7 +300,7 @@ try:
         pg.click('[data-testid="zoom-1"]'); pg.wait_for_timeout(400)
         at100 = pg.evaluate("() => document.querySelector('[data-testid=zscroll] [data-testid=sheet]').getBoundingClientRect().width")
         check('…and the levels really change the size', at100 > at70 * 1.3, f'{round(at70)} -> {round(at100)}')
-        pg.screenshot(path=f'{FID}/zoom-430.png', full_page=False)
+        shot(pg, path=f'{FID}/zoom-430.png', full_page=False)
         pg.click('[data-testid=zoom-close]'); pg.wait_for_timeout(400)
         check('…and closing it gives the page back', pg.locator('[data-testid=zoom]').count() == 0
               and pg.evaluate("() => document.body.style.overflow") == '')

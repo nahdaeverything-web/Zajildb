@@ -10,7 +10,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance, check_toast_clear, scroll_to_bottom, wait_toasts_clear, check_caret
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom, wait_toasts_clear, check_caret, shot
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'breeding')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -32,7 +32,7 @@ def load(pg, file):
     pg.evaluate("async (f) => { const db = await window.__zajilDb; await db.importAll(await (await fetch(f)).json(), 'merge'); }", file)
 def shots(pg, name):
     for w in (430, 900, 1400):
-        pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/{name}-{w}.png', full_page=True)
+        pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/{name}-{w}.png', full_page=True)
     pg.set_viewport_size({'width': 430, 'height': 900})
 
 try:
@@ -129,7 +129,7 @@ try:
         pg.fill('[data-testid=f-nest]', busy); pg.click('[data-testid=sheet-save]'); pg.wait_for_timeout(150)
         check('[spec «أخطاء»] a nest taken by an active pair this season is refused', 'مشغول' in pg.locator('[data-testid=new-errs]').inner_text())
         check_caret(pg, check, 'f-source', 'لوفت الفحيص', 'breeding sheet')
-        pg.fill('[data-testid=f-nest]', '99'); pg.fill('[data-testid=f-source]', 'لوفت الاختبار'); pg.screenshot(path=f'{FID}/new-pair-430.png', full_page=True)
+        pg.fill('[data-testid=f-nest]', '99'); pg.fill('[data-testid=f-source]', 'لوفت الاختبار'); shot(pg, path=f'{FID}/new-pair-430.png', full_page=True)
         n0 = h.evaluate("() => window.__zajilDb.state.pairs.size")
         pg.click('[data-testid=sheet-save]'); pg.wait_for_url(re.compile(r'/pair'), timeout=6000); pg.wait_for_selector('[data-testid=pair-card]')
         newp = pg.evaluate("() => { const p = [...window.__zajilDb.state.pairs.values()].find(p => p.nestBox === '99'); return p && [p.season, p.status, p.acquiredFrom, (p.rounds||[]).length]; }")

@@ -9,7 +9,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance, check_caret
+from _layout import check_clearance, check_caret, shot
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'sign-in')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -23,7 +23,7 @@ SIGNIN = f'{ROOT}sign-in.html'
 STUB = "https://stub.example.test"
 def shots(pg, name, widths=(430, 900, 1400)):
     for w in widths:
-        pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(200); pg.screenshot(path=f'{FID}/{name}-{w}.png', full_page=True)
+        pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(200); shot(pg, path=f'{FID}/{name}-{w}.png', full_page=True)
     pg.set_viewport_size({'width': 430, 'height': 900})
 
 try:
@@ -67,7 +67,7 @@ try:
         check('[spec «المزامنة غير مهيأة»] with no project configured, signing in says exactly that — never a status code',
               pg.locator('[data-testid=msg-cfg]').count() == 1 and 'غير مهيأة' in pg.locator('[data-testid=msg-cfg]').inner_text()
               and not any(ch.isdigit() for ch in pg.locator('[data-testid=msg-cfg]').inner_text()), pg.locator('[data-testid=msg-cfg]').inner_text().replace('\n', ' '))
-        pg.screenshot(path=f'{FID}/state-cfg-430.png', full_page=True)
+        shot(pg, path=f'{FID}/state-cfg-430.png', full_page=True)
 
         # ── CREDENTIALS REJECTED (a configured project that answers 400) ──
         cfg = ctx.new_page(); errs2 = []; cfg.on('pageerror', lambda e: errs2.append(str(e)))
@@ -81,7 +81,7 @@ try:
               and cfg.locator('[data-testid=f-email]').get_attribute('aria-invalid') == 'true' and cfg.locator('[data-testid=f-password]').get_attribute('aria-invalid') == 'true')
         check('…and no status code leaks into the message', not any(ch.isdigit() for ch in cfg.locator('[data-testid=msg-cred]').inner_text()), cfg.locator('[data-testid=msg-cred]').inner_text())
         check('…and nothing was signed in', cfg.evaluate("() => !!window.__zajilDb") is False or True)
-        cfg.screenshot(path=f'{FID}/state-cred-430.png', full_page=True)
+        shot(cfg, path=f'{FID}/state-cred-430.png', full_page=True)
         cfg.fill('[data-testid=f-email]', 'someone2@example.com'); cfg.wait_for_timeout(150)
         check('typing clears the error, as the spec\'s state machine does', cfg.locator('[data-testid=msg-cred]').count() == 0 and cfg.locator('[data-testid=f-email]').get_attribute('aria-invalid') == 'false')
 
@@ -120,7 +120,7 @@ try:
         check('[sync_ui #30] …and the button is usable again, not left spinning',
               net.locator('[data-testid=signin-submit]').is_enabled(),
               'disabled' if net.locator('[data-testid=signin-submit]').is_disabled() else 'enabled')
-        net.screenshot(path=f'{FID}/state-net-430.png', full_page=True)
+        shot(net, path=f'{FID}/state-net-430.png', full_page=True)
         net.close()
 
         # ── SIGNED IN (a project that answers with tokens) ──
@@ -134,7 +134,7 @@ try:
         check('[auth_live: a good sign-in] the session is stored and the screen leaves for the sync card', '/tools' in ok.url, ok.url)
         ok.goto(SIGNIN, wait_until='load'); ok.wait_for_selector('[data-testid=signin-form]')
         check('…and coming back says who is signed in rather than pretending otherwise', ok.locator('[data-testid=already-signed-in]').count() == 1 and 'someone@example.com' in ok.locator('[data-testid=already-signed-in]').inner_text())
-        ok.screenshot(path=f'{FID}/state-signed-in-430.png', full_page=True)
+        shot(ok, path=f'{FID}/state-signed-in-430.png', full_page=True)
         ok.close()
 
         # ── EARLY ACCESS (the submit is deliberately unwired) ──
@@ -154,7 +154,7 @@ try:
         check('[spec: UNWIRED] submitting shows the success pane and echoes the address', 'fancier@example.com' in pg.locator('[data-testid=early-mail]').inner_text())
         check('[spec: UNWIRED] …and sends nothing: no request left the page', True)
         check('…and nothing was written to the database either', pg.evaluate("() => window.__zajilDb ? window.__zajilDb.allBirds().length : 0") == 0)
-        pg.screenshot(path=f'{FID}/early-done-430.png', full_page=True)
+        shot(pg, path=f'{FID}/early-done-430.png', full_page=True)
         pg.click('[data-testid=early-return]'); pg.wait_for_selector('[data-testid=signin-form]')
         check('«العودة إلى تسجيل الدخول» comes back to the sign-in pane', pg.locator('[data-testid=pane-signin]').count() == 1)
         check_clearance(pg, check, 'sign-in')

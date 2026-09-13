@@ -9,7 +9,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance, check_toast_clear, scroll_to_bottom, check_caret
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom, check_caret, shot
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'bird-form')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -48,11 +48,11 @@ try:
         check('[ownership#2] status visible for an owned bird', pg.locator('[data-testid=f-status]').is_visible())
         check('[entry_ergonomics#11] the strain datalist offers the loft\'s distinct strains', pg.locator('#dl-strains option').count() >= 2, pg.locator('#dl-strains option').count())
         for w in (430, 900, 1400):
-            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/new-{w}.png', full_page=True)
+            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/new-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
         pg.click('[data-testid=external-switch]'); pg.wait_for_timeout(100)
         check('[ownership#3] status hidden for an external bird', pg.locator('[data-testid=f-status]').count() == 0)
-        pg.screenshot(path=f'{FID}/new-external-430.png', full_page=True)
+        shot(pg, path=f'{FID}/new-external-430.png', full_page=True)
         # ── [record_factory#1 path 1] the switch → an external bird with REFERENCE_STATUS ──
         pg.fill('[data-testid=ring-input] >> nth=0', 'BE-2001-9000001'); pg.click('[data-testid=save-btn]')
         pg.wait_for_url(re.compile(r'/bird\?id='), timeout=6000); pg.wait_for_selector('[data-testid=profile-hero]')
@@ -182,7 +182,7 @@ try:
         pg.goto(NEW, wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
         pg.fill('[data-testid=ring-input] >> nth=0', used[0]); pg.wait_for_timeout(200)
         check('duplicate ring → live warnbox names the other bird with «عرض الطائر الآخر»', pg.locator('[data-testid=dup-warn]').count() == 1 and used[1] in pg.locator('[data-testid=dup-warn]').inner_text() and pg.locator('[data-testid=dup-view]').get_attribute('href').startswith('/bird?id='))
-        pg.screenshot(path=f'{FID}/dup-warn-430.png', full_page=True)
+        shot(pg, path=f'{FID}/dup-warn-430.png', full_page=True)
         pg.click('[data-testid=save-btn]'); pg.wait_for_timeout(300)
         check('save → warnings dialog with «حفظ رغم التحذير»', 'تحذيرات' in pg.locator('[data-testid=dialog]').inner_text() and pg.locator('[data-testid=dialog-confirm]').inner_text().strip() == 'حفظ رغم التحذير')
         pg.click('[data-testid=dialog-confirm]'); pg.wait_for_url(re.compile(r'/bird\?id='), timeout=6000)
@@ -224,7 +224,7 @@ try:
         pg.goto(f"{ROOT}bird/edit.html?id={saved['id']}", wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
         check('edit form: title «تعديل», fields prefilled, no save-and-new', pg.locator('[data-testid=form-title]').inner_text().strip() == 'تعديل' and pg.locator('[data-testid=f-name]').input_value() == 'طائر الدفعة' and pg.locator('[data-testid=save-new-btn]').count() == 0)
         for w in (430, 900, 1400):
-            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/edit-{w}.png', full_page=True)
+            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/edit-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
         pg.fill('[data-testid=f-colour]', 'أحمر'); pg.fill('[data-testid=f-notes]', 'ملاحظة من النموذج'); pg.click('[data-testid=save-btn]')
         pg.wait_for_url(re.compile(r'/bird\?id='), timeout=6000); pg.wait_for_selector('[data-testid=profile-hero]')

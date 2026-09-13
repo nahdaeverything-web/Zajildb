@@ -10,7 +10,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance, check_toast_clear, wait_toasts_clear, check_caret
+from _layout import check_clearance, check_toast_clear, wait_toasts_clear, check_caret, shot
 
 # The LOCAL calendar date, as src/dates.js todayISO() computes it. NEVER
 # new Date().toISOString().slice(0,10) — that is the UTC date, and east of
@@ -38,7 +38,7 @@ def load(pg, file):
     pg.evaluate("async (f) => { const db = await window.__zajilDb; await db.importAll(await (await fetch(f)).json(), 'merge'); }", file)
 def shots(pg, name, widths=(430, 900, 1400)):
     for w in widths:
-        pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(200); pg.screenshot(path=f'{FID}/{name}-{w}.png', full_page=True)
+        pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(200); shot(pg, path=f'{FID}/{name}-{w}.png', full_page=True)
     pg.set_viewport_size({'width': 430, 'height': 900})
 
 try:
@@ -122,7 +122,7 @@ try:
         pg.click('[data-testid=sheet-save]'); pg.wait_for_timeout(250)
         check('[README: silent failure] no bird → alert banner + the field says which way out it has', pg.locator('[data-testid=sheet-alert]').count() == 1 and 'لم يُحفظ الحدث' in pg.locator('[data-testid=sheet-alert]').inner_text() and pg.evaluate("() => getComputedStyle(document.querySelector('[data-testid=f-bird] [role=alert]')).display") != 'none' and 'غيّر النطاق' in pg.locator('[data-testid=f-bird]').inner_text())
         check('…and nothing was written', pg.evaluate("() => window.__zajilDb.state.healthEvents.size") == before)
-        pg.screenshot(path=f'{FID}/sheet-error-430.png', full_page=True)
+        shot(pg, path=f'{FID}/sheet-error-430.png', full_page=True)
         pg.click('[data-testid=bird-pick]'); pg.wait_for_selector('[data-testid=bird-picklist]')
         pg.click('[data-testid=bird-item] >> nth=0'); pg.wait_for_timeout(150)
         check('picking a bird clears the error and fills the field', pg.evaluate("() => getComputedStyle(document.querySelector('[data-testid=f-bird] [role=alert]')).display") == 'none' and pg.locator('[data-testid=sheet-alert]').count() == 0)

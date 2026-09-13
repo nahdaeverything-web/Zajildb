@@ -8,7 +8,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance, check_toast_clear, scroll_to_bottom, check_caret
+from _layout import check_clearance, check_toast_clear, scroll_to_bottom, check_caret, shot
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'pedigree-tree')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -119,14 +119,14 @@ try:
         pg.wait_for_timeout(4500)
         check('CTA + head action → /cert?id=; print and share present', pg.locator('[data-testid=cta-cert]').get_attribute('href').startswith('/cert?id=') and pg.locator('[data-testid=print-btn]').count() == 1 and pg.locator('[data-testid=share-btn]').count() == 1)
         for w in (430, 900, 1400):
-            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/tree-{w}.png', full_page=True)
+            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/tree-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
         # ── generation control (vanilla 3/4/5) ──
         pg.click('[data-testid=gen-btn][data-gens="3"]'); pg.wait_for_timeout(150)
         check('3 generations → 14 ancestor slots, 4 ruler labels', pg.locator('[data-testid=node]').count() == 14 and pg.locator('[data-testid=ruler-label]').count() == 4)
         pg.click('[data-testid=gen-btn][data-gens="5"]'); pg.wait_for_timeout(150)
         check('5 generations → 62 ancestor slots, 6 ruler labels (the sixth from the {n} template)', pg.locator('[data-testid=node]').count() == 62 and pg.locator('[data-testid=ruler-label]').count() == 6 and 'الجيل 6' in pg.locator('[data-testid=ruler-label]').last.inner_text())
-        pg.screenshot(path=f'{FID}/tree-5gen-430.png', full_page=True)
+        shot(pg, path=f'{FID}/tree-5gen-430.png', full_page=True)
 
         # ── the teaching loft: deepest pedigree, COI 12.5%, breakdown, the severe full-sib warning (teaching_loft#3–6) ──
         wipe(h); load(h, './example-loft-large.json')
@@ -143,7 +143,7 @@ try:
         rel = pg.locator('[data-testid=rel-result]')
         check('[teaching_loft#6] full-sib pairing → «أشقاء» + severe level', rel.count() == 1 and 'أشقاء' in pg.locator('[data-testid=rel-key]').inner_text() and rel.get_attribute('data-level') == 'severe', pg.locator('[data-testid=rel-key]').inner_text() if rel.count() else 'no result')
         for w in (430, 1400):
-            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); pg.screenshot(path=f'{FID}/teaching-5gen-{w}.png', full_page=True)
+            pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/teaching-5gen-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
         # a bird with unknown ancestors → the add link
         pg.goto(f'{ROOT}pedigree.html?id={deep["id"]}&gens=5', wait_until='load'); pg.wait_for_selector('[data-testid=chart]')

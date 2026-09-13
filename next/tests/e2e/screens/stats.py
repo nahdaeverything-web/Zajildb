@@ -10,7 +10,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
-from _layout import check_clearance
+from _layout import check_clearance, shot
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'stats')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -33,7 +33,7 @@ def load(pg, file):
     pg.evaluate("async (f) => { const db = await window.__zajilDb; await db.importAll(await (await fetch(f)).json(), 'merge'); }", file)
 def shots(pg, name, widths=(430, 900, 1400)):
     for w in widths:
-        pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(200); pg.screenshot(path=f'{FID}/{name}-{w}.png', full_page=True)
+        pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(200); shot(pg, path=f'{FID}/{name}-{w}.png', full_page=True)
     pg.set_viewport_size({'width': 430, 'height': 900})
 
 # what the screen must show, computed here from the engine + the layer
