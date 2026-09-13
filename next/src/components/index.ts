@@ -10,6 +10,7 @@ export { default as MediaPlaceholder } from './MediaPlaceholder';
 export { BirdLabel, SexChip, COIValue, Plate, primaryRing, birdLabelText, sexIcon } from './BirdBits';
 export { seasonStart, seasonLabel } from './season';
 export { downloadJSON, downloadBlob } from './download';
+export { downscaleImage, MAX_EDGE } from './media';
 export { pickerModel, candidates, exactMatch, createFromQuery } from './picker';
 export { Tpl } from './Tpl';
 export { applySettings, saveSetting } from './settings';

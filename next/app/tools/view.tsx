@@ -6,7 +6,7 @@ import { useZajilStore, selectBirds } from '@/src/db/react';
 import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { findDuplicateRings } from '@/src/engine/rings.js';
 import { todayISO } from '@/src/dates.js';
-import { SyncRow, Loading, toast, confirmDialog, downloadJSON, downloadBlob, primaryRing, saveSetting, initDB } from '@/src/components';
+import { SyncRow, Loading, toast, confirmDialog, downloadJSON, downloadBlob, downscaleImage, primaryRing, saveSetting, initDB } from '@/src/components';
 import { useAppVersion } from '@/src/components/version';
 import s from './tools.module.css';
 
@@ -197,7 +197,7 @@ function LoftCard({ loft }: { loft: Loft | null }) {
   async function pickLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file || !loft) return;
     // device-local, like a photo: the bytes go to the media store and never to the op log
-    const m = await db.addMedia(loft.id, 'document', 'logo', file.name, file) as { id: string };
+    const m = await db.addMedia(loft.id, 'document', 'logo', file.name, await downscaleImage(file)) as { id: string };
     setLogo(m.id); e.target.value = '';
   }
   return (
