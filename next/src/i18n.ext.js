@@ -373,6 +373,16 @@ export const EXT = {
   'backup.exportProgress': { ar: '{n} من {total} صورة', en: '{n} of {total} photos' },
   'toast.exportFailed': { ar: 'تعذّر التصدير. جرّب مرة أخرى.', en: 'Export failed. Try again.' },
 
+  // ── the import guard (pre-launch) ──
+  // File.text() returns "" past 536,870,888 bytes with NO error, so JSON.parse says
+  // «Unexpected end of JSON input» — which describes an empty file. These say what is true.
+  'backup.importTooLarge': {
+    ar: 'الملف أكبر من الحد ({size} م.ب، والحد {limit} م.ب). صدّر لوفتك على دفعتين — احذف بعض الصور مؤقتًا، صدّر، ثم أعدها.',
+    en: 'This file is larger than the limit ({size} MB, limit {limit} MB). Export your loft in two passes — remove some photos temporarily, export, then put them back.' },
+  'backup.importFailed': {
+    ar: 'تعذّر الاستيراد. لم يتغيّر شيء. ({why})',
+    en: 'Import failed. Nothing was changed. ({why})' },
+
 };
 
 function interpolate(s, params) {

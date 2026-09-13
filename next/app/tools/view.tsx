@@ -293,6 +293,10 @@ function ExamplesCard() {
 }
 
 /** 6 — backup, export, import, and restoring an automatic snapshot. */
+// V8's maximum string length, measured as the exact boundary: at this size File.text()
+// still returns the whole file; one byte more and it returns "" with no error.
+const MAX_IMPORT_BYTES = 536870888;
+
 function BackupCard({ settings }: { settings: Record<string, unknown> }) {
   const [snapshots, setSnapshots] = useState<Backup[]>([]);
   const [snap, setSnap] = useState('');
@@ -330,9 +334,33 @@ function BackupCard({ settings }: { settings: Record<string, unknown> }) {
       const ok = await confirmDialog({ title: t('confirm.replace.title'), body: t('confirm.replace.body'), cancelLabel: t('act.cancel'), confirmLabel: t('act.replace'), confirmKind: 'danger' });
       if (!ok) return;
     }
-    const counts = await db.importAll(JSON.parse(await file.text()), mode) as { birds: number; pairs: number; raceResults: number };
-    toast(t('backup.imported', { birds: fmtNum(counts.birds), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) }), { timeout: 7000, kind: 'info' });
-    setFile(null);
+    // THE SIZE GUARD. V8 caps a string at 536,870,888 bytes, and `File.text()` does NOT throw
+    // past it — it resolves with "". JSON.parse("") then says «Unexpected end of JSON input»,
+    // which describes an EMPTY file and sends a fancier hunting for a broken download. Measured:
+    //   536,870,888 bytes -> full string      536,870,889+ -> length 0, no error
+    // `new Response(file).json()` fails identically, so there is no cheaper read. Refuse here,
+    // naming the size and the limit, rather than let the platform lie about it.
+    if (file.size > MAX_IMPORT_BYTES) {
+      toast(t('backup.importTooLarge', {
+        // ceil the size, floor the limit: a file one KB over would otherwise read
+        // «512 MB, limit 512 MB», which looks like a bug rather than a boundary
+        size: fmtNum(Math.ceil(file.size / 1048576)),
+        limit: fmtNum(Math.floor(MAX_IMPORT_BYTES / 1048576)),
+      }), { timeout: 12000, kind: 'error' });
+      return;
+    }
+    // EVERY failure surfaces. Without this the port was strictly worse than the app it
+    // replaces: vanilla catches and toasts (js/views/tools.js:116-118), this did neither, so
+    // a bad-format file, a quota error or a decode failure all looked like a button that did
+    // nothing at all.
+    try {
+      const counts = await db.importAll(JSON.parse(await file.text()), mode) as { birds: number; pairs: number; raceResults: number };
+      toast(t('backup.imported', { birds: fmtNum(counts.birds), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) }), { timeout: 7000, kind: 'info' });
+      setFile(null);
+    } catch (e) {
+      toast(t('backup.importFailed', { why: (e as Error)?.message || '' }), { timeout: 12000, kind: 'error' });
+      console.error('import failed', e);
+    }
   }
   async function restore() {
     const b = snapshots.find((x) => x.id === snap); if (!b) return;
