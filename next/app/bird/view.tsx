@@ -32,7 +32,11 @@ type Slot = { id: string; bird: Bird | undefined } | null;
 type Tab = 'over' | 'ped' | 'race' | 'hlth';
 const TABS: Array<[Tab, string]> = [['over', 'tab.overview'], ['ped', 'tab.pedigree'], ['race', 'nav.races'], ['hlth', 'nav.health']];
 const getBird = (id: string) => db.getBird(id) as Bird | undefined;
-const byDateDesc = <T extends { date?: string }>(a: T, b: T) => (b.date || '').localeCompare(a.date || '');
+// RF-7: every comparator ends on the record's own id. Without a final tie-break, equal
+// keys fall through to source order, and source order is the IndexedDB key order — the
+// uuid. Stable but arbitrary, and it differs for every record a fancier creates.
+const byDateDesc = <T extends { date?: string; id?: string }>(a: T, b: T) =>
+  (b.date || '').localeCompare(a.date || '') || (a.id || '').localeCompare(b.id || '');
 
 // Season of a race: the one display rule (src/components/season.ts, ruled at 4A acceptance).
 // Ruling 4 (4.0): next vaccination = most recent vaccination event + 365 days, labelled an estimate, hidden when none.
@@ -173,7 +177,9 @@ export default function BirdView() {
   }
   let totResults = 0, totWins = 0, totTop10 = 0, velSum = 0, velN = 0;
   for (const x of perBird.values()) { totResults += x.results; totWins += x.wins; totTop10 += x.top10; velSum += x.velSum; velN += x.velN; }
-  const ranked = [...perBird.entries()].sort((a, b) => b[1].wins - a[1].wins || b[1].top10 - a[1].top10 || b[1].results - a[1].results).slice(0, 5);
+  // RF-7: …|| a[0].localeCompare(b[0]) — a[0] is the bird id, so a five-way tie on wins,
+  // top-ten finishes and result count still ranks the same way every time.
+  const ranked = [...perBird.entries()].sort((a, b) => b[1].wins - a[1].wins || b[1].top10 - a[1].top10 || b[1].results - a[1].results || a[0].localeCompare(b[0])).slice(0, 5);
 
   // ── races tab data ──
   const best = results.filter((r) => r.position && r.position >= 1).sort((a, b) => (a.position! - b.position!) || byDateDesc(a, b))[0];
@@ -285,7 +291,8 @@ export default function BirdView() {
           <div className={s.card} data-testid="notes">
             <h2>{t('common.notes')}</h2>
             {(bird.notes || []).length === 0 ? <p className={sh.muted}>{t('common.none')}</p>
-              : [...(bird.notes || [])].sort((a, b) => (b.at || '').localeCompare(a.at || '')).map((n, i) => <p key={n.id || i} className={s.prose} data-testid="note"><span className={sh.muted}>{fmtDate(n.at, { withTime: true })} — </span><bdi>{n.text}</bdi></p>)}
+              // RF-7: notes carry their own id (set at :156); older notes may not, hence the fallback
+              : [...(bird.notes || [])].sort((a, b) => (b.at || '').localeCompare(a.at || '') || (a.id || '').localeCompare(b.id || '')).map((n, i) => <p key={n.id || i} className={s.prose} data-testid="note"><span className={sh.muted}>{fmtDate(n.at, { withTime: true })} — </span><bdi>{n.text}</bdi></p>)}
             <div className={s.noteform}>
               <textarea rows={2} value={noteText} onChange={(e) => setNoteText(e.target.value)} aria-label={t('bird.addNote')} data-testid="note-input" />
               <button type="button" className={`${sh.btn} ${sh.save}`} onClick={addNote} disabled={!noteText.trim()} data-testid="note-add">+ {t('bird.addNote')}</button>

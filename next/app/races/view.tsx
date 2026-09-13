@@ -74,7 +74,8 @@ export default function RacesView() {
   const birds = useZajilStore(selectBirds) as Bird[];
   if (!booted) return <section className={s.screen}><Loading /></section>;
 
-  const sorted = [...races].sort((a, b) => (b.date || '').localeCompare(a.date || ''));   // races.js:48
+  // RF-7: the id tie-break is the port's, not vanilla's — races.js:48 sorts on date alone
+  const sorted = [...races].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (a.id || '').localeCompare(b.id || ''));   // races.js:48
   const seasons = [...new Set(sorted.map((r) => (r.date ? seasonStart(r.date) : 0)).filter(Boolean))].sort((a, b) => b - a).map(String);
   const results = season === 'all' ? sorted : sorted.filter((r) => r.date && String(seasonStart(r.date)) === season);
   const empty = results.length === 0;
@@ -84,7 +85,9 @@ export default function RacesView() {
   // races.js:88 — a bird appears in the checker once it has an FCI ring or any result
   const fciRows = birds.map((b) => ({ b, e: birdEligibility(b, sorted.filter((r) => r.birdId === b.id)) as { hasRing: boolean; qualifyingResults: Race[]; nonQualifying: Array<{ result: Race; reasons: string[] }> } }))
     .filter(({ b, e }) => e.hasRing || sorted.some((r) => r.birdId === b.id))
-    .sort((x, y) => (y.e.hasRing ? 1 : 0) - (x.e.hasRing ? 1 : 0) || y.e.qualifyingResults.length - x.e.qualifyingResults.length);
+    // RF-7: …|| the bird's id, so two birds with the same ring status and the same count
+    // of qualifying results keep one order across reloads
+    .sort((x, y) => (y.e.hasRing ? 1 : 0) - (x.e.hasRing ? 1 : 0) || y.e.qualifyingResults.length - x.e.qualifyingResults.length || (x.b.id || '').localeCompare(y.b.id || ''));
 
   async function del(r: Race) {
     setConfirmId(null);

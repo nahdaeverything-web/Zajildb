@@ -251,6 +251,39 @@ const guards = {
     }
     return bad.length ? bad.concat(['use todayISO() from src/dates.js — a UTC slice names the wrong day east of Greenwich']) : bad;
   },
+  // The port does not reimplement the data layer, it COPIES it. Every file below is
+  // byte-identical to its counterpart in js/, and that is what makes an export from one app
+  // importable by the other — the property the whole cutover rests on. Nothing enforced it
+  // until now: identity held by care, and care is not a mechanism.
+  //
+  // DIVERGENT lists the files the port is RULED to own. Each needs a reason in
+  // PORT-COMPLETE.md. The list is meant to stay short; a file arriving here silently is the
+  // failure this guard exists to prevent.
+  'data-layer-identity'() {
+    const DIVERGENT = new Map([
+      // 'src/db/io.js', 'the export is chunked in the port; vanilla's is a separate decision'
+    ]);
+    const FILES = [
+      'src/db.js', 'src/db/storage.js', 'src/db/oplog.js', 'src/db/records.js',
+      'src/db/io.js', 'src/db/sync.js', 'src/dates.js', 'src/i18n.js', 'src/sync-config.js',
+      ...['coi', 'fci', 'integrity', 'pedigree', 'relationship', 'rings', 'validate', 'velocity']
+        .map((n) => `src/engine/${n}.js`),
+    ];
+    const bad = [];
+    for (const rel_ of FILES) {
+      const mine = join(ROOT, rel_);
+      const theirs = join(ROOT, '..', 'js', rel_.replace(/^src\//, ''));
+      if (!existsSync(mine)) { bad.push(`${rel_} is listed here but does not exist`); continue; }
+      if (!existsSync(theirs)) { bad.push(`${rel_} has no counterpart under js/ — is the list stale?`); continue; }
+      const same = readFileSync(mine).equals(readFileSync(theirs));
+      if (DIVERGENT.has(rel_)) {
+        if (same) bad.push(`${rel_} is listed as DIVERGENT but is still byte-identical — drop it from the list`);
+      } else if (!same) {
+        bad.push(`${rel_} has drifted from js/${rel_.replace(/^src\//, '')}. If that is deliberate, add it to DIVERGENT with a reason and record it in PORT-COMPLETE.md.`);
+      }
+    }
+    return bad;
+  },
   strings() {
     const r = spawnSync(process.execPath, [join(ROOT, 'guards', 'strings.mjs')], { encoding: 'utf8' });
     const out = (r.stdout || '') + (r.stderr || '');

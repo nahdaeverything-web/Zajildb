@@ -63,7 +63,8 @@ export default function HealthView() {
   const birds = useZajilStore(selectBirds) as Bird[];
   if (!booted) return <section className={s.screen}><Loading /></section>;
 
-  const all = [...events].sort((a, b) => (b.date || '').localeCompare(a.date || ''));   // health.js:20
+  // RF-7: health events are date-ONLY, so every event on the same day ties
+  const all = [...events].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (a.id || '').localeCompare(b.id || ''));   // health.js:20
   const vis = all.filter((e) => filter === 'all' ? true : filter === 'loft' ? !!e.wholeLoft : e.eventType === filter);
   const loft = db.currentLoft() as { name?: string } | null;
   const lastVac = all.find((e) => e.eventType === 'vaccination' && e.date);

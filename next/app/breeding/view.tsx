@@ -23,7 +23,8 @@ export default function BreedingView() {
   useZajilStore((x) => x.birds.size);   // names / plates come from the birds
   if (!booted) return <section className={s.screen}><Loading /></section>;
   const seasons = seasonOptions(pairs, currentYear());
-  const vis = pairs.filter((p) => p.season === season).sort((a, b) => (a.nestBox || '').localeCompare(b.nestBox || '', undefined, { numeric: true }));   // breeding.js:34
+  // RF-7: an empty or duplicated nest box is common, and it is the whole comparator here
+  const vis = pairs.filter((p) => p.season === season).sort((a, b) => (a.nestBox || '').localeCompare(b.nestBox || '', undefined, { numeric: true }) || (a.id || '').localeCompare(b.id || ''));   // breeding.js:34
   const loft = db.currentLoft() as { name?: string } | null;
   const active = vis.filter((p) => p.status === 'active').length;
   return (

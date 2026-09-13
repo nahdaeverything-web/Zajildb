@@ -90,9 +90,14 @@ export default function BirdsView() {
   const sorted = useMemo(() => {
     const key: Record<SortKey, (r: Row) => string | number> = { ring: (r) => r.ring, name: (r) => r.name, sex: (r) => r.sexK, status: (r) => r.stLabel, year: (r) => r.year, res: (r) => (r.last ? r.last.pl : 999) };
     const k = key[sortK];
-    return [...filtered].sort((a, b) => { const x = k(a), y = k(b); return (x > y ? 1 : x < y ? -1 : 0) * (desc ? -1 : 1); });
+    // RF-7, and this is the site the finding came from. The default sort is YEAR, and a
+    // loft's birds occupy a handful of seasons, so most comparisons here are ties. The
+    // id tie-break is applied ASCENDING regardless of `desc`: reversing the direction
+    // should reverse the SORT KEY, not shuffle the rows that tie on it.
+    return [...filtered].sort((a, b) => { const x = k(a), y = k(b);
+      return ((x > y ? 1 : x < y ? -1 : 0) * (desc ? -1 : 1)) || a.b.id.localeCompare(b.b.id); });
   }, [filtered, sortK, desc]);
-  const groups = useMemo(() => { const g = new Map<string, Row[]>(); for (const r of [...filtered].sort((a, b) => (b.b.createdAt || '').localeCompare(a.b.createdAt || ''))) { (g.get(r.year) ?? g.set(r.year, []).get(r.year)!).push(r); } return [...g.entries()].sort((a, b) => (b[0] > a[0] ? 1 : -1)); }, [filtered]);
+  const groups = useMemo(() => { const g = new Map<string, Row[]>(); for (const r of [...filtered].sort((a, b) => (b.b.createdAt || '').localeCompare(a.b.createdAt || '') || a.b.id.localeCompare(b.b.id))) { (g.get(r.year) ?? g.set(r.year, []).get(r.year)!).push(r); } return [...g.entries()].sort((a, b) => (b[0] > a[0] ? 1 : -1)); }, [filtered]);
 
   const m = rows.filter((r) => r.sexK === 'm').length, f = rows.filter((r) => r.sexK === 'f').length;
   const loft = db.currentLoft() as { name?: string } | null;
