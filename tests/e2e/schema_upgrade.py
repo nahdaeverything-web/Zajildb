@@ -13,7 +13,15 @@ with sync_playwright() as p:
 
     # ── build a REAL v1.7 database from scratch: version 1, v1.7 store list ──
     # a same-origin page that does NOT boot the app — otherwise initDB()
-    # creates a v2 database first and opening v1 blocks forever
+    # creates a v2 database first and opening v1 blocks forever.
+    #
+    # THIS MUST STAY THE FIRST NAVIGATION IN A FRESH CONTEXT. '__seed__' is a path
+    # BELOW the scope root, and since sw.js redirects those to the root (so a stale
+    # deep path cannot be served the shell at an address where every './' is wrong),
+    # a worker active at this moment would send us to the app — which boots, creates
+    # the v2 database, and makes the v1 open below BLOCK FOREVER. It is safe only
+    # because nothing has registered a worker yet. Reorder this suite so the app
+    # loads first and it will hang here with no obvious cause.
     page.goto(BASE + '__seed__', wait_until='domcontentloaded'); page.wait_for_timeout(200)
     seeded = page.evaluate("""async () => {
         await new Promise((res, rej) => { const d = indexedDB.deleteDatabase('zajil');
