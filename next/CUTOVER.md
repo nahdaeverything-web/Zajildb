@@ -417,6 +417,28 @@ Two costs of the recommended path, both real:
 | 3 | **Sync through the account** — sign in on the old origin, push; sign in on the new, pull | every record; **photos do NOT travel** (metadata syncs, blobs do not) | needs the production project live first, and it strands photos |
 | 4 | **Keep the old origin serving** as a bridge for a stated period | — | the old origin keeps its own service worker and its own cache; two live deployments to reason about |
 
+### d.3a A PRE-PILOT QUESTION, not a work item: how big is the biggest loft?
+
+**Vanilla cannot export past roughly 384 MB of photo bytes** (RF-11). `js/views/tools.js:96`
+goes through `JSON.stringify`, which throws past V8's ~512 MB string cap, and it fails the way
+the port's export used to — no file, no message. The migration direction is vanilla → port, so
+for a loft over that line the fancier **cannot produce a migratable file from the app they are
+using today**. No amount of work on the port's import reaches them.
+
+The port's own limits, for contrast: it exports to any size, and **refuses an import over
+536,870,888 bytes with a message that names the size and the limit** (~403 MB of photos).
+
+**This is a people problem and the answer is operational**, not a code change:
+
+- ask, before the pilot, roughly how many birds and photos the largest real loft has;
+- for anyone near the line, export in two passes — remove some photos temporarily, export,
+  restore them, export again — or do a one-off assisted migration off the device;
+- photos added from now on are downscaled to 2048px on the longest edge, which moves a typical
+  photo from ~5 MB to ~0.44 MB (measured, real photograph). That helps future lofts and does
+  **nothing** for photos already stored — which is exactly the population that will migrate.
+
+`main` is not being changed for this. Recorded so it is asked rather than discovered.
+
 ### d.4 Recommendation
 
 **Option 2 as the primary, option 4 as the safety net, option 3 never relied on for this.**

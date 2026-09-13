@@ -154,6 +154,9 @@ there in full, with diffs where a fix is proposed.
 | **RF-4** | a bird share fails outright when an ancestor's photo is on another device — **open, with the fix diffed** |
 | **RF-5** | root `package.json` says 1.4.1 while `sw.js` says `zajil-v1.9.1`; the version grep is unanchored and can read a comment |
 | **RF-6** | twelve document-relative URLs and the blank page they produced — **fixed at source** |
+| **RF-11** | vanilla cannot export past ~384 MB of photos, which makes it the **binding constraint on migration** — a pre-pilot question in `CUTOVER.md` §d.3a, not a fix |
+| **RF-10** | the four options for reading past the import boundary: multi-file **rejected** (silent partial loss in replace mode), streaming parser and zip container **held**, with measured costs |
+| **RF-9** | `File.text()` returns an EMPTY STRING past 536,870,888 bytes — guarded in the port, recorded for vanilla |
 | **RF-8** | the committed fidelity captures encode the timezone of the machine that made them — an artefact defect, with a one-argument fix, **not applied** |
 | **RF-7** | the register's desktop table sorts by year alone, so same-year birds fall back to uuid order — stable but arbitrary, and it disagrees with the phone grouping. **A design question, recorded** |
 | **SF-1** | `certificate-v1.html` puts its phone media query before the base rules it overrides |
@@ -248,6 +251,10 @@ them as "what one machine rendered on the day". `README.md` has the full table.
 `high-contrast/` and `pwa/`, captured by hand at 4D and Phase 5 and therefore frozen from
 before the Phase 6 fidelity fixes — were deleted at the pre-launch close. They never drifted,
 which made them look more trustworthy than the 143 that do.
+
+**`migration.py`'s proof landed in commit `b93fc5f`**, whose message covers only RF-7 — the
+suite was created in the same working tree and swept up by a `git add -A`. Recorded here
+rather than rewritten, because the branch is pushed.
 
 **The clock freeze was implemented, measured, and removed.** `page.clock.set_fixed_time()`
 wipes the performance timeline — `performance.getEntriesByType('navigation').length` goes

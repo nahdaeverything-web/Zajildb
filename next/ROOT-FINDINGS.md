@@ -588,3 +588,96 @@ write wall first. But vanilla can be handed a file exported by the port, and the
 failure — mitigated only by the `catch`, which at least says *something*.
 
 **Not fixed here.** Recorded for the release checklist alongside the vanilla export defect.
+
+---
+
+## RF-10 — the four options for reading past the boundary, and why three were not taken
+
+**Recorded so the rejected ones stay rejected for a reason, and the held ones can be picked up
+with their costs already measured.** All figures are from prototypes built and run during the
+analysis, not estimates.
+
+### REJECTED — multi-file export
+
+The obvious shape (a manifest plus typed parts) is **dead on arrival**: measured, deployed
+vanilla throws `bad-format` on both the manifest and a part. A non-obvious shape *does* work —
+every part is itself a complete `zajil-export` payload — and deployed vanilla imports a
+three-part set correctly in **merge** mode. That is genuinely the only way to get an 839 MB
+loft into the app that is live today.
+
+It is rejected anyway, because of what it does in **replace** mode. `mode === 'replace'` clears
+`birds, pairs, raceResults, healthEvents, lofts` and `media` before writing, so **part 2 wipes
+everything part 1 imported**. Measured end state of a three-part replace-import: **zero birds
+and one orphaned photo, with three «تم الاستيراد» success toasts.** Losing one part of three is
+equally silent — two parts import, photos are missing, nothing says so.
+
+**This cannot be closed from the port**: the behaviour is in deployed vanilla. It converts a
+loud all-or-nothing failure into a silent partial one, which is the exact failure class this
+project spent the whole port hunting. Rejected on those grounds, not on cost.
+
+### HELD — a streaming JSON parser
+
+Feasible, and it is the only option that changes nothing about the file, so both format
+directions keep working untouched. Measured costs:
+
+- **No native incremental JSON parse exists.** `Object.getOwnPropertyNames(JSON)` is
+  `["parse","stringify","rawJSON","isRawJSON"]`. The transport half is native
+  (`file.stream()`, `TextDecoderStream`, `Blob.slice`); the parse half is not.
+- A library would be **the project's first runtime dependency** — `next/package.json`
+  is exactly next, react, react-dom — and would contradict the reasoning already recorded in
+  `README.md` for writing the service worker by hand rather than taking Serwist.
+- Hand-rolled: **80 lines as a prototype, 120–150 in production** with escapes and surrogate
+  pairs across chunk boundaries. A prototype written during the analysis had a chunk-boundary
+  bug, which is the honest measure of the risk.
+- It does **not** lower peak memory much: the parsed object still holds every data URL, so the
+  ceiling moves but still scales with file size.
+
+One correction worth keeping, because it nearly became a recorded fact: an analysis claimed
+603 MB was "reachable" by summing the lengths of 64 MiB slices. **Summing lengths is not
+producing a string** — `chunks.join('')` throws `RangeError: Invalid string length`, measured.
+Every built-in read path fails past the cap: `blob.text()`, `Response.text()`,
+`FileReader.readAsText`, `fetch().json()`, and slice-and-concatenate.
+
+### HELD — a zip container, manifest plus raw blobs
+
+Also feasible, and it has the cleanest ceiling: **154 lines, no dependency**, prototyped and
+run in two engines. There is no native zip in any browser (`CompressionStream` supports
+deflate/gzip only), but STORE-mode is simple enough to write. It takes the media ceiling from
+**403 MB to 4 GB** (~2,000 photos) — the 32-bit fields and uint16 entry count cap it there
+without ZIP64. Compression buys nothing, since photos are already compressed; the win is
+dodging base64's 1.333× and the string cap entirely.
+
+**Held because it breaks the direction the cutover depends on.** Vanilla cannot read a
+container, and cannot be taught to — it is deployed.
+
+### Why both are held rather than built
+
+Neither is justified while **vanilla's export caps lower than the port's import** (RF-11). A
+fancier whose loft is past that cannot produce a file from the live app by any means, so a
+port-side read improvement does not reach them.
+
+---
+
+## RF-11 — vanilla's export is the binding constraint on migration, at ~384 MB of photos
+
+**Not a code problem. A people problem, and the answer is likely a conversation rather than a
+change. Recorded so the cutover plans for it.**
+
+`js/views/tools.js:96` → `downloadJSON` → `JSON.stringify`, which throws
+`Invalid string length` past V8's ~512 MB cap. Working back through the measured 1.3337×
+inflation, the live app **cannot write an export at all** beyond roughly **384 MB of photo
+bytes** — and it fails the way the port's used to: no file, no message.
+
+The cutover direction is **vanilla → port**. So for a loft past that size:
+
+- the fancier cannot produce a migratable file from the app they are using today;
+- nothing the port does to its *import* reaches them;
+- the port's own export ceiling (403 MB) is irrelevant, because they never get a file to import.
+
+**Not fixed here — `main` is the live deployment.** For a real loft near the line the answer is
+operational: export in two passes with some photos temporarily removed, or a one-off assisted
+migration. Carried into `CUTOVER.md` as a pre-pilot question, not a work item.
+
+Note that the downscale-on-add work makes this recede for *new* photos on either app, since
+`main` shares no code with it — but it does nothing for photos already stored, which is
+precisely the population that would be migrating.
