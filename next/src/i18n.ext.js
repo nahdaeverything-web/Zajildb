@@ -366,6 +366,13 @@ export const EXT = {
   // spec and the kit NAVIGATION NOTE say «التزاوج»; ruled at 4A acceptance.
   // EXT wins over the vanilla dictionary, so every t('nav.breeding') follows.
   'nav.breeding':             { ar: 'التزاوج', en: 'Breeding' },
+  // ── the export's busy state (pre-launch) ──
+  // The old export had none: at ~180 photos it threw `Invalid string length` and the fancier
+  // saw no file, no toast and an unchanged «آخر تصدير». These three are what it says instead.
+  'backup.exporting': { ar: 'جارٍ التصدير…', en: 'Exporting…' },
+  'backup.exportProgress': { ar: '{n} من {total} صورة', en: '{n} of {total} photos' },
+  'toast.exportFailed': { ar: 'تعذّر التصدير. جرّب مرة أخرى.', en: 'Export failed. Try again.' },
+
 };
 
 function interpolate(s, params) {

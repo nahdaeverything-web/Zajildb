@@ -6,7 +6,7 @@ import { useZajilStore, selectBirds } from '@/src/db/react';
 import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { findDuplicateRings } from '@/src/engine/rings.js';
 import { todayISO } from '@/src/dates.js';
-import { SyncRow, Loading, toast, confirmDialog, downloadJSON, primaryRing, saveSetting, initDB } from '@/src/components';
+import { SyncRow, Loading, toast, confirmDialog, downloadJSON, downloadBlob, primaryRing, saveSetting, initDB } from '@/src/components';
 import { useAppVersion } from '@/src/components/version';
 import s from './tools.module.css';
 
@@ -298,13 +298,31 @@ function BackupCard({ settings }: { settings: Record<string, unknown> }) {
   const [snap, setSnap] = useState('');
   const [mode, setMode] = useState<'merge' | 'replace'>('merge');
   const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const fileIn = useRef<HTMLInputElement>(null);
   useEffect(() => { db.listBackups().then((b: Backup[]) => { setSnapshots(b); if (b[0]) setSnap(b[0].id); }); }, []);
+  // The export is the migration path, so it has to survive a real loft and say so while it
+  // works. Measured before this: at ~180 photos of 2 MB the old path peaked over 1 GB of JS
+  // heap, and past that `JSON.stringify` threw `Invalid string length` — with NO toast, NO
+  // file and an unchanged «آخر تصدير». The button looked idle and the fancier had no idea.
   async function exportAll() {
-    const payload = await db.exportAll();
-    downloadJSON(payload, `zajil-export-${todayISO()}.json`);
-    await saveSetting('lastExport', new Date().toISOString());
-    toast(t('toast.exported'), { kind: 'success' });
+    if (busy) return;                                  // a second click must not start a second pass
+    setBusy(true); setProgress(null);
+    try {
+      const blob = await db.exportAllBlob({
+        onProgress: (done: number, total: number) => setProgress({ done, total }),
+      });
+      downloadBlob(blob, `zajil-export-${todayISO()}.json`);
+      await saveSetting('lastExport', new Date().toISOString());
+      toast(t('toast.exported'), { kind: 'success' });
+    } catch (e) {
+      // a failure that says nothing is the defect this replaced
+      toast(t('toast.exportFailed'), { kind: 'error' });
+      console.error('export failed', e);
+    } finally {
+      setBusy(false); setProgress(null);
+    }
   }
   async function importFile() {
     if (!file) return;
@@ -330,7 +348,14 @@ function BackupCard({ settings }: { settings: Record<string, unknown> }) {
         <div className={s.col}>
           <div className={s.stat}><span className={s.k}>{t('backup.lastExportLabel')}:</span> <span className={s.v} data-testid="last-export">{settings.lastExport ? fmtDate(settings.lastExport as string) : t('backup.never')}</span></div>
           <div className={s.hint}>{t('backup.auto', { h: fmtNum(12), n: fmtNum(7) })}</div>
-          <div className={s.btns}><button type="button" className={`${s.btn} ${s.primary}`} onClick={exportAll} data-testid="export-all">{t('backup.exportAll')}</button></div>
+          <div className={s.btns}>
+            <button type="button" className={`${s.btn} ${s.primary}`} onClick={exportAll} disabled={busy} aria-busy={busy} data-testid="export-all">
+              {busy ? t('backup.exporting') : t('backup.exportAll')}
+            </button>
+            {busy && progress && progress.total > 0
+              ? <span className={s.hint} data-testid="export-progress">{t('backup.exportProgress', { n: fmtNum(progress.done), total: fmtNum(progress.total) })}</span>
+              : null}
+          </div>
           <div className={s.subsec}>
             <h4>{t('backup.restoreAuto')}</h4>
             <div className={s.inline}>

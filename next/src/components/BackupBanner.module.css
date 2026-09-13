@@ -1,0 +1,21 @@
+/* The export-freshness nudge. Gold-tint ground with gold ink, the same voice the sync row
+ * and the dialog's warning list use — a caution, not an error. */
+.banner {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 16px;
+  background: var(--gold-tint);
+  color: var(--gold-ink);
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.act {
+  margin-inline-start: auto;
+  padding: 6px 14px;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  color: var(--gold-ink);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.act:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+@media print { .banner { display: none !important; } }

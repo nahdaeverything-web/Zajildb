@@ -9,7 +9,7 @@ export { default as Notice } from './Notice';
 export { default as MediaPlaceholder } from './MediaPlaceholder';
 export { BirdLabel, SexChip, COIValue, Plate, primaryRing, birdLabelText, sexIcon } from './BirdBits';
 export { seasonStart, seasonLabel } from './season';
-export { downloadJSON } from './download';
+export { downloadJSON, downloadBlob } from './download';
 export { pickerModel, candidates, exactMatch, createFromQuery } from './picker';
 export { Tpl } from './Tpl';
 export { applySettings, saveSetting } from './settings';

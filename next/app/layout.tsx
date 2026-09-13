@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { alexandria, plexMono } from './fonts';
 import Nav from '@/components/Nav';
 import ShellHost from '@/src/components/ShellHost';
+import BackupBanner from '@/src/components/BackupBanner';
 import SyncNotices from '@/src/components/SyncNotices';
 import AppSettings from '@/src/components/AppSettings';
 import ServiceWorker from '@/src/components/ServiceWorker';
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ar" dir="rtl" className={`${alexandria.variable} ${plexMono.variable}`}>
       <body>
+        <BackupBanner />
         <main className={s.main}>{children}</main>
         <Nav />
         <ShellHost />

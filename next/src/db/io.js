@@ -84,6 +84,71 @@ export async function exportAll({ includeMedia = true } = {}) {
 }
 
 /**
+ * The same export, assembled as a Blob instead of a string. PORT ONLY — see
+ * PORT-COMPLETE.md and the `data-layer-identity` guard's DIVERGENT list.
+ *
+ * WHY THIS EXISTS. `exportAll()` above returns an object; the caller then does
+ * `JSON.stringify(obj, null, 1)` and wraps it in a Blob. Measured on this machine, with
+ * 2 MB photos:
+ *
+ *   photos   source     output     peak JS heap
+ *      50    105 MB     140 MB        284 MB
+ *     100    210 MB     280 MB        563 MB
+ *     180    378 MB     504 MB       1011 MB
+ *     200    419 MB        —      **Invalid string length**
+ *
+ * V8 caps a string at about 512 MB, so past ~180 photos `JSON.stringify` cannot produce
+ * one. And the failure is silent: the tools card awaited a promise that rejects, so a
+ * fancier gets no file, NO TOAST, an unchanged «آخر تصدير», and a button that still looks
+ * ready. Measured — the only trace is a pageerror nobody sees.
+ *
+ * This builds the JSON as a sequence of parts and folds them into Blobs as it goes, so no
+ * single string is ever larger than one photo and the JS heap stays flat. A Blob's bytes
+ * live outside the JS heap, which is the whole point.
+ *
+ * The FORMAT is unchanged — same keys, same data URLs, same `JSON.parse` result. That is
+ * asserted in both directions by tests/e2e/migration.py, because a vanilla app must still
+ * be able to read what the port writes.
+ *
+ * @param {{ onProgress?: (done: number, total: number) => void }} [opts]
+ * @returns {Promise<Blob>}
+ */
+export async function exportAllBlob({ onProgress } = {}) {
+  const media = await idbGetAll('media');
+  const total = media.length;
+  const parts = [];            // Blobs and strings, in order
+  let pending = [];            // strings not yet folded into a Blob
+  const fold = () => { if (pending.length) { parts.push(new Blob(pending)); pending = []; } };
+  const push = (s) => { pending.push(s); if (pending.length >= 4) fold(); };
+
+  const head = {
+    format: 'zajil-export',
+    version: 1,
+    exportedAt: nowISO(),
+    tombstones: await idbGetAll('tombstones'),
+    lofts: [...state.lofts.values()],
+    birds: [...state.birds.values()],
+    pairs: [...state.pairs.values()],
+    raceResults: [...state.raceResults.values()],
+    healthEvents: [...state.healthEvents.values()],
+  };
+  // every key except media, then media streamed in one at a time
+  const headText = JSON.stringify(head);
+  push(headText.slice(0, -1));                 // drop the closing brace
+  push(',"media":[');
+  for (let i = 0; i < total; i++) {
+    const m = media[i];
+    const row = { ...m, blob: undefined, dataURL: await blobToDataURL(m.blob) };
+    push((i ? ',' : '') + JSON.stringify(row));
+    fold();                                    // release the data URL before the next read
+    if (onProgress) onProgress(i + 1, total);
+  }
+  push(']}');
+  fold();
+  return new Blob(parts, { type: 'application/json' });
+}
+
+/**
  * Import an export payload. mode 'merge' keeps newer records by updatedAt;
  * mode 'replace' wipes first. Returns counts.
  */

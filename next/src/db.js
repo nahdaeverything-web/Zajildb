@@ -118,6 +118,7 @@ export {
   autoBackup,
   dataURLToBlob,
   exportAll,
+  exportAllBlob,
   exportBirdWithAncestry,
   exportableSettings,
   importAll,

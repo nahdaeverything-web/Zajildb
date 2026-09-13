@@ -261,7 +261,13 @@ const guards = {
   // failure this guard exists to prevent.
   'data-layer-identity'() {
     const DIVERGENT = new Map([
-      // 'src/db/io.js', 'the export is chunked in the port; vanilla's is a separate decision'
+      ['src/db/io.js',
+       'exportAllBlob(): the export is assembled as a Blob instead of one JSON string, because '
+       + 'past ~180 photos V8 threw `Invalid string length` and the failure was SILENT. '
+       + "Vanilla's copy is a separate decision — main is the live deployment."],
+      ['src/db.js',
+       'the facade must re-export exportAllBlob. Divergent only by that one line, and only '
+       + 'because src/db/io.js is.'],
     ]);
     const FILES = [
       'src/db.js', 'src/db/storage.js', 'src/db/oplog.js', 'src/db/records.js',

@@ -306,10 +306,55 @@ try:
             pg.click('[data-testid=export-all]')
         name = dl.value.suggested_filename
         check('«تصدير الكل» downloads a dated JSON export', name.startswith('zajil-export-') and name.endswith('.json'), name)
+        # [pre-launch] the export is the migration path. Measured before the rewrite: at ~180
+        # photos of 2 MB `JSON.stringify` threw `Invalid string length` and the fancier got NO
+        # file, NO toast and an unchanged «آخر تصدير» — the button simply looked idle. The
+        # button now carries a busy state and a failure now says so.
+        # OBSERVED, not asserted by shape: add enough photo bytes that the export takes real
+        # time, start it, and look at the button while it runs.
+        run(pg, """async (db) => {
+            const loft = db.currentLoft().id;
+            for (let i = 0; i < 8; i++) {
+                const bird = await db.saveBird(db.newBird({ name: 'ب-' + i, sex: 'cock', loftId: loft }));
+                const buf = new Uint8Array(2 * 1024 * 1024);
+                for (let o = 0; o < buf.length; o += 65536)
+                    crypto.getRandomValues(buf.subarray(o, Math.min(o + 65536, buf.length)));
+                await db.addMedia(bird.id, 'photo', 'bird', 'p' + i + '.png', new Blob([buf], { type: 'image/png' }));
+            }
+        }""")
+        pg.reload(); pg.wait_for_timeout(1500)
+        pg.click('[data-testid=export-all]')
+        pg.wait_for_selector('[data-testid=export-progress]', timeout=8000)
+        busy_label = pg.locator('[data-testid=export-all]').inner_text().strip()
+        busy_disabled = pg.locator('[data-testid=export-all]').is_disabled()
+        prog = pg.locator('[data-testid=export-progress]').inner_text().strip()
+        check('[pre-launch] while exporting, the button says so and refuses a second click',
+              busy_disabled and busy_label == 'جارٍ التصدير…', f'{busy_label!r} disabled={busy_disabled}')
+        check('[pre-launch] …and it reports progress through the photos rather than sitting blank',
+              'من' in prog and any(ch.isdigit() or '\u0660' <= ch <= '\u0669' for ch in prog), prog)
+        pg.wait_for_selector('[data-testid=export-progress]', state='detached', timeout=120000)
+        check('[pre-launch] …and it hands the button back when it finishes',
+              not pg.locator('[data-testid=export-all]').is_disabled())
         pg.wait_for_timeout(500)
         check('…and the card stops saying «لم يتم التصدير بعد»',
               pg.locator('[data-testid=last-export]').inner_text().strip() != 'لم يتم التصدير بعد',
               pg.locator('[data-testid=last-export]').inner_text())
+
+        # ── [pre-launch] backup.warn30: the 30-day export nudge, restored ──
+        # The string has been in the dictionary since v1.4 and no component read it, while
+        # vanilla banners it on every route (js/app.js:123-134). It is the only prompt that
+        # puts an export in a fancier's hands, and the migration path depends on people
+        # exporting. Condition is vanilla's: stale AND the loft is not empty.
+        check('[pre-launch] a fresh export means NO 30-day banner',
+              pg.locator('[data-testid=backup-warn]').count() == 0)
+        run(pg, "async (db) => { await db.setSetting('lastExport', '2020-01-01T00:00:00.000Z'); }")
+        pg.reload(); pg.wait_for_timeout(1500)
+        check('[pre-launch] an export older than 30 days banners «مرّ أكثر من ٣٠ يومًا»',
+              pg.locator('[data-testid=backup-warn]').count() == 1
+              and 'مرّ أكثر من ٣٠ يومًا' in pg.locator('[data-testid=backup-warn]').inner_text(),
+              pg.locator('[data-testid=backup-warn]').inner_text()[:60])
+        check('…and it offers the way to act on it', pg.locator('[data-testid=backup-warn-act]').count() == 1)
+
         wait_toasts_clear(pg)
         check('the import button stays disabled until a file is chosen',
               pg.locator('[data-testid=import-file]').is_disabled()
