@@ -531,3 +531,60 @@ coin flip — measured **1 of 6** with element shots first against **6 of 6** wi
 `animations='disabled'` does not change it. `shared_states.py` takes nine element shots
 before its full-page shot, which is why `shared-states/full-*` carries a band nobody had
 attributed.
+
+---
+
+## RF-9 — `File.text()` returns an EMPTY STRING past 512 MB, and the import trusts it
+
+**Vanilla is exposed and is NOT being fixed here — `main` is the live deployment. Recorded for
+the release checklist.** The port has the same bug and it is a RELEASE BLOCKER there, being
+ruled separately.
+
+**Where:**
+
+| tree | line | catch? |
+|---|---|---|
+| vanilla | [`js/views/tools.js:113`](../js/views/tools.js#L113) — `const payload = JSON.parse(await f.text());` | **yes**, `:116-118` toasts `⚠ <message>` |
+| port | `next/app/tools/view.tsx:333` — `JSON.parse(await file.text())` | **no** — nothing is surfaced at all |
+
+`importAll()` itself is byte-identical between the trees; the difference is only the handler.
+
+**What.** V8 caps a string at `2**29 - 24` = **536,870,888** bytes. `File.text()` does not throw
+past it — **it resolves successfully with `""`**. Measured:
+
+```
+bytes=   536869864  File.text() ok=True  len=536869864  truncated=False
+bytes=   536870888  File.text() ok=True  len=536870888  truncated=False   <- exactly the cap
+bytes=   536871912  File.text() ok=True  len=0          truncated=True
+bytes=   559396374  File.text() ok=True  len=0          truncated=True
+```
+
+So `JSON.parse("")` throws **`Unexpected end of JSON input`** — a message that describes an
+empty file, not a file that was too large. Anyone reading that error would look for a
+truncated download.
+
+`new Response(file).json()` fails **identically**, measured on a 587 MB file whose largest
+single value was only 2.8 MB — so the cap is on the total decoded text, not on any one value,
+and there is no cheap substitution.
+
+**Why it matters.** This is the read half of the migration path. A fancier's whole loft is on
+the far side of it. The measured ceiling is **403 MB of photo bytes** (the export runs
+1.3337× source), which is:
+
+| typical photo | photos before the wall |
+|---|---|
+| 8 MP JPEG (~1.5 MB) | 255 |
+| 12 MP JPEG (~3 MB) | 127 |
+| 48 MP JPEG (~9 MB) | 42 |
+| scanned A4 pedigree PNG (~20 MB) | 19 |
+
+Photos are stored **raw** — [`app/bird/form.tsx:240`](app/bird/form.tsx#L240) hands the picker's
+`File` straight to `addMedia` with no resize — so a modern phone reaches this with a few dozen
+birds. This is not an edge case.
+
+**Vanilla's exposure specifically.** Vanilla can *export* far less than the port (its own
+`JSON.stringify` throws around the same size), so a vanilla user is more likely to hit the
+write wall first. But vanilla can be handed a file exported by the port, and then this is the
+failure — mitigated only by the `catch`, which at least says *something*.
+
+**Not fixed here.** Recorded for the release checklist alongside the vanilla export defect.
