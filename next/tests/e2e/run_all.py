@@ -33,6 +33,7 @@ OPT_IN = {
     'push_live.py': ('--live-push', 'needs the internet and live credentials, and WRITES to the real project'),
     'pull_live.py': ('--live-pull', 'needs the internet and live credentials; reads the real project'),
     'auth_live.py': ('--live-auth', 'needs the internet and live credentials, and WRITES to the real project (the sign-in screen runs the first-login cycle)'),
+    'import_boundary.py': ('--boundary', 'seeds ~537 MB of media and writes a file of the same order — slow and disk-hungry, not slow-and-flaky'),
 }
 SUITES = sorted(f for f in glob.glob(os.path.join(HERE, '*.py')) if os.path.basename(f) not in ({'run_all.py'} | set(OPT_IN)))
 skipped = []
