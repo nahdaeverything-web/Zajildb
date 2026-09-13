@@ -628,6 +628,28 @@ not portable and never were.** Case 6 means they change every day; case 7 means 
 the machine that made them. Treat them as "what Samir's machine rendered on the day", which
 is a useful thing for a human to look at and a useless thing to diff.
 
+### Nineteen of the PNGs are orphans, and two of them are a trap
+
+`fidelity/` holds **162** PNGs. The 34 capture sites write **143**. The other nineteen —
+`fidelity/high-contrast/` (12) and `fidelity/pwa/` (7) — are committed and **no suite writes
+them**. They were captured by hand: the high-contrast set during 4D acceptance (`a428bb3`),
+the PWA set during Phase 5 (`48faa77`). The only `high-contrast` string anywhere in `tests/`
+is a class assertion in `tools.py:170`, not a capture.
+
+**So they are frozen before the Phase 6 fidelity fixes (`2c4b3b7`)** — before the two dead
+tree-connector systems were repaired, before the certificate got its desktop layout at all,
+before the focus rings and the print rules. Read as "what the app looks like", they show
+screens that no longer exist. They do not drift, which makes them look MORE trustworthy than
+the 143 that do, and they are the least trustworthy of the set. Either a suite should
+regenerate them or they should go; until one of those happens, this paragraph is the warning.
+
+One smaller artefact bug in the same family: `loft-home/full-1400.png` is written **twice**
+by one suite — once inside the width loop at `loft_home.py:71` and again at `:193`, after the
+table has been sorted by name. The committed file is the second state, so the name says
+"full at 1400" and the picture is "full at 1400, re-sorted". The first write is dead work.
+
+
+
 ## Tests
 
     node tests/run.js        # the root engine suite against src/engine/ — 33/33
