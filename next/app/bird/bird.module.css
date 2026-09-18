@@ -51,7 +51,14 @@
   .rows .row:first-child{ padding-top:0; }
   .rows .k{ color:var(--ink-2); font-weight:500; }
   .rows .v{ font-weight:700; text-align:left; }
-  .rows .v.data{ direction:ltr; font-variant-numeric:tabular-nums; }
+  /* A formatted DATE is Arabic text that happens to contain numerals — «4 آذار 2016
+     (24 جمادى الأولى 1437 هـ)» — not LTR data. `direction:ltr` reorders its Arabic runs
+     around the leading number (measured: the leading «4» rendered at x=175 with the line
+     ending at 473, i.e. not where an RTL reader starts), and the mono face has no Arabic
+     glyphs so every letter falls back separately and the script disconnects. Both come off
+     here; `isolate` keeps the whole date as ONE bidi unit so the day stays leading. Ring
+     numbers, versions and coordinates keep mono+ltr — they really are LTR data. */
+  .rows .v.data{ unicode-bidi:isolate; font-variant-numeric:tabular-nums; }
   .rows .v.link{ display:inline-flex; align-items:center; gap:8px; color:var(--brand-deep); font-weight:800; border:none; background:none; cursor:pointer; font-size:15.5px; padding:0; }
   .rows .v.link svg{ width:14px; height:14px; stroke:currentColor; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; }
   .notice{ background:var(--brand); border-radius:var(--r); padding:18px 20px; margin-bottom:14px; color:#fff; }
