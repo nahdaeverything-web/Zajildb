@@ -96,7 +96,9 @@ export default function SignInView() {
             <p className={s.invite}>{t('signin.inviteOnly')}</p>
           </form>
           {/* the installed version, as the service worker reports it — never a constant in the source (version_display.py) */}
-          <div className={s.foot} data-testid="version">{t('about.version', { v: version || t('about.unknown') })}</div>
+          {/* the label is Arabic, the version token is LTR data — only the token gets mono,
+              or the Arabic falls back per character and reads as letter-spaced */}
+          <div className={s.foot} data-testid="version">{t('about.version', { v: '' }).trim()} <code>{version || t('about.unknown')}</code></div>
         </main>
       ) : (
         <EarlyAccess onBack={() => { setPane('signin'); window.scrollTo(0, 0); }} />

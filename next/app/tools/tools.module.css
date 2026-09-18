@@ -70,7 +70,8 @@
   .file{ display:flex; align-items:center; gap:12px; border:2px dashed var(--line); border-radius:var(--r-btn); padding:12px 12px 12px 16px; min-height:56px; background:var(--page); }
   .file .pick{ flex:none; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:9px 16px; font-size:13.5px; font-weight:800; color:var(--ink); cursor:pointer; min-height:40px; }
   .file .fn{ font-size:13.5px; font-weight:600; color:var(--ink-3); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .file .fn.has{ font-family:var(--f-mono); font-weight:500; color:var(--ink); direction:ltr; }
+  /* this holds «شعار محفوظ على هذا الجهاز» as often as it holds a filename */
+  .file .fn.has{ font-weight:500; color:var(--ink); unicode-bidi:isolate; }
 
   /* buttons */
   .btn{ border:none; border-radius:var(--r-btn); min-height:56px; padding:0 20px; font-size:16px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; width:100%; }
@@ -136,7 +137,10 @@
   /* backup */
   .stat{ display:flex; align-items:baseline; gap:10px; margin-top:12px; }
   .stat .k{ font-size:14px; font-weight:700; color:var(--ink-2); }
-  .stat .v{ font-family:var(--f-mono); font-weight:600; font-size:20px; color:var(--ink); direction:ltr; }
+  /* «آخر تصدير» holds either a formatted Arabic date or «لم يتم التصدير بعد» — Arabic text
+     in both cases, never LTR data. mono has no Arabic glyphs and direction:ltr reorders
+     the date's runs, so neither belongs here. */
+  .stat .v{ font-weight:600; font-size:20px; color:var(--ink); unicode-bidi:isolate; }
   .stat .v.mute{ font-family:var(--f); font-weight:700; color:var(--ink-3); font-size:15px; }
   .subsec{ margin-top:22px; padding-top:18px; border-top:1px solid var(--line); }
   .subsec h4{ font-size:15.5px; font-weight:800; margin-bottom:12px; }

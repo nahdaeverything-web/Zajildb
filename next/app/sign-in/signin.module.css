@@ -51,7 +51,10 @@
   .forgot a{ color:var(--ink-2); font-weight:700; text-decoration:underline; text-underline-offset:3px; }
   .forgot a:hover{ color:var(--brand-deep); }
   .invite{ text-align:center; font-size:13px; font-weight:600; color:var(--ink-3); margin-top:22px; }
-  .foot{ margin-top:auto; padding-top:32px; text-align:center; font-family:var(--f-mono); font-size:11px; color:var(--ink-3); direction:ltr; }
+  /* «الإصدار zajil-v1.9.1» — an Arabic label plus an LTR token. The CONTAINER must stay
+     Arabic; only the version token itself is mono LTR (.foot code, below). */
+  .foot{ margin-top:auto; padding-top:32px; text-align:center; font-size:11px; color:var(--ink-3); unicode-bidi:isolate; }
+  .foot code{ font-family:var(--f-mono); direction:ltr; unicode-bidi:isolate; }
 
   /* early access */
   .early{ min-height:932px; display:flex; flex-direction:column; padding:20px 24px 44px; background:var(--surface); }

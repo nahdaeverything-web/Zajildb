@@ -56,7 +56,8 @@
   .birdlink:hover{ text-decoration-color:var(--brand); color:var(--brand-deep); }
 
   /* ── phone rows ── */
-  .datelbl{ font-size:13px; font-weight:800; color:var(--ink-3); padding:6px 0 8px; direction:ltr; text-align:right; font-family:var(--f-mono); }
+  /* a dual Gregorian+Hijri date label: Arabic text, not LTR data (see bird.module.css) */
+  .datelbl{ font-size:13px; font-weight:800; color:var(--ink-3); padding:6px 0 8px; unicode-bidi:isolate; text-align:right; }
   .hrow{ background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:14px 16px; margin-bottom:10px; }
   .hrow .l1{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
   .hrow .l1 > div:first-child{ flex:1; min-width:0; }
