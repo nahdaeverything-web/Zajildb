@@ -570,6 +570,32 @@ Two more defects came out of closing the coverage gaps rather than from lint:
   non-empty branch. A fancier with an empty loft and a paused or failing sync was told
   nothing. Found by re-authoring `sync_ui` #1, which had been re-authored into a tautology.
 
+## A framing I withdrew: the 960px content cap is not a defect
+
+At a wide window the content column stays 960px and the rest of the viewport is empty. I
+framed that as a defect worth fixing and put it forward as such.
+
+**It is the kit's own rule, and it is approved.** `app/layout.module.css` implements
+"≥1100 rail on the RTL start (right) edge, content to its left, **max 960px**", citing
+`design/approved/loft-home-v1.html:183`. Measured, the races table is 978px at every width
+from 1100 to 2560 — the column does not grow, by design. **Do not widen it.**
+
+**The framing was mine, not the report's.** What was actually reported was OVERLAPPING TEXT:
+«المسافة كم» and «السرعة م/د» colliding, «التاريخ» over its column, a date breaking
+mid-parenthesis. Those were real, and they were the mono-face defect
+(`fix(next): Arabic out of the mono face`) plus the health date column — both fixed. Re-measured
+afterwards, the log headers all fit: التاريخ=300, المسافة كم=96, السرعة م/د=86, no overflow at
+any width.
+
+They looked unfixed because of the service-worker cache below, not because of the cap. I
+turned "text overlaps" into "the page is too empty" and went looking for a layout problem that
+was not there.
+
+What DID come out of it and is kept: the tools cards balance by height now (multicol rather
+than a two-column grid, which made every row as tall as its tallest card), because that band
+was vertical space inside the 960px column, not the empty space beside it. Those are two
+different things and conflating them is what produced the wrong framing.
+
 ## `fidelity/` — what those PNGs are, and why most of them drift
 
 **They are REVIEW ARTEFACTS, not a visual-regression signal.** They are committed, and the
