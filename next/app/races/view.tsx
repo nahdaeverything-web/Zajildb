@@ -163,7 +163,7 @@ export default function RacesView() {
                 <thead><tr><th>{t('common.date')}</th><th>{t('race.bird')}</th><th>{t('race.name')}</th><th>{t('race.type')}</th><th className={s.num}>{t('race.distance')} {t('race.km')}</th><th className={s.num}>{t('race.velocity')} {t('race.mpm')}</th><th>{t('race.position')}</th><th>FCI</th><th /></tr></thead>
                 <tbody>{results.map((r) => (
                   <tr key={r.id} data-testid="race-tr">
-                    <td className={s.num}><bdi>{fmtDate(r.date)}</bdi></td>
+                    <td className={s.datecell}><bdi>{fmtDate(r.date)}</bdi></td>
                     <td><Link href={`/bird?id=${r.birdId}`} className={s.link}><bdi>{nameOf(getBird(r.birdId))}</bdi></Link></td>
                     <td><bdi>{r.raceName || '—'}</bdi></td>
                     <td><Type r={r} /></td>

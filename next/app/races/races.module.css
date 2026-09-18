@@ -29,7 +29,8 @@
   .card h2{ font-size:19px; font-weight:800; margin-bottom:14px; }
 
   /* ── phone result rows ── */
-  .datelbl{ font-size:13px; font-weight:800; color:var(--ink-3); padding:6px 0 8px; direction:ltr; text-align:right; font-family:var(--f-mono); }
+  /* a dual Gregorian+Hijri date label — Arabic text, not LTR data */
+  .datelbl{ font-size:13px; font-weight:800; color:var(--ink-3); padding:6px 0 8px; unicode-bidi:isolate; text-align:right; }
   .rrow{ background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:14px 16px; margin-bottom:10px; }
   .rrow .l1{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .rrow .l1 > div:first-child{ flex:1; min-width:0; }
@@ -62,7 +63,18 @@
   .table th{ font-size:12.5px; font-weight:700; color:var(--ink-3); text-align:right; padding:14px 8px 10px; border-bottom:2px solid var(--line); white-space:nowrap; }
   .table td{ padding:12px 8px; font-size:15px; font-weight:600; border-bottom:1px solid var(--line); vertical-align:middle; }
   .table tr:last-child td{ border-bottom:none; }
+  /* mono is for LTR DATA ONLY — ring numbers, coordinates, speeds, versions. Any string
+     that can contain Arabic renders in the Arabic face: Plex Mono has no Arabic glyphs, so
+     each letter falls back on its own and the script disconnects. */
   .table th.num, .table td.num{ text-align:right; }
+  /* the header keeps the alignment and gives back the font: «المسافة كم» is a label */
+  .table th.num{ font-family:var(--f); direction:rtl; unicode-bidi:isolate; font-variant-numeric:normal; }
+  /* NOTE: «كم» and «م/د» are themselves ARABIC — there is no LTR token to split out here.
+     An earlier attempt wrapped the unit in <u> and put mono back on it, which reintroduced
+     the very defect on the two words it was meant to fix. */
+  /* a date CELL is Arabic text with numerals in it, so it takes the Arabic face and only
+     keeps the column's alignment and tabular figures */
+  .table td.datecell{ text-align:right; unicode-bidi:isolate; font-variant-numeric:tabular-nums; white-space:nowrap; }
   .table td .link{ font-size:16px; font-weight:800; background:none; border:none; cursor:pointer; color:var(--ink); padding:0; text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:4px; }
   .table td .link:hover{ text-decoration-color:var(--brand); color:var(--brand-deep); }
   .table tr.q td{ background:var(--brand-tint); }

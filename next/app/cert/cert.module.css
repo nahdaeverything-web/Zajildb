@@ -20,6 +20,9 @@
   .screen button:focus-visible, .screen input:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
 
   .mono{ font-family:var(--f-mono); direction:ltr; unicode-bidi:isolate; font-weight:600; white-space:nowrap; }
+  /* …except where .mono is put on a FORMATTED DATE. «18 أيلول 2026 (7 ربيع الآخر 1448 هـ)»
+     is Arabic text with numerals in it, and Plex Mono cannot draw a single letter of it. */
+  .v.mono, .d.mono{ font-family:var(--f); direction:rtl; }
 
   /* ═══════════ LAYOUT: options panel (start side) + preview ═══════════ */
   .screen{ display:flex; min-height:100vh; align-items:flex-start; }
@@ -126,7 +129,9 @@
   .head .id{ display:flex; align-items:center; gap:14px; }
   .mark{ width:52px; height:52px; border-radius:16px; background:var(--brand); display:grid; place-items:center; flex:none; }
   .mark svg{ width:32px; height:32px; }
-  .head h1{ font-size:34px; font-weight:900; line-height:1; letter-spacing:-0.3px; }
+  /* no negative tracking on Arabic: «شهادة نسب» is connected script and tightening it
+     pulls the joins apart. The latin-display habit does not transfer. */
+  .head h1{ font-size:34px; font-weight:900; line-height:1; letter-spacing:normal; }
   .head .sub{ font-size:12.5px; font-weight:700; color:var(--ink-3); margin-top:6px; }
   .head .meta{ display:flex; gap:28px; text-align:start; }
   .head .meta .k{ font-size:11px; font-weight:800; color:var(--ink-3); }
@@ -172,7 +177,9 @@
   .n1 .facts{ display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
   .facts .k{ font-size:11px; font-weight:800; color:var(--ink-3); }
   .facts .v{ font-size:14.5px; font-weight:800; margin-top:2px; }
-  .facts .v.mono{ font-size:12.5px; letter-spacing:-0.2px; }
+  /* these two carry FORMATTED DATES, so they must not take .mono's face, direction or
+     negative tracking — Arabic is connected script and is never letter-spaced */
+  .facts .v.mono{ font-size:12.5px; letter-spacing:normal; font-family:var(--f); direction:rtl; }
 
   .plate{ display:inline-flex; align-items:stretch; direction:ltr; border-radius:10px; overflow:hidden; background:var(--ink); }
   .plate .yr{ background:var(--gold); color:#fff; font-family:var(--f-mono); font-weight:600; font-size:11px; padding:0 8px; display:grid; place-items:center; }
@@ -230,7 +237,7 @@
   .story .subj .plate{ margin-top:7px; align-self:flex-start; }
   .story .plate .yr{ font-size:9px; padding:0 6px; } .story .plate .no{ font-size:11.5px; padding:5px 9px; letter-spacing:.6px; }
   .story .facts{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:8px 0 0; border-top:1px solid var(--line); }
-  .story .facts .k{ font-size:8.5px; } .story .facts .v{ font-size:11.5px; margin-top:0; } .story .facts .v.mono{ font-size:10px; letter-spacing:-0.3px; }
+  .story .facts .k{ font-size:8.5px; } .story .facts .v{ font-size:11.5px; margin-top:0; } .story .facts .v.mono{ font-size:10px; letter-spacing:normal; font-family:var(--f); direction:rtl; }
   .story .bands{ flex:1; min-height:0; display:flex; flex-direction:column; gap:7px; }
   .story .band{ display:flex; flex-direction:column; flex:0 0 auto; }
   .story .b5, .story.d4 .b4, .story.d3 .b3{ flex:1; min-height:0; }

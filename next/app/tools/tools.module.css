@@ -7,6 +7,9 @@
   .screen button, .screen input, .screen select, .screen textarea{ font-family:var(--f); }
   .screen [hidden]{ display:none !important; }
   .num{ font-family:var(--f-mono); font-weight:600; direction:ltr; unicode-bidi:isolate; font-variant-numeric:tabular-nums; }
+  /* Arabic-Indic digits are not in Plex Mono either — the eastern sample needs the
+     Arabic face or it previews the wrong glyphs for the very setting it illustrates */
+  .numAr{ font-weight:600; unicode-bidi:isolate; font-variant-numeric:tabular-nums; }
   .screen a{ color:var(--ink); }
 
   /* ── header + sticky index ── */

@@ -142,7 +142,7 @@ export default function HealthView() {
                 <thead><tr><th>{t('common.date')}</th><th>{t('health.type')}</th><th>{t('health.scope')}</th><th>{t('health.medication')}</th><th>{t('common.notes')}</th><th /></tr></thead>
                 <tbody>{vis.map((e) => (
                   <tr key={e.id} className={confirmId === e.id ? s.cf : ''} data-testid="ev-tr">
-                    <td className={s.num}><bdi>{fmtDate(e.date)}</bdi></td>
+                    <td className={s.datecell}><bdi>{fmtDate(e.date)}</bdi></td>
                     <td><Chip e={e} /></td><td><Scope e={e} /></td>
                     <td className={s.med}><bdi>{e.medication || '—'}</bdi></td>
                     <td className={s.note}><bdi>{e.notes || ''}</bdi></td>

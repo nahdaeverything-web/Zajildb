@@ -8,6 +8,9 @@
   .screen button, .screen input, .screen select, .screen textarea{ font-family:var(--f); }
   .screen [hidden]{ display:none !important; }
   .mono, .num{ font-family:var(--f-mono); font-weight:600; direction:ltr; font-variant-numeric:tabular-nums; }
+  /* a date cell is Arabic text with numerals in it — the Arabic face, the column's
+     alignment and tabular figures, and room for the dual Gregorian+Hijri string */
+  .datecell{ text-align:right; unicode-bidi:isolate; font-variant-numeric:tabular-nums; }
 
   /* ── header ── */
   .lofthead{ background:var(--surface); border-bottom:1px solid var(--line); padding:20px; }
@@ -26,7 +29,9 @@
   .next .k svg{ width:18px; height:18px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; }
   .next .t{ font-size:20px; font-weight:900; margin-top:4px; line-height:1.2; }
   .next .s{ font-size:13.5px; font-weight:500; opacity:.92; margin-top:4px; }
-  .next .s b{ font-family:var(--f-mono); font-weight:600; direction:ltr; unicode-bidi:isolate; }
+  /* the dose line's two <b> slots hold FORMATTED DATES — «آخر جرعة …» / «يُستحق …» —
+     so they are Arabic text, not LTR data. Weight alone carries the emphasis. */
+  .next .s b{ font-weight:700; unicode-bidi:isolate; }
   .next .days{ flex:none; text-align:center; }
   .next .days .n{ font-size:52px; font-weight:900; line-height:1; direction:ltr; }
   .next .days .u{ font-size:12.5px; font-weight:700; opacity:.9; margin-top:2px; }

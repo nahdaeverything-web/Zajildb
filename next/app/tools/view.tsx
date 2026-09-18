@@ -104,7 +104,7 @@ function SettingsCard({ settings }: { settings: Record<string, unknown> }) {
       <h3>{t('tools.settings')}</h3>
       <Seg set={set} label={t('set.language')} k="lang" current={(settings.lang as string) || 'ar'} options={[['ar', t('lang.ar')], ['en', t('lang.en')]]} />
       <Seg set={set} label={t('set.numerals')} k="numerals" current={(settings.numerals as string) || 'western'} hint={t('set.numeralsHint')}
-        options={[['western', <>{t('set.numerals.westernShort')}<span className={s.num}>0123456789</span></>], ['eastern', <>{t('set.numerals.easternShort')}<span className={s.num}>٠١٢٣٤٥٦٧٨٩</span></>]]} />
+        options={[['western', <>{t('set.numerals.westernShort')}<span className={s.num}>0123456789</span></>], ['eastern', <>{t('set.numerals.easternShort')}<span className={s.numAr}>٠١٢٣٤٥٦٧٨٩</span></>]]} />
       <Seg set={set} label={t('set.dates')} k="dates" current={(settings.dates as string) || 'both'}
         options={[['gregorian', t('set.dates.gregorian')], ['hijri', t('set.dates.hijri')], ['both', t('set.dates.both')]]} />
       <div className={s.set} data-testid="set-coiDepth">
