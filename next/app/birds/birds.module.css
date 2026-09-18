@@ -22,7 +22,7 @@
 .search svg{ flex:none; width:22px; height:22px; stroke:var(--ink-3); stroke-width:2.4; fill:none; stroke-linecap:round; }
 .search input{ border:none; outline:none; flex:1; min-width:0; font-family:var(--f); font-size:16px; font-weight:600; background:transparent; color:var(--ink); }
 .search input::placeholder{ color:var(--ink-3); }
-.btn-add{ display:none; border:none; background:var(--brand); color:#fff; border-radius:var(--r-btn); min-height:56px; padding:0 24px;
+.btn-add{ display:none; border:none; background:var(--brand-deep); color:#fff; border-radius:var(--r-btn); min-height:56px; padding:0 24px;
             font-size:16px; font-weight:800; cursor:pointer; align-items:center; gap:10px; white-space:nowrap; }
 .btn-add svg{ width:20px; height:20px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; }
 /* ── filters ── */
@@ -31,7 +31,7 @@
 .fp{ flex:none; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:0 18px; min-height:44px;
        font-size:14px; font-weight:700; color:var(--ink-2); cursor:pointer; white-space:nowrap; }
 .fp[data-year]{ font-variant-numeric:tabular-nums; }
-.fp.on{ background:var(--brand); border-color:var(--brand); color:#fff; }
+.fp.on{ background:var(--brand-deep); border-color:var(--brand); color:#fff; }
 .fp .gap{ flex:none; width:1px; }
 .fdiv{ flex:none; width:1px; background:var(--line); margin:8px 4px; }
 /* ── sync status row (above the list) ── */
@@ -85,7 +85,7 @@ td.ltr{ direction:ltr; text-align:right; font-variant-numeric:tabular-nums; }
 td.yr{ font-weight:700; color:var(--ink-2); }
 .res{ display:inline-flex; align-items:center; gap:8px; }
 .res .pl{ display:inline-block; min-width:36px; text-align:center; font-weight:800; font-size:13.5px; padding:4px 8px; border-radius:10px; background:var(--page); color:var(--ink-2); direction:ltr; }
-.res .pl.top{ background:var(--brand); color:#fff; }
+.res .pl.top{ background:var(--brand-deep); color:#fff; }
 .res .w{ font-weight:600; color:var(--ink-2); }
 .res.none{ color:var(--ink-3); font-weight:600; }
 tr.gone td.nm{ color:var(--ink-3); }
@@ -96,7 +96,7 @@ tr.gone td.nm{ color:var(--ink-3); }
 .empty h2{ font-size:34px; font-weight:900; line-height:1.1; margin-top:22px; }
 .empty p{ font-size:15px; font-weight:500; color:var(--ink-2); margin-top:10px; max-width:320px; text-wrap:pretty; }
 .empty .cta{ width:100%; max-width:360px; border:none; border-radius:var(--r-btn); padding:18px; margin-top:28px; cursor:pointer;
-               background:var(--brand); color:#fff; font-size:17px; font-weight:800; }
+               background:var(--brand-deep); color:#fff; font-size:17px; font-weight:800; }
 .empty .alt{ width:100%; max-width:360px; border:2px solid var(--ink); background:transparent; color:var(--ink); border-radius:var(--r-btn);
                padding:15px; margin-top:12px; cursor:pointer; font-size:15.5px; font-weight:800; }
 .empty .hint{ font-size:12.5px; font-weight:600; color:var(--ink-3); margin-top:12px; }
@@ -114,8 +114,8 @@ tr.gone td.nm{ color:var(--ink-3); }
 @media (hover:hover){
 .brow:hover{ background:var(--brand-tint); border-color:var(--brand); }
 .fp:hover:not(.on){ border-color:var(--brand); color:var(--brand-deep); }
-.fab button:hover{ background:var(--brand-deep); }
-.btn-add:hover, .empty .cta:hover{ background:var(--brand-deep); }
+.fab button:hover{ background:var(--brand-deep); box-shadow:inset 0 0 0 2px var(--brand-tint); }
+.btn-add:hover, .empty .cta:hover{ background:var(--brand-deep); box-shadow:inset 0 0 0 2px var(--brand-tint); }
 .empty .alt:hover{ background:var(--ink); color:#fff; }
 }
 .screen button:focus-visible, .search:has(input:focus-visible), .table tbody tr:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
@@ -141,4 +141,4 @@ tr.gone td.nm{ color:var(--ink-3); }
  * Same declarations, applied to the anchor. */
 .fab a{ border:none; border-radius:18px; background:var(--ink); color:#fff; font-size:16px; font-weight:800; min-height:58px; padding:0 24px;
         cursor:pointer; display:flex; align-items:center; gap:10px; text-decoration:none; }
-@media (hover:hover){ .fab a:hover{ background:var(--brand-deep); color:#fff; } }
+@media (hover:hover){ .fab a:hover{ background:var(--brand-deep); box-shadow:inset 0 0 0 2px var(--brand-tint); color:#fff; } }

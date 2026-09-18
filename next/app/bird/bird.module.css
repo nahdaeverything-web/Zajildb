@@ -30,7 +30,7 @@
   .hero-actions{ display:none; gap:10px; }
   .btn{ border-radius:var(--r-btn); padding:15px 22px; font-size:15.5px; font-weight:800; cursor:pointer; min-height:48px; }
   .btn-outline{ border:2px solid var(--ink); background:transparent; color:var(--ink); }
-  .btn-primary{ border:none; background:var(--brand); color:#fff; }
+  .btn-primary{ border:none; background:var(--brand-deep); color:#fff; }
 
   .tiles{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; padding:16px 20px 0; }
   .tile{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px 10px 14px; text-align:center; }
@@ -61,7 +61,7 @@
   .rows .v.data{ unicode-bidi:isolate; font-variant-numeric:tabular-nums; }
   .rows .v.link{ display:inline-flex; align-items:center; gap:8px; color:var(--brand-deep); font-weight:800; border:none; background:none; cursor:pointer; font-size:15.5px; padding:0; }
   .rows .v.link svg{ width:14px; height:14px; stroke:currentColor; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; }
-  .notice{ background:var(--brand); border-radius:var(--r); padding:18px 20px; margin-bottom:14px; color:#fff; }
+  .notice{ background:var(--brand-deep); border-radius:var(--r); padding:18px 20px; margin-bottom:14px; color:#fff; }
   .notice .t{ font-size:17px; font-weight:800; display:flex; align-items:center; gap:10px; }
   .notice .t svg{ width:22px; height:22px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; }
   .notice p{ font-size:13.5px; font-weight:500; opacity:.92; margin-top:6px; }
@@ -113,7 +113,7 @@
   .num{ direction:ltr; text-align:right; font-variant-numeric:tabular-nums; font-family:var(--f-mono); font-size:14px; }
   .table th.num{ font-family:var(--f); }
   .pill{ display:inline-block; min-width:44px; text-align:center; font-weight:800; font-size:14px; padding:6px 10px; border-radius:12px; background:var(--page); color:var(--ink-2); direction:ltr; }
-  .pill.top{ background:var(--brand); color:#fff; }
+  .pill.top{ background:var(--brand-deep); color:#fff; }
   .pill.gold{ background:var(--gold); color:#fff; }
 
   /* health timeline */
@@ -139,13 +139,13 @@
   .nxt .d{ font-family:var(--f-mono); font-weight:600; font-size:15px; direction:ltr; color:var(--ink); }
 
   .cta-wrap{ position:fixed; bottom:84px; inset-inline:0; margin-inline:auto; max-width:430px; padding:0 20px; z-index:9; }
-  .cta{ width:100%; border:none; border-radius:var(--r-btn); padding:18px; cursor:pointer; background:var(--brand); color:#fff; font-size:17px; font-weight:800; }
+  .cta{ width:100%; border:none; border-radius:var(--r-btn); padding:18px; cursor:pointer; background:var(--brand-deep); color:#fff; font-size:17px; font-weight:800; }
 
   @media (hover:hover){
     .icon-btn:hover{ background:var(--brand-tint); }
     .node:hover{ background:var(--brand-tint); border-color:var(--brand); }
     .pbtn:hover, .btn-outline:hover{ background:var(--ink); color:#fff; }
-    .btn-primary:hover, .cta:hover{ background:var(--brand-deep); }
+    .btn-primary:hover, .cta:hover{ background:var(--brand-deep); box-shadow:inset 0 0 0 2px var(--brand-tint); }
     .seg button:not([aria-selected="true"]):hover{ background:var(--brand-tint); color:var(--brand-deep); }
     .rows .v.link:hover{ text-decoration:underline; }
     .table tbody tr:hover td{ background:var(--brand-tint); }

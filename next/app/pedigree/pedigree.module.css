@@ -42,7 +42,7 @@
   .actions{ display:none; gap:10px; flex:none; }
   .btn{ border-radius:var(--r-btn); font-family:var(--f); font-weight:800; cursor:pointer; min-height:50px; }
   .btn-outline{ border:2px solid var(--ink); background:transparent; color:var(--ink); padding:15px 22px; font-size:15.5px; }
-  .btn-primary{ border:none; background:var(--brand); color:#fff; padding:15px 26px; font-size:15.5px; }
+  .btn-primary{ border:none; background:var(--brand-deep); color:#fff; padding:15px 26px; font-size:15.5px; }
 
   .body{ padding-bottom:170px; }
   .legend{ display:flex; flex-wrap:wrap; gap:8px 18px; padding:16px 20px 4px; }
@@ -88,14 +88,14 @@
   .node.unknown svg{ flex:none; width:14px; height:14px; stroke:var(--ink-3); stroke-width:2.8; fill:none; stroke-linecap:round; }
 
   .cta{ position:fixed; bottom:84px; inset-inline:0; margin-inline:auto; max-width:430px; padding:0 20px; z-index:9; }
-  .cta button{ width:100%; border:none; border-radius:var(--r-btn); padding:18px; cursor:pointer; background:var(--brand); color:#fff;
+  .cta button{ width:100%; border:none; border-radius:var(--r-btn); padding:18px; cursor:pointer; background:var(--brand-deep); color:#fff;
                font-family:var(--f); font-size:17px; font-weight:800; }
 
   @media (hover:hover){
     .icon-btn:hover{ background:var(--brand-tint); }
     .node:hover{ background:var(--brand-tint); border-color:var(--brand); }
     .btn-outline:hover{ background:var(--ink); color:#fff; }
-    .btn-primary:hover, .cta button:hover, .cta a:hover{ background:var(--brand-deep); }
+    .btn-primary:hover, .cta button:hover, .cta a:hover{ background:var(--brand-deep); box-shadow:inset 0 0 0 2px var(--brand-tint); }
   }
   /* `.cta a` as well as `.cta button`: the spec draws the certificate CTA as a button and
      the port renders it as a navigation, which is an anchor — so a button-only selector
@@ -139,7 +139,7 @@
 .screen a{ text-decoration:none; }
 .node{ text-decoration:none; }
 .cta a, .btn{ display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
-.cta a{ width:100%; border:none; border-radius:var(--r-btn); padding:18px; background:var(--brand); color:#fff; font-family:var(--f); font-size:17px; font-weight:800; }
+.cta a{ width:100%; border:none; border-radius:var(--r-btn); padding:18px; background:var(--brand-deep); color:#fff; font-family:var(--f); font-size:17px; font-weight:800; }
 /* vanilla's generation control (pedigree.js:25, 3 / 4 / 5) — the spec fixes four ancestor generations; carried as a small pill row
    in the legend's grammar (raised in the 4B report). The chart's width and height follow the deepest column. */
 .gensel{ display:flex; gap:6px; padding:0 20px 8px; align-items:center; }

@@ -79,7 +79,7 @@
   /* buttons */
   .btn{ border:none; border-radius:var(--r-btn); min-height:56px; padding:0 20px; font-size:16px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; width:100%; }
   .btn svg{ width:20px; height:20px; stroke:currentColor; stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
-  .btn.primary{ background:var(--brand); color:#fff; }
+  .btn.primary{ background:var(--brand-deep); color:#fff; }
   .btn.ink{ background:var(--surface); color:var(--ink); border:2px solid var(--ink); }
   .btn.ghost{ background:var(--page); color:var(--ink); border:1px solid var(--line); }
   .btn.danger{ background:var(--surface); color:var(--danger); border:2px solid var(--danger); }
@@ -181,7 +181,7 @@
   .tabbar{ position:fixed; bottom:0; inset-inline:0; margin-inline:auto; max-width:430px; background:var(--surface); border-top:1px solid var(--line); display:flex; padding:10px 4px 14px; z-index:10; }
 
   @media (hover:hover){
-    .btn.primary:hover{ background:var(--brand-deep); }
+    .btn.primary:hover{ background:var(--brand-deep); box-shadow:inset 0 0 0 2px var(--brand-tint); }
     .btn.ink:hover, .dup .del:hover{ background:var(--ink); color:#fff; border-color:var(--ink); }
     .btn.ghost:hover, .ds button:hover, .devbtns button:hover, .file .pick:hover{ background:var(--brand-tint); border-color:var(--brand); }
     .btn.danger:hover{ background:var(--danger); color:#fff; }

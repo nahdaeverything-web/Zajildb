@@ -37,9 +37,9 @@
   .msg small{ display:block; font-size:13px; font-weight:500; color:var(--ink-2); margin-top:3px; }
 
   .cta{ width:100%; min-height:60px; border:none; border-radius:var(--r-btn); padding:18px; cursor:pointer; margin-top:24px;
-        background:var(--brand); color:#fff; font-family:var(--f); font-size:17.5px; font-weight:800;
+        background:var(--brand-deep); color:#fff; font-family:var(--f); font-size:17.5px; font-weight:800;
         display:flex; align-items:center; justify-content:center; gap:12px; }
-  .cta:hover{ background:var(--brand-deep); }
+  .cta:hover{ background:var(--brand-deep); box-shadow:inset 0 0 0 2px var(--brand-tint); }
   .cta:focus-visible{ outline:3px solid var(--brand); outline-offset:3px; }
   .cta.busy{ background:var(--brand-deep); cursor:progress; }
   .spin{ width:22px; height:22px; border-radius:999px; border:3px solid rgba(255,255,255,.35); border-top-color:#fff; animation:spin .8s linear infinite; }

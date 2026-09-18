@@ -79,7 +79,7 @@
   .kpi .l{ font-size:12.5px; font-weight:800; color:var(--ink-2); margin-top:6px; }
   .kpi.wide{ grid-column:1 / -1; }
   .pill{ display:inline-block; min-width:44px; text-align:center; font-weight:800; font-size:14px; padding:6px 10px; border-radius:12px; background:var(--page); color:var(--ink-2); direction:ltr; }
-  .pill.top{ background:var(--brand); color:#fff; }
+  .pill.top{ background:var(--brand-deep); color:#fff; }
   .rtab{ width:100%; border-collapse:collapse; margin-top:18px; font-size:14px; }
   .rtab th{ text-align:start; font-size:12px; font-weight:800; color:var(--ink-3); padding:0 6px 8px; border-bottom:1px solid var(--line); }
   .rtab td{ padding:10px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
@@ -99,7 +99,7 @@
   .empty h3{ font-size:26px; font-weight:900; line-height:1.2; }
   .empty p{ font-size:15px; font-weight:500; color:var(--ink-2); margin-top:8px; max-width:360px; margin-inline:auto; text-wrap:pretty; }
   .empty .acts{ display:flex; flex-direction:column; gap:10px; margin:24px auto 0; max-width:360px; }
-  .empty .primary{ border:none; border-radius:var(--r-btn); background:var(--brand); color:#fff; font-size:16px; font-weight:800; min-height:58px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; }
+  .empty .primary{ border:none; border-radius:var(--r-btn); background:var(--brand-deep); color:#fff; font-size:16px; font-weight:800; min-height:58px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; }
   .empty .primary svg{ width:20px; height:20px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; }
   .empty .secondary{ border:2px solid var(--line); background:var(--surface); color:var(--ink); border-radius:var(--r-btn); font-size:16px; font-weight:800; min-height:58px; cursor:pointer; }
 
@@ -108,7 +108,7 @@
 
   @media (hover:hover){
     .toplist a:hover{ text-decoration-color:var(--brand); color:var(--brand-deep); }
-    .empty .primary:hover{ background:var(--brand-deep); }
+    .empty .primary:hover{ background:var(--brand-deep); box-shadow:inset 0 0 0 2px var(--brand-tint); }
     .empty .secondary:hover{ border-color:var(--ink); }
   }
   .screen button:focus-visible, a:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }

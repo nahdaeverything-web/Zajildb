@@ -16,7 +16,7 @@
   .lofthead .season{ font-size:13px; font-weight:700; color:var(--ink-3); }
   .lofthead h1{ font-size:34px; font-weight:900; line-height:1.05; }
   .lofthead .count{ font-size:15px; font-weight:700; color:var(--brand-deep); margin-top:4px; }
-  .btn-add{ display:none; align-items:center; gap:10px; border:none; border-radius:var(--r-btn); background:var(--brand); color:#fff; font-size:16px; font-weight:800; min-height:56px; padding:0 22px; cursor:pointer; }
+  .btn-add{ display:none; align-items:center; gap:10px; border:none; border-radius:var(--r-btn); background:var(--brand-deep); color:#fff; font-size:16px; font-weight:800; min-height:56px; padding:0 22px; cursor:pointer; }
   .btn-add svg, .fab svg{ width:20px; height:20px; stroke:#fff; stroke-width:3; fill:none; stroke-linecap:round; }
 
   /* ── segmented ── */
@@ -54,7 +54,7 @@
 
   /* ── pills ── */
   .pill{ display:inline-block; min-width:44px; text-align:center; font-weight:800; font-size:14px; padding:6px 10px; border-radius:12px; background:var(--page); color:var(--ink-2); direction:ltr; }
-  .pill.top{ background:var(--brand); color:#fff; }
+  .pill.top{ background:var(--brand-deep); color:#fff; }
   .pill.none{ color:var(--ink-3); font-weight:700; }
 
   /* ── desktop table ── */
@@ -154,12 +154,12 @@
   .calc-ok b{ font-family:var(--f-mono); direction:ltr; unicode-bidi:isolate; font-weight:600; font-size:15px; }
   .mact{ display:flex; gap:10px; margin-top:26px; }
   .mact .cancel{ flex:1; border:2px solid var(--line); background:var(--surface); color:var(--ink); border-radius:var(--r-btn); min-height:58px; font-size:16px; font-weight:800; cursor:pointer; }
-  .mact .save{ flex:2; border:none; background:var(--brand); color:#fff; border-radius:var(--r-btn); min-height:58px; font-size:17px; font-weight:800; cursor:pointer; }
+  .mact .save{ flex:2; border:none; background:var(--brand-deep); color:#fff; border-radius:var(--r-btn); min-height:58px; font-size:17px; font-weight:800; cursor:pointer; }
 
   @media (hover:hover){
     .rrow:hover, .fcard:not(.q):hover{ border-color:var(--brand); }
     .table tbody tr:not(.q):hover td{ background:var(--brand-tint); }
-    .btn-add:hover, .fab button:hover, .mact .save:hover{ background:var(--brand-deep); }
+    .btn-add:hover, .fab button:hover, .mact .save:hover{ background:var(--brand-deep); box-shadow:inset 0 0 0 2px var(--brand-tint); }
     .act:hover{ border-color:var(--ink); color:var(--ink); }
     .act.x:hover{ border-color:var(--danger); color:var(--danger); background:var(--danger-tint); }
     .calc:hover{ background:var(--ink); color:#fff; }
