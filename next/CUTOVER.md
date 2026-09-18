@@ -439,6 +439,21 @@ The port's own limits, for contrast: it exports to any size, and **refuses an im
 
 `main` is not being changed for this. Recorded so it is asked rather than discovered.
 
+### d.3b PRE-PILOT CHECKLIST: verify the date inputs on an Arabic-locale phone
+
+`<input type="date">` takes its display format from the **browser's locale**, not from the
+page. There is no CSS, attribute, `lang` or `dir` that overrides it — so on a device set to US
+English the app shows `mm/dd/yyyy` and «09 / 18 / 2026», which in Jordan reads as the 9th of
+the 18th month.
+
+**RULED: do not build a custom date field.** Replacing the native input costs a real component
+and loses the native mobile date wheel, and the problem may not exist for actual users: a
+device set to Arabic (Jordan) renders day-first for free.
+
+**Before any work on this, check it on a real Arabic-locale phone.** If it already reads
+day-first there, this is an artefact of the development browser and nothing needs doing. If it
+does not, it becomes a design decision with a known cost, not a bug to patch in a hurry.
+
 ### d.4 Recommendation
 
 **Option 2 as the primary, option 4 as the safety net, option 3 never relied on for this.**

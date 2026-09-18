@@ -383,6 +383,13 @@ export const EXT = {
     ar: 'تعذّر الاستيراد. لم يتغيّر شيء. ({why})',
     en: 'Import failed. Nothing was changed. ({why})' },
 
+  // ── the stats total (pre-launch) ──
+  // الطيور counts every record; الإحصائيات excludes reference birds by design
+  // (stats.js:12). Both numbers are right and the difference was being asked about —
+  // one line under the total answers it without inventing a second tile whose own
+  // number would then need explaining.
+  'stats.excludesReference': { ar: 'لا تشمل طيور المرجع', en: 'Excludes reference birds' },
+
 };
 
 function interpolate(s, params) {
