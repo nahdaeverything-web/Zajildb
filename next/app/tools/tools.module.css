@@ -201,8 +201,15 @@
     .panel{ margin-inline:auto; max-width:1024px; width:100%; padding:8px 32px 80px; }
     .group{ padding-top:32px; scroll-margin-top:140px; }
     .group > .gh h2{ font-size:30px; }
-    .cards{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start; }
-    .card.span{ grid-column:1 / -1; }
+    /* MULTICOL, not grid, so the two columns BALANCE BY HEIGHT. A two-column grid places
+     * cards row by row, and a row is as tall as its tallest card — measured here as
+     * settings(625) and loft(792) both in the right column against sync(131) alone in the
+     * left, a 1286px empty band at 1920px. Multicol fills to an even height instead, and
+     * `column-span:all` keeps the full-width cards full-width, which is why this works where
+     * `grid-template-rows:masonry` (not yet broadly supported) would have been needed. */
+    .cards{ display:block; columns:2; column-gap:16px; }   /* display:block — `columns` does not apply to a grid container */
+    .cards > .card{ break-inside:avoid; margin-bottom:16px; }
+    .card.span{ column-span:all; }
     .card.span .two{ display:grid; grid-template-columns:1fr 1fr; gap:0 40px; }
     .card.span .two > .col:last-child{ border-inline-start:1px solid var(--line); padding-inline-start:40px; }
     .btns.desk3{ grid-template-columns:1fr 1fr 1fr; }
