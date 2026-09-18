@@ -10,7 +10,12 @@
   .mono, .num{ font-family:var(--f-mono); font-weight:600; direction:ltr; font-variant-numeric:tabular-nums; }
   /* a date cell is Arabic text with numerals in it — the Arabic face, the column's
      alignment and tabular figures, and room for the dual Gregorian+Hijri string */
-  .datecell{ text-align:right; unicode-bidi:isolate; font-variant-numeric:tabular-nums; }
+  /* A dual Gregorian+Hijri date — «21 حزيران 2026 (6 محرم 1448 هـ)» — is ~236px. In a
+     139px column it wrapped to THREE lines and broke mid-parenthesis. nowrap plus a
+     min-width sized to the string keeps it on one line; the table gives the width back
+     by letting the race-name column shrink, which has far more slack. */
+  .datecell{ text-align:right; unicode-bidi:isolate; font-variant-numeric:tabular-nums;
+             white-space:nowrap; min-width:15rem; }
 
   /* ── header ── */
   .lofthead{ background:var(--surface); border-bottom:1px solid var(--line); padding:20px; }
