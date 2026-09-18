@@ -19,3 +19,12 @@
 }
 .act:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 @media print { .banner { display: none !important; } }
+
+/* The rail is fixed at the inline-start edge from 1100px and `main` clears it with
+ * `margin-inline: 132px 0`. The banner is full-width chrome above `main`, so without the
+ * same inset it runs UNDER the rail and the start of the sentence is hidden — measured at
+ * 1400px: banner x=0..1400 with the rail occupying 1268..1400. Any other full-width chrome
+ * added later needs this same inset. */
+@media (min-width: 1100px) {
+  .banner { margin-inline-start: 132px; }
+}
