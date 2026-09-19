@@ -185,39 +185,87 @@ looked at. Both are fixed; the shape is worth remembering.
 
 ## 5. Deferred — the things that are NOT done
 
-### Accessibility: 84 contrast pairs, deliberately not fixed
+### Accessibility: 108 contrast pairs, deliberately not fixed
 
 White text on a brand fill, and brand text on a white surface, were both **4.20:1** against
 AA's 4.5:1 — the brand green measures the same whichever side of the pair it is on. Both now
 use `--brand-deep` at **6.12:1**, and `tests/e2e/contrast.py` locks both directions.
 
-**Eighty-four distinct failing combinations remain, and they are a design decision rather
-than a contrast fix.** Grouped by the token pair that causes them:
+#### Read this before you read the number: 84 → 108 is a WIDER SCAN, not 24 new failures
+
+The suite used to render every route at **430px only**. A desktop-only control therefore could
+not fail it — which is exactly how «طير جديد» reached a real browsing session as a solid
+brand rectangle with an invisible label at **1.00:1**. The suite now scans at **430 and 1400**,
+and the baseline moved because it can finally see the desktop layout:
+
+|  | distinct failing combinations |
+|---|---|
+| the old baseline, at 430px alone | **84** |
+| the certificate's plate year stopped failing (ruled, below) | −1 |
+| what the phone-width scan finds today | **83** |
+| what only the DESKTOP width shows | **+25** |
+| **today's baseline** | **108** |
+
+**All 25 of the desktop-only ones are `--ink-3`** on white or page — table headers, ruler
+labels, empty dashes, the desktop nav rail's own labels. They belong to the same dominant,
+approved-token group as most of the other 83, and they are covered by the same ruling.
+
+**There was a 26th, and it was the only one that was not `--ink-3`:** the certificate's ring
+plate year, «16», **white on `--gold`, 2.65:1**. RULED 2026-09-19 — *do not invent a darker
+gold; gold is an accent and forcing it to AA changes what the accent is,* the same reasoning
+that protects `--ink-3`. The **label** moved instead: `--ink` on `--gold`, measured **6.76:1**
+(`app/cert/cert.module.css:185`). It renders at 9px and 11px, so that single fix removed
+**two** combinations — which is why the total is 108 and not 109. `--ink` on a gold plate was
+already the treatment in `src/components/shared.module.css:59`, so the certificate now agrees
+with the shared component rather than introducing anything.
+
+#### The 108, grouped by the token pair that causes them
 
 | text | on | distinct combos | worst | example |
 |---|---|---|---|---|
-| `--ink-3` | `--surface` / `#fff` | **50** | 2.97 | «موسم 2026 / 2027» |
-| `--ink-3` | `--page` | **20** | 2.77 | a count figure |
-| `#fff` | `--gold` | 4 | 2.65 | a gold-filled count |
+| `--ink-3` | `--surface` / `#fff` | **69** | 2.97 | «موسم 2026 / 2027» |
+| `--ink-3` | `--page` | **26** | 2.77 | a count figure |
+| `#fff` | `--gold` | 3 | 2.65 | the ring plate's year, on every screen but the certificate |
 | `--gold` | `--surface` | 2 | 2.65 | the ♀ sex mark |
 | `--danger` | `--danger-tint` | 2 | 4.30 | the ✗ FCI chip |
 | `--ink-3` | `--brand-tint` | 1 | 2.61 | a tinted count |
-| five one-off greys | `--surface` / `--page` | 5 | 1.96 | disabled labels, «لا صورة بعد» |
+| five one-off greys | `--surface` / `--page` / `--brand-tint` | 5 | 1.96 | disabled labels, «لا صورة بعد», «اختيار صورة» |
 
-**`--ink-3` alone is 71 of the 84 — 85%.** It is an approved token and it is the colour of
+**`--ink-3` alone is 96 of the 108 — 89%.** It is an approved token and it is the colour of
 every secondary label in the app: captions, counts, hints, timestamps, the muted half of every
 two-tone line. Darkening it to clear 4.5:1 repaints all of them and flattens the deliberate
 hierarchy between primary and secondary text. That is a judgement about how the app should
 look, and it belongs to whoever owns the design — **RULED: it is not to be made by ratio.**
 
-The gold pairs are the same shape in miniature: `--gold` is a brand accent, and forcing it to
-AA as text would change what the accent *is*.
+**The gold pairs are deferred on the same grounds, recorded by token pair.** Nine rules still
+paint white on a gold fill — the ring plate's year or season on birds, breeding, pedigree,
+bird, the bird form, races and health, plus bird's `.best` panel and `.pill.gold`. The
+certificate was singled out because it is the artefact that gets printed and read on paper.
+Extending `--ink` on `--gold` to the other nine is a one-line change per file if the design
+owner wants the consistency; it is **not** taken here.
 
-What the ratchet does in the meantime: `contrast.py` fails if the count **grows** past 84, so
-nothing new can be added quietly while this waits. Lowering it is the point; raising it needs
-a ruling and a new number in the suite.
+**One low pair is recorded by name in the suite rather than deferred silently.** The
+certificate's OFF photo rows dim everything to 45% (`cert.module.css:92`), taking «اختيار
+صورة» to **1.96:1**. That control is genuinely disabled (`pointer-events:none`), and a
+disabled-state ruling already exists — `app/bird/form.module.css:96-108` chose an inert
+`--line` fill with `--ink-2` ink at **6.22:1**, floor 3:1. So this one misses a ruling that is
+already on the books. Extending it is the design owner's call, so `contrast.py` names it in
+`UNRULED_LOW_FILL`: it does not fail the suite, and anything that JOINS it does.
 
+#### What the suite holds while this waits
 
+`contrast.py` now asserts three things, not one:
+1. **the ruled invariant, both directions** — every white-on-brand fill and every
+   brand-on-white text at AA, each pair named individually;
+2. **filled controls, whole** — every control that paints an opaque fill of its own must have
+   a rendered label or an accessible name, and that label must be legible against the fill
+   (floor 3:1). This starts from the CONTROL rather than from a colour pair, because a label
+   the cascade painted the colour of its own background is in no colour-pair list at all. It
+   asserts by name that `birds/add-bird` and `pedigree/hero-cert` — the two that shipped at
+   1.00:1 — are in the measured set, because "we scan everything" is what the single-width
+   version of this suite also believed;
+3. **a ratchet** — the count fails if it **grows** past 108, so nothing new can be added
+   quietly. Lowering it is the point; raising it needs a ruling and a new number in the suite.
 
 **`live_deployment.py` — 11 assertions, the only uncovered ones left.** They need a real
 deployed origin. The suite as it exists cannot gate the port: there is no port copy, every

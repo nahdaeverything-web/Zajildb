@@ -182,7 +182,19 @@
   .facts .v.mono{ font-size:12.5px; letter-spacing:normal; font-family:var(--f); direction:rtl; }
 
   .plate{ display:inline-flex; align-items:stretch; direction:ltr; border-radius:10px; overflow:hidden; background:var(--ink); }
-  .plate .yr{ background:var(--gold); color:#fff; font-family:var(--f-mono); font-weight:600; font-size:11px; padding:0 8px; display:grid; place-items:center; }
+  /* RULED 2026-09-19. This was `color:#fff` — white on the --gold fill, 11px/600, which
+   * measures 2.65:1 and misses AA. Raised with a proposal to darken the gold; the ruling
+   * refused it, for the same reason --ink-3 is not being repainted: «Gold is an accent and
+   * forcing it to AA changes what the accent is». The label moves instead. --ink on --gold
+   * is not a new idea in this codebase — shared.module.css:59 already sets exactly that on
+   * .plate.sm .season — so the certificate's plate now agrees with the shared one.
+   *
+   * SCOPE IS THE CERTIFICATE ONLY, by the same ruling: nine other rules paint white on a
+   * gold fill (the ring-plate year/season on birds, breeding, pedigree, bird, the bird form,
+   * races and health, and bird's .best and .pill.gold). They are DEFERRED, recorded by token
+   * pair in PORT-COMPLETE.md §5 alongside --ink-3, not changed here. The certificate is the
+   * one that gets printed and read on paper. */
+  .plate .yr{ background:var(--gold); color:var(--ink); font-family:var(--f-mono); font-weight:600; font-size:11px; padding:0 8px; display:grid; place-items:center; }
   .plate .no{ color:#fff; font-family:var(--f-mono); font-weight:600; font-size:14px; letter-spacing:1px; padding:7px 12px; }
 
   /* photos — flat placeholder slots */

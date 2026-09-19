@@ -37,17 +37,32 @@ opaque, so a transparent control over a card is measured against the card. The t
 composited over that background, and the element's own `opacity` is folded in, because a
 label at 60% opacity really is lower contrast.
 
-BASELINE: 110 distinct failing combinations over the routes below, at BOTH widths. It was 84
-when the scan ran at 430px alone. The 26 it gained are what the phone-width scan could never
-see, not 26 new defects, and they were counted and read before the number was moved:
-  · 25 of the 26 are --ink-3 (#8c97a2) on white or page — table headers, ruler labels, empty
-    dashes, the desktop nav-link rail. That is the same dominant, approved-token group that
-    the other 84 are mostly made of, and it is RULED not to be repainted without the design
-    owner saying so.
-  · 1 is not: the certificate's rank badge, «16» at 11px, WHITE ON --gold (#c9971f), 2.65:1.
-    That belongs to the family part 1 rules on — white text on a solid fill — but the ruling
-    named --brand, and there is no sanctioned darker gold FILL to move it to. Raised, not
-    ruled, not fixed.
+BASELINE: 108 distinct failing combinations over the routes below, at BOTH widths. THE
+INCREASE FROM 84 IS COVERAGE, NOT REGRESSION, and the arithmetic is written out here so that
+nobody has to take that on trust:
+
+     84   the old baseline, scanned at 430px alone
+    -1    the certificate's plate year at 11px stopped failing (see below)
+    ───
+     83   what the phone-width scan finds today
+    +25   what ONLY the desktop width shows, and the 430px scan could never have seen
+    ───
+    108
+
+  · The 25 desktop-only ones are ALL --ink-3 (#8c97a2) on white or page: table headers, ruler
+    labels, empty dashes, the desktop nav rail's own labels. That is the same dominant,
+    approved-token group the other 83 are mostly made of, and it is RULED not to be repainted
+    without the design owner saying so.
+  · There was a 26th, and it was not --ink-3: the certificate's plate year, «16», WHITE ON
+    --gold, 2.65:1. RULED 2026-09-19 — do not darken the gold, because «gold is an accent and
+    forcing it to AA changes what the accent is», the same reasoning that protects --ink-3.
+    The LABEL moved instead: --ink on --gold, measured 6.76:1, cert.module.css:185. It renders
+    at 9px and 11px, so fixing it removed TWO combinations, which is why the total is 108 and
+    not 109.
+  · Nine other rules still paint white on a gold fill (the ring plate on birds, breeding,
+    pedigree, bird, the bird form, races and health, plus bird's .best and .pill.gold), and
+    they are DEFERRED by the same ruling, recorded by token pair — `#fff on --gold`, 3 combos,
+    worst 2.65 — alongside --ink-3 rather than changed.
 
 The key is (route, fg, bg, px, weight) and deliberately NOT the viewport, so a pair that fails
 at both widths counts once. Lowering this number is the point; raising it needs a ruling and a
@@ -67,7 +82,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'sync'))
 from _serve import serve
 
-BASELINE = 110
+BASELINE = 108
 # BOTH, not just the phone. A desktop-only control cannot fail a suite that never renders it:
 # that is exactly how a 1.00:1 button reached a real browsing session.
 VIEWPORTS = [(430, 900), (1400, 1000)]
