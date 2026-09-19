@@ -141,7 +141,10 @@
   .field .pick .ph{ color:var(--ink-3); font-weight:500; }
   .field .pick svg{ width:20px; height:20px; stroke:var(--ink-3); stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
   .plate{ display:inline-flex; align-items:stretch; direction:ltr; border-radius:10px; overflow:hidden; background:var(--ink); }
-  .plate .season{ background:var(--gold); color:#fff; font-family:var(--f-mono); font-weight:600; font-size:10px; padding:0 7px; display:grid; place-items:center; }
+  /* --ink on --gold, not #fff: white on the gold fill is 2.65:1 and --ink is 6.76:1. RULED
+   * 2026-09-19 — the accent keeps its colour, the label moves. src/components/shared.module.css:59
+   * already did this on .plate.sm .season; this brings the rest of the app to its own pattern. */
+  .plate .season{ background:var(--gold); color:var(--ink); font-family:var(--f-mono); font-weight:600; font-size:10px; padding:0 7px; display:grid; place-items:center; }
   .plate .num{ color:#fff; font-family:var(--f-mono); font-weight:600; font-size:12px; letter-spacing:1px; padding:6px 10px; }
   .field.err input, .field.err select, .field.err .pick{ border-color:var(--danger); background:#fff; }
   .field .msg{ display:none; margin-top:8px; font-size:13.5px; font-weight:700; color:var(--danger); }

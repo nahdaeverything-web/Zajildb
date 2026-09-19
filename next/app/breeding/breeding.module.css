@@ -78,7 +78,10 @@
   .sex.m{ color:var(--brand-deep); } .sex.f{ color:var(--gold); }
   .x{ font-size:22px; font-weight:900; color:var(--ink-3); margin-top:2px; }
   .plate{ display:inline-flex; align-items:stretch; direction:ltr; border-radius:10px; overflow:hidden; background:var(--ink); }
-  .plate .yr{ background:var(--gold); color:#fff; font-family:var(--f-mono); font-weight:600; font-size:10px; padding:0 7px; display:grid; place-items:center; }
+  /* --ink on --gold, not #fff: white on the gold fill is 2.65:1 and --ink is 6.76:1. RULED
+   * 2026-09-19 — the accent keeps its colour, the label moves. src/components/shared.module.css:59
+   * already did this on .plate.sm .season; this brings the rest of the app to its own pattern. */
+  .plate .yr{ background:var(--gold); color:var(--ink); font-family:var(--f-mono); font-weight:600; font-size:10px; padding:0 7px; display:grid; place-items:center; }
   .plate .no{ color:#fff; font-family:var(--f-mono); font-weight:600; font-size:12px; letter-spacing:1px; padding:6px 10px; }
   .pair.off .plate{ background:var(--ink-3); } .pair.off .plate .yr{ background:var(--gold); }
 

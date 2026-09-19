@@ -37,7 +37,7 @@ opaque, so a transparent control over a card is measured against the card. The t
 composited over that background, and the element's own `opacity` is folded in, because a
 label at 60% opacity really is lower contrast.
 
-BASELINE: 105 distinct failing combinations over the routes below, at BOTH widths. THE
+BASELINE: 102 distinct failing combinations over the routes below, at BOTH widths. THE
 INCREASE FROM 84 IS COVERAGE, NOT REGRESSION, and the arithmetic is written out here so that
 nobody has to take that on trust:
 
@@ -46,9 +46,10 @@ nobody has to take that on trust:
     ───
     110   the same app, finally measured at both widths — no defect was added to reach this
      -2   the certificate's plate year, at the 9px and 11px it renders: --ink on --gold
+     -3   the other gold fills, ruled the same way and swept uniformly
      -3   three disabled treatments that were dimming (tools ×2, the certificate ×1)
     ───
-    105
+    102
 
 Every line of that is measured, not derived. Two of the disabled fixes — sign-in's input and
 breeding's pair save — removed nothing from this table, because neither state is reachable by
@@ -59,16 +60,18 @@ page happens to render.
 
   · The 25 desktop-only ones are ALL --ink-3 (#8c97a2) on white or page: table headers, ruler
     labels, empty dashes, the desktop nav rail's own labels. That is the same dominant,
-    approved-token group the other 80 are mostly made of, and it is RULED not to be repainted
+    approved-token group the other 77 are mostly made of, and it is RULED not to be repainted
     without the design owner saying so.
   · There was a 26th, and it was not --ink-3: the certificate's plate year, «16», WHITE ON
     --gold, 2.65:1. RULED 2026-09-19 — do not darken the gold, because «gold is an accent and
     forcing it to AA changes what the accent is», the same reasoning that protects --ink-3.
-    The LABEL moved instead: --ink on --gold, measured 6.76:1, cert.module.css:185.
-  · Nine other rules still paint white on a gold fill (the ring plate on birds, breeding,
-    pedigree, bird, the bird form, races and health, plus bird's .best and .pill.gold), and
-    they are DEFERRED by the same ruling, recorded by token pair — `#fff on --gold`, 3 combos,
-    worst 2.65 — alongside --ink-3 rather than changed.
+    The LABEL moved instead: --ink on --gold, 6.76:1. Ruled again the same day to make it
+    uniform, so all TEN gold fills carry --ink now — the ring plate's year or season on
+    birds, breeding, pedigree, bird, the bird form, races, health and the certificate, plus
+    bird's .best panel and .pill.gold. Measured at every size they render, 9px to 14px:
+    6.76:1 at all of them, because the pair does not depend on size. `#fff on --gold` is gone
+    from the table entirely. src/components/shared.module.css:59 had already done this on
+    .plate.sm .season, so this brought the app to its own existing pattern.
   · The disabled states went the same way. Five treatments missed the 3:1 floor — 1.93, 1.95,
     2.43, 2.45, 2.97 — and three of them missed it by dimming. All now use the ruled pattern
     (inert --line fill, --ink-2 ink, 6.22:1). See the disabled sweep below.
@@ -91,7 +94,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'sync'))
 from _serve import serve
 
-BASELINE = 105
+BASELINE = 102
 # BOTH, not just the phone. A desktop-only control cannot fail a suite that never renders it:
 # that is exactly how a 1.00:1 button reached a real browsing session.
 VIEWPORTS = [(430, 900), (1400, 1000)]

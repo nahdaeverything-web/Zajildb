@@ -22,7 +22,10 @@
   .tag{ font-size:13.5px; font-weight:700; padding:6px 14px; border-radius:999px; background:var(--page); color:var(--ink-2); }
   .tag.on{ background:var(--brand-tint); color:var(--brand-deep); }
   .plate{ display:inline-flex; align-items:stretch; direction:ltr; margin-top:18px; border-radius:14px; overflow:hidden; background:var(--ink); }
-  .plate .season{ background:var(--gold); color:#fff; font-family:var(--f-mono); font-weight:600; font-size:14px; padding:0 12px; display:grid; place-items:center; }
+  /* --ink on --gold, not #fff: white on the gold fill is 2.65:1 and --ink is 6.76:1. RULED
+   * 2026-09-19 — the accent keeps its colour, the label moves. src/components/shared.module.css:59
+   * already did this on .plate.sm .season; this brings the rest of the app to its own pattern. */
+  .plate .season{ background:var(--gold); color:var(--ink); font-family:var(--f-mono); font-weight:600; font-size:14px; padding:0 12px; display:grid; place-items:center; }
   .plate .num{ color:#fff; font-family:var(--f-mono); font-weight:600; font-size:20px; letter-spacing:2px; padding:12px 18px; }
   .plate.sm{ border-radius:10px; margin:0; }
   .plate.sm .season{ font-size:10px; padding:0 7px; }
@@ -99,7 +102,9 @@
   .pbtn svg{ width:18px; height:18px; stroke:currentColor; stroke-width:2.8; fill:none; stroke-linecap:round; stroke-linejoin:round; }
 
   /* races */
-  .best{ background:var(--gold); border-radius:var(--r); padding:18px 20px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; color:#fff; }
+  /* --ink on --gold — see the plate above. The best-result panel is a gold GROUND with a
+   * whole line of text on it, so it carried the same 2.65:1 the badge did. */
+  .best{ background:var(--gold); border-radius:var(--r); padding:18px 20px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; color:var(--ink); }
   .best .t{ font-size:13px; font-weight:700; opacity:.9; }
   .best .r{ font-size:20px; font-weight:900; margin-top:2px; }
   .best .m{ font-family:var(--f-mono); font-weight:600; font-size:12.5px; opacity:.9; margin-top:6px; direction:ltr; text-align:right; }
@@ -114,7 +119,7 @@
   .table th.num{ font-family:var(--f); }
   .pill{ display:inline-block; min-width:44px; text-align:center; font-weight:800; font-size:14px; padding:6px 10px; border-radius:12px; background:var(--page); color:var(--ink-2); direction:ltr; }
   .pill.top{ background:var(--brand-deep); color:#fff; }
-  .pill.gold{ background:var(--gold); color:#fff; }
+  .pill.gold{ background:var(--gold); color:var(--ink); }   /* --ink on --gold — see the plate above */
 
   /* health timeline */
   .tl{ position:relative; padding-inline-start:26px; }
