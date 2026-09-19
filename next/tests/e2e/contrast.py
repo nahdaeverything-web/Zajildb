@@ -4,10 +4,12 @@
 WHAT IT ENFORCES, in two parts, because the app is not at zero failures and pretending
 otherwise would make this suite a decoration:
 
-  1. THE RULED INVARIANT — white text on a solid brand fill must pass AA. That is the fix
-     that took the primary action from 4.20:1 to 6.12:1 by moving those fills to
-     --brand-deep. Every such pair is asserted individually. If a token change or a new
-     button drops one below AA, this fails and names it.
+  1. THE RULED INVARIANT, in BOTH directions, because the brand green is 4.20:1 against white
+     whichever side it is on:
+       · white text on a solid brand FILL      (buttons, pills, banners)
+       · brand text on a white/near-white SURFACE (nav labels, links, headline figures)
+     Both were 4.20:1 and both now use --brand-deep at 6.12:1. Every such pair is asserted
+     individually, so a token change or a new control that drops one below AA is named.
 
   2. A RATCHET on everything else. There are other failing pairs — muted greys on white,
      light text on tints, the danger colour on its tint — none of them ruled on yet. The
@@ -21,8 +23,11 @@ opaque, so a transparent control over a card is measured against the card. The t
 composited over that background, and the element's own `opacity` is folded in, because a
 label at 60% opacity really is lower contrast.
 
-BASELINE: 94 distinct failing combinations at the time of writing, over the routes below.
-Lowering it is the point; raising it needs a ruling and a new number here.
+BASELINE: 84 distinct failing combinations at the time of writing, over the routes below.
+Lowering it is the point; raising it needs a ruling and a new number here. What they are, and
+why they are not fixed, is in PORT-COMPLETE.md — the dominant group is --ink-3, an approved
+token, and repainting every secondary label in the app is a design decision rather than a
+contrast fix.
 
 Provisions its own server (R6)."""
 import os
@@ -34,11 +39,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'sync'))
 from _serve import serve
 
-BASELINE = 94
+BASELINE = 84
 ROUTES = ['birds', 'bird', 'bird/new', 'breeding', 'races', 'races?tab=fci', 'health',
           'stats', 'tools', 'pedigree', 'cert', 'sign-in']
 BRAND = ('#128c6e', '#0e6f57')
 WHITE = ('#ffffff', '#fefefe')
+# 'near white' is the page and surface grounds the brand is ever set as text on
+NEAR_WHITE = ('#ffffff', '#fefefe', '#f5f7f8', '#fbfcfc')
 
 passed = failed = 0
 
@@ -109,7 +116,7 @@ try:
             await db.importAll(await (await fetch('./example-loft-large.json')).json(), 'merge'); }""")
         bid = pg.evaluate("async () => { const db = await window.__zajilDb; return db.allBirds()[0].id; }")
 
-        white_on_brand, fails = [], set()
+        white_on_brand, brand_on_white, fails = [], [], set()
         for route in ROUTES:
             base, _, qs = route.partition('?')
             url = ROOT + base + '.html' + (('?' + qs) if qs else '')
@@ -121,6 +128,8 @@ try:
                 r['route'] = route
                 if r['fg'].lower() in WHITE and r['bg'].lower() in BRAND:
                     white_on_brand.append(r)
+                if r['fg'].lower() in BRAND and r['bg'].lower() in NEAR_WHITE:
+                    brand_on_white.append(r)
                 if not r['pass']:
                     fails.add((route, r['fg'], r['bg'], r['px'], r['w']))
 
@@ -134,6 +143,16 @@ try:
         check('…and none of them is still filled with the lighter --brand',
               not light,
               '; '.join(f"{r['route']}/{r['testid'] or r['tag']}" for r in light[:4]))
+
+        check('brand-as-text surfaces were actually found (else this proves nothing)',
+              len(brand_on_white) >= 10, f'{len(brand_on_white)} found')
+        badT = [r for r in brand_on_white if not r['pass']]
+        check('[RULED] every brand-coloured TEXT on a white surface passes AA',
+              not badT,
+              '; '.join(f"{r['route']}/{r['testid'] or r['tag']} {r['ratio']}" for r in badT[:4]))
+        lightT = [r for r in brand_on_white if r['fg'].lower() == '#128c6e']
+        check('…and none of it is still the lighter --brand',
+              not lightT, '; '.join(f"{r['route']}/{r['testid'] or r['tag']}" for r in lightT[:4]))
 
         check(f'[RATCHET] distinct AA failures have not grown beyond {BASELINE}',
               len(fails) <= BASELINE, f'{len(fails)} distinct combinations')

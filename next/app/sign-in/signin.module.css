@@ -47,7 +47,7 @@
 
   .alt{ text-align:center; font-size:14px; font-weight:600; color:var(--ink-2); margin-top:18px; }
   .alt a{ color:var(--brand-deep); font-weight:800; text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:2px; }
-  .alt a:hover{ color:var(--brand); }
+  .alt a:hover{ color:var(--brand-deep); }
   .forgot{ text-align:center; font-size:13px; font-weight:600; color:var(--ink-3); margin-top:8px; }
   .forgot a{ color:var(--ink-2); font-weight:700; text-decoration:underline; text-underline-offset:3px; }
   .forgot a:hover{ color:var(--brand-deep); }
@@ -112,7 +112,7 @@
 /* the spec's «العودة إلى تسجيل الدخول» and «سجّل للوصول المبكر» are in-page toggles; in the port they stay in-page too,
    so both are buttons styled as the spec's links / .back */
 .linkbtn{ border:none; background:none; padding:0; cursor:pointer; font-family:var(--f); color:var(--brand-deep); font-weight:800; text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:2px; font-size:14px; }
-.linkbtn:hover{ color:var(--brand); }
+.linkbtn:hover{ color:var(--brand-deep); }
 /* the country select's two groups: the spec separates them with a disabled «──────────» row — an optgroup is the same
    information with a name on it, and a screen reader can use it */
 .early .field optgroup{ font-weight:800; color:var(--ink-2); }

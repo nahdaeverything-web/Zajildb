@@ -49,7 +49,7 @@
 
   .stepper{ display:flex; align-items:center; gap:10px; direction:ltr; justify-content:flex-end; }
   .stepper button{ width:48px; height:48px; border-radius:999px; border:1px solid var(--line); background:var(--page); font-size:22px; font-weight:700; color:var(--ink); cursor:pointer; }
-  .stepper input{ width:72px; height:48px; border:2px solid var(--line); border-radius:var(--r-btn); background:var(--surface); text-align:center; font-family:var(--f-mono); font-size:22px; font-weight:600; color:var(--brand); outline:none; }
+  .stepper input{ width:72px; height:48px; border:2px solid var(--line); border-radius:var(--r-btn); background:var(--surface); text-align:center; font-family:var(--f-mono); font-size:22px; font-weight:600; color:var(--brand-deep); outline:none; }
   .stepper .rng{ font-family:var(--f-mono); font-size:12px; color:var(--ink-3); margin-inline-end:auto; }
 
   .check{ display:flex; align-items:center; gap:14px; cursor:pointer; min-height:48px; }
@@ -96,7 +96,7 @@
   .kv .k{ font-size:14px; font-weight:700; color:var(--ink-2); flex:none; }
   .kv .v{ font-size:15px; font-weight:700; text-align:left; min-width:0; overflow:hidden; text-overflow:ellipsis; }
   .kv .v.num{ font-size:15px; }
-  .kv .v .big{ font-family:var(--f-mono); font-weight:600; font-size:26px; line-height:1; color:var(--brand); direction:ltr; }
+  .kv .v .big{ font-family:var(--f-mono); font-weight:600; font-size:26px; line-height:1; color:var(--brand-deep); direction:ltr; }
   .kv .v .big.zero{ color:var(--ink-3); }
   .kv .v.mute{ color:var(--ink-3); }
 
@@ -174,7 +174,7 @@
 
   /* about */
   .ver{ display:flex; align-items:baseline; gap:12px; margin-top:12px; }
-  .ver .v{ font-family:var(--f-mono); font-weight:600; font-size:30px; color:var(--brand); direction:ltr; line-height:1; }
+  .ver .v{ font-family:var(--f-mono); font-weight:600; font-size:30px; color:var(--brand-deep); direction:ltr; line-height:1; }
   .ver .k{ font-size:14px; font-weight:700; color:var(--ink-2); }
 
   /* ── nav ── */

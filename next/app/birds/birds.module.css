@@ -5,7 +5,7 @@
 .screen{ display:block; }
 
 .screen a{ color:var(--brand-deep); font-weight:700; }
-.screen a:hover{ color:var(--brand); }
+.screen a:hover{ color:var(--brand-deep); }
 .screen button{ font-family:var(--f); }
 .screen [hidden]{ display:none !important; }
 /* ── loft header ── */
@@ -14,7 +14,7 @@
 .eyebrow{ font-size:13px; font-weight:700; color:var(--ink-3); }
 .screen h1{ font-size:40px; font-weight:900; line-height:1.05; margin-top:4px; }
 .count{ font-size:15px; font-weight:700; color:var(--ink-2); margin-top:10px; display:flex; gap:6px; align-items:baseline; flex-wrap:wrap; }
-.count b{ font-size:24px; font-weight:900; color:var(--brand); direction:ltr; line-height:1; font-variant-numeric:tabular-nums; }
+.count b{ font-size:24px; font-weight:900; color:var(--brand-deep); direction:ltr; line-height:1; font-variant-numeric:tabular-nums; }
 .count .sep{ color:var(--ink-3); margin-inline:4px; }
 .tools{ display:flex; flex-direction:column; gap:12px; }
 .search{ display:flex; align-items:center; gap:10px; background:var(--page); border:2px solid var(--line); border-radius:var(--r-btn); padding:0 16px; min-height:56px; }

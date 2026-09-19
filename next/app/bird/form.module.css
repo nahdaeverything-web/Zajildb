@@ -142,7 +142,7 @@
 .picker .note{ font-size:13.5px; font-weight:600; color:var(--ink-2); margin-top:10px; }
 .picker .create{ border:1.5px dashed var(--line); background:transparent; color:var(--brand-deep); border-radius:12px; min-height:48px; padding:0 14px; font-family:var(--f); font-size:14.5px; font-weight:800; cursor:pointer; width:100%; text-align:start; margin-top:8px; }
 .picker .create small{ display:block; font-weight:600; color:var(--ink-3); font-size:12px; }
-.pempty .btns button.ghost.on, .prow .act.on{ color:var(--brand); }
+.pempty .btns button.ghost.on, .prow .act.on{ color:var(--brand-deep); }
 .filelist{ font-family:var(--f-mono); font-size:12px; color:var(--ink-2); direction:ltr; text-align:right; margin-top:6px; }
 .actions .alt{ flex:none; border:2px solid var(--line); background:transparent; color:var(--ink); border-radius:var(--r-btn); padding:17px 16px; font-family:var(--f); font-size:15px; font-weight:800; cursor:pointer; }
 /* the spec's parent-row plate is inline-styled in the markup (add-edit-bird-v2.html:226-228); the same values as a class */

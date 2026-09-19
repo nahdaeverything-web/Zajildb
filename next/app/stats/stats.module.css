@@ -20,7 +20,7 @@
   /* ── A. tiles ── */
   .tiles{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
   .tile{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:18px 18px 16px; }
-  .tile .n{ font-family:var(--f-mono); font-weight:600; font-size:40px; line-height:1; color:var(--brand); direction:ltr; text-align:right; font-variant-numeric:tabular-nums; }
+  .tile .n{ font-family:var(--f-mono); font-weight:600; font-size:40px; line-height:1; color:var(--brand-deep); direction:ltr; text-align:right; font-variant-numeric:tabular-nums; }
   .tile.total .n{ font-size:52px; }
   .tile .l{ font-size:13px; font-weight:800; color:var(--ink-2); margin-top:8px; }
   .tile.muted .n{ color:var(--ink-3); }
@@ -56,7 +56,7 @@
   /* ── COI summary ── */
   .coistat{ display:flex; align-items:baseline; gap:10px; margin-top:20px; padding-top:18px; border-top:1px solid var(--line); }
   .coistat .k{ flex:none; white-space:nowrap; font-size:14px; font-weight:800; color:var(--ink-2); }
-  .coistat .v{ font-family:var(--f-mono); font-weight:600; font-size:34px; line-height:1; color:var(--brand); direction:ltr; }
+  .coistat .v{ font-family:var(--f-mono); font-weight:600; font-size:34px; line-height:1; color:var(--brand-deep); direction:ltr; }
   .note{ display:flex; gap:8px; align-items:flex-start; margin-top:10px; font-size:13px; font-weight:600; color:var(--ink-2); }
   .note svg{ width:16px; height:16px; flex:none; margin-top:3px; stroke:var(--ink-3); stroke-width:2.6; fill:none; stroke-linecap:round; }
   .note b{ font-family:var(--f-mono); font-weight:600; direction:ltr; unicode-bidi:isolate; }
@@ -74,7 +74,7 @@
 
   /* ── season cards ── */
   .kpis{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px 18px; margin-top:16px; }
-  .kpi .n{ font-family:var(--f-mono); font-weight:600; font-size:34px; line-height:1; color:var(--brand); direction:ltr; text-align:right; font-variant-numeric:tabular-nums; }
+  .kpi .n{ font-family:var(--f-mono); font-weight:600; font-size:34px; line-height:1; color:var(--brand-deep); direction:ltr; text-align:right; font-variant-numeric:tabular-nums; }
   .kpi .n small{ font-family:var(--f); font-size:13px; font-weight:800; color:var(--ink-3); margin-inline-start:4px; }
   .kpi .l{ font-size:12.5px; font-weight:800; color:var(--ink-2); margin-top:6px; }
   .kpi.wide{ grid-column:1 / -1; }

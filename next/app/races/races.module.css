@@ -83,7 +83,7 @@
 
   /* ── FCI checker ── */
   .intro{ font-size:15px; font-weight:600; color:var(--ink-2); margin-bottom:14px; }
-  .intro strong{ color:var(--brand); font-weight:900; font-size:18px; }
+  .intro strong{ color:var(--brand-deep); font-weight:900; font-size:18px; }
   .fcard{ background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:16px; margin-bottom:10px; }
   .fcard.q{ background:var(--brand-tint); border-color:var(--brand); }
   .fcard .l1{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -92,14 +92,14 @@
   .ring .fci.off{ background:var(--danger-tint); color:var(--danger); }
   .fcard .cnt{ display:flex; gap:24px; margin-top:12px; }
   .cnt .v{ font-size:34px; font-weight:900; line-height:1; direction:ltr; }
-  .cnt .v.ok{ color:var(--brand); }
+  .cnt .v.ok{ color:var(--brand-deep); }
   .cnt .k{ font-size:12.5px; font-weight:600; color:var(--ink-2); margin-top:4px; }
   .why{ margin-top:12px; border-top:1px solid var(--line); padding-top:10px; display:flex; flex-direction:column; gap:6px; }
   .fcard.q .why{ border-color:rgba(18,140,110,.25); }
   .why div{ font-size:13.5px; font-weight:600; color:var(--ink-2); }
   .why b{ color:var(--ink); font-weight:800; }
   .bigv{ font-size:22px; font-weight:900; direction:ltr; }
-  .bigv.ok{ color:var(--brand); }
+  .bigv.ok{ color:var(--brand-deep); }
 
   /* ── empty ── */
   .empty{ text-align:center; padding:56px 20px; }

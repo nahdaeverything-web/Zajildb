@@ -12,7 +12,7 @@
  * now respects module scope so it cannot happen again. */
 .screen{ display:block; --gap:20px; }
 
-  .screen a{ color:var(--brand-deep); } .screen a:hover{ color:var(--brand); }
+  .screen a{ color:var(--brand-deep); } .screen a:hover{ color:var(--brand-deep); }
 
   .top{ background:var(--surface); padding:16px 20px 0; }
   .top .bar{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -36,7 +36,7 @@
 
   .tiles{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
   .tile{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px 10px 14px; text-align:center; }
-  .tile .n{ font-size:34px; font-weight:900; color:var(--brand); direction:ltr; line-height:1; font-variant-numeric:tabular-nums; }
+  .tile .n{ font-size:34px; font-weight:900; color:var(--brand-deep); direction:ltr; line-height:1; font-variant-numeric:tabular-nums; }
   .tile .l{ font-size:12.5px; color:var(--ink-2); font-weight:600; margin-top:6px; }
 
   .actions{ display:none; gap:10px; flex:none; }

@@ -15,7 +15,7 @@
  * an app token; found at Phase 6 by the fidelity audit, and the no-undefined-token guard
  * now respects module scope so it cannot happen again. */
 .screen{ --gap:18px; }   /* display comes from the spec's own layout rule below */
-  .screen a{ color:var(--brand-deep); } .screen a:hover{ color:var(--brand); }
+  .screen a{ color:var(--brand-deep); } .screen a:hover{ color:var(--brand-deep); }
   .screen button, .screen input{ font-family:var(--f); }
   .screen button:focus-visible, .screen input:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
 

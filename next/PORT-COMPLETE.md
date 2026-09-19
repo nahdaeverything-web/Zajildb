@@ -185,6 +185,40 @@ looked at. Both are fixed; the shape is worth remembering.
 
 ## 5. Deferred — the things that are NOT done
 
+### Accessibility: 84 contrast pairs, deliberately not fixed
+
+White text on a brand fill, and brand text on a white surface, were both **4.20:1** against
+AA's 4.5:1 — the brand green measures the same whichever side of the pair it is on. Both now
+use `--brand-deep` at **6.12:1**, and `tests/e2e/contrast.py` locks both directions.
+
+**Eighty-four distinct failing combinations remain, and they are a design decision rather
+than a contrast fix.** Grouped by the token pair that causes them:
+
+| text | on | distinct combos | worst | example |
+|---|---|---|---|---|
+| `--ink-3` | `--surface` / `#fff` | **50** | 2.97 | «موسم 2026 / 2027» |
+| `--ink-3` | `--page` | **20** | 2.77 | a count figure |
+| `#fff` | `--gold` | 4 | 2.65 | a gold-filled count |
+| `--gold` | `--surface` | 2 | 2.65 | the ♀ sex mark |
+| `--danger` | `--danger-tint` | 2 | 4.30 | the ✗ FCI chip |
+| `--ink-3` | `--brand-tint` | 1 | 2.61 | a tinted count |
+| five one-off greys | `--surface` / `--page` | 5 | 1.96 | disabled labels, «لا صورة بعد» |
+
+**`--ink-3` alone is 71 of the 84 — 85%.** It is an approved token and it is the colour of
+every secondary label in the app: captions, counts, hints, timestamps, the muted half of every
+two-tone line. Darkening it to clear 4.5:1 repaints all of them and flattens the deliberate
+hierarchy between primary and secondary text. That is a judgement about how the app should
+look, and it belongs to whoever owns the design — **RULED: it is not to be made by ratio.**
+
+The gold pairs are the same shape in miniature: `--gold` is a brand accent, and forcing it to
+AA as text would change what the accent *is*.
+
+What the ratchet does in the meantime: `contrast.py` fails if the count **grows** past 84, so
+nothing new can be added quietly while this waits. Lowering it is the point; raising it needs
+a ruling and a new number in the suite.
+
+
+
 **`live_deployment.py` — 11 assertions, the only uncovered ones left.** They need a real
 deployed origin. The suite as it exists cannot gate the port: there is no port copy, every
 DOM token in it is vanilla-only, and the URL and scope are hardcoded (it documents a
