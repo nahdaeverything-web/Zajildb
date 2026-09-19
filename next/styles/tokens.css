@@ -65,6 +65,25 @@
    * fallbacks match the specs' own stacks. */
   --f: var(--font-alexandria), 'Alexandria', system-ui, sans-serif;
   --f-mono: var(--font-plex-mono), 'IBM Plex Mono', monospace;
+
+  /* ── the desktop rail's width ──
+   * NOT a constant the layout can rely on. The rail sizes itself to its widest item
+   * (Nav.module.css `width:max-content`), so its real width depends on the label text and
+   * on the face that draws it — neither of which CSS can be told in advance. Four pieces of
+   * chrome have to clear the rail (`main`, the backup banner, the toast stack, and the bird
+   * form's fixed action bar) and they all read --rail-w; Nav.tsx measures the rail and
+   * publishes the value here at runtime.
+   *
+   * --rail-w-min is loft-home-v1.html:183's 132px, kept as the FLOOR so the rail never
+   * becomes narrower than the kit drew it. --rail-w below is only what the four dependants
+   * see before hydration; from then on Nav.tsx's inline property wins (inline beats
+   * stylesheet on the same :root element).
+   *
+   * These were five separate hard-coded 132s until 2026-09-19. «الإحصائيات» needs 121px of
+   * item box inside a 107px one, so it overflowed its own icon, and shortening the word was
+   * explicitly refused: the SIZE had to follow the content, not the other way round. */
+  --rail-w-min: 132px;
+  --rail-w: var(--rail-w-min);
 }
 
 /* ─────────────────────── SANCTIONED EXTENSIONS ───────────────────────

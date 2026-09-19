@@ -41,7 +41,10 @@ button:focus-visible, a:focus-visible, input:focus-visible{ outline:none; box-sh
   max-width:430px; padding-inline:12px; z-index:12; pointer-events:none; }
 .toaststack > *{ pointer-events:auto; }
 @media (min-width:701px){ .toaststack{ max-width:720px; } }
-@media (min-width:1100px){ .toaststack{ bottom:12px; max-width:960px; margin-inline:132px auto; } }
+/* --rail-w, not 132px: the toast stack is viewport-fixed, so it cannot inherit the rail's
+ * clearance from `main` and has to state it — but it states the rail's MEASURED width
+ * (styles/tokens.css), which follows the widest nav label instead of a constant. */
+@media (min-width:1100px){ .toaststack{ bottom:12px; max-width:960px; margin-inline:var(--rail-w) auto; } }
 .toaststack .ctx{ font-size:12px; font-weight:600; color:var(--ink-3); text-align:center; }
 /* ── 3 · confirm dialogs ── */
   .overlay{ background:rgba(16,24,32,.55); border-radius:var(--r); padding:28px 20px; display:grid; place-items:center; }

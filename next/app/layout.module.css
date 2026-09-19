@@ -1,7 +1,9 @@
 /* Kit "Adaptation rules": ≤700 phone · 701–1099 centred column max 720px ·
  * ≥1100 rail on the RTL start (right) edge, content to its left, max 960px.
- * The 132px start margin is the rail width from loft-home-v1.html line 183. */
+ * The start margin is --rail-w: the rail measures ITSELF (Nav.module.css sizes it to its
+ * widest item) and Nav.tsx publishes the result, so this clearance tracks the rail instead
+ * of repeating a number that goes stale the moment a nav label changes. */
 .main { min-height: 100vh; padding-bottom: 84px; }          /* clears the fixed tab bar */
 @media (min-width: 701px)  { .main { max-width: 720px; margin-inline: auto; border-inline: 1px solid var(--line); background: var(--surface); } }
-@media (min-width: 1100px) { .main { max-width: none; margin-inline: 132px 0; border: none; padding-bottom: 0; }
+@media (min-width: 1100px) { .main { max-width: none; margin-inline: var(--rail-w) 0; border: none; padding-bottom: 0; }
                              .main > * { max-width: 960px; margin-inline: auto; } }

@@ -1,4 +1,5 @@
 'use client';
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { t } from '@/src/i18n.ext.js';
@@ -46,6 +47,35 @@ const NO_TABBAR = ['/bird/new', '/bird/edit', '/cert'];
 export default function Nav() {
   // a plain file server serves the export as /birds.html, /bird/new.html; a static host as the clean path — compare the clean one
   const pathname = (usePathname() ?? '').replace(/\.html$/, '');
+
+  // THE RAIL MEASURES ITSELF. Nav.module.css sizes it to its widest item rather than to a
+  // number, so nothing can write its width down: it depends on the label text, the font
+  // size, and which face actually drew the glyphs. Four pieces of fixed or full-width
+  // chrome must clear it — `main`, the backup banner, the toast stack, the bird form's
+  // action bar — and all four read --rail-w. This publishes what the rail really is.
+  //
+  // Before hydration, and below 1100 where the rail is display:none, the token sheet's
+  // --rail-w-min (132px, the kit's drawing) is what they see; an inline property on the
+  // same :root element beats the stylesheet, so this overrides it as soon as it runs.
+  // ResizeObserver rather than a one-shot read because the width changes after the web
+  // font swaps in — the fallback face measures the six Arabic labels differently.
+  const rail = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = rail.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const root = document.documentElement;
+    const publish = () => {
+      const w = el.getBoundingClientRect().width;
+      // display:none measures 0. Publishing that would collapse every dependant's
+      // clearance; leave the token's default standing instead.
+      if (w > 0) root.style.setProperty('--rail-w', `${Math.ceil(w)}px`);
+      else root.style.removeProperty('--rail-w');
+    };
+    publish();
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => { ro.disconnect(); root.style.removeProperty('--rail-w'); };
+  }, []);
   const items = TABS.map((tab) => (
     <Link key={tab.href} href={tab.href} className={isOn(pathname, tab) ? s.on : undefined} data-testid="nav-link" data-tab={tab.href}>
       <svg viewBox="0 0 24 24" aria-hidden="true">{tab.icon}</svg>{t(tab.label)}
@@ -55,7 +85,7 @@ export default function Nav() {
   return (
     <>
       {!modalFlow && <nav className={s.tabbar} data-bottom-chrome="tabbar" data-testid="tabbar" aria-label="التنقل">{items}</nav>}
-      <nav className={s.rail} data-testid="rail" aria-label="التنقل">{items}</nav>
+      <nav className={s.rail} ref={rail} data-testid="rail" aria-label="التنقل">{items}</nav>
     </>
   );
 }

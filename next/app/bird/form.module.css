@@ -121,12 +121,16 @@
     .actions .inner{ max-width:560px; margin-inline:auto; }
   }
   @media (min-width:1100px){
-    .actions{ margin-inline-start:calc(50% - 330px + 132px); margin-inline-end:calc(50% - 330px); }
+    /* --rail-w, not 132px — see styles/tokens.css. The rail sizes itself to its widest
+     * label, so every piece of fixed chrome that clears it has to ask it how wide it is. */
+    .actions{ margin-inline-start:calc(50% - 330px + var(--rail-w)); margin-inline-end:calc(50% - 330px); }
   }
 
 /* ── port additions (not in the spec) ── */
-/* the shell's rail is 132px on the inline-start edge at ≥1100; the spec offset its fixed bar for a 660px frame the port does not have */
-@media (min-width:1100px){ .actions{ inset-inline-start:132px; max-width:none; } }
+/* the shell's rail sits on the inline-start edge at ≥1100 and is as wide as its widest
+ * label (--rail-w, styles/tokens.css); the spec offset its fixed bar for a 660px frame the
+ * port does not have */
+@media (min-width:1100px){ .actions{ inset-inline-start:var(--rail-w); max-width:none; } }
 /* vanilla keeps several rings per bird, each with a type (bird-form.js:62) — the spec draws one ring field; extra rows reuse it plus a type select */
 .ringrow{ display:flex; gap:8px; align-items:flex-start; margin-top:10px; }
 .ringrow > input{ flex:1; min-width:0; }
