@@ -195,6 +195,57 @@ try:
         pg.click('[data-testid=th-sort][data-key=name]'); pg.wait_for_timeout(200)
         names2 = pg.locator('[data-testid=table-row] [data-testid=cell-name]').all_inner_texts()
         check('[ruling 6] second click reverses the sort', names2 == list(reversed(names)))
+        # ── A BIRD WITH NO NAME RENDERS SOMETHING, IN BOTH VIEWS ───────────────────────
+        # A bird found in the register with a blank name cell, ring JO-2026-7591, entered by
+        # hand. Both halves of it were real:
+        #   · the record genuinely had name:"". Nothing requires a name — the form trims it
+        #     (bird/form.tsx:208) and classifySave has no name rule at all (engine/validate.js),
+        #     so a nameless bird is a legitimate record, not a corrupt one.
+        #   · and the two views DISAGREED about what to do with it. The phone row already fell
+        #     back to the ring (birds/view.tsx:151); the desktop table did not, and rendered an
+        #     empty <td>. One register, two readings of the same record.
+        # So this asserts the property for both views at once, over three shapes of nameless
+        # bird — the desktop table is the one that was broken, and the phone list is what stops
+        # the fix being a table-only patch that lets them drift apart again.
+        wipe(h)
+        pg.evaluate("""async () => { const db = await window.__zajilDb;
+            const mk = async (o) => db.saveBird({ ...db.newBird({ sex: 'cock', hatchDate: '2026-01-01' }), ...o });
+            const ring = (raw) => [{ raw, type: 'official' }];   // primaryRing reads .raw (BirdBits.tsx:12)
+            await mk({ name: '', rings: ring('JO-2026-7591') });    // the one that was reported
+            await mk({ name: '   ', rings: ring('JO-2026-7592') }); // whitespace is not a name
+            await mk({ name: '', rings: [] });                      // no name AND no ring at all
+            await mk({ name: 'مسمّى', rings: ring('JO-2026-7594') }); // a control: a named bird
+        }""")
+        pg.goto(BIRDS, wait_until='load'); pg.wait_for_timeout(1200)
+
+        # the NAME SLOT in each view, not the whole row: the phone row also prints the ring on
+        # its second line, so a row-level check reports a blank name slot as answered. That is
+        # the weaker test passing while the defect stands.
+        for vw, sel in ((430, '[data-testid=bird-row] [data-testid=row-name]'),
+                        (1400, '[data-testid=table-row] [data-testid=cell-name]')):
+            pg.set_viewport_size({'width': vw, 'height': 900}); pg.wait_for_timeout(300)
+            cells = pg.locator(sel).all_inner_texts()
+            check(f'@{vw}: all four birds are listed (else this proves nothing)',
+                  len(cells) == 4, f'{len(cells)} row(s)')
+            blank = [i for i, c in enumerate(cells) if not c.strip()]
+            check(f'@{vw}: no bird renders as a blank — a nameless one falls back to its ring or id',
+                  not blank, f'row(s) {blank} empty of {len(cells)}: {cells}')
+            check(f'@{vw}: the reported bird shows its ring where its name would be',
+                  any('JO-2026-7591' in c for c in cells), cells)
+            check(f'@{vw}: a whitespace-only name is treated as no name, not as a name',
+                  any('JO-2026-7592' in c for c in cells), cells)
+            check(f'@{vw}: the control bird still shows its NAME, not its ring',
+                  any('مسمّى' in c for c in cells), cells)
+
+        # and the two views must agree — the defect was not the empty cell, it was the
+        # disagreement. Compare the identifying text the two renderings settle on.
+        pg.set_viewport_size({'width': 430, 'height': 900}); pg.wait_for_timeout(300)
+        phone = sorted(c.strip() for c in pg.locator('[data-testid=bird-row] [data-testid=row-name]').all_inner_texts())
+        pg.set_viewport_size({'width': 1400, 'height': 900}); pg.wait_for_timeout(300)
+        table = sorted(c.strip() for c in pg.locator('[data-testid=table-row] [data-testid=cell-name]').all_inner_texts())
+        check('the phone list and the desktop table name the same four birds the same way',
+              phone == table, f'phone {phone}  table {table}')
+
         check('zero page errors', not errs, errs)
 
         # ── SMALL STATE (spec data-v="small": ≤ 8 birds) ──

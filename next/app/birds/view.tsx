@@ -72,7 +72,7 @@ export default function BirdsView() {
     }
     return birds.map((b) => {
       const lr = lastByBird.get(b.id);
-      return { b, name: b.name || '', ring: primaryRing(b), year: b.hatchDate ? b.hatchDate.slice(0, 4) : '—', sexK: sexKind(b.sex), stK: stKind(b.status), stLabel: statusLabel(b.status || ''),
+      return { b, name: (b.name || '').trim(), ring: primaryRing(b), year: b.hatchDate ? b.hatchDate.slice(0, 4) : '—', sexK: sexKind(b.sex), stK: stKind(b.status), stLabel: statusLabel(b.status || ''),
         last: lr && lr.position ? { w: lr.raceName || lr.releasePoint?.name || '', pl: lr.position } : null };
     });
   }, [birds, version]);
@@ -148,7 +148,7 @@ export default function BirdsView() {
                 <div className={s.yearlbl} data-testid="year-label"><span className={s.y}>{t('loft.generation', { y })}</span><span className={s.c}>{fmtNum(rs.length)}</span></div>
                 {rs.map((r) => (
                   <Link key={r.b.id} href={`/bird?id=${r.b.id}`} className={`${s.brow} ${r.stK === 'gone' ? s.gone : ''}`} data-testid="bird-row">
-                    <span className={s.mid}><span className={s.nm}>{r.name || r.ring || r.b.id.slice(0, 8)}</span><span className={s.sub}>{r.ring && <Plate ring={r.ring} />}<Sx k={r.sexK} /><St r={r} />{r.b.external && <Ext />}</span></span>
+                    <span className={s.mid}><span className={s.nm} data-testid="row-name">{r.name || r.ring || r.b.id.slice(0, 8)}</span><span className={s.sub}>{r.ring && <Plate ring={r.ring} />}<Sx k={r.sexK} /><St r={r} />{r.b.external && <Ext />}</span></span>
                     <svg className={s.chev} viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
                   </Link>
                 ))}
@@ -168,7 +168,15 @@ export default function BirdsView() {
                 {sorted.map((r) => (
                   <tr key={r.b.id} tabIndex={0} className={r.stK === 'gone' ? s.gone : ''} data-testid="table-row" onClick={() => router.push(`/bird?id=${r.b.id}`)}>
                     <td className={s.ltr}>{r.ring ? <Plate ring={r.ring} /> : '—'}</td>
-                    <td className={s.nm} data-testid="cell-name">{r.name}{r.b.external && <> <Ext /></>}</td>
+                    {/* the SAME fallback the phone list uses at :151. A bird may legitimately
+                        have no name — nothing requires one: the form trims the field to ""
+                        (bird/form.tsx:208) and classifySave has no name rule — and the table
+                        rendered an empty cell for it while the phone row showed the ring.
+                        Two views of one record must not disagree about whether it is nameless.
+                        The trim that makes this work is at :75, on the row, not here: a name
+                        of "   " is truthy, so without it BOTH views print a blank and the
+                        name sort puts the blank first. One cause, one place. */}
+                    <td className={s.nm} data-testid="cell-name">{r.name || r.ring || r.b.id.slice(0, 8)}{r.b.external && <> <Ext /></>}</td>
                     <td><Sx k={r.sexK} /></td>
                     <td><St r={r} /></td>
                     <td className={`${s.yr} ${s.ltr}`}>{r.year}</td>
