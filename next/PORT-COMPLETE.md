@@ -185,76 +185,107 @@ looked at. Both are fixed; the shape is worth remembering.
 
 ## 5. Deferred — the things that are NOT done
 
-### Accessibility: 108 contrast pairs, deliberately not fixed
+### Accessibility: 105 contrast pairs, deliberately not fixed
 
 White text on a brand fill, and brand text on a white surface, were both **4.20:1** against
 AA's 4.5:1 — the brand green measures the same whichever side of the pair it is on. Both now
 use `--brand-deep` at **6.12:1**, and `tests/e2e/contrast.py` locks both directions.
 
-#### Read this before you read the number: 84 → 108 is a WIDER SCAN, not 24 new failures
+#### Read this before you read the number: 84 → 105, via 110, is a WIDER SCAN
 
 The suite used to render every route at **430px only**. A desktop-only control therefore could
-not fail it — which is exactly how «طير جديد» reached a real browsing session as a solid
-brand rectangle with an invisible label at **1.00:1**. The suite now scans at **430 and 1400**,
-and the baseline moved because it can finally see the desktop layout:
+not fail it — which is exactly how «طير جديد» reached a real browsing session as a solid brand
+rectangle with an invisible label at **1.00:1**. The suite now scans at **430 and 1400**, and
+the baseline first *rose* because it could finally see the desktop layout, then fell as three
+rulings were applied:
 
 |  | distinct failing combinations |
 |---|---|
 | the old baseline, at 430px alone | **84** |
-| the certificate's plate year stopped failing (ruled, below) | −1 |
-| what the phone-width scan finds today | **83** |
-| what only the DESKTOP width shows | **+25** |
-| **today's baseline** | **108** |
+| what ONLY the desktop width shows | **+26** |
+| **the same app, finally measured at both widths** | **110** |
+| the certificate's plate year, at the 9px and 11px it renders — `--ink` on `--gold` | −2 |
+| three disabled treatments that were dimming (tools ×2, the certificate ×1) | −3 |
+| **today's baseline** | **105** |
 
-**All 25 of the desktop-only ones are `--ink-3`** on white or page — table headers, ruler
-labels, empty dashes, the desktop nav rail's own labels. They belong to the same dominant,
-approved-token group as most of the other 83, and they are covered by the same ruling.
+**No defect was added to reach 110, and every line of that table is measured rather than
+derived.** All 26 of the desktop-only ones were read before the number moved: 25 are `--ink-3`
+on white or page — table headers, ruler labels, empty dashes, the desktop nav rail's own
+labels — and the 26th was the gold badge, now handled.
 
-**There was a 26th, and it was the only one that was not `--ink-3`:** the certificate's ring
-plate year, «16», **white on `--gold`, 2.65:1**. RULED 2026-09-19 — *do not invent a darker
-gold; gold is an accent and forcing it to AA changes what the accent is,* the same reasoning
-that protects `--ink-3`. The **label** moved instead: `--ink` on `--gold`, measured **6.76:1**
-(`app/cert/cert.module.css:185`). It renders at 9px and 11px, so that single fix removed
-**two** combinations — which is why the total is 108 and not 109. `--ink` on a gold plate was
-already the treatment in `src/components/shared.module.css:59`, so the certificate now agrees
-with the shared component rather than introducing anything.
+Two of the disabled fixes removed nothing from this count — sign-in's input and breeding's
+pair save — because neither state is reachable by loading a route: they need the app to be
+submitting, or a form to be invalid. They were found by reading the stylesheets and computing
+the pairs, and they are held by the *forced* half of the disabled sweep instead. **A ratchet
+only ever sees what the page happens to render**, which is the whole reason the suite does not
+rely on it alone.
 
-#### The 108, grouped by the token pair that causes them
+#### RULED 2026-09-19: gold keeps its colour, the label moves
+
+`--gold` as a fill under white text measured **2.65:1**. Darkening the gold was refused —
+*gold is an accent and forcing it to AA changes what the accent is*, the same reasoning that
+protects `--ink-3`. The **label** moved instead: `--ink` on `--gold`, measured **6.76:1**
+(`app/cert/cert.module.css:185`).
+
+Scope is the certificate for now. **Nine other rules still paint white on a gold fill** — the
+ring plate's year or season on birds, breeding, pedigree, bird, the bird form, races and
+health, plus bird's `.best` panel and `.pill.gold` — and they are deferred by the same ruling,
+recorded by token pair (`#fff on --gold`, 3 combos, worst 2.65).
+
+#### RULED 2026-09-19: one disabled pattern, floor 3:1
+
+The disabled treatment chosen at Phase 5 — an inert `--line` fill with `--ink-2` ink, **6.22:1**
+— is now the app-wide pattern. It replaced **five** different treatments, all below the 3:1
+floor, and the common thread in three of them was `opacity`, which drags the label and its
+ground toward each other at the same time:
+
+| where | before | ratio | after |
+|---|---|---|---|
+| `cert .row.off .pick` | brand-deep on brand-tint @45% | **1.93** | 6.22 |
+| `sign-in .field input:disabled` | ink-3 on page @70% | **1.95** | 6.22 |
+| `breeding .mact .save:disabled` | ink-3 on line | **2.43** | 6.22 |
+| `tools .btn.primary:disabled` | #fff on brand-deep @55% | **2.45** | 6.22 |
+| `shared .btn.cancel:disabled` | ink-3 on surface | **2.97** | 6.22 |
+| `form .actions .save:disabled` | ink-2 on line — *the ruled one* | 6.22 | unchanged |
+
+**Busy is still distinguishable from unavailable.** A button disabled because it is working
+keeps its spinner; the spinner is the busy signal, not the colour. Its ring moves to `--ink-2`
+so it stays visible on the grey — the same shape as the brand-deep ring it replaced
+(`shared.module.css`, `tools.module.css`). The certificate's OFF rows still dim their thumbnail
+and text, because that is the *row* saying it is off; only the *control* takes the inert
+treatment.
+
+One WebKit detail worth keeping: sign-in's disabled input sets `-webkit-text-fill-color` as
+well as `color`. WebKit ignores `color` on a disabled input and paints its own grey, so the
+rule would have measured correctly in Chromium and been wrong on the iPhones this app is
+mostly used on.
+
+`UNRULED_LOW_FILL` in the suite is now **empty**, and nothing landed in it.
+
+#### The 105, grouped by the token pair that causes them
 
 | text | on | distinct combos | worst | example |
 |---|---|---|---|---|
 | `--ink-3` | `--surface` / `#fff` | **69** | 2.97 | «موسم 2026 / 2027» |
 | `--ink-3` | `--page` | **26** | 2.77 | a count figure |
-| `#fff` | `--gold` | 3 | 2.65 | the ring plate's year, on every screen but the certificate |
 | `--gold` | `--surface` | 2 | 2.65 | the ♀ sex mark |
 | `--danger` | `--danger-tint` | 2 | 4.30 | the ✗ FCI chip |
+| `#fff` | `--gold` | 3 | 2.65 | the ring plate's year, off the certificate |
 | `--ink-3` | `--brand-tint` | 1 | 2.61 | a tinted count |
-| five one-off greys | `--surface` / `--page` / `--brand-tint` | 5 | 1.96 | disabled labels, «لا صورة بعد», «اختيار صورة» |
+| two one-off greys | `--surface` | 2 | 2.12 | the certificate's dimmed OFF-row text |
 
-**`--ink-3` alone is 96 of the 108 — 89%.** It is an approved token and it is the colour of
+**`--ink-3` alone is 96 of the 105 — 91%.** It is an approved token and it is the colour of
 every secondary label in the app: captions, counts, hints, timestamps, the muted half of every
 two-tone line. Darkening it to clear 4.5:1 repaints all of them and flattens the deliberate
 hierarchy between primary and secondary text. That is a judgement about how the app should
 look, and it belongs to whoever owns the design — **RULED: it is not to be made by ratio.**
 
-**The gold pairs are deferred on the same grounds, recorded by token pair.** Nine rules still
-paint white on a gold fill — the ring plate's year or season on birds, breeding, pedigree,
-bird, the bird form, races and health, plus bird's `.best` panel and `.pill.gold`. The
-certificate was singled out because it is the artefact that gets printed and read on paper.
-Extending `--ink` on `--gold` to the other nine is a one-line change per file if the design
-owner wants the consistency; it is **not** taken here.
-
-**One low pair is recorded by name in the suite rather than deferred silently.** The
-certificate's OFF photo rows dim everything to 45% (`cert.module.css:92`), taking «اختيار
-صورة» to **1.96:1**. That control is genuinely disabled (`pointer-events:none`), and a
-disabled-state ruling already exists — `app/bird/form.module.css:96-108` chose an inert
-`--line` fill with `--ink-2` ink at **6.22:1**, floor 3:1. So this one misses a ruling that is
-already on the books. Extending it is the design owner's call, so `contrast.py` names it in
-`UNRULED_LOW_FILL`: it does not fail the suite, and anything that JOINS it does.
+The two remaining one-off greys are the certificate's OFF-row **title and description**. They
+are text, not controls, so the disabled ruling does not reach them; they sit with `--ink-3`.
 
 #### What the suite holds while this waits
 
-`contrast.py` now asserts three things, not one:
+`contrast.py` asserts four things, not one:
 1. **the ruled invariant, both directions** — every white-on-brand fill and every
    brand-on-white text at AA, each pair named individually;
 2. **filled controls, whole** — every control that paints an opaque fill of its own must have
@@ -264,7 +295,14 @@ already on the books. Extending it is the design owner's call, so `contrast.py` 
    asserts by name that `birds/add-bird` and `pedigree/hero-cert` — the two that shipped at
    1.00:1 — are in the measured set, because "we scan everything" is what the single-width
    version of this suite also believed;
-3. **a ratchet** — the count fails if it **grows** past 108, so nothing new can be added
+3. **every disabled control at the 3:1 floor**, composited through the whole opacity chain on
+   *both* sides — folding opacity into the text alone understates a dimmed button badly, and
+   dimming was the cause in three of the five. Because most disabled states need the app to be
+   busy or a form to be invalid, the sweep runs twice: over what is genuinely disabled on the
+   page (26 controls), and again with `disabled` FORCED on every visible form control (210),
+   which makes `:disabled` match and exercises the stylesheet rule itself. Worst measured:
+   **5.19:1**;
+4. **a ratchet** — the count fails if it **grows** past 105, so nothing new can be added
    quietly. Lowering it is the point; raising it needs a ruling and a new number in the suite.
 
 **`live_deployment.py` — 11 assertions, the only uncovered ones left.** They need a real

@@ -89,8 +89,14 @@
   .sw::after{ content:''; position:absolute; top:3px; inset-inline-start:3px; width:26px; height:26px; border-radius:999px; background:#fff; transition:transform .15s; }
   .sw.on{ background:var(--brand); } .sw.on::after{ transform:translateX(-22px); }
   .pick{ border:none; background:var(--brand-tint); color:var(--brand-deep); font-weight:800; font-size:13px; padding:0 14px; min-height:40px; border-radius:999px; cursor:pointer; white-space:nowrap; flex:none; }
-  .row.off .thumb, .row.off .t, .row.off .d, .row.off .pick{ opacity:.45; }
-  .row.off .pick{ pointer-events:none; }
+  .row.off .thumb, .row.off .t, .row.off .d{ opacity:.45; }
+  /* .pick is NOT in that list any more. It is a genuinely disabled CONTROL
+   * (pointer-events:none, below), and dimming it to 45% took «اختيار صورة» to 1.93:1 — the
+   * worst disabled state in the app. It takes the ruled disabled pattern instead
+   * (app/bird/form.module.css:96-108): inert --line fill, --ink-2 ink, 6.22:1. The rest of
+   * an off row still dims, because that is the row saying it is off, not a control saying
+   * it is unavailable. */
+  .row.off .pick{ pointer-events:none; background:var(--line); color:var(--ink-2); }
   .away-row .d{ color:var(--ink-2); display:flex; gap:6px; align-items:center; }
   .away-row .d svg{ width:14px; height:14px; stroke:var(--ink-3); stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
   .fields{ display:flex; flex-direction:column; }

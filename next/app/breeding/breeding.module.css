@@ -224,7 +224,9 @@
   .mact{ display:flex; gap:10px; margin-top:26px; }
   .mact .cancel{ flex:1; border:2px solid var(--line); background:var(--surface); color:var(--ink); border-radius:var(--r-btn); min-height:58px; font-size:16px; font-weight:800; cursor:pointer; }
   .mact .save{ flex:2; border:none; background:var(--brand-deep); color:#fff; border-radius:var(--r-btn); min-height:58px; font-size:17px; font-weight:800; cursor:pointer; }
-  .mact .save:disabled{ background:var(--line); color:var(--ink-3); cursor:not-allowed; }
+  /* the ruled disabled pattern (app/bird/form.module.css:96-108). The fill was already
+   * right; the ink was --ink-3, which is 2.43:1 on it. --ink-2 is 6.22:1. */
+  .mact .save:disabled{ background:var(--line); color:var(--ink-2); cursor:not-allowed; }
   .mact .save.warn{ background:var(--gold); }
 
   @media (hover:hover){

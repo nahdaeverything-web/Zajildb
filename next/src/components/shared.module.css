@@ -108,10 +108,27 @@ button:focus-visible, a:focus-visible, input:focus-visible{ outline:none; box-sh
 .btnrow{ display:flex; gap:10px; max-width:390px; }
 .btn{ flex:1; border:none; border-radius:var(--r-btn); min-height:58px; padding:0 20px; font-size:17px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:10px; }
 .btn.save{ background:var(--brand-deep); color:#fff; }
-.btn.save:disabled{ background:var(--brand-tint); color:var(--brand-deep); cursor:default; }
-.btn.save:disabled .spinner{ width:18px; height:18px; border-width:2.5px; border-color:rgba(14,111,87,.25); border-top-color:var(--brand-deep); }
 .btn.cancel{ flex:none; border:2px solid var(--ink); background:transparent; color:var(--ink); font-size:16px; }
-.btn.cancel:disabled{ border-color:var(--line); color:var(--ink-3); cursor:default; }
+/* ── THE DISABLED PATTERN, app-wide. RULED at Phase 5, extended 2026-09-19 ──
+ * An inert --line fill with --ink-2 ink, measured 6.22:1, floor 3:1. Chosen over dimming
+ * because taking the BRAND COLOUR AWAY is what reads as "not available" — a brand-green
+ * label at reduced opacity reads as a rendering glitch. The full ruling, with the three
+ * candidates and their numbers, is at app/bird/form.module.css:96-108.
+ *
+ * It replaced five different treatments, all of which missed the 3:1 floor:
+ *   cert .row.off .pick        brand-deep on brand-tint @45%   1.93
+ *   sign-in input:disabled     ink-3 on page @70%              1.95
+ *   breeding .mact .save       ink-3 on line                   2.43
+ *   tools .btn.primary         #fff on brand-deep @55%         2.45
+ *   .btn.cancel (below)        ink-3 on surface                2.97
+ * Opacity is what most of them had in common, and opacity is what the ruling rejects:
+ * it drags the LABEL and its GROUND toward each other at the same time.
+ *
+ * BUSY IS STILL DISTINGUISHABLE. A button disabled because it is working keeps its spinner;
+ * the spinner is the busy signal, not the colour. Its ring is recoloured to --ink-2 so it
+ * stays visible on the grey — the same shape as the brand-deep ring this replaced. */
+.btn.save:disabled, .btn.cancel:disabled { background:var(--line); color:var(--ink-2); border-color:var(--line); cursor:default; }
+.btn.save:disabled .spinner{ width:18px; height:18px; border-width:2.5px; border-color:rgba(74,85,96,.25); border-top-color:var(--ink-2); }
 /* ── 8 · offline media (bird-profile-v1 grammar) ── */
   .gal{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:390px; }
 .ph{ aspect-ratio:1; border-radius:18px; position:relative; border:none; padding:0; background:var(--page); text-align:center; }

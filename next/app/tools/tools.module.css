@@ -84,7 +84,12 @@
   .btn.ghost{ background:var(--page); color:var(--ink); border:1px solid var(--line); }
   .btn.danger{ background:var(--surface); color:var(--danger); border:2px solid var(--danger); }
   .btn.sm{ min-height:46px; font-size:14.5px; padding:0 16px; width:auto; }
-  .btn:disabled{ opacity:.55; cursor:default; }
+  /* the ruled disabled pattern — src/components/shared.module.css, ruling at
+   * app/bird/form.module.css:96-108. This was `opacity:.55`, which took the primary
+   * button to 2.45:1. These buttons are disabled because they are BUSY, so the spinner
+   * ring moves to --ink-2 with them or it vanishes into the grey. */
+  .btn:disabled{ background:var(--line); color:var(--ink-2); border-color:var(--line); cursor:default; }
+  .btn:disabled .spin{ border-color:rgba(74,85,96,.35); border-top-color:var(--ink-2); }
   .btn .spin{ width:18px; height:18px; border-radius:50%; border:3px solid rgba(255,255,255,.35); border-top-color:#fff; animation:spin .8s linear infinite; }
   @keyframes spin{ to{ transform:rotate(360deg);} }
   .btns{ display:grid; gap:10px; margin-top:16px; }
