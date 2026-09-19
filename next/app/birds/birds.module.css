@@ -5,6 +5,13 @@
 .screen{ display:block; }
 
 .screen a{ color:var(--brand-deep); font-weight:700; }
+/* A filled button is a button even when it is an <a>. `.screen a{ color:... }` has
+   specificity (0,1,1) and a single-class button rule has (0,1,0), so the generic anchor
+   colour won and the label took the SAME colour as its own fill — measured 1.00:1, an
+   invisible label on a solid green rectangle. It was 1.46:1 before the brand-deep sweep,
+   i.e. already unreadable; the sweep only removed the last of the difference.
+   These rules re-raise the specificity so a filled button owns its own label colour. */
+.screen a.btn-add{ color:#fff; }
 .screen a:hover{ color:var(--brand-deep); }
 .screen button{ font-family:var(--f); }
 .screen [hidden]{ display:none !important; }
