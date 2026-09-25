@@ -34,6 +34,10 @@ OPT_IN = {
     'pull_live.py': ('--live-pull', 'needs the internet and live credentials; reads the real project'),
     'auth_live.py': ('--live-auth', 'needs the internet and live credentials, and WRITES to the real project (the sign-in screen runs the first-login cycle)'),
     'import_boundary.py': ('--boundary', 'seeds ~537 MB of media and writes a file of the same order — slow and disk-hungry, not slow-and-flaky'),
+    # THE DEPLOY GATE. It has no local origin to run against and will not invent one: it needs
+    # ZAJIL_LIVE_URL pointing at a real deployment. Opt-in rather than skipped-if-unset, so
+    # that "the deploy gate did not run" can never read as "the deploy gate passed".
+    'live_deployment.py': ('--live-deploy', 'tests a DEPLOYED origin over the internet; needs ZAJIL_LIVE_URL'),
 }
 SUITES = sorted(f for f in glob.glob(os.path.join(HERE, '*.py')) if os.path.basename(f) not in ({'run_all.py'} | set(OPT_IN)))
 skipped = []
