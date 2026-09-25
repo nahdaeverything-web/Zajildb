@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 import { t } from '@/src/i18n.ext.js';
 import * as db from '@/src/db.js';
@@ -49,7 +50,9 @@ export default function BackupBanner() {
   return (
     <div className={s.banner} role="status" data-testid="backup-warn">
       <span>{t('backup.warn30')}</span>
-      <a className={s.act} href="/tools" data-testid="backup-warn-act">{t('act.export')}</a>
+      {/* next/link, not a raw <a>: an anchor is emitted verbatim, so href="/tools" left the
+          app entirely under a basePath deployment. See src/components/Empty.tsx. */}
+      <Link className={s.act} href="/tools" data-testid="backup-warn-act">{t('act.export')}</Link>
     </div>
   );
 }

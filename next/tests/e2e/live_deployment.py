@@ -41,8 +41,11 @@ AND TWO THINGS THE ORIGINAL DID NOT ASK, both of which are the whole point of th
     extensionless deep routes, which is also §g's "walk more than the root path".
 
 Provisions nothing: the origin under test is the deployment."""
+import json
 import os
+import re
 import sys
+import urllib.request
 import uuid as _uuid
 
 from playwright.sync_api import sync_playwright
@@ -70,7 +73,9 @@ EXPECTED_VERSION = os.environ.get('ZAJIL_EXPECTED_VERSION') or ('zajil-v' + _pkg
 
 # The scope is DERIVED from the URL, never asserted against a literal.
 from urllib.parse import urlparse
-EXPECTED_SCOPE = urlparse(URL).path or '/'
+_u = urlparse(URL)
+EXPECTED_SCOPE = _u.path or '/'
+ORIGIN = f'{_u.scheme}://{_u.netloc}'      # hrefs resolve against this, not against the prefix
 
 # The shipped datasets carry real uuids. Python's uuid5 derives exactly what tools/idmap.js
 # derives from the same namespace and key, so this suite names birds by the readable key.
@@ -171,6 +176,7 @@ with sync_playwright() as p:
         shape = 'as next/link renders it' if route.endswith('/') else 'bare, as a human types it'
         check(f'COLD (no worker): /{route} is served as the app — {shape}',
               status == 200 and got == 6, f'HTTP {status}, {got} nav links at {URL + route}')
+
     cold.close()
 
     # ── seed over the real network, through the UI: a release build has no harness ──
@@ -181,6 +187,88 @@ with sync_playwright() as p:
     page.goto(URL + 'birds/', wait_until='load'); page.wait_for_timeout(2500)
     rows = page.locator('[data-testid=bird-row]').count()
     check('the 38-bird example loaded from the live site', rows == 38, f'{rows} rows')
+
+    # ── EVERY ROUTE THE EXPORT WROTE, AND EVERY LINK THE APP RENDERS ──────────────
+    # ADDED 2026-09-25, after «أضف أول طائر» 404d on the live site and this gate passed.
+    #
+    # The hand-written list above walked three routes. It could not have caught that, and
+    # neither could a list of ten: the broken control pointed at `/bird/new`, which is not a
+    # route of this app at all. `/zajilv2/bird/new/` was 200 the whole time. So there are two
+    # questions here and only the second one finds that class of defect:
+    #
+    #   A. is every route the export WROTE actually served?   (a deploy that dropped a file)
+    #   B. does every href the app RENDERS resolve inside this deployment and answer 200?
+    #      (a link that leaves the app — basePath missing, a raw <a> where next/link belongs)
+    #
+    # Both lists are DERIVED, never typed. A is the worker's own precache manifest, which is
+    # generated from out/, fetched from the live origin so it describes what is deployed
+    # rather than what is on this machine. B is the DOM: whatever the app puts in an href is
+    # what a human can click, including controls no test author thought to name.
+    with urllib.request.urlopen(URL + 'sw.js', timeout=30) as _r:
+        _sw = _r.read().decode('utf-8')
+    _shell = json.loads(re.search(r'const SHELL = (\[[\s\S]*?\n\]);', _sw).group(1))
+    export_routes = sorted({u[:-len('index.html')] for u in _shell if u.endswith('/index.html')})
+    check('the route list was derived from the deployment, not typed here',
+          len(export_routes) >= 10, f'{len(export_routes)} routes from the served precache manifest')
+
+    cold2 = br.new_context(viewport={'width': 390, 'height': 844}, service_workers='block')
+    cp = cold2.new_page(); cp.set_default_timeout(60000)
+    missing = []
+    for r in export_routes:
+        resp = cp.goto(ORIGIN + r, wait_until='load')
+        cp.wait_for_timeout(350)
+        if not resp or resp.status != 200:
+            missing.append(f'{r} -> HTTP {resp.status if resp else "no response"}')
+    check(f'[A] every one of the {len(export_routes)} routes the export wrote is served COLD',
+          not missing, '; '.join(missing[:5]))
+
+    # BOTH STATES, and the empty one is not optional. A seeded loft renders the register; an
+    # EMPTY loft renders the first-run empty state, whose CTA is the only control it offers —
+    # and that is the control a human found 404ing while this gate was green. Walking only the
+    # seeded app would have caught the backup banner and missed the reported bug entirely.
+    COLLECT = """() => [...document.querySelectorAll('a[href]')].map(a => ({
+          href: a.getAttribute('href'), resolved: a.href,
+          testid: a.getAttribute('data-testid') || '', text: (a.textContent||'').trim().slice(0,18) }))"""
+    hrefs = {}
+    empty = br.new_context(viewport={'width': 390, 'height': 844})
+    ep = empty.new_page(); ep.set_default_timeout(60000)
+    for who, pg_ in (('empty loft', ep), ('seeded loft', page)):
+        for r in export_routes:
+            pg_.goto(ORIGIN + r, wait_until='load'); pg_.wait_for_timeout(700)
+            for h in pg_.evaluate(COLLECT):
+                # one representative per (testid, path): 38 bird rows are one link, 38 times
+                if h['href'].startswith('#') or not h['resolved'].startswith(ORIGIN):
+                    continue
+                h['state'] = who
+                hrefs.setdefault((h['testid'], h['resolved'].split('?')[0]), h)
+    empty.close()
+    check('links were actually found to check, in BOTH loft states (else this proves nothing)',
+          len(hrefs) >= 8 and {h['state'] for h in hrefs.values()} == {'empty loft', 'seeded loft'},
+          f"{len(hrefs)} distinct internal links across {len(export_routes)} routes; "
+          f"states seen: {sorted({h['state'] for h in hrefs.values()})}")
+
+    # (i) the cheap, decisive half: a link that leaves the deployment is broken by inspection
+    escaped = [h for h in hrefs.values() if not h['resolved'].startswith(URL)]
+    check('[B1] no rendered link points OUTSIDE this deployment',
+          not escaped,
+          '; '.join(f"{h['testid'] or h['text']!r} ({h['state']}) -> {h['href']}" for h in escaped[:5]))
+
+    # (ii) and the ones that stay inside must actually answer
+    dead = []
+    for h in hrefs.values():
+        if not h['resolved'].startswith(URL):
+            continue
+        resp = cp.goto(h['resolved'], wait_until='load')
+        cp.wait_for_timeout(300)
+        if not resp or resp.status != 200:
+            dead.append(f"{h['testid'] or h['text']} {h['href']} -> HTTP {resp.status if resp else '?'}")
+    check(f'[B2] every one of the {len(hrefs)} rendered links answers 200 COLD',
+          not dead, '; '.join(dead[:5]))
+    cold2.close()
+    # leave `page` where the offline section expects it: the walk above ended on whatever
+    # route came last, and reloading THERE offline counts zero bird rows for a reason that
+    # has nothing to do with offline.
+    page.goto(URL + 'birds/', wait_until='load'); page.wait_for_timeout(2000)
 
     # ── offline ───────────────────────────────────────────────────────────────────
     ctx.set_offline(True)
