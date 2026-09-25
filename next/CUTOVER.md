@@ -367,9 +367,17 @@ Two consequences, pulling in opposite directions:
   real app is running a dev build against their live loft, and every write is shared both
   ways. A side-by-side deployment on one origin is a side-by-side VIEW, not a safe trial.
 
-`lofts: 2` was observed in the shared database — each app creating its own on first run, so
-they disagree about which loft is current. Not investigated; recorded because it is the same
-shape as the `backup.warn30` defect that created a third loft.
+`lofts: 2` was investigated and the first reading of it was wrong. It is not each app creating
+its own — `initDB()` creates one only when `state.lofts.size === 0`, so the second app to boot
+creates nothing and both agree on `currentLoftId`. The second loft comes from the teaching
+dataset, and what it exposes is **ROOT-FINDINGS RF-12**: after that import, a newly added bird
+is filed under a DIFFERENT loft from every bird on screen, and the loft settings card edits
+the empty one. That is in the shared data layer, present in both trees, and unrelated to the
+shared origin. Not fixed.
+
+**Trying the port without touching a real loft needs a separate browser profile or a private
+window** — measured; nothing about the URL isolates, and inside that profile the two apps
+still share. See ROOT-FINDINGS DF-1.
 
 **The service workers also evict each other, asymmetrically.** Each sweeps on ACTIVATE with
 `keys.filter(k => k.startsWith('zajil-') && k !== VERSION)`, and activation happens once per

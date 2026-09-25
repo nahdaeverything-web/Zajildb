@@ -13,6 +13,10 @@ the vanilla tree and re-proving it against the approved designs:
   other two. They belong here because a broken tool does not announce itself:
   it reports a clean result and ends the investigation. TF-1 is one that
   invalidated a verification already reported as fact.
+- **DEPLOYMENT findings** (`DF-n`) — things true of the two builds only once a
+  host is serving them. No file in either tree can show these, because they are
+  not properties of a tree. DF-1 was found by deploying and it invalidated the
+  phrase "side by side".
 
 Neither tree is written to during the port. Each entry names the file and
 line, what is wrong, why it matters, and what the port did about it on its own
@@ -752,3 +756,113 @@ Every grep-derived claim from that session was re-run under Python. All four hel
 white-on-gold rules remaining **0**, hard-coded `132px` outside the token **0**, relative
 fetches in app code **0**, flat `.html` routes in tests **0**. The conclusions were right; the
 basis was unsound, which is a different thing and worth separating.
+
+---
+
+## DF-1 — two apps at different paths on ONE ORIGIN share everything
+
+**A DEPLOYMENT finding: it is not visible in either tree, because it is a property of what
+happens when two builds meet on a host. It was found by deploying, and it invalidates the
+phrase "side by side".**
+
+Since 2026-09-25 the port is live at `…github.io/zajilv2/` and vanilla at `…github.io/Zajildb/`.
+Different paths, **the same origin**. IndexedDB and CacheStorage are partitioned by ORIGIN,
+not by path, so the two apps are not neighbours — they are the same tenant.
+
+### The data is shared, completely
+
+Measured in one ephemeral browser profile, against both live deployments:
+
+```
+VANILLA  /Zajildb/   dbs ['zajil@v2']
+PORT     /zajilv2/   dbs ['zajil@v2']          SAME ORIGIN: True
+
+38 birds loaded through the PORT's own UI   ->   VANILLA sees 38
+VANILLA first rows: ['JO-2022-09011 · نسمة', 'BE-2016-6012345 · Remco', 'JO-2022-09021 · ريما']
+shared zajil DB: {birds: 38, healthEvents: 7, pairs: 5, raceResults: 17, oplog: 68, lofts: 2}
+```
+
+and it is bidirectional — a bird created through vanilla's data layer appeared in the port's
+register on the next load, 39 rows.
+
+**The port is therefore not a sandbox.** Anyone who opens `/zajilv2/` in the browser they use
+for the real app is running a `2.0.0-dev.1` build against their actual loft, and every write
+lands in the one database. "Side by side" describes the URLs, not the storage.
+
+The compensation is real and worth stating: **no migration is needed between these two paths.**
+CUTOVER §d's export/import applies to a move to a *different* origin — a custom domain — which
+is also the thing that would end this sharing.
+
+### The service workers evict each other, asymmetrically
+
+Each sweeps on ACTIVATE with `keys.filter(k => k.startsWith('zajil-') && k !== VERSION)`, and
+activation happens once per install. So whichever worker installs or updates LAST wipes the
+other's cache, and the other does not retaliate until it next updates:
+
+```
+after VANILLA       ['zajil-v1.9.1']
+after PORT          ['zajil-v2.0.0-dev.1']                     <- the port deleted vanilla's
+back to VANILLA     ['zajil-v1.9.1', 'zajil-v2.0.0-dev.1']     <- vanilla rebuilt its own, kept the port's
+VANILLA reload      ['zajil-v1.9.1', 'zajil-v2.0.0-dev.1']
+```
+
+No records are lost: the sweep touches CacheStorage and never IndexedDB. What is lost is
+**vanilla's offline capability**, from the moment a user first opens the port until their next
+ONLINE visit to vanilla rebuilds it. For an app whose promise is «يعمل دون اتصال», a user who
+tries the port on the aeroplane and then wants the real app is the case this describes.
+
+Note this is the mirror image of CUTOVER §0.1 rather than a contradiction of it: identical
+version strings meant neither could evict the other, distinct ones mean each can.
+
+### What actually isolates a trial — measured, not assumed
+
+A separate browser profile, or a private window. Nothing about the URL does it. Each Playwright
+CONTEXT is a separate storage partition by the same mechanism a profile is, so:
+
+```
+A. one partition, port alone
+   first boot                      lofts [e27b1afa (unnamed)]      birds 0
+   after the teaching loft         lofts [8f268d1b, e27b1afa]      birds 38
+B. a FRESH partition, port         lofts [bf00d4c7 (unnamed)]      birds 0   <- sees none of A
+   same fresh partition, vanilla   lofts [bf00d4c7 (unnamed)]      birds 0   <- and shares with the port
+```
+
+So the honest instruction for trying the port against a real loft is: **use a separate browser
+profile or a private window, and expect that inside it the port and vanilla still share.** The
+separation is between profiles, never between the two apps.
+
+---
+
+## RF-12 — after loading the teaching loft, new birds are filed under a DIFFERENT loft
+
+**In the shared data layer, so it is present in BOTH trees — `src/db/` is byte-identical to
+`js/db/`. Not caused by the deployment; found while investigating DF-1.** This is the R4
+pristine-loft class, by a different mechanism than expected.
+
+`initDB()` creates an unnamed default loft on first run and points `currentLoftId` at it
+(`storage.js:136-143`). Importing the teaching dataset ADDS the loft the file carries — it does
+not adopt it — so `currentLoftId` still names the pristine one, while every imported record
+carries the imported loft's id. Measured in the port alone, in a clean partition:
+
+```
+1. first boot            lofts [e27b1afa (unnamed)]                    currentLoftId e27b1afa   birds {}
+2. teaching loft loaded  lofts [8f268d1b «لوفت إربد التعليمي», e27b1afa] currentLoftId e27b1afa   birds {8f268d1b: 38}
+3. one bird added        (same two lofts)                              currentLoftId e27b1afa   birds {8f268d1b: 38, e27b1afa: 1}
+```
+
+**So a bird the fancier adds is filed under a loft that holds none of the birds on screen,**
+and the loft settings card is editing that same empty loft — name it «لوفت سمير» and the name
+lands on the loft containing one bird, while the 38 in the register stay under «لوفت إربد
+التعليمي». Nothing warns, because no screen filters by `loftId`: the register shows all 39
+rows regardless, so the split is invisible until something cares about lofts, and the things
+that will care are club mode and sync attribution.
+
+`dropPristineLoft()` exists for exactly this and is guarded properly (`records.js:442-470`),
+but it is reachable **only from sync.js:875**, during first-sync loft adoption. `importAll`
+never calls it — see `io.js:264-276`, which repairs a `currentLoftId` pointing at a loft that
+no longer EXISTS, and has no case for one pointing at a loft that exists and is empty.
+
+**Not fixed.** Ruled: investigate, report, do not change. Two shapes are available and they are
+not equivalent — adopt the imported loft as current (changes what the fancier's own loft is
+called), or drop the pristine one when an import brings a named loft (the sync path's choice,
+`isPristineLoft` already makes it safe). That is a product decision about whose loft this is.

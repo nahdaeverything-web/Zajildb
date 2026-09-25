@@ -505,10 +505,13 @@ shared zajil DB: {birds: 38, healthEvents: 7, pairs: 5, raceResults: 17, oplog: 
   browser they use for the real app is running a `2.0.0-dev.1` build against their actual
   loft. Every write is shared, in both directions. This deployment is a side-by-side *view*,
   not a side-by-side *sandbox*, and it must not be described as one.
-- **`lofts: 2`.** Two loft records exist in the shared database. Each app creates its own on
-  first run, so they now disagree about which loft is current. Not yet investigated; recorded
-  here because it is the same shape as the `backup.warn30` defect, where a banner calling
-  `initDB()` on every route created a third loft.
+- **`lofts: 2` — investigated, and my first guess was wrong.** It is NOT each app creating
+  its own: `initDB()` only creates one when `state.lofts.size === 0`, so the second app to
+  boot creates nothing, and both apps agree on `currentLoftId`. The second loft comes from the
+  teaching dataset, and the real defect it exposes is **RF-12** — after importing the teaching
+  loft, a newly added bird is filed under a DIFFERENT loft from every bird on screen. That is
+  in the shared data layer and present in both trees; it has nothing to do with the shared
+  origin, and it is not fixed.
 
 **The two service workers evict each other's caches, asymmetrically.** Each sweeps on ACTIVATE
 with `keys.filter(k => k.startsWith('zajil-') && k !== VERSION)`, and activation happens once
@@ -526,10 +529,29 @@ No data is lost — records live in IndexedDB, which the sweep never touches. Wh
 online visit to vanilla rebuilds it. For an app whose whole promise is «يعمل دون اتصال» that
 is worth knowing before a fancier is invited to compare the two.
 
+### How to try the port WITHOUT touching a real loft — measured
+
+**A separate browser profile, or a private/incognito window. Nothing about the URL does it,
+and nothing in either app offers a safe mode.** Storage is partitioned by profile, so that is
+the only boundary there is. Measured (each Playwright context is a separate partition by the
+same mechanism a profile is):
+
+```
+one partition, port alone     -> its own loft, 38 birds after the teaching loft
+a FRESH partition, port       -> a NEW unnamed loft, 0 birds     (sees none of the above)
+same fresh partition, vanilla -> the SAME new loft, 0 birds      (still shares with the port)
+```
+
+So the instruction to give a fancier is: **open the port in a private window**, and understand
+that inside that window the two apps still share — the separation is between profiles, never
+between the two apps. Closing the private window discards the trial entirely, which is the
+point.
+
 A custom domain gives the port its own origin and ends all of the above — separate IndexedDB,
-separate CacheStorage, no cross-eviction — at the cost of making export/import a genuine
-requirement for anyone who was already using vanilla. §d spells out the options. Sync is the
-wrong tool for that: media *metadata* syncs and blobs do not.
+separate CacheStorage, no cross-eviction, and a trial that does not need a private window — at
+the cost of making export/import a genuine requirement for anyone already using vanilla. §d
+spells out the options. Sync is the wrong tool for that: media *metadata* syncs and blobs do
+not.
 
 And the one that decides whether people keep their birds: **IndexedDB is per-origin**, so
 nothing at the old origin follows to a new domain. §d spells out the options and recommends
