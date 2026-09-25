@@ -135,6 +135,18 @@ function documentCandidates(url) {
   // ignoreSearch that is the same lookup
   const out = [];
   if (!/\.[a-z0-9]+$/i.test(path)) {
+    // BOTH export shapes, because a worker outlives the config that built it. `trailingSlash:
+    // true` (RULED 2026-09-25) writes stats/index.html; before it, stats.html. The directory
+    // index is tried FIRST because it is what this build produces.
+    //
+    // The bare, slash-less form is the one that matters here. ONLINE the host redirects
+    // /stats to /stats/ and the question never arises; OFFLINE there is no host, so a
+    // bookmark, a typed URL or a link someone trimmed the slash off is answered by this
+    // worker alone — and without this candidate it fell through to SCOPE + index.html and
+    // rendered the SHELL, which redirects to /birds. The user asks for stats offline and
+    // silently gets the loft: a wrong document, not an error. Caught by the gate, not by
+    // reading.
+    out.push(path.replace(/\/$/, '') + '/index.html');
     out.push(path.replace(/\/$/, '') + '.html');
     if (path.endsWith('/')) out.push(path + 'index.html');
   }

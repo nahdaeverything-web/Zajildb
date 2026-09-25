@@ -6,7 +6,7 @@ import { useZajilStore, selectBirds } from '@/src/db/react';
 import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { findDuplicateRings } from '@/src/engine/rings.js';
 import { todayISO } from '@/src/dates.js';
-import { SyncRow, Loading, toast, confirmDialog, downloadJSON, downloadBlob, downscaleImage, primaryRing, saveSetting, initDB } from '@/src/components';
+import { SyncRow, Loading, toast, confirmDialog, downloadJSON, downloadBlob, downscaleImage, primaryRing, saveSetting, initDB, asset } from '@/src/components';
 import { useAppVersion } from '@/src/components/version';
 import s from './tools.module.css';
 
@@ -276,7 +276,10 @@ function ExamplesCard() {
   async function load(file: string) {
     setBusy(true);
     try {
-      const counts = await db.importAll(await (await fetch(file)).json(), 'merge') as { birds: number };
+      // asset(), not a relative URL: these datasets live at the deployment root and this
+      // screen is at `<base>/tools/` since trailingSlash was ruled, so `./x` would resolve to
+      // `<base>/tools/x` and hand JSON.parse the host's 404 page. See app/birds/view.tsx.
+      const counts = await db.importAll(await (await fetch(asset(file))).json(), 'merge') as { birds: number };
       toast(t('bird.exampleLoaded', { n: counts.birds }), { timeout: 7000, kind: 'info' });
     } finally { setBusy(false); }
   }

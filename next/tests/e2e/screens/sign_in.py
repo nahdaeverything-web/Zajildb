@@ -17,8 +17,8 @@ def check(n, ok, d=''):
     passed += bool(ok); failed += (not ok); print(f"  {'✓' if ok else '✗'} {n}{('  ' + str(d)) if d else ''}")
 
 srv, HARNESS = serve()
-ROOT = HARNESS.replace('test-harness.html', '')
-SIGNIN = f'{ROOT}sign-in.html'
+ROOT = HARNESS.replace('test-harness/', '')
+SIGNIN = f'{ROOT}sign-in/'
 # the stub project the sync suites use: enough for signIn() to reach a fetch and be answered
 STUB = "https://stub.example.test"
 def shots(pg, name, widths=(430, 900, 1400)):

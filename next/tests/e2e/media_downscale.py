@@ -34,7 +34,7 @@ def check(n, ok, d=''):
 
 
 srv, HARNESS = serve()
-ROOT = HARNESS.replace('test-harness.html', '')
+ROOT = HARNESS.replace('test-harness/', '')
 
 # A large source image, built in the page: 4000x3000 (12 MP), well over the 2048 cap. It is
 # drawn with structure rather than flat colour so the JPEG encoder has something to do — a
@@ -92,7 +92,7 @@ try:
 
         # picked through the REAL form, exactly as a fancier would
         form = ctx.new_page(); form.on('pageerror', lambda e: errs.append(str(e)))
-        form.goto(f'{ROOT}bird/new.html', wait_until='load'); form.wait_for_timeout(1200)
+        form.goto(f'{ROOT}bird/new/', wait_until='load'); form.wait_for_timeout(1200)
         raw = pg.evaluate("(d) => { const b = atob(d.split(',')[1]); const u = new Uint8Array(b.length);"
                           " for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return [...u]; }", big['dataURL'])
         form.set_input_files('input[type=file][accept="image/*"]',
@@ -130,7 +130,7 @@ try:
         raw2 = pg.evaluate("(d) => { const b = atob(d.split(',')[1]); const u = new Uint8Array(b.length);"
                            " for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return [...u]; }", small['dataURL'])
         form2 = ctx.new_page(); form2.on('pageerror', lambda e: errs.append(str(e)))
-        form2.goto(f'{ROOT}bird/new.html', wait_until='load'); form2.wait_for_timeout(1200)
+        form2.goto(f'{ROOT}bird/new/', wait_until='load'); form2.wait_for_timeout(1200)
         form2.set_input_files('input[type=file][accept="image/*"]',
                               files=[{'name': 'small.jpg', 'mimeType': 'image/jpeg', 'buffer': bytes(raw2)}])
         form2.wait_for_timeout(300)

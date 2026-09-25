@@ -69,7 +69,7 @@ def serve_dir(path):
     return srv, f'http://127.0.0.1:{port}/'
 
 
-assert os.path.exists(os.path.join(NEXT_OUT, 'test-harness.html')), 'run `npm run build:harness` first'
+assert os.path.exists(os.path.join(NEXT_OUT, 'test-harness/')), 'run `npm run build:harness` first'
 
 # ── the fixture, built in the page ───────────────────────────────────────────────────────
 # Photos are drawn on a canvas with per-bird noise and encoded as PNG, so each is a few
@@ -185,7 +185,7 @@ try:
         # ── ORIGIN A: build the loft ───────────────────────────────────────────────────
         ctx_a = br.new_context(accept_downloads=True)
         a = ctx_a.new_page(); errs = []; a.on('pageerror', lambda e: errs.append(str(e)))
-        a.goto(ORIGIN_A + 'test-harness.html', wait_until='load'); a.wait_for_timeout(800)
+        a.goto(ORIGIN_A + 'test-harness/', wait_until='load'); a.wait_for_timeout(800)
         a.evaluate("async () => { await window.__zajilReady; }")
         seeded = a.evaluate(SEED, 6)
         total_bytes = sum(m['bytes'] for m in seeded['made'])
@@ -204,7 +204,7 @@ try:
 
         # ── the export, through the UI ─────────────────────────────────────────────────
         ta = ctx_a.new_page(); ta.on('pageerror', lambda e: errs.append(str(e)))
-        ta.goto(ORIGIN_A + 'tools.html', wait_until='load'); ta.wait_for_timeout(1200)
+        ta.goto(ORIGIN_A + 'tools/', wait_until='load'); ta.wait_for_timeout(1200)
         t0 = time.time()
         with ta.expect_download(timeout=120000) as dl:
             ta.click('[data-testid=export-all]')
@@ -223,13 +223,13 @@ try:
         ctx_b = br.new_context(accept_downloads=True)
         b = ctx_b.new_page(); b.on('pageerror', lambda e: errs.append(str(e)))
         # A page that does NOT boot the app: the server's own 404 is same-origin and loads no
-        # script. Probing after tools.html would be worthless — initDB() creates the database
+        # script. Probing after tools/ would be worthless — initDB() creates the database
         # on load, so the answer could only ever be True.
         b.goto(ORIGIN_B + '__no_such_page__', wait_until='domcontentloaded'); b.wait_for_timeout(200)
         exists = b.evaluate(DB_EXISTS)
         check('origin B: the zajil database does NOT exist — a first-ever open, not a wiped one',
               exists is False, f'indexedDB.databases() says exists={exists}')
-        b.goto(ORIGIN_B + 'tools.html', wait_until='load'); b.wait_for_timeout(1800)
+        b.goto(ORIGIN_B + 'tools/', wait_until='load'); b.wait_for_timeout(1800)
 
         b.set_input_files('[data-testid=file-input]',
                           files=[{'name': 'zajil-export.json', 'mimeType': 'application/json', 'buffer': raw}])
@@ -286,7 +286,7 @@ try:
         v_payload = v.evaluate("async () => { const db = await import('./js/db.js'); return await db.exportAll(); }")
         ctx_c = br.new_context(accept_downloads=True)
         c = ctx_c.new_page(); c.on('pageerror', lambda e: errs.append(str(e)))
-        c.goto(ORIGIN_B + 'tools.html', wait_until='load'); c.wait_for_timeout(1800)
+        c.goto(ORIGIN_B + 'tools/', wait_until='load'); c.wait_for_timeout(1800)
         c_imported = c.evaluate("""async (pl) => {
             const db = await window.__zajilDb;
             const before = db.allBirds().length;
@@ -310,7 +310,7 @@ try:
         victim['dataURL'] = f'{head},{b64[:400]}{flipped}{b64[401:]}'
         ctx_n = br.new_context(accept_downloads=True)
         n = ctx_n.new_page()
-        n.goto(ORIGIN_B + 'tools.html', wait_until='load'); n.wait_for_timeout(1800)
+        n.goto(ORIGIN_B + 'tools/', wait_until='load'); n.wait_for_timeout(1800)
         n.set_input_files('[data-testid=file-input]', files=[{'name': 'tampered.json',
                           'mimeType': 'application/json', 'buffer': json.dumps(tampered).encode('utf-8')}])
         n.wait_for_timeout(400)

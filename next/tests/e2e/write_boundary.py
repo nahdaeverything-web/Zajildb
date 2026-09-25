@@ -18,7 +18,7 @@ with sync_playwright() as p:
     errs=[]; page.on('pageerror', lambda e: errs.append(str(e)))
     page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/'),wait_until='networkidle'); page.wait_for_timeout(800)
     page.evaluate("""async()=>{const db=await window.__zajilDb;
-        await db.importAll(await (await fetch('./example-loft-large.json')).json(),'merge');}""")
+        await db.importAll(await (await fetch(new URL('example-loft-large.json', document.querySelector('link[rel=manifest]').href))).json(),'merge');}""")
     page.reload(); page.wait_for_timeout(1000)
     check('import still lands the full payload verbatim',
           page.evaluate("async()=>(await window.__zajilDb).allBirds().length")>=38)

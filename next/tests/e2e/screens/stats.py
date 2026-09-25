@@ -18,8 +18,8 @@ def check(n, ok, d=''):
     passed += bool(ok); failed += (not ok); print(f"  {'✓' if ok else '✗'} {n}{('  ' + str(d)) if d else ''}")
 
 srv, HARNESS = serve()
-ROOT = HARNESS.replace('test-harness.html', '')
-STATS = f'{ROOT}stats.html'
+ROOT = HARNESS.replace('test-harness/', '')
+STATS = f'{ROOT}stats/'
 def boot(ctx):
     pg = ctx.new_page(); pg.goto(HARNESS, wait_until='load'); pg.wait_for_timeout(600)
     pg.evaluate("async () => { await window.__zajilReady; }"); return pg
@@ -30,7 +30,7 @@ def wipe(pg):
         for (const r of [...db.state.raceResults.values()]) await db.Races.remove(r.id);
         for (const b of db.allBirds()) await db.deleteBird(b.id); }""")
 def load(pg, file):
-    pg.evaluate("async (f) => { const db = await window.__zajilDb; await db.importAll(await (await fetch(f)).json(), 'merge'); }", file)
+    pg.evaluate("async (f) => { const db = await window.__zajilDb; await db.importAll(await (await fetch(new URL(f.replace(/^\.?\//, ''), document.querySelector('link[rel=manifest]').href))).json(), 'merge'); }", file)
 def shots(pg, name, widths=(430, 900, 1400)):
     for w in widths:
         pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(200); shot(pg, path=f'{FID}/{name}-{w}.png', full_page=True)
@@ -84,7 +84,7 @@ try:
         check('[README departure 4] an empty loft shows ONE explained empty state — not four zeros and six empty bars',
               pg.locator('[data-testid=empty-panel]').count() == 1 and pg.locator('[data-testid=content]').count() == 0
               and 'لا توجد بيانات كافية بعد' in pg.locator('[data-testid=empty-panel]').inner_text() and pg.locator('[data-testid=count-line]').inner_text().strip() == 'لا طيور بعد')
-        check('[README departure 4] …with two ways out: add a bird, or load the teaching loft', pg.locator('[data-testid=empty-add]').get_attribute('href') == '/bird/new' and pg.locator('[data-testid=empty-example]').count() == 1)
+        check('[README departure 4] …with two ways out: add a bird, or load the teaching loft', pg.locator('[data-testid=empty-add]').get_attribute('href') == '/bird/new/' and pg.locator('[data-testid=empty-example]').count() == 1)
         shots(pg, 'empty')
         pg.click('[data-testid=empty-example]'); pg.wait_for_selector('[data-testid=content]', timeout=15000)
         check('…and loading the teaching loft fills the screen in place', pg.locator('[data-testid=tile-total]').count() == 1 and pg.locator('[data-testid=empty-panel]').count() == 0)
@@ -117,7 +117,7 @@ try:
         check('[README departure 1] the average is over the computable birds only', pg.locator('[data-testid=avg-coi]').inner_text().strip().startswith(exp['avg']), f"screen={pg.locator('[data-testid=avg-coi]').inner_text()} engine={exp['avg']}%")
         check('[README departure 1] the «صفر» band holds exactly the birds the engine computes as 0 — no one else', int(got_bands[0]) == exp['zeroCoi'], f"zero band={got_bands[0]}, engine={exp['zeroCoi']}, unknown-pedigree={exp['unknownPed']}")
         top = pg.locator('[data-testid=top-coi] li')
-        check('«أعلى COI» lists the highest first, each linking to its bird', top.count() >= 1 and top.count() <= 5 and top.first.locator('a').get_attribute('href').startswith('/bird?id='))
+        check('«أعلى COI» lists the highest first, each linking to its bird', top.count() >= 1 and top.count() <= 5 and top.first.locator('a').get_attribute('href').startswith('/bird/?id='))
 
         # ── [departure 2] both breakdowns, with a total and a «غير محددة» row ──
         check('[README departure 2] the status card states its total = every bird', pg.locator('[data-testid=status-card]').inner_text().replace('\n', ' ').find(str(exp['total'])) > 0 and pg.locator('[data-testid=status-bars] [data-testid=bar-row]').count() == exp['statuses'], f"{exp['statuses']} statuses")
@@ -138,7 +138,7 @@ try:
         check('[README departure 5] …states the rule «لا تُحتسب نتائج التدريب.» and honours it', 'لا تُحتسب نتائج التدريب' in pg.locator('[data-testid=race-note]').inner_text() and exp['entries'] == pg.evaluate("""() => { const seasonOf = (iso) => { const y = +iso.slice(0,4), m = +iso.slice(5,7); return m >= 7 ? y : y - 1; }; const t = (()=>{const n=new Date();return `${n.getFullYear()}-`+`${String(n.getMonth()+1).padStart(2,'0')}-`+`${String(n.getDate()).padStart(2,'0')}`;})();
             return [...window.__zajilDb.state.raceResults.values()].filter(r => r.date && seasonOf(r.date) === seasonOf(t) && r.raceType !== 'training').length; }"""))
         check('[README departure 5] …the best-five table is ranked, the leader highlighted, each row linking to its bird',
-              pg.locator('[data-testid=race-table] [data-testid=race-row]').count() <= 5 and (pg.locator('[data-testid=race-row]').count() == 0 or pg.locator('[data-testid=race-row]').first.locator('a').get_attribute('href').startswith('/bird?id=')))
+              pg.locator('[data-testid=race-table] [data-testid=race-row]').count() <= 5 and (pg.locator('[data-testid=race-row]').count() == 0 or pg.locator('[data-testid=race-row]').first.locator('a').get_attribute('href').startswith('/bird/?id=')))
         check(f'[README departure 5] the breeding card: {exp["pairs"]} active pairs, {exp["eggs"]} eggs, {exp["hatched"]} hatched, {exp["weaned"]} weaned',
               num('[data-testid=kpi-pairs]') == str(exp['pairs']) and num('[data-testid=kpi-eggs]') == str(exp['eggs'])
               and num('[data-testid=kpi-hatched]') == str(exp['hatched']) and num('[data-testid=kpi-weaned]') == str(exp['weaned']),

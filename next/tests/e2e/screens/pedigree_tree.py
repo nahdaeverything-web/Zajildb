@@ -16,7 +16,7 @@ def check(n, ok, d=''):
     passed += bool(ok); failed += (not ok); print(f"  {'✓' if ok else '✗'} {n}{('  ' + str(d)) if d else ''}")
 
 srv, HARNESS = serve()
-ROOT = HARNESS.replace('test-harness.html', '')
+ROOT = HARNESS.replace('test-harness/', '')
 def boot(ctx):
     pg = ctx.new_page(); pg.goto(HARNESS, wait_until='load'); pg.wait_for_timeout(600)
     pg.evaluate("async () => { await window.__zajilReady; }"); return pg
@@ -25,7 +25,7 @@ def wipe(pg):
     pg.evaluate("""async () => { await window.__zajilReady; const db = await window.__zajilDb;
         for (const b of db.allBirds()) await db.deleteBird(b.id); }""")
 def load(pg, file):
-    pg.evaluate("async (f) => { const db = await window.__zajilDb; await db.importAll(await (await fetch(f)).json(), 'merge'); }", file)
+    pg.evaluate("async (f) => { const db = await window.__zajilDb; await db.importAll(await (await fetch(new URL(f.replace(/^\.?\//, ''), document.querySelector('link[rel=manifest]').href))).json(), 'merge'); }", file)
 
 try:
     with sync_playwright() as p:
@@ -41,7 +41,7 @@ try:
             const b = db.getBird(id); const br = e.coi.coiBreakdown(db.getBird, b.sireId, b.damId, 10);
             return { filled: loss.filled, total: loss.total, complete, common, commonSlots, rows: br.contributions.length }; }""", barq)
         pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
-        pg.goto(f'{ROOT}pedigree.html?id={barq}', wait_until='load'); pg.wait_for_selector('[data-testid=chart]', timeout=6000)
+        pg.goto(f'{ROOT}pedigree/?id={barq}', wait_until='load'); pg.wait_for_selector('[data-testid=chart]', timeout=6000)
 
         # ── head ──
         check('crumb = the bird, h1 «شجرة النسب», subject line with plate + sex', pg.locator('[data-testid=crumb]').inner_text().strip() == 'برق' and pg.locator('h1').inner_text().strip() == 'شجرة النسب' and 'ذكر' in pg.locator('[data-testid=subject]').inner_text())
@@ -105,10 +105,10 @@ try:
         pg.wait_for_timeout(500)
         unk = pg.locator('[data-testid=node][data-known="0"]')
         if unk.count():
-            check('an unknown slot offers «سلف غير مسجل — إضافة» → the child\'s edit form', unk.first.get_attribute('aria-label') == 'سلف غير مسجل — إضافة' and (unk.first.get_attribute('href') or '').startswith('/bird/edit?id='))
+            check('an unknown slot offers «سلف غير مسجل — إضافة» → the child\'s edit form', unk.first.get_attribute('aria-label') == 'سلف غير مسجل — إضافة' and (unk.first.get_attribute('href') or '').startswith('/bird/edit/?id='))
         else:
             check('an unknown slot offers «إضافة» (none in this pedigree — asserted on the teaching loft below)', True)
-        check('nodes link to the profile', pg.locator('[data-testid=node][data-known="1"]').first.get_attribute('href').startswith('/bird?id='))
+        check('nodes link to the profile', pg.locator('[data-testid=node][data-known="1"]').first.get_attribute('href').startswith('/bird/?id='))
         # ── carried panels ──
         check('[core_flows#4] COI breakdown table rendered with the engine\'s rows', pg.locator('[data-testid=breakdown-row]').count() == exp['rows'] and exp['rows'] == 2, f'{pg.locator("[data-testid=breakdown-row]").count()} rows')
         check_clearance(pg, check, 'pedigree tree')
@@ -117,7 +117,7 @@ try:
         pg.wait_for_selector('[data-testid=toast]', timeout=5000)
         check_toast_clear(pg, check, 'pedigree tree (export toast over the certificate CTA)')
         pg.wait_for_timeout(4500)
-        check('CTA + head action → /cert?id=; print and share present', pg.locator('[data-testid=cta-cert]').get_attribute('href').startswith('/cert?id=') and pg.locator('[data-testid=print-btn]').count() == 1 and pg.locator('[data-testid=share-btn]').count() == 1)
+        check('CTA + head action → /cert?id=; print and share present', pg.locator('[data-testid=cta-cert]').get_attribute('href').startswith('/cert/?id=') and pg.locator('[data-testid=print-btn]').count() == 1 and pg.locator('[data-testid=share-btn]').count() == 1)
         for w in (430, 900, 1400):
             pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/tree-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
@@ -133,7 +133,7 @@ try:
         deep = h.evaluate("""() => { const db = window.__zajilDb, e = window.__zajilEngine; let best = null;
             for (const b of db.allBirds()) { const g = e.pedigree.pedigreeGrid(db.getBird, b.id, 5); const known = g.slice(1).flat().filter(x => x && x.bird).length; if (!best || known > best.known) best = { id: b.id, name: b.name, known }; }
             return best; }""")
-        pg.goto(f'{ROOT}pedigree.html?id={deep["id"]}&gens=5', wait_until='load'); pg.wait_for_selector('[data-testid=chart]')
+        pg.goto(f'{ROOT}pedigree/?id={deep["id"]}&gens=5', wait_until='load'); pg.wait_for_selector('[data-testid=chart]')
         known = pg.locator('[data-testid=node][data-known="1"]').count(); unknown = pg.locator('[data-testid=node][data-known="0"]').count()
         check('[teaching_loft#3] 5-gen tree fully populated (62 known ancestors, 0 unknown) via ?gens=5', known == 62 and unknown == 0 and deep['known'] == 62, f'known={known} unknown={unknown}')
         check('[teaching_loft#4] COI headline 12.5%', '12.5' in pg.locator('[data-testid=coi-headline] [data-testid=coi-badge]').inner_text())
@@ -146,10 +146,10 @@ try:
             pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/teaching-5gen-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
         # a bird with unknown ancestors → the add link
-        pg.goto(f'{ROOT}pedigree.html?id={deep["id"]}&gens=5', wait_until='load'); pg.wait_for_selector('[data-testid=chart]')
+        pg.goto(f'{ROOT}pedigree/?id={deep["id"]}&gens=5', wait_until='load'); pg.wait_for_selector('[data-testid=chart]')
         orphan = h.evaluate("() => window.__zajilDb.allBirds().find(b => !b.sireId && !b.damId && b.name).id")
-        pg.goto(f'{ROOT}pedigree.html?id={orphan}', wait_until='load'); pg.wait_for_selector('[data-testid=chart]')
-        check('a parentless bird: every slot unknown, the first-generation slots link to its own edit form', pg.locator('[data-testid=node][data-known="0"]').count() == 30 and pg.locator('[data-testid=node][data-gen="1"]').first.get_attribute('href') == f'/bird/edit?id={orphan}' and pg.locator('[data-testid=tile-complete]').inner_text().split()[0] == '0')
+        pg.goto(f'{ROOT}pedigree/?id={orphan}', wait_until='load'); pg.wait_for_selector('[data-testid=chart]')
+        check('a parentless bird: every slot unknown, the first-generation slots link to its own edit form', pg.locator('[data-testid=node][data-known="0"]').count() == 30 and pg.locator('[data-testid=node][data-gen="1"]').first.get_attribute('href') == f'/bird/edit/?id={orphan}' and pg.locator('[data-testid=tile-complete]').inner_text().split()[0] == '0')
         check('zero page errors', not errs, errs)
         b.close()
 finally:

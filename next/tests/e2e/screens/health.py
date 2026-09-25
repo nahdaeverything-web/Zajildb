@@ -24,8 +24,8 @@ def check(n, ok, d=''):
     passed += bool(ok); failed += (not ok); print(f"  {'✓' if ok else '✗'} {n}{('  ' + str(d)) if d else ''}")
 
 srv, HARNESS = serve()
-ROOT = HARNESS.replace('test-harness.html', '')
-HEALTH = f'{ROOT}health.html'
+ROOT = HARNESS.replace('test-harness/', '')
+HEALTH = f'{ROOT}health/'
 def boot(ctx):
     pg = ctx.new_page(); pg.goto(HARNESS, wait_until='load'); pg.wait_for_timeout(600)
     pg.evaluate("async () => { await window.__zajilReady; }"); return pg
@@ -35,7 +35,7 @@ def wipe(pg):
         for (const e of [...db.state.healthEvents.values()]) await db.Health.remove(e.id);
         for (const b of db.allBirds()) await db.deleteBird(b.id); }""")
 def load(pg, file):
-    pg.evaluate("async (f) => { const db = await window.__zajilDb; await db.importAll(await (await fetch(f)).json(), 'merge'); }", file)
+    pg.evaluate("async (f) => { const db = await window.__zajilDb; await db.importAll(await (await fetch(new URL(f.replace(/^\.?\//, ''), document.querySelector('link[rel=manifest]').href))).json(), 'merge'); }", file)
 def shots(pg, name, widths=(430, 900, 1400)):
     for w in widths:
         pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(200); shot(pg, path=f'{FID}/{name}-{w}.png', full_page=True)
@@ -66,7 +66,7 @@ try:
         check('every event carries its type chip, from vanilla\'s four types', set(kinds) <= {'vaccination', 'treatment', 'illness', 'check'} and len(kinds) >= 3, kinds)
         n_loft = h.evaluate("() => [...window.__zajilDb.state.healthEvents.values()].filter(e => e.wholeLoft).length")
         # the desktop table is in the DOM at every width (display:none until 1100), so count inside the phone list
-        check('whole-loft events show the loft scope, per-bird events link to the bird', pg.locator('[data-testid=ev-rows] [data-testid=scope-loft]').count() == n_loft and pg.locator('[data-testid=ev-rows] [data-testid=scope-bird]').count() == n - n_loft and pg.locator('[data-testid=scope-bird]').first.get_attribute('href').startswith('/bird?id='), f'{n_loft} whole-loft')
+        check('whole-loft events show the loft scope, per-bird events link to the bird', pg.locator('[data-testid=ev-rows] [data-testid=scope-loft]').count() == n_loft and pg.locator('[data-testid=ev-rows] [data-testid=scope-bird]').count() == n - n_loft and pg.locator('[data-testid=scope-bird]').first.get_attribute('href').startswith('/bird/?id='), f'{n_loft} whole-loft')
 
         # ── [ruling 4] the derived next-vaccination banner ──
         want = h.evaluate("""() => { const es = [...window.__zajilDb.state.healthEvents.values()].filter(e => e.eventType === 'vaccination' && e.date).sort((a,b)=>(b.date||'').localeCompare(a.date||''));

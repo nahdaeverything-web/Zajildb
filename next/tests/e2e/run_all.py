@@ -13,7 +13,7 @@ import os, subprocess, sys, glob, socket, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.abspath(os.path.join(HERE, '..', '..', 'out'))
-ROUTE = 'test-harness.html'
+ROUTE = 'test-harness/'
 
 if not os.path.exists(os.path.join(OUT, ROUTE)):
     print(f'  no {ROUTE} in {OUT} — run `npm run build:harness` first (a normal build must NOT produce it)')

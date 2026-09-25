@@ -33,9 +33,9 @@ AND TWO THINGS THE ORIGINAL DID NOT ASK, both of which are the whole point of th
     could ever evict the other. `any('zajil-')` is true in precisely the broken case. This
     asserts the key is EXACTLY what this build stamped, and that NO other `zajil-` cache is
     left beside it.
-  · THE URLS THE APP'S OWN LINKS POINT AT. `output: 'export'` writes `birds.html`, not
+  · THE URLS THE APP'S OWN LINKS POINT AT. `output: 'export'` writes `birds/`, not
     `birds/index.html`, while next/link renders `href="<base>/birds"` with no extension. Those
-    only agree if the host resolves `/birds` to `birds.html`. A python http.server does not do
+    only agree if the host resolves `/birds` to `birds/`. A python http.server does not do
     that, so no local suite has ever tested it, and if the host does not either then every
     in-app navigation 404s on a site that looks perfect at its root. So this walks the
     extensionless deep routes, which is also §g's "walk more than the root path".
@@ -145,10 +145,16 @@ with sync_playwright() as p:
           f"raw {man.get('raw')!r} resolves to {man.get('start')!r}, expected under {URL}")
 
     # ── the URLs the app's own links point at, asked of the HOST ──────────────────
-    # next/link renders these WITHOUT .html; the export writes birds.html and, beside it, a
-    # birds/ directory holding only RSC .txt payloads. Those only agree if the host resolves
-    # /birds to birds.html — and GitHub Pages does not list directories, so if it prefers the
-    # indexless directory instead, a COLD visit to any deep link 404s.
+    # `trailingSlash: true` (RULED 2026-09-25) makes next/link render href="<base>/birds/"
+    # and the export write birds/index.html. A directory WITH an index is the one thing every
+    # static host serves identically, so this should hold anywhere — but "should" is exactly
+    # what this suite exists to replace with a measurement, and GitHub Pages has never been
+    # measured. Before the ruling the export wrote birds.html beside an INDEXLESS birds/
+    # directory, and Pages does not list directories, so a cold visit to a deep link could
+    # have 404d on a site that looked perfect at its root.
+    #
+    # Both shapes are asked: the trailing-slash form next/link renders, and the bare form a
+    # human types or a chat app strips.
     #
     # This MUST run with the worker blocked. Measured 2026-09-25: with a worker installed
     # these checks passed against a server that answers /birds with a 301, because the worker
@@ -157,12 +163,13 @@ with sync_playwright() as p:
     # visit to a shared deep link is exactly the case that has no worker yet.
     cold = br.new_context(viewport={'width': 390, 'height': 844}, service_workers='block')
     cpage = cold.new_page(); cpage.set_default_timeout(60000)
-    for route in ('birds', 'tools', 'breeding'):
+    for route in ('birds/', 'tools/', 'breeding/', 'birds', 'tools'):
         resp = cpage.goto(URL + route, wait_until='load')
         cpage.wait_for_timeout(1200)
         status = resp.status if resp else 0
         got = cpage.evaluate(VISIBLE_NAV_LINKS)
-        check(f'COLD (no worker): /{route} is served as the app — the host resolves it to {route}.html',
+        shape = 'as next/link renders it' if route.endswith('/') else 'bare, as a human types it'
+        check(f'COLD (no worker): /{route} is served as the app — {shape}',
               status == 200 and got == 6, f'HTTP {status}, {got} nav links at {URL + route}')
     cold.close()
 
@@ -171,7 +178,7 @@ with sync_playwright() as p:
     if page.locator('[data-testid=empty-example]').count():
         page.locator('[data-testid=empty-example]').click()
         page.wait_for_timeout(5000)
-    page.goto(URL + 'birds', wait_until='load'); page.wait_for_timeout(2500)
+    page.goto(URL + 'birds/', wait_until='load'); page.wait_for_timeout(2500)
     rows = page.locator('[data-testid=bird-row]').count()
     check('the 38-bird example loaded from the live site', rows == 38, f'{rows} rows')
 
@@ -182,7 +189,7 @@ with sync_playwright() as p:
     rows_off = page.locator('[data-testid=bird-row]').count()
     check('OFFLINE: data intact', rows_off == 38, f'{rows_off} rows')
 
-    page.goto(URL + 'pedigree?id=' + bird_id('g5-faris26'), wait_until='load')
+    page.goto(URL + 'pedigree/?id=' + bird_id('g5-faris26'), wait_until='load')
     page.wait_for_timeout(2000)
     badge = (page.locator('[data-testid=coi-headline] [data-testid=coi-badge]').inner_text()
              if page.locator('[data-testid=coi-headline] [data-testid=coi-badge]').count() else 'none')

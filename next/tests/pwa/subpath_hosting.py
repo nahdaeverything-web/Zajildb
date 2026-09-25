@@ -17,7 +17,7 @@ A copy of the root suite. Five kinds of change and no others:
     that is on screen (both navs render the same six tabs and CSS picks; a plain count is
     12), `.bird-row` -> `[data-testid=bird-row]`, `.coi-headline .coi-badge` ->
     `[data-testid=coi-headline] [data-testid=coi-badge]`;
-  · the routes — `#/pedigree/<id>` -> `pedigree.html?id=<id>`, and the export is flat so a
+  · the routes — `#/pedigree/<id>` -> `pedigree/?id=<id>`, and the export is flat so a
     bare visit to the prefix lands on index.html;
   · the seed — through the harness route's `window.__zajilDb`, since the port's data layer
     is bundled;
@@ -149,23 +149,23 @@ try:
 
         # seed through the harness route, then exercise the app under the prefix
         seed = ctx.new_page()
-        seed.goto(URL + 'test-harness.html', wait_until='load'); seed.wait_for_timeout(900)
+        seed.goto(URL + 'test-harness/', wait_until='load'); seed.wait_for_timeout(900)
         seed.evaluate("async () => { await window.__zajilReady; }")
         seed.evaluate("""async () => { const db = await window.__zajilDb;
-            await db.importAll(await (await fetch('./example-loft-large.json')).json(), 'merge'); }""")
+            await db.importAll(await (await fetch(new URL('example-loft-large.json', document.querySelector('link[rel=manifest]').href))).json(), 'merge'); }""")
         seed.close()
 
-        page.goto(URL + 'birds.html', wait_until='load'); page.wait_for_timeout(2000)
+        page.goto(URL + 'birds/', wait_until='load'); page.wait_for_timeout(2000)
         check('38 birds under subpath', page.locator('[data-testid=bird-row]').count() == 38,
               str(page.locator('[data-testid=bird-row]').count()))
-        page.goto(URL + 'pedigree.html?id=' + bird_id('g5-faris26'), wait_until='load')
+        page.goto(URL + 'pedigree/?id=' + bird_id('g5-faris26'), wait_until='load')
         page.wait_for_timeout(2000)
         check('pedigree + COI work under subpath',
               '12.5' in page.locator('[data-testid=coi-headline] [data-testid=coi-badge]').inner_text(),
               page.locator('[data-testid=coi-headline]').inner_text().replace('\n', ' ')[:80])
 
         # a click that navigates: basePath must reach the router, not just the asset URLs
-        page.goto(URL + 'birds.html', wait_until='load'); page.wait_for_timeout(1500)
+        page.goto(URL + 'birds/', wait_until='load'); page.wait_for_timeout(1500)
         page.locator('[data-testid=bird-row]').first.click(); page.wait_for_timeout(1800)
         check('a navigation inside the app stays inside the prefix',
               f'/{PREFIX}/' in page.url and '?id=' in page.url, page.url)
@@ -174,7 +174,7 @@ try:
         page.wait_for_timeout(1500)
         online['yes'] = False
         ctx.set_offline(True)
-        page.goto(URL + 'birds.html', wait_until='load'); page.wait_for_timeout(2000)
+        page.goto(URL + 'birds/', wait_until='load'); page.wait_for_timeout(2000)
         check('OFFLINE reload works under subpath', page.locator('[data-testid=bird-row]').count() == 38,
               str(page.locator('[data-testid=bird-row]').count()))
         page.goto(URL + 'tools', wait_until='load'); page.wait_for_timeout(2000)

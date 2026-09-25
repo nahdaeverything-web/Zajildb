@@ -44,7 +44,7 @@ def check(n, ok, d=''):
 
 
 srv, HARNESS = serve()
-ROOT = HARNESS.replace('test-harness.html', '')
+ROOT = HARNESS.replace('test-harness/', '')
 
 # Eight ids that sort ASCENDING as id-0 … id-7. They are seeded in that same order, so a
 # comparator with no tie-break can only reproduce this sequence if IndexedDB happens to hand
@@ -118,7 +118,7 @@ try:
 
         # ── the register, at 1400: the desktop table on its default `year` sort ──
         pg = ctx.new_page(); pg.on('pageerror', lambda e: errs.append(str(e)))
-        pg.goto(f'{ROOT}birds.html', wait_until='load')
+        pg.goto(f'{ROOT}birds/', wait_until='load')
         pg.wait_for_function("document.querySelectorAll('[data-testid=table-row]').length === 4", timeout=8000)
         pg.evaluate(SEED, ['birds', live, loft])   # added LIVE — db.state keeps insertion order
         pg.wait_for_function("document.querySelectorAll('[data-testid=table-row]').length === 8", timeout=8000)
@@ -144,7 +144,7 @@ try:
 
         # ── the race log: eight races on one date ──
         rp = ctx.new_page(); rp.on('pageerror', lambda e: errs.append(str(e)))
-        rp.goto(f'{ROOT}races.html?season=all', wait_until='load')
+        rp.goto(f'{ROOT}races/?season=all', wait_until='load')
         rp.wait_for_function("document.querySelectorAll('[data-testid=race-row]').length >= 4", timeout=8000)
         rp.evaluate(SEED, ['races', live, loft])
         rp.wait_for_function("document.querySelectorAll('[data-testid=race-row]').length >= 8", timeout=8000)
@@ -157,7 +157,7 @@ try:
 
         # ── the health log: eight events on one date ──
         hp = ctx.new_page(); hp.on('pageerror', lambda e: errs.append(str(e)))
-        hp.goto(f'{ROOT}health.html', wait_until='load')
+        hp.goto(f'{ROOT}health/', wait_until='load')
         hp.wait_for_function("document.querySelectorAll('[data-testid=ev-row]').length >= 4", timeout=8000)
         hp.evaluate(SEED, ['health', live, loft])
         hp.wait_for_function("document.querySelectorAll('[data-testid=ev-row]').length >= 8", timeout=8000)

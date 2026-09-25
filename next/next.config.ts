@@ -32,6 +32,24 @@ const nextConfig: NextConfig = {
   output: 'export',
   ...(BASE_PATH ? { basePath: BASE_PATH } : {}),
 
+  /**
+   * RULED 2026-09-25, before the first deployment.
+   *
+   * Without it, `output: 'export'` writes `birds.html` AND, beside it, a `birds/` directory
+   * holding only RSC .txt payloads — while next/link renders `href="<base>/birds"`, with no
+   * extension. Those two only agree if the host resolves /birds to birds.html. GitHub Pages
+   * does not list directories, so if it prefers the indexless directory instead, a COLD visit
+   * to any deep link 404s on a site that looks perfect at its root. That is precisely the link
+   * a pilot user receives when someone shares a bird in WhatsApp.
+   *
+   * With it, the export writes `birds/index.html` and next/link renders `href="<base>/birds/"`.
+   * A directory with an index is the one thing every static host serves the same way, so
+   * correctness stops depending on undocumented host behaviour. Measured, not assumed: a
+   * python http.server with no .html fallback serves the trailing-slash export correctly and
+   * fails the extensionless one — which is the whole argument.
+   */
+  trailingSlash: true,
+
   // Photos are device-local blobs rendered from object URLs, never remote
   // sources — and the default next/image loader needs a server it will not
   // have. Nothing here should reach the optimizer.

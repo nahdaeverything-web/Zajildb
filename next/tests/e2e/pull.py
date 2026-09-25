@@ -362,7 +362,7 @@ with sync_playwright() as p:
     check('...and carries no blob, as designed', med['hasBlob'] is False, str(med))
 
     # the port's record route (Phase 0 route map): /bird?id= , served from the static export
-    page.goto(BASE.replace('test-harness.html', 'bird.html') + f"?id={REMOTE_BIRD['id']}", wait_until='load')
+    page.goto(BASE.replace('test-harness/', 'bird/') + f"?id={REMOTE_BIRD['id']}", wait_until='load')
     page.wait_for_timeout(1500)
     body = page.inner_text('body')
     check('the bird detail view renders a placeholder instead of throwing',

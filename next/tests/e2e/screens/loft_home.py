@@ -19,7 +19,7 @@ def check(n, ok, d=''):
     passed += bool(ok); failed += (not ok); print(f"  {'✓' if ok else '✗'} {n}{('  ' + str(d)) if d else ''}")
 
 srv, HARNESS = serve()
-BIRDS = HARNESS.replace('test-harness.html', 'birds.html')
+BIRDS = HARNESS.replace('test-harness/', 'birds/')
 def boot(ctx):
     """Fresh database via the harness route; returns a page on it."""
     pg = ctx.new_page(); pg.goto(HARNESS, wait_until='load'); pg.wait_for_timeout(600)

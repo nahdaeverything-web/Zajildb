@@ -49,7 +49,7 @@ def check(n, ok, d=''):
 
 
 srv, HARNESS = serve()
-ROOT = HARNESS.replace('test-harness.html', '')
+ROOT = HARNESS.replace('test-harness/', '')
 
 GEO = """() => {
   const box = (e) => { if (!e) return null; const b = e.getBoundingClientRect();
@@ -124,10 +124,10 @@ try:
         pg.evaluate("async () => { await window.__zajilReady; }")
         # a non-empty loft AND a stale export, so the banner is on screen at all
         pg.evaluate("""async () => { const db = await window.__zajilDb;
-            await db.importAll(await (await fetch('./example-loft-large.json')).json(), 'merge');
+            await db.importAll(await (await fetch(new URL('example-loft-large.json', document.querySelector('link[rel=manifest]').href))).json(), 'merge');
             await db.setSetting('lastExport', '2020-01-01T00:00:00.000Z'); }""")
 
-        pg.goto(f'{ROOT}birds.html', wait_until='load'); pg.wait_for_timeout(1800)
+        pg.goto(f'{ROOT}birds/', wait_until='load'); pg.wait_for_timeout(1800)
         seen_rail = 0
         for w in WIDTHS:
             pg.set_viewport_size({'width': w, 'height': 1000}); pg.wait_for_timeout(500)
@@ -202,7 +202,7 @@ try:
         pg.reload(wait_until='load'); pg.wait_for_timeout(1200)   # drop the synthetic label
 
         # the dual date stays on one line, in both logs, at the widest and narrowest
-        for route, label in ((f'{ROOT}health.html', 'health'), (f'{ROOT}races.html?season=all', 'races')):
+        for route, label in ((f'{ROOT}health/', 'health'), (f'{ROOT}races/?season=all', 'races')):
             for w in (1100, 2560):
                 pg.set_viewport_size({'width': w, 'height': 1000})
                 pg.goto(route, wait_until='load'); pg.wait_for_timeout(1600)

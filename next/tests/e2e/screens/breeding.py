@@ -18,8 +18,8 @@ def check(n, ok, d=''):
     passed += bool(ok); failed += (not ok); print(f"  {'✓' if ok else '✗'} {n}{('  ' + str(d)) if d else ''}")
 
 srv, HARNESS = serve()
-ROOT = HARNESS.replace('test-harness.html', '')
-LIST = f'{ROOT}breeding.html'
+ROOT = HARNESS.replace('test-harness/', '')
+LIST = f'{ROOT}breeding/'
 def boot(ctx):
     pg = ctx.new_page(); pg.goto(HARNESS, wait_until='load'); pg.wait_for_timeout(600)
     pg.evaluate("async () => { await window.__zajilReady; }"); return pg
@@ -29,7 +29,7 @@ def wipe(pg):
         for (const p of [...db.state.pairs.values()]) await db.Pairs.remove(p.id);
         for (const b of db.allBirds()) await db.deleteBird(b.id); }""")
 def load(pg, file):
-    pg.evaluate("async (f) => { const db = await window.__zajilDb; await db.importAll(await (await fetch(f)).json(), 'merge'); }", file)
+    pg.evaluate("async (f) => { const db = await window.__zajilDb; await db.importAll(await (await fetch(new URL(f.replace(/^\.?\//, ''), document.querySelector('link[rel=manifest]').href))).json(), 'merge'); }", file)
 def shots(pg, name):
     for w in (430, 900, 1400):
         pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/{name}-{w}.png', full_page=True)
@@ -66,8 +66,8 @@ try:
         # ── DETAIL: the mid-cycle pair (example_data#13: hatch buttons) ──
         mid = h.evaluate("() => { const p = [...window.__zajilDb.state.pairs.values()].find(p => (p.rounds||[]).some(r => (r.eggs||[]).some(e => e.state === 'laid'))); return p && p.id; }")
         pg.click('[data-testid=pair-row] >> nth=0'); pg.wait_for_url(re.compile(r'/pair'), timeout=6000); pg.wait_for_selector('[data-testid=pair-card]')
-        check('row → /pair?id= with the back link «الأزواج · موسم 2026» and the parents as links', '/pair' in pg.url and 'الأزواج' in pg.locator('[data-testid=back-link]').inner_text() and pg.locator('[data-testid=parent-sire]').get_attribute('href').startswith('/bird?id='))
-        pg.goto(f'{ROOT}pair.html?id={mid}', wait_until='load'); pg.wait_for_selector('[data-testid=pair-card]')
+        check('row → /pair?id= with the back link «الأزواج · موسم 2026» and the parents as links', '/pair' in pg.url and 'الأزواج' in pg.locator('[data-testid=back-link]').inner_text() and pg.locator('[data-testid=parent-sire]').get_attribute('href').startswith('/bird/?id='))
+        pg.goto(f'{ROOT}pair/?id={mid}', wait_until='load'); pg.wait_for_selector('[data-testid=pair-card]')
         check('[example_data#13] the mid-cycle pair shows «تسجيل الفقس» / «لم تفقس» on its laid eggs', pg.locator('[data-testid=egg-hatch]').count() >= 1 and pg.locator('[data-testid=egg-fail]').count() >= 1)
         check('the newest round starts open, older rounds collapsed', pg.locator('[data-testid=round]').last.get_attribute('data-open') == '1')
         shots(pg, 'detail')
@@ -75,7 +75,7 @@ try:
         unringed = h.evaluate("() => { for (const p of window.__zajilDb.state.pairs.values()) for (const r of p.rounds||[]) for (const e of r.eggs||[]) if (e.state === 'hatched' && !e.chickId) return p.id; return null; }")
         if not unringed:   # make one: hatch a laid egg on the mid-cycle pair
             pg.click('[data-testid=egg-hatch] >> nth=0'); pg.wait_for_timeout(300); unringed = mid
-        pg.goto(f'{ROOT}pair.html?id={unringed}', wait_until='load'); pg.wait_for_selector('[data-testid=egg-link]')
+        pg.goto(f'{ROOT}pair/?id={unringed}', wait_until='load'); pg.wait_for_selector('[data-testid=egg-link]')
         check('[ownership#6] «ربط طير مسجَّل» offered on an unringed hatched egg (and «تركيب الحلقة»)', pg.locator('[data-testid=egg-link]').count() >= 1 and pg.locator('[data-testid=egg-ring]').count() >= 1)
         pg.click('[data-testid=egg-link] >> nth=0'); pg.wait_for_selector('[data-testid=sheet-link]')
         # a bird linked to another egg this season → the spec's blocked state
@@ -199,7 +199,7 @@ try:
         check(f'[teaching_loft#9] 2026 breeding shows the teaching loft\'s pairs ({nl})', pg.locator('[data-testid=pair-row]').count() == nl == 3)
         check_clearance(pg, check, 'breeding list')
         pid = pg.evaluate("() => [...window.__zajilDb.state.pairs.values()].find(p => p.season === '2026').id")
-        pg.goto(f'{ROOT}pair.html?id={pid}', wait_until='load'); pg.wait_for_selector('[data-testid=pair-card]')
+        pg.goto(f'{ROOT}pair/?id={pid}', wait_until='load'); pg.wait_for_selector('[data-testid=pair-card]')
         check_clearance(pg, check, 'pair detail')
         # [Phase 6, fidelity audit] a tap on the scrim closes the sheet. All three of the
         # spec's dialogs carry it (breeding-v1.html:355, :383, :397) and the races and health

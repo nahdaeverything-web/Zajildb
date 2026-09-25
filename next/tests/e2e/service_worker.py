@@ -8,7 +8,7 @@
 #     `.coi-headline .coi-badge` -> `[data-testid=coi-headline] [data-testid=coi-badge]`.
 #     The desktop table's `[data-testid=table-row]` is ALWAYS in the DOM (responsive
 #     selection is CSS-only), so the phone list is what gets counted;
-#   · the routes — `#/pedigree/<id>` -> `pedigree.html?id=<id>`;
+#   · the routes — `#/pedigree/<id>` -> `pedigree/?id=<id>`;
 #   · `wait_until='load'` throughout, never 'networkidle': a page controlled by a service
 #     worker never goes idle (HANDOFF.md:100-106);
 #   · it provisions its own server (R6). The root suite assumes a hand-started one on 8123,
@@ -47,7 +47,7 @@ if not os.path.exists(os.path.join(OUT, 'sw.js')):
     raise SystemExit(2)
 
 srv, HARNESS = serve()
-ROOT = HARNESS.replace('test-harness.html', '')
+ROOT = HARNESS.replace('test-harness/', '')
 
 try:
     with sync_playwright() as p:
@@ -56,7 +56,7 @@ try:
         errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
 
         # seed a SIBLING project's cache on the same origin, as github.io would have
-        page.goto(ROOT + 'birds.html', wait_until='load'); page.wait_for_timeout(500)
+        page.goto(ROOT + 'birds/', wait_until='load'); page.wait_for_timeout(500)
         page.evaluate("async () => { const c = await caches.open('other-project-v1'); await c.put('/sibling', new Response('x')); }")
         page.wait_for_timeout(2500)  # let our SW install/activate
         names = page.evaluate("async () => await caches.keys()")
@@ -78,7 +78,7 @@ try:
         seed.goto(HARNESS, wait_until='load'); seed.wait_for_timeout(800)
         seed.evaluate("async () => { await window.__zajilReady; }")
         seed.evaluate("""async () => { const db = await window.__zajilDb;
-            await db.importAll(await (await fetch('./example-loft-large.json')).json(), 'merge'); }""")
+            await db.importAll(await (await fetch(new URL('example-loft-large.json', document.querySelector('link[rel=manifest]').href))).json(), 'merge'); }""")
         seed.close()
         page.wait_for_timeout(500)
 
@@ -87,7 +87,7 @@ try:
         check('OFFLINE still works after SW changes', page.locator('[data-testid=bird-row]').count() == 38,
               str(page.locator('[data-testid=bird-row]').count()))
 
-        page.goto(ROOT + 'pedigree.html?id=' + bird_id('g5-faris26'), wait_until='load')
+        page.goto(ROOT + 'pedigree/?id=' + bird_id('g5-faris26'), wait_until='load')
         page.wait_for_timeout(1800)
         check('OFFLINE pedigree + COI',
               '12.5' in page.locator('[data-testid=coi-headline] [data-testid=coi-badge]').inner_text(),
@@ -131,7 +131,7 @@ try:
         opt = b.new_context()
         opt.route('**/stats.txt', lambda route: route.fulfill(status=404, body=''))
         op = opt.new_page(); operrs = []; op.on('pageerror', lambda e: operrs.append(str(e)))
-        op.goto(ROOT + 'birds.html', wait_until='load'); op.wait_for_timeout(4000)
+        op.goto(ROOT + 'birds/', wait_until='load'); op.wait_for_timeout(4000)
         n_opt = cache_entries(op)
         opt.set_offline(True)
         op.reload(wait_until='load'); op.wait_for_timeout(1800)
@@ -143,7 +143,7 @@ try:
         crit = b.new_context()
         crit.route('**/sample-data.json', lambda route: route.fulfill(status=404, body=''))
         cp = crit.new_page()
-        cp.goto(ROOT + 'birds.html', wait_until='load'); cp.wait_for_timeout(4000)
+        cp.goto(ROOT + 'birds/', wait_until='load'); cp.wait_for_timeout(4000)
         n_crit = cache_entries(cp)
         check('[departure 3] …while a missing SHELL entry still fails the install atomically, as vanilla does',
               n_crit <= 0, f'{n_crit} entries — a half-installed shell is worse than none')

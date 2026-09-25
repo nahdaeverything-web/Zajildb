@@ -17,8 +17,8 @@ def check(n, ok, d=''):
     passed += bool(ok); failed += (not ok); print(f"  {'✓' if ok else '✗'} {n}{('  ' + str(d)) if d else ''}")
 
 srv, HARNESS = serve()
-ROOT = HARNESS.replace('test-harness.html', '')
-NEW = f'{ROOT}bird/new.html'
+ROOT = HARNESS.replace('test-harness/', '')
+NEW = f'{ROOT}bird/new/'
 def boot(ctx):
     pg = ctx.new_page(); pg.goto(HARNESS, wait_until='load'); pg.wait_for_timeout(600)
     pg.evaluate("async () => { await window.__zajilReady; }"); return pg
@@ -34,7 +34,7 @@ try:
         b = p.chromium.launch()
         ctx = b.new_context(viewport={'width': 430, 'height': 900})
         h = boot(ctx); wipe(h)
-        h.evaluate("async () => { const db = await window.__zajilDb; await db.importAll(await (await fetch('./example-loft-large.json')).json(), 'merge'); }")
+        h.evaluate("async () => { const db = await window.__zajilDb; await db.importAll(await (await fetch(new URL('example-loft-large.json', document.querySelector('link[rel=manifest]').href))).json(), 'merge'); }")
         pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
 
         # ── the empty form (spec: new) ──
@@ -55,7 +55,7 @@ try:
         shot(pg, path=f'{FID}/new-external-430.png', full_page=True)
         # ── [record_factory#1 path 1] the switch → an external bird with REFERENCE_STATUS ──
         pg.fill('[data-testid=ring-input] >> nth=0', 'BE-2001-9000001'); pg.click('[data-testid=save-btn]')
-        pg.wait_for_url(re.compile(r'/bird\?id='), timeout=6000); pg.wait_for_selector('[data-testid=profile-hero]')
+        pg.wait_for_url(re.compile(r'/bird/\?id='), timeout=6000); pg.wait_for_selector('[data-testid=profile-hero]')
         ext1 = snap(pg, "() => { const b = window.__zajilDb.allBirds().find(x => (x.rings||[]).some(r => r.raw === 'BE-2001-9000001')); return b && [b.external, b.status]; }")
         check('[ownership#4 / record_factory#1] saved as external with reference status, landed on the profile', ext1 == [True, 'reference'], ext1)
         # ── [record_factory#1 path 2] the picker's quick create → external + reference ──
@@ -141,34 +141,34 @@ try:
         before = h.evaluate("(id) => { const db = window.__zajilDb; const b = db.getBird(id); return [b.sireId, b.damId, db.allBirds().length]; }", target)
         pg.goto(f"{NEW}?siblingOf={target}", wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
         check('[record_factory#3] a notice explains what will happen on save', pg.locator('[data-testid=sibling-notice]').count() == 1 and 'بلا أبوين' in pg.locator('[data-testid=sibling-notice]').inner_text())
-        pg.goto(f'{ROOT}birds.html', wait_until='load'); pg.wait_for_timeout(500)   # ABANDON
+        pg.goto(f'{ROOT}birds/', wait_until='load'); pg.wait_for_timeout(500)   # ABANDON
         h.reload(wait_until='load'); h.wait_for_timeout(500); h.evaluate("async () => { await window.__zajilReady; }")
         after = h.evaluate("(id) => { const db = window.__zajilDb; const b = db.getBird(id); return [b.sireId, b.damId, db.allBirds().length]; }", target)
         check('[record_factory#4] abandoning leaves the original untouched and creates no placeholders', after == before, f'{before} -> {after}')
         pg.goto(f"{NEW}?siblingOf={target}", wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
         pg.fill('[data-testid=ring-input] >> nth=0', 'JO-2026-8800001'); pg.click('[data-testid=save-btn]')
-        pg.wait_for_url(re.compile(r'/bird\?id='), timeout=6000); pg.wait_for_selector('[data-testid=profile-hero]')
+        pg.wait_for_url(re.compile(r'/bird/\?id='), timeout=6000); pg.wait_for_selector('[data-testid=profile-hero]')
         done = snap(pg, """(id) => { const db = window.__zajilDb, e = window.__zajilEngine; const orig = db.getBird(id); const sib = db.allBirds().find(b => (b.rings||[]).some(r => r.raw === 'JO-2026-8800001'));
             return { origS: orig.sireId, origD: orig.damId, sibS: sib && sib.sireId, sibD: sib && sib.damId, dangling: e.integrity.checkIntegrity({ birds: db.state.birds, pairs: db.state.pairs, raceResults: db.state.raceResults, healthEvents: db.state.healthEvents }).length }; }""", target)
         check('[record_factory#5] completing it links BOTH birds to the same placeholder parents', bool(done['origS']) and done['origS'] == done['sibS'] and done['origD'] == done['sibD'], done)
         check('[record_factory#6] and leaves the database referentially clean', done['dangling'] == 0, done['dangling'])
         # ── [data_loss#1, #3] abandoning a search keeps the parent; explicit clear detaches ──
         child = snap(pg, "() => { const b = window.__zajilDb.allBirds().find(x => x.sireId && x.damId && x.name); return [b.id, window.__zajilDb.getBird(b.sireId).name]; }")
-        pg.goto(f'{ROOT}bird/edit.html?id={child[0]}', wait_until='load'); pg.wait_for_selector('[data-testid=parent-sire]')
+        pg.goto(f'{ROOT}bird/edit/?id={child[0]}', wait_until='load'); pg.wait_for_selector('[data-testid=parent-sire]')
         pg.click('[data-testid=parent-sire-change]'); pg.fill('[data-testid=picker-input]', 'xyz'); pg.wait_for_timeout(150); pg.click('[data-testid=form-title]'); pg.wait_for_timeout(200)
         check('[data_loss#1] the slot still shows the real sire after abandoning a search', child[1] in pg.locator('[data-testid=parent-sire-name]').inner_text())
         b4 = snap(pg, "(id) => { const b = window.__zajilDb.getBird(id); return [b.sireId, b.damId]; }", child[0])
-        pg.click('[data-testid=save-btn]'); pg.wait_for_url(re.compile(r'/bird\?id='), timeout=6000)
+        pg.click('[data-testid=save-btn]'); pg.wait_for_url(re.compile(r'/bird/\?id='), timeout=6000)
         check('[data_loss#2] parent links survive the save', snap(pg, "(id) => { const b = window.__zajilDb.getBird(id); return [b.sireId, b.damId]; }", child[0]) == b4)
-        pg.goto(f'{ROOT}bird/edit.html?id={child[0]}', wait_until='load'); pg.wait_for_selector('[data-testid=parent-sire]')
+        pg.goto(f'{ROOT}bird/edit/?id={child[0]}', wait_until='load'); pg.wait_for_selector('[data-testid=parent-sire]')
         pg.click('[data-testid=parent-sire-clear]'); pg.wait_for_timeout(100)
         check('[data_loss#3] explicit «إزالة» empties the slot', pg.locator('[data-testid=parent-sire-empty]').count() == 1)
-        pg.click('[data-testid=save-btn]'); pg.wait_for_url(re.compile(r'/bird\?id='), timeout=6000)
+        pg.click('[data-testid=save-btn]'); pg.wait_for_url(re.compile(r'/bird/\?id='), timeout=6000)
         check('[data_loss#3] …and the save detaches the sire', snap(pg, "(id) => window.__zajilDb.getBird(id).sireId", child[0]) is None)
         h.evaluate("async (arg) => { const db = await window.__zajilDb; await new Promise(r => setTimeout(r, 200)); }", 0)
         # ── validation: a cycle is an ERROR → shared-states error dialog + the slot marked ──
         fam = snap(pg, "() => { const db = window.__zajilDb; for (const b of db.allBirds()) { const kid = db.allBirds().find(k => k.sireId === b.id && k.sex !== 'hen' && k.name); if (kid) return [b.id, kid.name]; } return null; }")
-        pg.goto(f'{ROOT}bird/edit.html?id={fam[0]}', wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
+        pg.goto(f'{ROOT}bird/edit/?id={fam[0]}', wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
         if pg.locator('[data-testid=parent-sire]').count(): pg.click('[data-testid=parent-sire-change]')
         else: pg.click('[data-testid=parent-sire-pick]')
         pg.fill('[data-testid=picker-input]', fam[1]); pg.wait_for_timeout(150); pg.click('[data-testid=picker-item] >> nth=0'); pg.wait_for_timeout(100)
@@ -181,11 +181,11 @@ try:
         used = snap(pg, "() => { const b = window.__zajilDb.allBirds().find(x => (x.rings||[]).length && x.name); return [b.rings[0].raw, b.name]; }")
         pg.goto(NEW, wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
         pg.fill('[data-testid=ring-input] >> nth=0', used[0]); pg.wait_for_timeout(200)
-        check('duplicate ring → live warnbox names the other bird with «عرض الطائر الآخر»', pg.locator('[data-testid=dup-warn]').count() == 1 and used[1] in pg.locator('[data-testid=dup-warn]').inner_text() and pg.locator('[data-testid=dup-view]').get_attribute('href').startswith('/bird?id='))
+        check('duplicate ring → live warnbox names the other bird with «عرض الطائر الآخر»', pg.locator('[data-testid=dup-warn]').count() == 1 and used[1] in pg.locator('[data-testid=dup-warn]').inner_text() and pg.locator('[data-testid=dup-view]').get_attribute('href').startswith('/bird/?id='))
         shot(pg, path=f'{FID}/dup-warn-430.png', full_page=True)
         pg.click('[data-testid=save-btn]'); pg.wait_for_timeout(300)
         check('save → warnings dialog with «حفظ رغم التحذير»', 'تحذيرات' in pg.locator('[data-testid=dialog]').inner_text() and pg.locator('[data-testid=dialog-confirm]').inner_text().strip() == 'حفظ رغم التحذير')
-        pg.click('[data-testid=dialog-confirm]'); pg.wait_for_url(re.compile(r'/bird\?id='), timeout=6000)
+        pg.click('[data-testid=dialog-confirm]'); pg.wait_for_url(re.compile(r'/bird/\?id='), timeout=6000)
         check('…confirming saves the duplicate (allowWarnings) and lands on the profile', snap(pg, "(raw) => window.__zajilDb.allBirds().filter(x => (x.rings||[]).some(r => r.raw === raw)).length", used[0]) == 2)
         # ── hatch hint from the ring year; second ring row; save-and-new carry-over ──
         pg.goto(NEW, wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
@@ -211,7 +211,7 @@ try:
         pg.fill('[data-testid=f-name]', 'طائر الدفعة'); pg.fill('[data-testid=f-colour]', 'أزرق'); pg.fill('[data-testid=f-strain]', 'يانسن')
         pg.click('[data-testid=sex-btn][data-sex=cock]'); pg.click('[data-testid=status-chip][data-status=stock]')
         pg.locator('[data-testid=f-name]').press('Enter'); pg.wait_for_timeout(100)
-        check('Enter in a field advances focus instead of saving', pg.evaluate("() => document.activeElement && document.activeElement.dataset.testid") != 'f-name' and pg.url.rstrip('/').endswith('new.html'))
+        check('Enter in a field advances focus instead of saving', pg.evaluate("() => document.activeElement && document.activeElement.dataset.testid") != 'f-name' and pg.url.rstrip('/').endswith('/bird/new'))
         pg.click('[data-testid=save-new-btn]'); pg.wait_for_timeout(600)
         saved = snap(pg, "() => window.__zajilDb.allBirds().find(x => x.name === 'طائر الدفعة')")
         check('save-and-new: the bird is saved with both rings (types kept), the toast says «حُفظ … — أدخل التالي»', bool(saved) and len(saved['rings']) == 2 and saved['rings'][1]['type'] == 'club' and 'أدخل التالي' in pg.locator('[data-testid=toast]').inner_text())
@@ -221,22 +221,22 @@ try:
         check_clearance(pg, check, 'bird form · new')
         check('…and focus sits in the ring field', pg.evaluate("() => document.activeElement && document.activeElement.dataset.testid") == 'ring-input')
         # ── edit: prefilled, a change persists, note appended ──
-        pg.goto(f"{ROOT}bird/edit.html?id={saved['id']}", wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
+        pg.goto(f"{ROOT}bird/edit/?id={saved['id']}", wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
         check('edit form: title «تعديل», fields prefilled, no save-and-new', pg.locator('[data-testid=form-title]').inner_text().strip() == 'تعديل' and pg.locator('[data-testid=f-name]').input_value() == 'طائر الدفعة' and pg.locator('[data-testid=save-new-btn]').count() == 0)
         for w in (430, 900, 1400):
             pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/edit-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
         pg.fill('[data-testid=f-colour]', 'أحمر'); pg.fill('[data-testid=f-notes]', 'ملاحظة من النموذج'); pg.click('[data-testid=save-btn]')
-        pg.wait_for_url(re.compile(r'/bird\?id='), timeout=6000); pg.wait_for_selector('[data-testid=profile-hero]')
+        pg.wait_for_url(re.compile(r'/bird/\?id='), timeout=6000); pg.wait_for_selector('[data-testid=profile-hero]')
         upd = snap(pg, "(id) => { const b = window.__zajilDb.getBird(id); return [b.colour, (b.notes||[]).length]; }", saved['id'])
         check('edit saves the change and appends the note through saveBird', upd == ['أحمر', 1], upd)
-        check('cancel on the edit form returns to the profile', (pg.goto(f"{ROOT}bird/edit.html?id={saved['id']}", wait_until='load'), pg.wait_for_selector('[data-testid=cancel-btn]'), pg.click('[data-testid=cancel-btn]'), pg.wait_for_timeout(500))[0] is not None and ('/bird' in pg.url))
+        check('cancel on the edit form returns to the profile', (pg.goto(f"{ROOT}bird/edit/?id={saved['id']}", wait_until='load'), pg.wait_for_selector('[data-testid=cancel-btn]'), pg.click('[data-testid=cancel-btn]'), pg.wait_for_timeout(500))[0] is not None and ('/bird' in pg.url))
         # ── [entry_ergonomics#12–13] a plain save leaves for the bird, and the back gesture returns to the LIST ──
-        pg.goto(f'{ROOT}birds.html', wait_until='load'); pg.wait_for_selector('[data-testid=bird-row]')
+        pg.goto(f'{ROOT}birds/', wait_until='load'); pg.wait_for_selector('[data-testid=bird-row]')
         pg.goto(NEW, wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
         pg.fill('[data-testid=ring-input] >> nth=0', 'JO-2026-77003'); pg.click('[data-testid=save-btn]')
-        pg.wait_for_url(re.compile(r'/bird\?id='), timeout=6000); pg.wait_for_selector('[data-testid=profile-hero]')
-        check('[entry_ergonomics#12] a plain save lands on the new bird', '/bird?id=' in pg.url)
+        pg.wait_for_url(re.compile(r'/bird/\?id='), timeout=6000); pg.wait_for_selector('[data-testid=profile-hero]')
+        check('[entry_ergonomics#12] a plain save lands on the new bird', '/bird/?id=' in pg.url)
         pg.go_back(); pg.wait_for_timeout(700)
         check('[entry_ergonomics#13] …and going back returns to the LIST, never to a stale form (replace, not push)', '/birds' in pg.url and pg.locator('[data-testid=bird-row]').count() > 0, pg.url)
 

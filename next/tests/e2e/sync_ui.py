@@ -7,7 +7,7 @@
 #     names; the port's shell says the same things through data-testid, and the
 #     healthy row is not rendered AT ALL rather than rendered with display:none
 #     (which is what "not taking up space" was asserting);
-#   · the routes — `#/tools` → `tools.html`, `#/birds` → `birds.html`;
+#   · the routes — `#/tools` → `tools/`, `#/birds` → `birds/`;
 #   · RULING 1 (Phase 4 order) — the inline sign-in form inside the card is
 #     superseded by /sign-in. Its ten assertions (#23–#33 of the root list) are in
 #     tests/e2e/screens/tools.py and tests/e2e/screens/sign_in.py, re-authored
@@ -19,8 +19,8 @@
 import json, os
 from playwright.sync_api import sync_playwright
 
-HARNESS = os.environ.get('ZAJIL_URL', 'http://127.0.0.1:8123/test-harness.html')
-ROOT = HARNESS.replace('test-harness.html', '')
+HARNESS = os.environ.get('ZAJIL_URL', 'http://127.0.0.1:8123/test-harness/')
+ROOT = HARNESS.replace('test-harness/', '')
 STUB_URL = 'https://stub.zajil.test'
 STUB_KEY = 'sb_publishable_STUBKEY'
 
@@ -96,7 +96,7 @@ with sync_playwright() as p:
     page = ctx.new_page(); page.set_default_timeout(30000)
     errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
     # any screen that carries the shared row; the loft home is the one a fancier opens on
-    page.goto(ROOT + 'birds.html', wait_until='load'); page.wait_for_timeout(1800)
+    page.goto(ROOT + 'birds/', wait_until='load'); page.wait_for_timeout(1800)
 
     # ── 1. a device with no session shows NOTHING ──
     # The root asserts `#sync-row` exists. The port renders nothing at all when there is
@@ -213,7 +213,7 @@ with sync_playwright() as p:
           loud['state'] == 'error', str(loud['state']))
     check('...as a warning, with a link to الأدوات',
           row_state(page) == 'error'
-          and page.eval_on_selector('[data-testid=sync-row-link]', 'n => n.getAttribute("href")') in ('/tools', '/tools.html'),
+          and page.eval_on_selector('[data-testid=sync-row-link]', 'n => n.getAttribute("href")') in ('/tools', '/tools/'),
           f'{row_state(page)} / {page.query_selector("[data-testid=sync-row-link]") is not None}')
     check('...using wording that avoids blame and jargon',
           'تعذّرت المزامنة' in (row_text(page) or ''), repr(row_text(page)))
@@ -279,7 +279,7 @@ with sync_playwright() as p:
             at: new Date().toISOString(),
             since: new Date(Date.now() - 5 * 60 * 1000).toISOString() });
     }""")
-    page.goto(ROOT + 'tools.html', wait_until='load'); page.wait_for_timeout(1800)
+    page.goto(ROOT + 'tools/', wait_until='load'); page.wait_for_timeout(1800)
     body = page.inner_text('body')
     check('الأدوات has a المزامنة card', 'المزامنة' in body)
     check('...showing the signed-in account', 'spike-a@zajil.test' in body, body[:200].replace('\n', ' '))

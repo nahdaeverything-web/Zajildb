@@ -42,8 +42,8 @@ def check(n, ok, d=''):
 
 
 srv, HARNESS = serve()
-ROOT = HARNESS.replace('test-harness.html', '')
-TOOLS = f'{ROOT}tools.html'
+ROOT = HARNESS.replace('test-harness/', '')
+TOOLS = f'{ROOT}tools/'
 STUB = 'https://stub.example.test'
 # a 1×1 PNG — the smallest real image, so the logo path exercises a genuine Blob
 PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
@@ -492,11 +492,11 @@ try:
               pg.locator('[data-testid=card-settings] h3').inner_text())
         check('…and it is a stored setting, so it survives a navigation',
               run(pg, "(db) => db.state.settings.lang") == 'en')
-        pg.goto(f'{ROOT}stats.html', wait_until='load'); pg.wait_for_timeout(2000)
+        pg.goto(f'{ROOT}stats/', wait_until='load'); pg.wait_for_timeout(2000)
         check('…on another screen too, which is what makes it the APP language and not a toggle',
               pg.evaluate("() => document.documentElement.dir") == 'ltr'
               and pg.evaluate("() => document.documentElement.lang") == 'en')
-        pg.goto(f'{ROOT}tools.html', wait_until='load'); pg.wait_for_timeout(2000)
+        pg.goto(f'{ROOT}tools/', wait_until='load'); pg.wait_for_timeout(2000)
         pg.locator('[data-testid=set-lang] [data-testid=seg-btn][data-value=ar]').click()
         pg.wait_for_timeout(900)
         back = pg.evaluate("() => ({ dir: document.documentElement.dir, lang: document.documentElement.lang })")

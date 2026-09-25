@@ -114,7 +114,7 @@ def check(n, ok, d=''):
 
 
 srv, HARNESS = serve()
-ROOT = HARNESS.replace('test-harness.html', '')
+ROOT = HARNESS.replace('test-harness/', '')
 
 SCAN = """() => {
   const parse = (c) => { const m = c.match(/[\\d.]+/g); if (!m) return null;
@@ -317,12 +317,12 @@ try:
             pg.goto(HARNESS, wait_until='load'); pg.wait_for_timeout(800)
             pg.evaluate("async () => { await window.__zajilReady; }")
             pg.evaluate("""async () => { const db = await window.__zajilDb;
-                await db.importAll(await (await fetch('./example-loft-large.json')).json(), 'merge'); }""")
+                await db.importAll(await (await fetch(new URL('example-loft-large.json', document.querySelector('link[rel=manifest]').href))).json(), 'merge'); }""")
             bid = pg.evaluate("async () => { const db = await window.__zajilDb; return db.allBirds()[0].id; }")
 
             for route in ROUTES:
                 base, _, qs = route.partition('?')
-                url = ROOT + base + '.html' + (('?' + qs) if qs else '')
+                url = ROOT + base + '/' + (('?' + qs) if qs else '')
                 if base in ('bird', 'pedigree', 'cert'):
                     url += ('&' if qs else '?') + 'id=' + bid
                 pg.goto(url, wait_until='load'); pg.wait_for_timeout(1400)

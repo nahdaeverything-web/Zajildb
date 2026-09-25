@@ -6,7 +6,7 @@ import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds } from '@/src/db/react';
 import { t, fmtNum, statusLabel } from '@/src/i18n.ext.js';
 import { ringKey } from '@/src/engine/rings.js';
-import { SyncRow, Empty, toast, primaryRing, seasonLabel, initDB } from '@/src/components';
+import { SyncRow, Empty, toast, primaryRing, seasonLabel, initDB, asset } from '@/src/components';
 import sh from '@/src/components/shared.module.css';
 import s from './birds.module.css';
 
@@ -33,7 +33,7 @@ const searchText = (b: Bird) => [b.name, b.strain, b.colour, b.eyeSign, b.breede
 
 /** js/views/birds.js loadExample — merge, never destroy. */
 async function loadExample(file: string) {
-  const payload = await (await fetch(file)).json();
+  const payload = await (await fetch(asset(file))).json();
   const counts = await db.importAll(payload, 'merge');
   toast(t('bird.exampleLoaded', { n: counts.birds }), { timeout: 7000, kind: 'info' });
 }

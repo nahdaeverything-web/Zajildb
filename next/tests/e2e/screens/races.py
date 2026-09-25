@@ -17,8 +17,8 @@ def check(n, ok, d=''):
     passed += bool(ok); failed += (not ok); print(f"  {'✓' if ok else '✗'} {n}{('  ' + str(d)) if d else ''}")
 
 srv, HARNESS = serve()
-ROOT = HARNESS.replace('test-harness.html', '')
-RACES = f'{ROOT}races.html'
+ROOT = HARNESS.replace('test-harness/', '')
+RACES = f'{ROOT}races/'
 def boot(ctx):
     pg = ctx.new_page(); pg.goto(HARNESS, wait_until='load'); pg.wait_for_timeout(600)
     pg.evaluate("async () => { await window.__zajilReady; }"); return pg
@@ -28,7 +28,7 @@ def wipe(pg):
         for (const r of [...db.state.raceResults.values()]) await db.Races.remove(r.id);
         for (const b of db.allBirds()) await db.deleteBird(b.id); }""")
 def load(pg, file):
-    pg.evaluate("async (f) => { const db = await window.__zajilDb; await db.importAll(await (await fetch(f)).json(), 'merge'); }", file)
+    pg.evaluate("async (f) => { const db = await window.__zajilDb; await db.importAll(await (await fetch(new URL(f.replace(/^\.?\//, ''), document.querySelector('link[rel=manifest]').href))).json(), 'merge'); }", file)
 def shots(pg, name, widths=(430, 900, 1400)):
     for w in widths:
         pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(200); shot(pg, path=f'{FID}/{name}-{w}.png', full_page=True)

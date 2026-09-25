@@ -32,7 +32,7 @@ def check(n, ok, d=''):
 
 
 srv, HARNESS = serve()
-ROOT = HARNESS.replace('test-harness.html', '')
+ROOT = HARNESS.replace('test-harness/', '')
 PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
 
 
@@ -70,7 +70,7 @@ try:
         boot = ctx.new_page(); boot.goto(HARNESS, wait_until='load'); boot.wait_for_timeout(600)
         boot.evaluate("async () => { await window.__zajilReady; }")
         boot.evaluate("""async () => { const db = await window.__zajilDb;
-            await db.importAll(await (await fetch('./example-loft-large.json')).json(), 'merge'); }""")
+            await db.importAll(await (await fetch(new URL('example-loft-large.json', document.querySelector('link[rel=manifest]').href))).json(), 'merge'); }""")
         # RULING 2's fields, filled the way the الأدوات card fills them
         boot.evaluate("""async (logo) => { const db = await window.__zajilDb; const l = db.currentLoft();
             const bytes = Uint8Array.from(atob(logo), c => c.charCodeAt(0));
@@ -85,7 +85,7 @@ try:
                           return { id: b.id, name: b.name, score: (s && s.sireId ? 1 : 0) + (d && d.damId ? 1 : 0) }; })
               .sort((x, y) => y.score - x.score);
             return deep[0]; }""")
-        CERT = f'{ROOT}cert.html?id={target["id"]}'
+        CERT = f'{ROOT}cert/?id={target["id"]}'
 
         pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
         pg.goto(CERT, wait_until='load'); pg.wait_for_selector('[data-testid=sheet]', timeout=10000)
@@ -338,7 +338,7 @@ try:
 
         # ── a bird that is not there ──
         gone = ctx.new_page()
-        gone.goto(f'{ROOT}cert.html?id=no-such-bird', wait_until='load'); gone.wait_for_timeout(1500)
+        gone.goto(f'{ROOT}cert/?id=no-such-bird', wait_until='load'); gone.wait_for_timeout(1500)
         check('a certificate for a record that is not here goes back to the loft rather than showing an empty sheet',
               '/birds' in gone.url, gone.url.split('/')[-1])
 

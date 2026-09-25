@@ -153,7 +153,12 @@ if (existsSync('out/sw.js')) {
     ];
     for (const [re, what] of need) if (!shell.some((u) => re.test(u))) bad.push(`missing from the precache list: ${what}`);
     // 4. every DOCUMENT the shell can navigate to, or that route is dead offline
-    const docs = [...files].filter((f) => f.endsWith('.html') && !/^(404|_not-found)\.html$/.test(f)
+    // 404 and _not-found are not navigable app routes — the worker serves index.html as the
+    // navigation fallback — so they are excluded. BOTH SHAPES: `trailingSlash: true` writes
+    // them as 404/index.html and _not-found/index.html rather than 404.html, and a pattern
+    // that knew only the flat shape reported them as dead offline routes the moment the
+    // config was ruled (2026-09-25).
+    const docs = [...files].filter((f) => f.endsWith('.html') && !/^(404|_not-found)(\.html|\/index\.html)$/.test(f)
       && (process.env.NEXT_PUBLIC_HARNESS === '1' || !/test-harness/.test(f)));
     for (const d of docs) if (!shell.includes(base + '/' + d)) bad.push(`a route that would be dead offline: ${d}`);
   }

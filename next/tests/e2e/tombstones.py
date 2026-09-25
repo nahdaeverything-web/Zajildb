@@ -20,7 +20,7 @@ with sync_playwright() as p:
     errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
     page.goto(BASE, wait_until='load'); page.wait_for_timeout(2000)
     page.evaluate("""async()=>{const db=await window.__zajilDb;
-        await db.importAll(await (await fetch('./example-loft-large.json')).json(),'merge');}""")
+        await db.importAll(await (await fetch(new URL('example-loft-large.json', document.querySelector('link[rel=manifest]').href))).json(),'merge');}""")
     page.wait_for_timeout(600)
 
     # ── a simple delete writes exactly one tombstone ──

@@ -5,7 +5,7 @@ subscription to the layer's existing onChange. Provisions its own server."""
 import subprocess, socket, sys, time, os
 from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__)); OUT = os.path.abspath(os.path.join(HERE, '..', '..', 'out'))
-assert os.path.exists(os.path.join(OUT, 'test-harness.html')), 'run `npm run build:harness` first'
+assert os.path.exists(os.path.join(OUT, 'test-harness', 'index.html')), 'run `npm run build:harness` first'
 s = socket.socket(); s.bind(('127.0.0.1', 0)); port = s.getsockname()[1]; s.close()
 srv = subprocess.Popen([sys.executable, '-m', 'http.server', str(port), '-d', OUT, '--bind', '127.0.0.1'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL); time.sleep(0.8)
 passed = failed = 0
@@ -15,7 +15,7 @@ def check(name, ok, detail=''):
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
-        pg.goto(f'http://127.0.0.1:{port}/test-harness.html', wait_until='load'); pg.wait_for_timeout(1500)
+        pg.goto(f'http://127.0.0.1:{port}/test-harness/', wait_until='load'); pg.wait_for_timeout(1500)
         pg.evaluate("async () => { const db = await window.__zajilDb; await window.__zajilReady; window.__marker = 'same-document'; }")
         c0 = pg.inner_text('#bridge-count'); l0 = pg.inner_text('#bridge-last')
         check('initial render through the bridge', c0 == '0' and l0 == '—', f'count={c0!r} last={l0!r}')

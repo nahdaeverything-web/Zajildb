@@ -15,7 +15,7 @@ passed = failed = 0
 def check(n, ok, d=''):
     global passed, failed
     passed += bool(ok); failed += (not ok); print(f"  {'✓' if ok else '✗'} {n}{('  ' + str(d)) if d else ''}")
-srv, BASE = serve(); GAL = BASE.replace('test-harness.html', 'test-harness/gallery.html')
+srv, BASE = serve(); GAL = BASE.replace('test-harness/', 'test-harness/gallery/')
 SECTIONS = ['g-sync', 'g-toast', 'g-dialogs', 'g-validation', 'g-notice', 'g-empty', 'g-loading', 'g-media', 'g-bits']
 try:
     with sync_playwright() as p:
@@ -49,7 +49,7 @@ try:
         check('sync.synced renders nothing', pg.locator('[data-testid=sync-synced]').evaluate("e => e.childElementCount === 0 && e.textContent.trim() === ''"))
         check('sync.pending count in .n', pg.locator('[data-testid=sync-pending] span span').inner_text() == '3')
         a = pg.locator('[data-testid=sync-error] a')
-        check('sync.error links to /tools labelled nav.tools', a.get_attribute('href') == '/tools' and a.inner_text() == 'الأدوات')
+        check('sync.error links to /tools labelled nav.tools', a.get_attribute('href') == '/tools/' and a.inner_text() == 'الأدوات')
 
         # §02 toasts: kinds, timings (spec: 4 s / error 6 s / undo 6 s), undo action fires
         pg.click('[data-testid=fire-toast-success]'); t0 = time.time()

@@ -76,7 +76,7 @@ try:
 
         # ── 1. the platform fact this all rests on, re-measured every run ──────────────
         p0 = br.new_page(); p0.set_default_timeout(900000)
-        p0.goto(ORIGIN + 'tools.html', wait_until='load'); p0.wait_for_timeout(1200)
+        p0.goto(ORIGIN + 'tools/', wait_until='load'); p0.wait_for_timeout(1200)
         probe = p0.evaluate("""async (cap) => {
             const mk = (n) => { const chunk = new Uint8Array(1024 * 1024).fill(65); const parts = [];
               let left = n; while (left > 0) { const take = Math.min(left, chunk.length);
@@ -96,7 +96,7 @@ try:
         ctx = br.new_context(accept_downloads=True)
         g = ctx.new_page(); g.set_default_timeout(900000)
         gerr = []; g.on('pageerror', lambda e: gerr.append(str(e)))
-        g.goto(ORIGIN + 'tools.html', wait_until='load'); g.wait_for_timeout(2000)
+        g.goto(ORIGIN + 'tools/', wait_until='load'); g.wait_for_timeout(2000)
         for _ in range(30):
             if g.locator('[data-testid=toast]').count() == 0:
                 break
@@ -138,13 +138,13 @@ try:
         try:
             ctx_a = br.new_context(accept_downloads=True)
             a = ctx_a.new_page(); a.set_default_timeout(1800000)
-            a.goto(ORIGIN + 'test-harness.html', wait_until='load'); a.wait_for_timeout(900)
+            a.goto(ORIGIN + 'test-harness/', wait_until='load'); a.wait_for_timeout(900)
             a.evaluate("async () => { await window.__zajilReady; }")
             # aim the FILE just under the cap: the file runs ~1.3337x the source bytes
             target_src = int((CAP - 8 * 1024 * 1024) / 1.3337)
             seeded = a.evaluate(SEED_BYTES, [target_src, 4 * 1024 * 1024])
             ta = ctx_a.new_page(); ta.set_default_timeout(1800000)
-            ta.goto(ORIGIN + 'tools.html', wait_until='load'); ta.wait_for_timeout(1500)
+            ta.goto(ORIGIN + 'tools/', wait_until='load'); ta.wait_for_timeout(1500)
             with ta.expect_download(timeout=1800000) as dl:
                 ta.click('[data-testid=export-all]')
             near = '/tmp/zajil-boundary-near.json'
@@ -157,7 +157,7 @@ try:
             ctx_b = br.new_context(accept_downloads=True)
             b2 = ctx_b.new_page(); b2.set_default_timeout(1800000)
             berr = []; b2.on('pageerror', lambda e: berr.append(str(e)))
-            b2.goto(ORIGIN_B + 'tools.html', wait_until='load'); b2.wait_for_timeout(2000)
+            b2.goto(ORIGIN_B + 'tools/', wait_until='load'); b2.wait_for_timeout(2000)
             for _ in range(30):
                 if b2.locator('[data-testid=toast]').count() == 0:
                     break

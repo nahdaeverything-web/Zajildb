@@ -25,7 +25,7 @@ _sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..
 from _serve import serve as _serve            # noqa: E402
 
 _srv, HARNESS = (None, os.environ['ZAJIL_URL']) if os.environ.get('ZAJIL_URL') else _serve()
-ROOT = HARNESS.replace('test-harness.html', '')
+ROOT = HARNESS.replace('test-harness/', '')
 URL = os.environ.get('ZAJIL_LIVE_SUPABASE_URL', '')
 KEY = os.environ.get('ZAJIL_LIVE_PUBLISHABLE_KEY', '')
 EMAIL = os.environ.get('ZAJIL_LIVE_EMAIL', '')
@@ -118,7 +118,7 @@ with sync_playwright() as p:
     # RULING 1 (Phase 4 order): the form is /sign-in now, and الأدوات keeps the signed-in
     # card. Same claim as vanilla's — "the API works" and "a person can sign in" are
     # different claims, and v1.9 shipped with the first true and the second false.
-    page.goto(ROOT + 'sign-in.html', wait_until='load'); page.wait_for_selector('[data-testid=signin-form]')
+    page.goto(ROOT + 'sign-in/', wait_until='load'); page.wait_for_selector('[data-testid=signin-form]')
     check('the form is offered when signed out', page.locator('[data-testid=signin-submit]').count() == 1)
 
     page.fill('[data-testid=f-email]', EMAIL)
