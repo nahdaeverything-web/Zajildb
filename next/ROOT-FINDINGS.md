@@ -1,7 +1,7 @@
 # Root and spec findings surfaced by the port
 
-Two kinds of entry, both surfaced by the React port while copying the vanilla
-tree and re-proving it against the approved designs:
+Three kinds of entry, the first two surfaced by the React port while copying
+the vanilla tree and re-proving it against the approved designs:
 
 - **ROOT findings** — inconsistencies in the **vanilla** tree (everything
   outside `next/`).
@@ -9,6 +9,10 @@ tree and re-proving it against the approved designs:
   `design/approved/`. Ruled in at 4D acceptance. The specs are frozen, so
   these are not edited either; the port states what it did instead, and why
   the intent was not in doubt.
+- **TOOLING findings** (`TF-n`) — defects in the machinery used to VERIFY the
+  other two. They belong here because a broken tool does not announce itself:
+  it reports a clean result and ends the investigation. TF-1 is one that
+  invalidated a verification already reported as fact.
 
 Neither tree is written to during the port. Each entry names the file and
 line, what is wrong, why it matters, and what the port did about it on its own
@@ -681,3 +685,70 @@ migration. Carried into `CUTOVER.md` as a pre-pilot question, not a work item.
 Note that the downscale-on-add work makes this recede for *new* photos on either app, since
 `main` shares no code with it — but it does nothing for photos already stored, which is
 precisely the population that would be migrating.
+
+---
+
+## TF-1 — `grep` on this machine silently reports nothing for matches that exist
+
+**A tooling finding, not a code one, and recorded here because it invalidated a verification
+I had already reported as fact.** Every "I checked and there are none" in this tree is only
+as good as the tool that checked, and for a while this one was not good at all.
+
+### The measurement
+
+Three tools, one file, one needle, at the same moment:
+
+```
+$ grep -c "data-testid" app/stats/view.tsx
+                      ← printed NOTHING, exit status lost in the pipeline
+$ /bin/grep -c "data-testid" app/stats/view.tsx
+27
+$ python3 -c "print(open('app/stats/view.tsx').read().count('data-testid'))"
+29
+```
+
+Three different answers, and the one on `PATH` gave the answer that ends an investigation.
+(`/bin/grep` counts matching LINES and Python counts OCCURRENCES, which is why 27 and 29
+disagree and both are right. Nothing explains the first.)
+
+The `grep` on `PATH` is not GNU grep. Earlier in the same session it had emitted
+`ugrep: warning: --include=*.css: No such file or directory` for a flag GNU grep accepts, so
+it also does not support the same options — a search that looks like it ran, runs, and
+reports a confident zero.
+
+### What it actually cost
+
+While porting to `trailingSlash: true`, four `fetch('./example-loft-large.json')` call sites
+had to move to a basePath-aware URL. A scan for the remaining ones reported **one** — the
+comment inside `src/components/asset.ts` describing the very bug — and that was reported
+upward as "app-wide relative fetches remaining: 1, only asset.ts".
+
+It was wrong. `app/stats/view.tsx:123` was a real, unfixed fourth call site. It surfaced
+only because the gate failed on it, and it failed with
+
+```
+Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+```
+
+which is a JSON parser being handed a 404 page and says nothing whatever about the cause.
+Had the deploy gone out on that scan, the stats screen's teaching-loft button would have been
+dead on the live site with an error naming nothing.
+
+### The rule adopted
+
+**Anything load-bearing — a claim that something does not exist, a count that gates a
+decision, a sweep that is about to be reported as complete — uses Python or `/bin/grep`,
+never bare `grep`.** Bare `grep` is fine for looking around; it is not evidence.
+
+A zero from a search is a claim about the whole tree, which makes it exactly the kind of
+statement that deserves the most suspicion, not the least. The cheap defence is a control: a
+search whose expected answer is non-zero, run with the same tool in the same breath. Had the
+scan above been paired with "and here is the count of a string I know is there", it would
+have caught itself.
+
+### Re-verification
+
+Every grep-derived claim from that session was re-run under Python. All four held —
+white-on-gold rules remaining **0**, hard-coded `132px` outside the token **0**, relative
+fetches in app code **0**, flat `.html` routes in tests **0**. The conclusions were right; the
+basis was unsound, which is a different thing and worth separating.
