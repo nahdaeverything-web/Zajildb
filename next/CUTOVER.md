@@ -1,8 +1,23 @@
 # Cutover plan — vanilla Zajil to the React port
 
-**Status: A PLAN. Nothing in it has been executed.** Written at the end of Phase 6, when
-the port passes 1747 assertions and the isolation contract has never been broken. Phase 7
-is this document; Phase 8 would be carrying it out.
+**Status: PARTLY EXECUTED — a side-by-side deployment exists; the CUTOVER does not.** Written
+at the end of Phase 6; the port now passes 1876 assertions and the isolation contract has
+never been broken.
+
+**Executed 2026-09-25.** The port is live at **https://nahdaeverything-web.github.io/zajilv2/**
+serving `zajil-v2.0.0-dev.1`, from `nahdaeverything-web/zajilv2` (`main` = the source,
+`gh-pages` = the built export). It is **SYNC-INERT by ruling** — no project URL, no key.
+`live_deployment.py`, the deploy gate this document's §g asked for, is written and ran green
+against that origin: **18 passed, 0 failed**.
+
+**Not executed: the cutover itself.** Vanilla is untouched and is still what real users run.
+Nothing in §b (production Supabase), §c (invites), §d (the data path), §e (domain wiring) or
+§f (rollback) has happened.
+
+**And one thing this plan got wrong, corrected by the deployment — see §d.0.** The two apps
+are on the SAME ORIGIN at different paths, so they share one IndexedDB and one CacheStorage.
+That was assumed to be a migration question. It is an isolation question, and it changes what
+"side by side" means.
 
 Every claim here is either cited to a file in this repo or marked as needing confirmation.
 Where the plan recommends something, the alternatives that were rejected are named, because
@@ -19,6 +34,13 @@ hour, not a day) and §f.3 (a rollback strand the version bump does not fix).
 ---
 
 ## 0. The three findings that shape everything below
+
+> **Status after the first deployment (2026-09-25).** §0.1 is CLOSED — the live origin serves
+> `zajil-v2.0.0-dev.1` and the browser reports exactly one cache with that key. §0.2 is BUILT
+> and deliberately unused: `public/sync-config.js` ships empty, `scripts/inject-config.mjs`
+> rewrites it after the guards and before upload. §0.3 is STILL OPEN and can only be closed
+> by `push_live`/`pull_live` against a configured project — the deferred §3 verification.
+> §0.4 is CLOSED: the ported `live_deployment.py` exists and gated this deployment.
 
 These came out of writing the plan, not out of running it. Each one would have been found
 in production, expensively.
@@ -322,6 +344,49 @@ real destination or the pane is a promise the app does not keep.
 ---
 
 ## d. The data path for existing users
+
+### d.0 — MEASURED, and it corrects this section's premise
+
+**The port and vanilla currently SHARE storage.** `…github.io/Zajildb/` and `…github.io/zajilv2/`
+are the same **origin** at different paths, and IndexedDB is partitioned by origin, not by
+path. Measured against both live deployments in one ephemeral browser profile:
+
+```
+VANILLA  /Zajildb/   dbs ['zajil@v2']
+PORT     /zajilv2/   dbs ['zajil@v2']     SAME ORIGIN: True
+
+38 birds loaded through the PORT's UI  ->  VANILLA sees 38
+shared zajil DB: {birds: 38, healthEvents: 7, pairs: 5, raceResults: 17, oplog: 68, lofts: 2}
+```
+
+Two consequences, pulling in opposite directions:
+
+- **No migration is needed between these two paths.** Everything below about export/import
+  applies to a move to a DIFFERENT origin — a custom domain (§e) — not to the current pair.
+- **The port is not a sandbox.** Anyone opening `/zajilv2/` in the browser they use for the
+  real app is running a dev build against their live loft, and every write is shared both
+  ways. A side-by-side deployment on one origin is a side-by-side VIEW, not a safe trial.
+
+`lofts: 2` was observed in the shared database — each app creating its own on first run, so
+they disagree about which loft is current. Not investigated; recorded because it is the same
+shape as the `backup.warn30` defect that created a third loft.
+
+**The service workers also evict each other, asymmetrically.** Each sweeps on ACTIVATE with
+`keys.filter(k => k.startsWith('zajil-') && k !== VERSION)`, and activation happens once per
+install, so whichever installs or updates LAST wipes the other's cache:
+
+```
+after VANILLA     ['zajil-v1.9.1']
+after PORT        ['zajil-v2.0.0-dev.1']                    <- the port deleted vanilla's
+back to VANILLA   ['zajil-v1.9.1', 'zajil-v2.0.0-dev.1']    <- vanilla rebuilt its own, kept the port's
+```
+
+No records are lost — the sweep never touches IndexedDB. **Vanilla's offline capability is**,
+until the user's next online visit rebuilds it. For an app whose promise is «يعمل دون اتصال»
+that is worth knowing before a fancier is asked to compare the two.
+
+A custom domain ends all of it — separate origin, separate IndexedDB, separate caches, no
+cross-eviction — and simultaneously makes everything below a genuine requirement.
 
 ### d.1 The problem, stated exactly
 

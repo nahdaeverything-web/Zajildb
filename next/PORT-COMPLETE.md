@@ -3,9 +3,16 @@
 One page for whoever picks this up cold. Everything here is checkable; where a claim needs
 a command, the command is given.
 
-**Status:** the port is finished and gated. It has never been deployed. The vanilla app in
-the repo root is what real users run today, at `https://nahdaeverything-web.github.io/Zajildb/`.
-Nothing moves until the launch sequence is opened.
+**Status: DEPLOYED, side by side.** Since 2026-09-25 the port is live at
+**https://nahdaeverything-web.github.io/zajilv2/**, serving `zajil-v2.0.0-dev.1` from
+`nahdaeverything-web/zajilv2` (`main` = this tree at the repo root; `gh-pages` = the built
+export). It is **SYNC-INERT by ruling** — no project URL, no key of any kind — so the tools
+card reads «المزامنة غير مهيأة». That is the shipped posture, not a degraded one.
+
+**This is not a cutover.** The vanilla app is untouched and is still what real users run, at
+`https://nahdaeverything-web.github.io/Zajildb/`. Two origins, two IndexedDB stores, no
+migration has happened and none is implied. What remains before anyone else's data exists is
+in §8.
 
 ---
 
@@ -392,21 +399,137 @@ wipes the performance timeline — `performance.getEntriesByType('navigation').l
 ## 8. Before anything deploys
 
 **Read `next/CUTOVER.md` first.** It is the Phase 7 plan: sections a–h, the order of
-operations as 15 stages, and an open-decisions register. Nothing in it has been executed.
+operations as 15 stages, and an open-decisions register.
 
-The three findings in its §0 are the ones that would otherwise be discovered in production:
+### What the first deployment settled (2026-09-25)
 
-1. **Both service workers name the same cache.** `sw.js` is `zajil-v1.9.1` and the port
-   composes the same string from `next/package.json`. Since each sweeps `zajil-*` keys that
-   are `!== VERSION`, an identical version means **neither deploy ever evicts the other** —
-   the port's 138 entries land beside vanilla's 40 and stay, in both directions. The release
-   must bump `next/package.json`.
-2. **A configured release is currently impossible, by design.** `src/sync-config.js` is
-   byte-identical to vanilla's and two tests assert it empty. The config injection point is
-   recommended in §a.3 and **not built**.
-3. **The verification query proves objects, not paths.** All four introspection checks once
-   went green on a Supabase project that accepted nothing, because the SQL editor runs as
-   `postgres`. Only `push_live` / `pull_live` against the real project prove a write lands.
+The three findings in CUTOVER §0 are the ones that would otherwise have been discovered in
+production. Two are now closed and one is deliberately still open:
+
+1. **The shared cache key — CLOSED.** `sw.js` was `zajil-v1.9.1` and the port composed the
+   same string, so both workers named the same CacheStorage key and neither activate sweep
+   could evict the other. `next/package.json` is now `2.0.0-dev.1` and the live origin
+   serves `zajil-v2.0.0-dev.1`. Verified against the deployment, not the build: the browser
+   reports `caches = ['zajil-v2.0.0-dev.1']`, one key, with no second `zajil-` beside it.
+2. **The config injection point — BUILT, and deliberately unused.** `public/sync-config.js`
+   ships committed-empty, is loaded `beforeInteractive`, and `scripts/inject-config.mjs`
+   rewrites it AFTER the guards and BEFORE upload. `src/sync-config.js` stays byte-identical
+   to vanilla's, so both byte-identity tests still hold. The deployed copy is empty because
+   this deployment is sync-inert by ruling.
+3. **Introspection proves objects, not paths — STILL OPEN, and correctly so.** It can only
+   be closed by `push_live` / `pull_live` against a configured project, which is exactly
+   what the deferred §3 verification is. See below.
+
+### trailingSlash, and the failure it actually prevented
+
+`next.config.ts` sets `trailingSlash: true`. Without it, `output: 'export'` wrote `birds.html`
+beside an **indexless** `birds/` directory (holding only RSC `.txt` payloads), while
+`next/link` rendered `href="<base>/birds"`. Whether those agree is entirely up to the host.
+
+Measured against the live origin, using indexless directories that already exist there:
+
+| request | GitHub Pages answers |
+|---|---|
+| `/_next/static/chunks/` (indexless directory) | **404** |
+| `/_next/static/chunks` | **301** → `/_next/static/chunks/` → then 404 |
+| `/birds/` (directory WITH an index) | **200** |
+| `/birds` | **301** → `/birds/` → 200 |
+
+**Pages prefers the directory over a sibling `.html`.** So the flat export's `/zajilv2/birds`
+would have gone `301 → /birds/ → 404` — a site perfect at its root and broken at every deep
+link, which is the link a pilot user receives when someone shares a bird in WhatsApp. This
+was not a hypothetical risk that was avoided; it is a measured failure that was prevented.
+
+**Four real defects it exposed on the way**, none of which a reader would have found:
+
+- **Four relative fetches in app code.** `fetch('./example-loft-large.json')` is correct only
+  while every route is a flat document at the root; with the loft at `<base>/birds/` it
+  resolved one directory deeper, the host answered with its 404 page, and `JSON.parse` was
+  handed HTML — reported as «Unexpected token '<'», which names nothing. `birds`, `tools` and
+  `stats` all called it. Now one rule: `src/components/asset.ts`, built from
+  `NEXT_PUBLIC_BASE_PATH`, depth-proof by construction. **The fourth was found only because
+  the gate failed on it — a scan had reported the sweep complete. See ROOT-FINDINGS TF-1.**
+- **The service worker served the WRONG DOCUMENT offline.** `documentCandidates()` tried
+  `<path>.html` and nothing else, so a bare `/stats` fell through to the shell, which
+  redirects to `/birds`. Online the host redirects and the question never arises; offline
+  there is no host. Verified live: offline, `/zajilv2/stats` renders the stats document
+  (count-line present, zero bird rows — the shell would have shown 38).
+- **`sw-precache-sound`** reported `404/index.html` and `_not-found/index.html` as dead
+  offline routes; its exclusion knew only the flat shape.
+- **The fidelity gallery diverged from the app** — a plain `<a href="/tools">` that
+  `next/link`'s rewriting never touches, rendering a shape the real `<SyncRow/>` no longer
+  produces. The mock was corrected, not the assertion.
+
+### What remains before ANY other person's data exists
+
+Nothing below is optional, and none of it is started. This deployment is for one person on
+one device with no account.
+
+| | why it blocks a second user |
+|---|---|
+| **Production Supabase, on Pro** | the dev project is free-tier and **auto-pauses** (ROOT-FINDINGS RF-3). A paused project is a silent sync outage. Production also means the migration is a one-way door: it is far cheaper to move before anyone's data exists than after. |
+| **Config injection wired up** | built and proven, never used. Two variables — `ZAJIL_SUPABASE_URL`, `ZAJIL_SUPABASE_PUBLISHABLE_KEY` — deliberately NOT `NEXT_PUBLIC_*`, so Next cannot inline them into the hashed chunks and a release artefact stays diffable against a dev one. |
+| **Email password reset** | there is no way for a fancier to recover an account. Acceptable for one operator who controls the project; not acceptable for anyone else. |
+| **The deferred §3 verification** | sign-in, push and pull against a configured origin, over the internet. This is the ONLY thing that closes §0.3 — introspection proves objects, not paths, and only a real write landing proves the path. |
+
+### THE PORT IS NOT A SANDBOX — it shares live storage with the vanilla app
+
+**Measured against both live deployments on 2026-09-25, in one ephemeral browser profile.**
+This was assumed to be a migration question and it is not; it is an isolation question, and
+the answer changes what a side-by-side deployment means.
+
+`https://nahdaeverything-web.github.io/Zajildb/` and `…/zajilv2/` are **the same ORIGIN** at
+different paths. IndexedDB is partitioned by origin, not by path, so the two apps share one
+database — and the data layer is byte-identical, so they agree on its schema completely:
+
+```
+VANILLA  /Zajildb/     dbs ['zajil@v2']
+PORT     /zajilv2/     dbs ['zajil@v2']        SAME ORIGIN: True
+```
+
+Loading the 38-bird teaching loft **through the port's own UI** and then opening vanilla:
+
+```
+PORT    bird rows after loading the teaching loft: 38
+VANILLA bird rows it can see:                      38
+VANILLA first rows: ['JO-2022-09011 · نسمة', 'BE-2016-6012345 · Remco', 'JO-2022-09021 · ريما']
+shared zajil DB: {birds: 38, healthEvents: 7, pairs: 5, raceResults: 17, oplog: 68, lofts: 2, …}
+```
+
+**What follows from this, stated plainly:**
+
+- **No migration is needed between these two paths.** A fancier already using vanilla on this
+  origin opens the port and their birds are simply there. CUTOVER §d's export/import applies
+  to a move to a DIFFERENT origin — a custom domain — not to this pair.
+- **But the port is operating on live data, not a copy.** Anyone who tries `/zajilv2/` in the
+  browser they use for the real app is running a `2.0.0-dev.1` build against their actual
+  loft. Every write is shared, in both directions. This deployment is a side-by-side *view*,
+  not a side-by-side *sandbox*, and it must not be described as one.
+- **`lofts: 2`.** Two loft records exist in the shared database. Each app creates its own on
+  first run, so they now disagree about which loft is current. Not yet investigated; recorded
+  here because it is the same shape as the `backup.warn30` defect, where a banner calling
+  `initDB()` on every route created a third loft.
+
+**The two service workers evict each other's caches, asymmetrically.** Each sweeps on ACTIVATE
+with `keys.filter(k => k.startsWith('zajil-') && k !== VERSION)`, and activation happens once
+per install — so whichever worker installs or updates LAST wipes the other's offline cache:
+
+```
+after VANILLA       ['zajil-v1.9.1']
+after PORT          ['zajil-v2.0.0-dev.1']            ← the port deleted vanilla's cache
+back to VANILLA     ['zajil-v1.9.1', 'zajil-v2.0.0-dev.1']   ← vanilla rebuilt its own, kept the port's
+VANILLA reload      ['zajil-v1.9.1', 'zajil-v2.0.0-dev.1']
+```
+
+No data is lost — records live in IndexedDB, which the sweep never touches. What is lost is
+**vanilla's offline capability**, the first time a user visits the port, until their next
+online visit to vanilla rebuilds it. For an app whose whole promise is «يعمل دون اتصال» that
+is worth knowing before a fancier is invited to compare the two.
+
+A custom domain gives the port its own origin and ends all of the above — separate IndexedDB,
+separate CacheStorage, no cross-eviction — at the cost of making export/import a genuine
+requirement for anyone who was already using vanilla. §d spells out the options. Sync is the
+wrong tool for that: media *metadata* syncs and blobs do not.
 
 And the one that decides whether people keep their birds: **IndexedDB is per-origin**, so
 nothing at the old origin follows to a new domain. §d spells out the options and recommends
