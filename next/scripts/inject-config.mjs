@@ -27,18 +27,25 @@
  * script checks the shape of what it was handed and exits non-zero rather than write it,
  * because the guards cannot help here — they already ran.
  *
- * Usage:  ZAJIL_SUPABASE_URL=… ZAJIL_SUPABASE_PUBLISHABLE_KEY=… node scripts/inject-config.mjs
- *         --check   verify an already-written out/sync-config.js instead of writing it
+ * Usage:  ZAJIL_SUPABASE_URL=… ZAJIL_SUPABASE_PUBLISHABLE_KEY=… node scripts/inject-config.mjs [dir]
+ *         --check   verify an already-written <dir>/sync-config.js instead of writing it
+ *
+ * [dir] defaults to `out` but should normally be the STAGING directory that
+ * scripts/stage-release.mjs produced. out/ is scratch — a gate in another shell rewrites it
+ * (see scripts/_outlock.mjs) — and injecting into scratch means injecting into something that
+ * may not be what gets deployed. The staged copy is the artefact; configure that.
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
-const TARGET = 'out/sync-config.js';
 const check = process.argv.includes('--check');
+const DIR = process.argv.slice(2).find((a) => !a.startsWith('--')) || 'out';
+const TARGET = `${DIR}/sync-config.js`;
 
 const fail = (msg) => { console.error(`✗ inject-config  ${msg}`); process.exit(1); };
 
 if (!existsSync(TARGET)) {
-  fail(`${TARGET} is not there. Run \`npm run build\` first — this rewrites a finished export, it does not create one.`);
+  fail(`${TARGET} is not there. Stage a release first (npm run stage:release) — this rewrites`
+     + ' a finished export, it does not create one.');
 }
 
 if (check) {

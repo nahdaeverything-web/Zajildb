@@ -993,3 +993,38 @@ than to trust the one that happens to be fastest.
 
 The reason is recorded in `eslint.config.mjs` beside the pattern rather than only here,
 because that is where the next person adding an output directory will be looking.
+
+---
+
+## SEC-1 — the dev test account's password is in a session transcript and must be rotated
+
+**Not a defect in either tree. An operational fact with an expiry date, recorded here because
+it is the kind of thing that is remembered for a week and then is not.**
+
+On 2026-09-27 the DEV project's credentials were supplied in a working session so that
+CUTOVER §0.3 could be closed, which needs a real sign-in from the live origin. That was a
+deliberate choice, made knowingly, and it has consequences that outlive the session:
+
+| value | exposure | action |
+|---|---|---|
+| `ZAJIL_SUPABASE_URL` | public by design — it is in the deployed `sync-config.js` | none |
+| `ZAJIL_SUPABASE_PUBLISHABLE_KEY` | **public by design.** It grants nothing alone: the server denies `anon`, RLS scopes every row to its owner, and public signups are disabled | **none — it does not need rotating** |
+| `ZAJIL_TEST_EMAIL` | a real address, in the transcript | judgement |
+| `ZAJIL_TEST_PASSWORD` | **in the transcript in clear** | **ROTATE before this account is used for anything beyond this verification** |
+
+The account is a manually-created test user on the DEV project (`thfxijqzxzdttsuqriwn`). While
+it holds nothing but probe data on a project only its owner uses, the exposure costs nothing.
+It stops being free the moment that account is reused — for a pilot, for a second person, or
+on the production project. **Rotate it then, or before.**
+
+`~/.zajil-deploy.env` is mode 600 and is covered by `.gitignore`'s `.env*`; it has never been
+committed. Verify with `git log --all --full-history -- '*zajil-deploy.env'` returning nothing.
+
+### A smaller thing, worth knowing before the next such file
+
+The file is plain `KEY=VALUE` with no quoting, and **`source` cannot read it**: the password
+contains `#`, which bash treats as a comment, and `)`, which is a syntax error. That format
+was suggested in the same session that then failed to source it. Tools that read env files
+parse them directly and are fine; shell scripts are not. Either quote the values or parse the
+file rather than sourcing it — this session did the latter, so no credential ever reached a
+shell command line, a history file, or a process listing.

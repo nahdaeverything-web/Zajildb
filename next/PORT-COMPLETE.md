@@ -6,8 +6,10 @@ a command, the command is given.
 **Status: DEPLOYED, side by side.** Since 2026-09-25 the port is live at
 **https://nahdaeverything-web.github.io/zajilv2/**, serving `zajil-v2.0.0-dev.1` from
 `nahdaeverything-web/zajilv2` (`main` = this tree at the repo root; `gh-pages` = the built
-export). It is **SYNC-INERT by ruling** — no project URL, no key of any kind — so the tools
-card reads «المزامنة غير مهيأة». That is the shipped posture, not a degraded one.
+export). **Sync is CONFIGURED as of 2026-09-27**, pointing at the DEV Supabase project: the tools card
+offers sign-in, and signing in pushes and pulls over the internet. CUTOVER §0.3 is closed by
+that — a real write by a real signed-in user through row-level security is the only thing that
+could close it. The production project is still to come; see §8.
 
 **This is not a cutover.** The vanilla app is untouched and is still what real users run, at
 `https://nahdaeverything-web.github.io/Zajildb/`. Two origins, two IndexedDB stores, no
@@ -468,9 +470,10 @@ one device with no account.
 | | why it blocks a second user |
 |---|---|
 | **Production Supabase, on Pro** | the dev project is free-tier and **auto-pauses** (ROOT-FINDINGS RF-3). A paused project is a silent sync outage. Production also means the migration is a one-way door: it is far cheaper to move before anyone's data exists than after. |
-| **Config injection wired up** | built and proven, never used. Two variables — `ZAJIL_SUPABASE_URL`, `ZAJIL_SUPABASE_PUBLISHABLE_KEY` — deliberately NOT `NEXT_PUBLIC_*`, so Next cannot inline them into the hashed chunks and a release artefact stays diffable against a dev one. |
+| ~~**Config injection wired up**~~ | **DONE 2026-09-27**, against the DEV project. Two variables — `ZAJIL_SUPABASE_URL`, `ZAJIL_SUPABASE_PUBLISHABLE_KEY` — deliberately NOT `NEXT_PUBLIC_*`, so Next cannot inline them into the hashed chunks and a release artefact stays diffable against a dev one. Re-run it for production. |
 | **Email password reset** | there is no way for a fancier to recover an account. Acceptable for one operator who controls the project; not acceptable for anyone else. |
-| **The deferred §3 verification** | sign-in, push and pull against a configured origin, over the internet. This is the ONLY thing that closes §0.3 — introspection proves objects, not paths, and only a real write landing proves the path. |
+| ~~**The deferred §3 verification**~~ | **DONE 2026-09-27 — §0.3 CLOSED.** Signed in from the live origin through the app's own form, pushed to zero pending, and a second browser profile signed in to the same account and pulled 39 birds including the one just created. |
+| **Rotate the dev test password** | it is in a session transcript by choice — ROOT-FINDINGS SEC-1. Free while that account holds probe data on a project only its owner uses; not free the moment it is reused. |
 
 ### THE PORT IS NOT A SANDBOX — it shares live storage with the vanilla app
 

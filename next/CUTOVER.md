@@ -6,9 +6,13 @@ never been broken.
 
 **Executed 2026-09-25.** The port is live at **https://nahdaeverything-web.github.io/zajilv2/**
 serving `zajil-v2.0.0-dev.1`, from `nahdaeverything-web/zajilv2` (`main` = the source,
-`gh-pages` = the built export). It is **SYNC-INERT by ruling** — no project URL, no key.
-`live_deployment.py`, the deploy gate this document's §g asked for, is written and ran green
-against that origin: **18 passed, 0 failed**.
+`gh-pages` = the built export). `live_deployment.py`, the deploy gate this document's §g asked
+for, is written and green against that origin: **23 passed, 0 failed**.
+
+**Configured 2026-09-27 — sync is no longer inert.** §a.3's injection point was used for the
+first time: `scripts/inject-config.mjs` wrote the DEV project's URL and publishable key into
+the STAGED release, after the guards had run on an unconfigured export and before upload.
+**§0.3 IS CLOSED** — see below.
 
 **Not executed: the cutover itself.** Vanilla is untouched and is still what real users run.
 Nothing in §b (production Supabase), §c (invites), §d (the data path), §e (domain wiring) or
@@ -35,12 +39,25 @@ hour, not a day) and §f.3 (a rollback strand the version bump does not fix).
 
 ## 0. The three findings that shape everything below
 
-> **Status after the first deployment (2026-09-25).** §0.1 is CLOSED — the live origin serves
-> `zajil-v2.0.0-dev.1` and the browser reports exactly one cache with that key. §0.2 is BUILT
-> and deliberately unused: `public/sync-config.js` ships empty, `scripts/inject-config.mjs`
-> rewrites it after the guards and before upload. §0.3 is STILL OPEN and can only be closed
-> by `push_live`/`pull_live` against a configured project — the deferred §3 verification.
-> §0.4 is CLOSED: the ported `live_deployment.py` exists and gated this deployment.
+> **Status after the first deployment (2026-09-25) and its configuration (2026-09-27).**
+> ALL FOUR ARE NOW CLOSED.
+>
+> §0.1 — the live origin serves `zajil-v2.0.0-dev.1` and the browser reports exactly one
+> cache with that key, with no second `zajil-` beside it.
+>
+> §0.2 — `public/sync-config.js` ships committed-empty; `scripts/inject-config.mjs` rewrote
+> the STAGED release after the guards and before upload. The guard confirmed the export was
+> unconfigured when it ran (`✓ no-sync-config-in-build`), and the staged bytes were then
+> scanned with TF-1 controls: the URL and publishable key in `sync-config.js` and nowhere
+> else, and no secret key, `service_role` string or JWT anywhere.
+>
+> §0.3 — **CLOSED, and only this could close it.** Introspection proves objects, not paths;
+> only a real write by a real signed-in user through row-level security proves the path. Done
+> from the LIVE origin through the app's own form: signed in, created a bird, pushed to zero
+> pending, and a SECOND browser profile signed in to the same account and **pulled 39 birds
+> including that one**. Sync works over the internet, not only on localhost.
+>
+> §0.4 — the ported `live_deployment.py` exists and gates this deployment, 23/0.
 
 These came out of writing the plan, not out of running it. Each one would have been found
 in production, expensively.
@@ -393,8 +410,17 @@ No records are lost — the sweep never touches IndexedDB. **Vanilla's offline c
 until the user's next online visit rebuilds it. For an app whose promise is «يعمل دون اتصال»
 that is worth knowing before a fancier is asked to compare the two.
 
-A custom domain ends all of it — separate origin, separate IndexedDB, separate caches, no
-cross-eviction — and simultaneously makes everything below a genuine requirement.
+**ACCEPTED 2026-09-27, with the configuration.** A configured deployment means the port can
+PUSH records out of the IndexedDB it shares with vanilla on this origin — including records a
+fancier created in vanilla, which the port never wrote and whose provenance it cannot see.
+Ruled acceptable while the owner is the only user and the project is the DEV one. It stops
+being acceptable the moment a second person has data on this origin, or the production project
+is configured, whichever comes first.
+
+**The domain move dissolves DF-1 rather than mitigating it.** A custom domain gives the app
+its own origin: separate IndexedDB, separate CacheStorage, no cross-eviction, no shared
+database to push out of — and a trial that needs no private window. It simultaneously makes
+everything below a genuine requirement, because nothing at the old origin follows.
 
 ### d.1 The problem, stated exactly
 
