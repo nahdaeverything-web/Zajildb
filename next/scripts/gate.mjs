@@ -10,6 +10,7 @@
 // to serve), counts the assertions itself, and refuses to report a total it could not
 // parse — a step whose summary it cannot read is a FAILURE, not a zero.
 import { spawnSync } from 'node:child_process';
+import { lockOut } from './_outlock.mjs';
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -53,6 +54,13 @@ function skip(name, why) {
   rows.push({ name, passed: 0, failed: 0, ok: true, skipped: true, secs: '0', detail: why });
   console.log(`  [skip] ${name.padEnd(34)}        ${why}`);
 }
+
+// THE GATE WRITES out/ — twice, at the ROOT prefix. On 2026-09-25 it did that while a
+// /zajilv2 release was being copied to the deploy branch, and the gate's bytes are what
+// reached production: a root-basePath build, every asset URL unprefixed, a site that could
+// not load. Both processes were correct alone. The lock is what makes them correct together;
+// scripts/stage-release.mjs takes the same one.
+lockOut('gate');   // released automatically on exit, including on SIGINT
 
 console.log('\n── guards and builds ───────────────────────────────────────────────');
 run('guards (prebuild)', 'node', ['guards/run.mjs'], { parse: 'exit' });

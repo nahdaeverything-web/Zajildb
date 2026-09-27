@@ -40,6 +40,9 @@
     "harness/**/*.tsx"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "out",
+    "release*",
+    "out.lock"
   ]
 }

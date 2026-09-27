@@ -6,7 +6,7 @@ import { useZajilStore, selectBirds } from '@/src/db/react';
 import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { findDuplicateRings } from '@/src/engine/rings.js';
 import { todayISO } from '@/src/dates.js';
-import { SyncRow, Loading, toast, confirmDialog, downloadJSON, downloadBlob, downscaleImage, primaryRing, saveSetting, initDB, asset } from '@/src/components';
+import { SyncRow, Loading, toast, confirmDialog, downloadBlob, downscaleImage, primaryRing, saveSetting, initDB, asset } from '@/src/components';
 import { useAppVersion } from '@/src/components/version';
 import s from './tools.module.css';
 

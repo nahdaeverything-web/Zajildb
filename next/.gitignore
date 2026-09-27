@@ -17,6 +17,11 @@
 /.next/
 /out/
 
+# the verified release staging directory, and the lock that keeps out/ single-writer
+# (scripts/stage-release.mjs, scripts/_outlock.mjs)
+/release*/
+/out.lock/
+
 # production
 /build
 

@@ -11,6 +11,14 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    // BUILD OUTPUT, added 2026-09-27 with scripts/stage-release.mjs. `release*` is the
+    // verified staging copy of out/; linting it reported 20 errors and 4725 warnings in
+    // MINIFIED VENDOR BUNDLES and failed the gate. A new output directory has to be declared
+    // to every tool that walks the tree — this file, guards/run.mjs's SKIP, tsconfig's
+    // exclude, and .gitignore. There is no single place; that is why this comment exists.
+    "release/**",
+    "release-*/**",
+    "out.lock/**",
     "next-env.d.ts",
     // VERBATIM COPIES. src/db/**, src/engine/**, src/i18n.js, src/dates.js and tests/*.test.js
     // are byte-identical copies of the root tree's files (see README, "Two files you did not

@@ -13,11 +13,16 @@ import { join, relative, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(fileURLToPath(import.meta.url), '..', '..');
-const SKIP = new Set(['node_modules', '.next', 'out', '.git']);
+// BUILD OUTPUT, never source. `release*` is scripts/stage-release.mjs's verified staging
+// copy of out/ — added 2026-09-27, after it tripped no-hardcoded-version on its own sw.js:
+// a guard reading generated output reports the generator's work as a source defect.
+// `out.lock` is the single-writer lock, not a directory of files.
+const SKIP = new Set(['node_modules', '.next', 'out', '.git', 'out.lock']);
+const SKIP_PREFIX = ['release'];
 
 function* walk(dir) {
   for (const name of readdirSync(dir)) {
-    if (SKIP.has(name)) continue;
+    if (SKIP.has(name) || SKIP_PREFIX.some((p) => name === p || name.startsWith(p + '-'))) continue;
     const p = join(dir, name);
     if (statSync(p).isDirectory()) yield* walk(p); else yield p;
   }
