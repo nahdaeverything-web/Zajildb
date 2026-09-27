@@ -862,7 +862,134 @@ but it is reachable **only from sync.js:875**, during first-sync loft adoption. 
 never calls it — see `io.js:264-276`, which repairs a `currentLoftId` pointing at a loft that
 no longer EXISTS, and has no case for one pointing at a loft that exists and is empty.
 
-**Not fixed.** Ruled: investigate, report, do not change. Two shapes are available and they are
-not equivalent — adopt the imported loft as current (changes what the fancier's own loft is
-called), or drop the pristine one when an import brings a named loft (the sync path's choice,
-`isPristineLoft` already makes it safe). That is a product decision about whose loft this is.
+### FIXED IN THE PORT, 2026-09-27 — and NOT in vanilla
+
+**Ruled shape, and it is not a new mechanism:** when an import carries exactly one loft and
+the current loft is pristine by the existing `isPristineLoft()` definition, adopt the imported
+loft and drop the pristine one with `dropPristineLoft()`. That is precisely R4's rule, which
+`sync.js:869-875` already applies when a first sync brings a real loft; it now also applies at
+import. `src/db/io.js`, which is already recorded as port-divergent.
+
+**Two refusals, both R4's.** Nothing is adopted and nothing dropped when the current loft is
+NOT pristine — named, placed, or holding any record, in which case it is the fancier's and
+which loft is current is not ours to decide — or when the import carries SEVERAL lofts, where
+there is no basis for choosing and guessing would file their next bird somewhere arbitrary.
+
+`tests/e2e/loft_adoption.py`, 14 assertions, reading the raw object stores rather than the
+layer under test. Mutation-proved three ways, each breaking one rule and failing its own
+assertion and no other:
+
+| mutation | what failed |
+|---|---|
+| the `isPristineLoft()` guard removed | the NAMED-loft refusal, and the holds-a-bird refusal |
+| `length === 1` widened to `>= 1` | the several-lofts refusal |
+| an op and a tombstone written after the drop | `[R4] logged NO op`, `[R4] wrote NO tombstone` |
+
+The third had to be mutated at the CALL SITE, not inside `dropPristineLoft()`: editing
+`records.js` fails the `data-layer-identity` guard, which is the byte-identity contract doing
+its job — the port cannot mutate a verbatim file even to test it.
+
+### The same defect exists in vanilla and is NOT fixed there
+
+`js/db/io.js` has the identical `importAll`, because that is what byte-identical means. A
+fancier loading the teaching loft on the live app today gets the same split. It is **not
+fixed**, deliberately: `main` is the deployed application, the defect is invisible until club
+mode or sync attribution cares, and it is not worth a release on its own. Carry it into the
+next vanilla release that ships for another reason.
+
+---
+
+## TF-2 — every suite serves at the ROOT, where a wrong URL and a right one are the same string
+
+**A TOOLING finding, and the one that let a 404 reach a human.** It is not about a broken
+tool this time; it is about a blind spot shared by an entire test tree, and the blind spot is
+structural rather than accidental.
+
+### The shape of it
+
+`basePath` is the empty string at the root. So for any link the app renders:
+
+```
+at the root       href="/bird/new"   ->  /bird/new          CORRECT
+under a prefix    href="/bird/new"   ->  /bird/new          WRONG — the app is at /zajilv2/
+                  (what it should be)    /zajilv2/bird/new/
+```
+
+The wrong URL and the right one are **the same string** at the root, and every suite in this
+tree serves the app at the root. A link that bypasses `next/link` is therefore not merely
+untested — it is **unobservable**. No assertion anywhere could have distinguished the two,
+because there was nothing to distinguish.
+
+### What it cost
+
+Two shipped controls rendered raw `<a href>` instead of `next/link`, which applies `basePath`
+and `trailingSlash` where an anchor is emitted verbatim:
+
+| component | control | rendered | should have been |
+|---|---|---|---|
+| `src/components/Empty.tsx` | `empty-cta` «أضف أول طائر» — **the only control an empty loft offers** | `/bird/new` | `/zajilv2/bird/new/` |
+| `src/components/BackupBanner.tsx` | `backup-warn-act` «تصدير» | `/tools` | `/zajilv2/tools/` |
+
+Both resolved to `github.io/bird/new` — not a route of this app — so both served GitHub's 404
+page. **A human found the first one by clicking it**, on the live deployment, with 1876
+assertions green and a deploy gate that had passed.
+
+### Why the one suite that could have caught it did not
+
+`tests/pwa/subpath_hosting.py` exists precisely because the app must work under a prefix, and
+it builds its own export with `NEXT_PUBLIC_BASE_PATH=/zajil`. It was green throughout. It
+exercised the ROUTES under the prefix — navigating to them, asserting assets resolved, the
+worker scoped, offline working — and never asked **what the app puts in its links**. Testing
+that a route works is a different question from testing that anything points at it.
+
+### The rule adopted
+
+**Anything that produces an internal URL goes through `next/link`.** A raw `<a href>` to an
+in-app route is a defect even when it works, because it works only at the root.
+
+And `subpath_hosting.py` now walks every rendered `href` across ten routes in BOTH loft states
+— empty and seeded, because the empty state renders controls the seeded one does not, and the
+broken control was one of them — asserting each stays under the prefix. Proven to fire by
+restoring both raw anchors:
+
+```
+✓ links were found in BOTH loft states (else this proves nothing)
+✗ every one of the 21 rendered links stays under /zajil/
+      'empty-cta' (empty loft) -> /bird/new; 'backup-warn-act' (seeded loft) -> /tools
+```
+
+The live deploy gate asks the same question of the deployment (`[B1]`). This one asks it
+before the deploy, which is the half that matters.
+
+---
+
+## TF-3 — a new build-output directory must be declared to four tools, with no shared source
+
+**A TOOLING finding, recorded because the first half of it looked finished.**
+
+`scripts/stage-release.mjs` (2026-09-27) writes a verified staging copy of `out/` into
+`release/`, inside the project. Four separate tools walk this tree, each with its own ignore
+mechanism, its own syntax, and no common source:
+
+| tool | where | what it does with generated output otherwise |
+|---|---|---|
+| `guards/run.mjs` | `SKIP` set | `✗ no-hardcoded-version  release/sw.js:51` — a guard reporting the generator's own work as a source defect |
+| ESLint | `globalIgnores` in `eslint.config.mjs` | **20 errors, 4725 warnings** from minified vendor chunks; fails the gate |
+| TypeScript | `exclude` in `tsconfig.json` | `include` is `**/*.js`, so a staging directory is in scope by default |
+| git | `.gitignore` | a 139-file build artefact committed to the source branch |
+
+### The part worth keeping
+
+**The guards passing did not mean the tree was clean.** `no-hardcoded-version` fired first,
+was fixed, and `node guards/run.mjs` then reported `all guards pass` — which reads like the
+end of the problem and was the end of one quarter of it. The ESLint failure surfaced only
+because a FULL GATE ran afterwards; had the work been handed over on the strength of the
+guards, lint would have failed for whoever ran it next, in generated files they did not write.
+
+The generalisation is not "remember four lists". It is that **a tool reporting success speaks
+only for what it inspects**, and four tools inspecting the same tree agree about that tree
+only by coincidence. The defence is to run all of them — which is what the gate is — rather
+than to trust the one that happens to be fastest.
+
+The reason is recorded in `eslint.config.mjs` beside the pattern rather than only here,
+because that is where the next person adding an output directory will be looking.

@@ -11,7 +11,7 @@ import {
   emitChange, getBird, idbClear, idbDelete, idbGet, idbGetAll, idbPut, nowISO, setSetting, state,
 } from './storage.js';
 import { diffFields, logOp } from './oplog.js';
-import { mediaForBird } from './records.js';
+import { mediaForBird, isPristineLoft, dropPristineLoft } from './records.js';
 
 // ------------------------------------------------------------- export/import
 
@@ -271,6 +271,45 @@ export async function importAll(payload, mode = 'merge') {
     }
   }
 
+  // ── ADOPT AN IMPORTED LOFT WHEN OURS IS PRISTINE (RF-12, RULED 2026-09-27) ──
+  //
+  // initDB() creates an unnamed default loft on first run and points currentLoftId at it.
+  // Import ADDS the loft a file carries; it never adopted it. So the first thing a new
+  // fancier does — load the teaching loft, then add a bird — left the register holding birds
+  // of TWO lofts: the 38 imported ones under «لوفت إربد التعليمي», and their own new bird
+  // under the unnamed loft that currentLoftId still named. The loft settings card edited that
+  // empty one, so naming it put the name on a loft containing one bird. Nothing warned,
+  // because no screen filters by loftId — the split is invisible until club mode or sync
+  // attribution cares, and by then it is in everyone's data.
+  //
+  // This is R4's rule, which sync.js:869-875 already applies when a first sync brings a real
+  // loft: if ours is PRISTINE, theirs becomes current and ours is dropped. Same rule, same
+  // functions — isPristineLoft() decides and dropPristineLoft() re-checks its own guard, so
+  // a loft the fancier has actually filed birds under can never be deleted by this path.
+  //
+  // TWO REFUSALS, both R4's, both deliberate:
+  //   · ours is NOT pristine — named, placed, or holding records. Then it is theirs, and
+  //     which loft is current is a question only they can answer.
+  //   · the import carries SEVERAL lofts. There is no basis for choosing one, and guessing
+  //     would file their next bird somewhere arbitrary.
+  // In both cases nothing is adopted and nothing is dropped: the import is still correct,
+  // it simply does not change whose loft this is.
+  const incomingLofts = payload.lofts || [];
+  if (incomingLofts.length === 1) {
+    const incoming = state.lofts.get(incomingLofts[0].id);
+    const mine = state.lofts.get(state.currentLoftId);
+    if (incoming && mine && incoming.id !== mine.id && isPristineLoft(mine)) {
+      // current first, then drop: dropPristineLoft removes the row, and currentLoftId must
+      // never name a loft that is already gone
+      state.currentLoftId = incoming.id;
+      await setSetting('currentLoftId', incoming.id);
+      await dropPristineLoft(mine.id);
+    }
+  }
+
+  // An export from another device carries its own loft ids, so the stored currentLoftId can
+  // still end up naming a loft that does not exist here — a different case from the above,
+  // and this repair stays.
   if (!state.lofts.has(state.currentLoftId)) {
     state.currentLoftId = state.lofts.size ? [...state.lofts.keys()][0] : null;
     await setSetting('currentLoftId', state.currentLoftId);

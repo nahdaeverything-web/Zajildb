@@ -164,6 +164,52 @@ try:
               '12.5' in page.locator('[data-testid=coi-headline] [data-testid=coi-badge]').inner_text(),
               page.locator('[data-testid=coi-headline]').inner_text().replace('\n', ' ')[:80])
 
+        # ── EVERY RENDERED HREF MUST STAY UNDER THE PREFIX ────────────────────────
+        # ADDED 2026-09-27. This suite is the ONLY one that builds with a basePath, and it
+        # still shipped two links that left the app: «أضف أول طائر» and the backup banner's
+        # «تصدير» rendered href="/bird/new" and href="/tools", with no prefix at all, because
+        # they were raw <a> tags — next/link applies basePath, an anchor is emitted verbatim.
+        # A human found them on the deployment by clicking; the deploy gate found them only
+        # afterwards. Everything here was green, because this suite exercised the ROUTES under
+        # the prefix and never asked what the app PUTS IN ITS LINKS.
+        #
+        # Every other suite serves at the root, where basePath is '' and a wrong URL and a
+        # right one are the same string. So this is the only place the check can live before
+        # a deploy, and it belongs here.
+        COLLECT = """() => [...document.querySelectorAll('a[href]')].map(a => ({
+              href: a.getAttribute('href'), resolved: a.href,
+              testid: a.getAttribute('data-testid') || '',
+              text: (a.textContent || '').trim().slice(0, 18) }))"""
+        ROUTES = ['', 'birds/', 'tools/', 'breeding/', 'health/', 'races/', 'stats/',
+                  'sign-in/', 'bird/new/', 'pedigree/?id=' + bird_id('g5-faris26')]
+        ORIGIN = URL[:URL.index('/', URL.index('//') + 2)]
+
+        # BOTH LOFT STATES. A seeded loft renders the register; an EMPTY one renders the
+        # first-run empty state, whose CTA is the only control it offers — and that was the
+        # broken one. Walking the seeded app alone catches the banner and misses the bug.
+        links, states = {}, set()
+        empty_ctx = b.new_context(viewport={'width': 390, 'height': 844})
+        try:
+            ep = empty_ctx.new_page()
+            for who, pg_ in (('empty loft', ep), ('seeded loft', page)):
+                for r in ROUTES:
+                    pg_.goto(URL + r, wait_until='load'); pg_.wait_for_timeout(600)
+                    for h in pg_.evaluate(COLLECT):
+                        if h['href'].startswith('#') or not h['resolved'].startswith(ORIGIN):
+                            continue
+                        h['state'] = who; states.add(who)
+                        links.setdefault((h['testid'], h['resolved'].split('?')[0]), h)
+        finally:
+            empty_ctx.close()
+
+        check('links were found in BOTH loft states (else this proves nothing)',
+              len(links) >= 8 and states == {'empty loft', 'seeded loft'},
+              f'{len(links)} distinct links; states {sorted(states)}')
+        escaped = [h for h in links.values() if not h['resolved'].startswith(URL)]
+        check(f'every one of the {len(links)} rendered links stays under /{PREFIX}/',
+              not escaped,
+              '; '.join(f"{h['testid'] or h['text']!r} ({h['state']}) -> {h['href']}" for h in escaped[:5]))
+
         # a click that navigates: basePath must reach the router, not just the asset URLs
         page.goto(URL + 'birds/', wait_until='load'); page.wait_for_timeout(1500)
         page.locator('[data-testid=bird-row]').first.click(); page.wait_for_timeout(1800)
