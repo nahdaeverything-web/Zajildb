@@ -51,7 +51,20 @@ try:
             pg.set_viewport_size({'width': w, 'height': 900}); pg.wait_for_timeout(150); shot(pg, path=f'{FID}/new-{w}.png', full_page=True)
         pg.set_viewport_size({'width': 430, 'height': 900})
         pg.click('[data-testid=external-switch]'); pg.wait_for_timeout(100)
-        check('[ownership#3] status hidden for an external bird', pg.locator('[data-testid=f-status]').count() == 0)
+        # [ownership#3] RULED 2026-10-03 — the field is SHOWN for an external bird now, with a
+        # narrowed vocabulary, not hidden. HANDOFF.md:165-166 says choosing external "hides the
+        # status field"; that left a fancier who marks a bird as a reference and later learns it
+        # died with no way to say so. The intent behind ownership#3 is preserved — REFERENCE_STATUS
+        # is still out of DEFAULT_STATUSES, external birds are still excluded from loft statistics
+        # (measured: «لا تشمل طيور المرجع», 30 of 38 either side of the change) — but «نافق» is a
+        # fact about the BIRD, not about who owned it. See ROOT-FINDINGS SF-4.
+        chips = pg.locator('[data-testid=f-status] [data-testid=status-chip]')
+        check('[ownership#3] status is SHOWN for an external bird, not hidden',
+              pg.locator('[data-testid=f-status]').count() == 1, f'{chips.count()} chip(s)')
+        offered = pg.evaluate("""() => [...document.querySelectorAll('[data-testid=f-status] [data-testid=status-chip]')]
+            .map(e => e.getAttribute('data-status'))""")
+        check('[ownership#3] …offering only what can be true of a bird that was never yours',
+              set(offered) == {'reference', 'dead'}, str(offered))
         shot(pg, path=f'{FID}/new-external-430.png', full_page=True)
         # ── [record_factory#1 path 1] the switch → an external bird with REFERENCE_STATUS ──
         pg.fill('[data-testid=ring-input] >> nth=0', 'BE-2001-9000001'); pg.click('[data-testid=save-btn]')

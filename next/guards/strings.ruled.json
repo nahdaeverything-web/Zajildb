@@ -32,7 +32,8 @@
     "حفظ الطائر": "RULED (4A acceptance, item 14): synonyms — vanilla act.save wins for the primary action. Was: «حفظ الطائر»",
     "الرئيسية": "RULED (kit v3.1 NAVIGATION NOTE, 2026-09-02): this spec's rail is the superseded five-item nav; the shell renders the six ruled destinations.",
     "الأنساب": "RULED (kit v3.1 NAVIGATION NOTE, 2026-09-02): this spec's rail is the superseded five-item nav; the shell renders the six ruled destinations.",
-    "المزيد": "RULED (kit v3.1 NAVIGATION NOTE, 2026-09-02): this spec's rail is the superseded five-item nav; the shell renders the six ruled destinations."
+    "المزيد": "RULED (kit v3.1 NAVIGATION NOTE, 2026-09-02): this spec's rail is the superseded five-item nav; the shell renders the six ruled destinations.",
+    "سجل مرجعي للنسب فقط — لا يظهر في قائمة الطيور ولا في السباقات.": "RULED 2026-10-03: the spec copy is WRONG about the behaviour, and the behaviour is right. It claims an external bird «لا يظهر في قائمة الطيور» — measured, all 8 external birds in the teaching loft DO appear in the register, tagged «خارجي», and the «الخارجية فقط» filter isolates them. They must stay visible: a fancier has to be able to find a bird he marked as a reference, and hiding it would make the feature feel like deletion under another name. The spec is frozen, so it is not edited; form.external.body is rewritten to describe what the app does. See ROOT-FINDINGS SF-3."
   },
   "pedigree-tree-v1.html": {
     "الطائر": "RULED (4A acceptance, item 14): synonyms — vanilla ped.subject wins for the first ruler label. Was: «الطائر»",

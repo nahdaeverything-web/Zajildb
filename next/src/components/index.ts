@@ -1,4 +1,4 @@
-export { toast, undoToast, confirmDialog, closeDialog, dismissToast } from './shell';
+export { toast, undoToast, confirmDialog, choiceDialog, closeDialog, dismissToast } from './shell';
 export { default as ShellHost } from './ShellHost';
 export { default as SyncNotices } from './SyncNotices';
 export { default as SyncRow } from './SyncRow';

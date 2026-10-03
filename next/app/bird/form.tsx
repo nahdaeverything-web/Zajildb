@@ -32,6 +32,31 @@ type Pending = { kind: 'photo' | 'document'; subtype: string; file: File };
 const getBird = (id: string) => db.getBird(id) as Bird | undefined;
 const REFERENCE_STATUS = db.REFERENCE_STATUS as string;
 
+/**
+ * What a REFERENCE bird's status may be — RULED 2026-10-03.
+ *
+ * The rest of the vocabulary describes a bird's role IN THIS LOFT: «تربية», «فريق السباق»,
+ * «فرخ», «احتياط» are jobs it is doing here, and «مباع» / «مفقود» are things that happen to a
+ * bird you owned. None of them can be true of an ancestor that was never yours, so offering
+ * them would invite a record that contradicts itself.
+ *
+ * «نافق» is different in kind, and it is the case this exists for: death is a fact about the
+ * BIRD, not about your ownership of it. A fancier who records a pedigree ancestor and later
+ * learns it died has something true to say, and before this the form gave him no way to say
+ * it — the whole status field was hidden for external birds, and collect() forced the status
+ * back to `reference` on every save even if something else had been set.
+ *
+ * The chips show what SAVING WILL STORE, not the raw draft: toggling «خارجي» on a bird whose
+ * draft still says «احتياط» must not offer «احتياط» as a choice for a reference bird. Both the
+ * list and the pressed chip go through the same normalisation collect() uses, so the form
+ * cannot show one thing and save another.
+ */
+const EXTERNAL_STATUSES = [REFERENCE_STATUS, 'dead'];
+/** Exactly what collect() will store for this draft — the single rule, used in both places. */
+const effectiveStatus = (external: boolean, status?: string) => (external
+  ? (EXTERNAL_STATUSES.includes(status as string) ? (status as string) : REFERENCE_STATUS)
+  : (status === REFERENCE_STATUS ? 'stock' : (status || 'stock')));
+
 /** bird-form.js:162 — an engine problem rendered in words. */
 function problemText(p: Problem): string {
   const params: Record<string, unknown> = { ...(p.params || {}) };
@@ -206,7 +231,13 @@ export default function BirdForm() {
   const collect = (d: Bird = draft!): Bird => {
     const rs = rings.map((r) => { const parsed = parseRing(r.raw || '', r.type || 'national') as Ring; parsed.type = (r.type || 'national') === 'national' && parsed.type === 'FCI' ? 'FCI' : (r.type || 'national'); return parsed; }).filter((r) => r.raw);
     return { ...d, name: (d.name || '').trim(), colour: (d.colour || '').trim(), strain: (d.strain || '').trim(), eyeSign: (d.eyeSign || '').trim(), breeder: (d.breeder || '').trim(), owner: (d.owner || '').trim(), acquiredFrom: (d.acquiredFrom || '').trim(),
-      external: !!d.external, status: d.external ? REFERENCE_STATUS : (d.status === REFERENCE_STATUS ? 'stock' : (d.status || 'stock')), rings: rs };
+      // An external bird KEEPS a status that means something for a reference bird; anything
+      // else collapses to `reference`, which is what every imported ancestor carries. This
+      // used to be an unconditional `d.external ? REFERENCE_STATUS`, so «نافق» could be
+      // chosen and was silently discarded on save.
+      external: !!d.external,
+      status: effectiveStatus(!!d.external, d.status as string | undefined),
+      rings: rs };
   };
   // live duplicate-ring warning (spec's warnbox): the engine's own rule, re-run as the rings change
   const dup = useMemo(() => {
@@ -341,13 +372,18 @@ export default function BirdForm() {
                 {(['cock', 'hen', 'unknown'] as const).map((sx) => <button key={sx} type="button" aria-pressed={(draft.sex || 'unknown') === sx} onClick={() => set({ sex: sx })} data-testid="sex-btn" data-sex={sx}>{t('sex.' + sx)}</button>)}
               </div>
             </FormField>
-            {!draft.external && (
-              <FormField label={t('bird.status')} testid="f-status">
-                <div className={s.chips} role="group">
-                  {statuses.map((st) => <button key={st} type="button" aria-pressed={(draft.status === REFERENCE_STATUS ? 'stock' : draft.status) === st} onClick={() => set({ status: st })} data-testid="status-chip" data-status={st}>{statusLabel(st)}</button>)}
-                </div>
-              </FormField>
-            )}
+            {/* shown for EXTERNAL birds too, with the narrowed vocabulary above. Hiding it
+                was the same mistake the delete dialog made: a fancier who marks a bird as a
+                reference and later wants to record that it died had no way to say so. */}
+            <FormField label={t('bird.status')} testid="f-status">
+              <div className={s.chips} role="group">
+                {(draft.external ? EXTERNAL_STATUSES : statuses).map((st) => (
+                  <button key={st} type="button"
+                    aria-pressed={effectiveStatus(!!draft.external, draft.status as string | undefined) === st}
+                    onClick={() => set({ status: st })} data-testid="status-chip" data-status={st}>{statusLabel(st)}</button>
+                ))}
+              </div>
+            </FormField>
             <FormField label={t('bird.colour')}><input value={draft.colour || ''} onChange={(e) => set({ colour: e.target.value })} placeholder={t('form.colour.placeholder')} list="dl-colours" data-testid="f-colour" /></FormField>
             <FormField label={t('bird.hatchDate')} hint={!draft.hatchDate && ringYear ? <><button type="button" className={s.linkbtn} onClick={() => set({ hatchDate: ringYear + '-01-01' })} data-testid="hatch-hint">{t('bird.useRingYear', { year: String(ringYear) })}</button><div className={s.hintline}>{t('bird.approxFromRing')}</div></> : null}>
               <input type="date" className={s.data} value={draft.hatchDate || ''} onChange={(e) => set({ hatchDate: e.target.value })} data-testid="f-hatch" />

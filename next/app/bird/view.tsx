@@ -8,7 +8,7 @@ import { t, fmtDate, fmtNum, fmtPercent, statusLabel } from '@/src/i18n.ext.js';
 import { inbreeding, ancestorLoss } from '@/src/engine/coi.js';
 import { descendantDepths, pedigreeGrid } from '@/src/engine/pedigree.js';
 import { birdEligibility } from '@/src/engine/fci.js';
-import { SyncRow, Loading, MediaPlaceholder, COIValue, BirdLabel, primaryRing, birdLabelText, toast, undoToast, confirmDialog, seasonStart, downloadJSON, initDB } from '@/src/components';
+import { SyncRow, Loading, MediaPlaceholder, COIValue, BirdLabel, primaryRing, birdLabelText, toast, undoToast, confirmDialog, choiceDialog, seasonStart, downloadJSON, initDB } from '@/src/components';
 import sh from '@/src/components/shared.module.css';
 import s from './bird.module.css';
 
@@ -116,6 +116,44 @@ export default function BirdView() {
   // ── actions (vanilla's, behind the spec's ⋯ button) ──
   async function del() {
     setMenu(false);
+
+    // ── A BIRD WITH DESCENDANTS GETS A THIRD ANSWER (RULED 2026-10-03) ──────────
+    //
+    // Delete is the only visible control that means "not mine any more", so a fancier who
+    // sells or loses a bird reaches for it. Measured on the teaching loft: deleting one
+    // ancestor took a DESCENDANT's pedigree from 30 known nodes to 27 and its COI from 12.5%
+    // to 10.5% — a different number for a bird the fancier was not looking at, with nothing
+    // to say why. The data model already had the non-destructive answer; the UI never offered
+    // it at the moment of deletion.
+    //
+    // ONLY when it has descendants. A bird with pairs, races or health but no offspring
+    // deletes exactly as before: those are its OWN records and losing them is what was asked
+    // for. The three-way choice exists for damage to records that are NOT this bird's, and
+    // `offspring` — anything naming it as sireId or damId — is that test.
+    if (offspring > 0) {
+      const choice = await choiceDialog({
+        title: t('confirm.deleteBird.title'),
+        who: { label: title, plate: ring || undefined },
+        body: t('confirm.deleteBird.descendants', { n: fmtNum(offspring) }),
+        altLabel: t('act.makeReference'), altKind: 'primary',
+        cancelLabel: t('act.cancel'),
+        confirmLabel: t('act.deletePermanently'), confirmKind: 'danger',
+      });
+      if (choice === 'cancel') return;
+      if (choice === 'alt') {
+        // the non-destructive path: the bird stops being his, the pedigree stays whole.
+        // allowWarnings, because a bird already in pairs or races will raise them and none is
+        // a reason to refuse — nothing is being removed.
+        await db.saveBird({ ...bird, external: true }, { allowWarnings: true });
+        toast(t('toast.madeReference'), { kind: 'success' });
+        return;
+      }
+      const snap = await db.deleteBird(id);
+      router.replace('/birds');
+      undoToast(t('toast.deleted'), t('act.undo'), async () => { await db.restoreBird(snap); toast(t('toast.undone'), { kind: 'success' }); });
+      return;
+    }
+
     const kinds: string[] = [];
     if (offspring) kinds.push(t('kind.pedigree')); if (pairs) kinds.push(t('kind.pairs')); if (results.length) kinds.push(t('kind.races')); if (ownHealth) kinds.push(t('kind.health')); if (media.length) kinds.push(t('kind.media'));
     const n = offspring + pairs + results.length + ownHealth + media.length;

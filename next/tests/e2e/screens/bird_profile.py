@@ -154,7 +154,14 @@ try:
         pg.goto(f"{ROOT}bird/?id={ids['barq']}", wait_until='load'); pg.wait_for_selector('[data-testid=profile-hero]')
         pg.click('[data-testid=options-menu]'); pg.wait_for_timeout(100); pg.click('[data-testid=menu-delete]'); pg.wait_for_timeout(150)
         dtxt = pg.locator('[data-testid=dialog]').inner_text()
-        check('delete confirm names the bird and its relation count («علاقات مرتبطة»)', 'برق' in dtxt and 'علاقات مرتبطة' in dtxt, dtxt.replace('\n', ' ')[:120])
+        # RULED 2026-10-03: برق HAS descendants, so it gets the three-way dialog and the body
+        # states the CONSEQUENCE rather than a count. The old «N علاقات مرتبطة» wording is still
+        # what a bird WITHOUT descendants gets, and screens/delete_choice.py asserts that case.
+        check('delete confirm names the bird and states what deleting costs its descendants',
+              'برق' in dtxt and 'النسل' in dtxt and 'معامل التآلف' in dtxt, dtxt.replace('\n', ' ')[:140])
+        check('…and the destructive button is the explicit «حذف نهائيًا»',
+              pg.locator('[data-testid=dialog-confirm]').inner_text().strip() == 'حذف نهائيًا',
+              pg.locator('[data-testid=dialog-confirm]').inner_text())
         pg.click('[data-testid=dialog-confirm]')
         pg.wait_for_url(re.compile(r'/birds/?(\?.*)?$'), timeout=5000); pg.wait_for_selector('[data-testid=bird-row]', timeout=5000)
         check('after delete: back on /birds and برق is gone', not any('برق' == r.strip().split('\n')[0] for r in pg.locator('[data-testid=bird-row]').all_inner_texts()))

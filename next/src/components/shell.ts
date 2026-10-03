@@ -11,11 +11,23 @@ import { useSyncExternalStore } from 'react';
 
 export type ToastKind = 'plain' | 'success' | 'error' | 'info';
 export type Toast = { id: number; msg: string; kind: ToastKind; actionLabel?: string; onAction?: () => void };
+/**
+ * A dialog answers with one of THREE things, not two.
+ *
+ * `confirmDialog` keeps vanilla's contract exactly — Promise<boolean>, so every existing call
+ * site ports one-to-one and none of them changed. `choiceDialog` exposes the third answer for
+ * the one case that needs it: deleting a bird that has descendants, where the right action is
+ * usually neither "yes" nor "no" but "make it a reference instead". A dialog that can only say
+ * yes or no can only warn; this one can offer the non-destructive path at the moment the
+ * fancier is reaching for the destructive one.
+ */
+export type DialogChoice = 'confirm' | 'alt' | 'cancel';
 export type Dialog = {
   id: number; title: string; body?: string; who?: { label: string; plate?: string };
   kinds?: string[]; list?: { kind: 'errs' | 'warns'; items: Array<{ field: string; text: string }> };
   cancelLabel: string; confirmLabel: string | null; confirmKind: 'danger' | 'primary' | 'ink';
-  resolve: (ok: boolean) => void;
+  altLabel?: string; altKind?: 'danger' | 'primary' | 'ink';
+  resolve: (v: DialogChoice) => void;
 };
 type State = { toasts: Toast[]; dialog: Dialog | null; version: number };
 let state: State = { toasts: [], dialog: null, version: 0 };
@@ -47,9 +59,19 @@ export function dismissToast(id: number) { if (state.toasts.some((t) => t.id ===
 export function undoToast(msg: string, undoLabel: string, onUndo: () => void) {
   return toast(msg, { timeout: 6000, actionLabel: undoLabel, onAction: onUndo });
 }
-/** Resolves true on confirm, false on cancel / close / Escape — vanilla confirmDialog's contract. */
-export function confirmDialog(d: Omit<Dialog, 'id' | 'resolve'>): Promise<boolean> {
+/** Resolves true on confirm, false on cancel / close / Escape — vanilla confirmDialog's contract.
+ *  A dialog opened this way never carries altLabel, so it can never resolve 'alt'. */
+export function confirmDialog(d: Omit<Dialog, 'id' | 'resolve' | 'altLabel' | 'altKind'>): Promise<boolean> {
+  return choiceDialog(d).then((v) => v === 'confirm');
+}
+
+/** The three-way form. Resolves 'confirm' | 'alt' | 'cancel'. */
+export function choiceDialog(d: Omit<Dialog, 'id' | 'resolve'>): Promise<DialogChoice> {
   return new Promise((resolve) => set({ dialog: { ...d, id: ++seq, resolve } }));
 }
-export function closeDialog(ok: boolean) { const d = state.dialog; if (!d) return; set({ dialog: null }); d.resolve(ok); }
+export function closeDialog(v: boolean | DialogChoice) {
+  const d = state.dialog; if (!d) return; set({ dialog: null });
+  // booleans keep working: every existing caller passes true/false
+  d.resolve(v === true ? 'confirm' : v === false ? 'cancel' : v);
+}
 export function useShell() { return useSyncExternalStore((cb) => { listeners.add(cb); return () => listeners.delete(cb); }, () => state, () => state); }

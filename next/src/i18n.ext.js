@@ -106,7 +106,26 @@ export const EXT = {
   'form.parent.pick':         { ar: 'اختيار من اللوفت', en: 'Choose from the loft' },
   'form.parent.quick':        { ar: 'إنشاء سريع', en: 'Quick create' },
   'form.external.title':      { ar: 'سلف خارج اللوفت', en: 'Ancestor outside the loft' },
-  'form.external.body':       { ar: 'سجل مرجعي للنسب فقط — لا يظهر في قائمة الطيور ولا في السباقات.', en: 'A pedigree-only reference record — not listed among the birds and never in races.' },
+  // RULED 2026-10-03: the BEHAVIOUR is right and this COPY was wrong. It said an external
+  // bird «لا يظهر في قائمة الطيور» — measured, all 8 external birds in the teaching loft DO
+  // appear in the register, tagged «خارجي», and the «الخارجية فقط» filter isolates them. They
+  // must: a fancier has to be able to find a bird he marked as a reference, and hiding it
+  // would make the feature feel like deletion under another name.
+  // ── the three-way delete, RULED 2026-10-03 ──
+  // A fancier who sells or loses a bird reaches for delete, because it is the only visible
+  // control meaning "not mine any more". Deleting one with descendants empties its slot in
+  // THEIR pedigrees and changes THEIR computed COI — measured: 12.5% -> 10.5%, three nodes
+  // lost, on a bird the fancier was not even looking at. These offer the non-destructive
+  // answer at the moment the destructive one is reached for.
+  'act.makeReference':        { ar: 'أصبح مرجع نسب', en: 'Make it a pedigree reference' },
+  'act.deletePermanently':    { ar: 'حذف نهائيًا', en: 'Delete permanently' },
+  // the CONSEQUENCE, not a count: the old body said "N linked records will be deleted",
+  // which never mentioned that another bird's pedigree and COI change.
+  'confirm.deleteBird.descendants': {
+    ar: 'لهذا الطائر {n} من النسل. الحذف سيُفرغ موضعه في شجراتهم ويغيّر معامل التآلف المحسوب لهم.',
+    en: 'This bird has {n} descendant(s). Deleting it empties its place in their pedigrees and changes their computed COI.' },
+  'toast.madeReference':      { ar: 'تم تحويله إلى مرجع نسب', en: 'Converted to a pedigree reference' },
+  'form.external.body':       { ar: 'سجل مرجعي للنسب — يبقى في القائمة بوسم «خارجي» ويحافظ على شجرات نسله، ولا يُحتسب في السباقات.', en: 'A pedigree reference — stays in the register tagged «external» and keeps its descendants\' trees intact; not counted in races.' },
   'act.change':               { ar: 'تغيير', en: 'Change' },
   'form.notes.placeholder':   { ar: 'سلالة، مصدر الطائر، ملاحظات التدريب…', en: 'Strain, where the bird came from, training notes…' },
 

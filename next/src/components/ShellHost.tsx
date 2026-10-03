@@ -89,6 +89,14 @@ export default function ShellHost() {
             )}
             <div className={s.btns}>
               <button type="button" className={s.cancel} onClick={() => closeDialog(false)} data-testid="dialog-cancel">{dialog.cancelLabel}</button>
+              {/* The third answer, present only when a caller supplies one. It sits BETWEEN
+                  cancel and confirm so the destructive button stays where it has always been:
+                  a fancier who has learned where «حذف» is does not find something else there. */}
+              {dialog.altLabel && (
+                <button type="button"
+                  className={dialog.altKind === 'danger' ? s.danger : dialog.altKind === 'ink' ? s.ink : s.brand}
+                  onClick={() => closeDialog('alt')} data-testid="dialog-alt">{dialog.altLabel}</button>
+              )}
               {dialog.confirmLabel && (
                 <button type="button" className={dialog.confirmKind === 'danger' ? s.danger : dialog.confirmKind === 'ink' ? s.ink : s.brand} onClick={() => closeDialog(true)} data-testid="dialog-confirm">{dialog.confirmLabel}</button>
               )}

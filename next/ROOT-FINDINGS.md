@@ -1028,3 +1028,89 @@ was suggested in the same session that then failed to source it. Tools that read
 parse them directly and are fine; shell scripts are not. Either quote the values or parse the
 file rather than sourcing it — this session did the latter, so no credential ever reached a
 shell command line, a history file, or a process listing.
+
+---
+
+## SF-3 — `add-edit-bird-v2.html` describes the external switch wrongly
+
+**A SPEC finding. The spec is frozen, so it is not edited; the port says what it did instead.**
+
+The approved spec's copy for the «سلف خارج اللوفت» switch reads:
+
+> «سجل مرجعي للنسب فقط — لا يظهر في قائمة الطيور ولا في السباقات.»
+> *A pedigree-only reference record — not listed among the birds and never in races.*
+
+**Measured on the teaching loft: all 8 external birds DO appear in the register**, each tagged
+«خارجي», with the count line reading «38 طائرًا» — the full loft, references included. The
+«الخارجية فقط» filter exists precisely to isolate them.
+
+RULED 2026-10-03: **the behaviour is right and the copy is wrong.** A fancier must be able to
+find a bird he marked as a reference; hiding it would make the feature feel like deletion
+under another name — which is exactly the confusion the three-way delete dialog exists to
+resolve. `form.external.body` in `src/i18n.ext.js` now describes what the app does:
+
+> «سجل مرجعي للنسب — يبقى في القائمة بوسم «خارجي» ويحافظ على شجرات نسله، ولا يُحتسب في السباقات.»
+
+Recorded in `guards/strings.ruled.json` under `add-edit-bird-v2.html`, so the strings guard
+accepts the divergence by name rather than by the port quietly matching a spec it disagrees
+with. The guard caught this the moment the copy changed, which is the contract working: a
+screen cannot drift from its approved spec without a ruling written down.
+
+**The "never in races" half is NOT disputed** and is kept: an external bird is a pedigree
+record and is not raced.
+
+---
+
+## SF-4 — the ownership model says external birds have no status; a dead ancestor needs one
+
+**A ruling against a documented model, recorded because the model is in `HANDOFF.md` and that
+file is root-owned and not edited during the port.**
+
+`HANDOFF.md:160-166` defines ownership as `external: true` **plus** `status: 'reference'`, and
+says explicitly that choosing external *"hides the status field and stores `REFERENCE_STATUS`"*.
+The port implemented exactly that, and `tests/e2e/screens/bird_form.py` asserted it as
+`[ownership#3] status hidden for an external bird`.
+
+**What it cost:** a fancier who records a pedigree ancestor and later learns it died had no way
+to say so. The field was not merely hidden — `app/bird/form.tsx` `collect()` carried an
+unconditional `d.external ? REFERENCE_STATUS`, so a status set by any other route was silently
+discarded on the next save of that bird through the form.
+
+RULED 2026-10-03: show the field for external birds, with a **narrowed vocabulary**.
+
+| offered | why |
+|---|---|
+| `reference` | the default, and what every imported ancestor carries |
+| `dead` «نافق» | **a fact about the BIRD, not about who owned it** |
+
+| withheld | why |
+|---|---|
+| `breeder`, `race team`, `young bird`, `stock` | jobs a bird does *in this loft*; a reference bird is by definition not in it |
+| `sold`, `lost` | things that happen to a bird **you owned**; you cannot sell one you never had |
+
+### The invariant is relaxed, and here is exactly how far
+
+`src/db/records.js:28-29` still enforces it at CREATION — `newBird()` sets
+`external ⇒ REFERENCE_STATUS`, and that file is byte-identical to vanilla's and untouched. Only
+a deliberate edit of an existing bird can now produce `external: true, status: 'dead'`.
+
+**Nothing depends on the invariant.** Measured before relying on it: setting an external bird to
+`dead` changed neither the register nor the statistics.
+
+```
+BEFORE  stats 30 عدد الطيور … لا تشمل طيور المرجع   register 38 rows, ext tags present
+set status=dead, external stays true
+AFTER   stats 30 عدد الطيور … لا تشمل طيور المرجع   register 38 rows, ext tags present
+```
+
+Exclusion keys off `external`, never off `status === 'reference'` — the one place that reads
+the status is `loftStatuses({includeReference})`, which only decides what the picker offers.
+
+**ownership#3's intent survives:** `REFERENCE_STATUS` is still out of `DEFAULT_STATUSES` so it
+cannot be picked for a real bird, external birds are still excluded from loft statistics, and
+the only thing added is the one status that can be true of an ancestor.
+
+The form now derives the displayed chips and the stored value from ONE function,
+`effectiveStatus()`, so it cannot show one thing and save another — the first version offered
+«احتياط» on a reference bird because it rendered the raw draft instead of what `collect()`
+would store.
