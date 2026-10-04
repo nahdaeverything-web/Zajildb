@@ -18,6 +18,10 @@ the vanilla tree and re-proving it against the approved designs:
   not properties of a tree. DF-1 was found by deploying and it invalidated the
   phrase "side by side".
 
+- **SUPPORT findings** (`SUP-n`) — things that make a CORRECT build look broken on a real
+  device, from outside the app. No tree carries them and no assertion can fail on them;
+  they are here so the next report with the same symptom is recognised rather than chased.
+
 Neither tree is written to during the port. Each entry names the file and
 line, what is wrong, why it matters, and what the port did about it on its own
 side. They land in the root `BACKLOG.md` as one docs commit at Phase 7.
@@ -1125,6 +1129,12 @@ session with Arabic selected: the desktop rail read Birds / Breeding / Races / H
 Statistics / Tools and the backup banner read «More than 30 days since your last export.»,
 its full stop on the wrong side, beside an Arabic page.
 
+> **Amended 2026-10-04.** The session behind the report was afterwards attributed to the
+> browser's own page translation (SUP-1), which produces the SAME symptom on the SAME two
+> surfaces. What follows stands regardless: it was reproduced on the live origin in a
+> browser with no translator, and it is fixed. "Step 5 reproduces the report" is what was
+> measured; that step 5 was that session is not.
+
 ### The mechanism — measured on the live origin before anything was changed
 
 `t()` reads ONE module variable (`src/i18n.js:484`, set by `configure()`). It is not React
@@ -1148,7 +1158,7 @@ The same seven steps at 1400px and at 430px, on `https://nahdaeverything-web.git
 | 6 navigated to birds | ar/rtl | لوفت إربد التعليمي | Arabic | **English** |
 | 7 reloaded | ar/rtl | لوفت إربد التعليمي | Arabic | Arabic |
 
-Step 5 is the report. **Not a missing key** — both strings have Arabic and render it at steps
+Step 5 reproduces the report. **Not a missing key** — both strings have Arabic and render it at steps
 1 and 7. **Not a first-paint race** — a cold load with Arabic stored is correct. **Not a
 hardcoded string.** A stale render. And the full stop is not a second defect: at step 5 the
 banner is an English sentence in an `rtl` paragraph, so its trailing «.» resolves to the
@@ -1216,3 +1226,68 @@ the language of the page, step 5 included (rail «الطيور … الأدوا�
   the export is static, so a device with English stored paints the Arabic shell until the
   layer has booted and then switches. That is inherent to this architecture, not this defect;
   what is asserted is the state after boot.
+
+---
+
+## SUP-1 — a browser's page translation makes the app look half-English, and nothing in the gate can see it
+
+**A SUPPORT finding: a defect in neither tree.** The session behind the TF-4 report was
+attributed to it on 2026-10-04 — Samir's screenshot shows Firefox's translation bar. That
+attribution is his observation: the screenshot was not available here, and Firefox's
+translator was not run. What IS measured below is the mechanism, with a stand-in.
+
+### The symptom is TF-4's symptom, for the same structural reason
+
+"Some strings English, most Arabic": the rail and the backup banner in English beside an
+Arabic page. An in-page translator rewrites text nodes in place, from outside the app, after
+the app has rendered. React does not rewrite a text node whose text it believes unchanged, so
+the rewrite SURVIVES wherever the DOM persists — the layout's banner and nav
+(`app/layout.tsx:45,47`), which outlive every navigation — and is LOST wherever a navigation
+mounts fresh nodes. The same two surfaces as TF-4, because they are the two that persist.
+
+Reproduced on the live origin, on the FIXED build (`gh-pages ff5f603`), at 1400px, with a
+stand-in that prefixes every Arabic text node — **not Firefox's translator**, only the one
+thing every in-page translator does:
+
+```
+                               still rewritten            untouched Arabic
+                               nav   banner   page        strings on the page
+before any rewrite              0      0        0                73
+95 text nodes rewritten in place
+immediately after               6      2       73                 0
+after ONE tap on «الطيور»        6      2        1               170
+after a tap on «الإحصائيات»      6      2        0                64
+after a reload                  0      0        0                64
+```
+
+`<html>` is `ar/rtl` on every line. One tap is enough to produce the report's picture.
+
+### Why no assertion can catch it
+
+The app's own output is correct throughout — `screens/language.py` is 31/31 and the deploy
+gate's `[C]` passes on this deployment. The rewrite happens after render, by an agent the
+gate's browsers do not have. TF-4's fix does not prevent it and could not: the table above
+is the fixed build.
+
+### The two detection signals
+
+1. **The browser is showing its translation UI** — Firefox's translation bar, as in the
+   screenshot. If it is there, stop.
+2. **English on a page that is still right-to-left.** The app's own English is never that.
+   Measured on the live origin:
+
+   | | `<html>` | rail | language control |
+   |---|---|---|---|
+   | the app in Arabic | `ar/rtl` | RIGHT edge | «العربية» pressed |
+   | the app in English | `en/ltr` | LEFT edge | «English» pressed |
+
+   and since TF-4 the nav and the banner cannot disagree with the page (asserted). A
+   corollary that settles it alone: the app never translates the fancier's own text — in the
+   app's English the loft is still «لوفت إربد التعليمي» and a bird still «غيمة ٢٦» — so a
+   loft or bird NAME in English is the browser, whatever else is on screen.
+
+### Port-side handling
+
+None, RULED 2026-10-04: no app fix. Not done and not ruled: marking the document
+`translate="no"`, the standard opt-out — whether Firefox's translator honours it was not
+measured here.
