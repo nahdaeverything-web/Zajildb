@@ -1199,6 +1199,14 @@ The deploy gate asks the same of the deployment (`live_deployment.py [C]`), thro
 language control itself — a production build has no harness globals. Against the live origin
 before the fix shipped: `26 passed, 10 failed`, all ten `[C]`.
 
+### Re-verification from the live origin
+
+Deployed 2026-10-04 as `gh-pages ff5f603` from `5bb086a`: all 139 staged files served
+byte-identical. `live_deployment.py` — **36 passed, 0 failed**, the twelve `[C]` among them —
+and the seven-step measurement above, re-run: every step now shows the nav and the banner in
+the language of the page, step 5 included (rail «الطيور … الأدوات», banner «مرّ أكثر من ٣٠
+يومًا على آخر تصدير. صدّر نسخة الآن.»).
+
 ### Two things seen and deliberately left
 
 - **Both navs carry `aria-label="التنقل"` as a literal** (`components/Nav.tsx`, both `<nav>` elements). It is
