@@ -361,6 +361,16 @@ until a cutover ruling.
   because the cache is keyed by version and written once — per-entry revisioning is what
   a library would buy and this gives up; and the update path still needs two reloads to
   show a new version, which is vanilla's inherited wart (HANDOFF.md:339).
+- **Since 2026-10-04: anything in the layout that calls `t()` calls `useLocale()`**
+  (`src/components/settings.ts`). `t()` reads a module variable, not React state, so a
+  component shows a new language only when something makes it render again. Screens
+  re-render on every layer change; the nav re-rendered only on a route change and the backup
+  banner only when it appeared, so each kept the language of its last render — found live as
+  an English rail and banner beside an Arabic page. `applySettings()` now ANNOUNCES a locale
+  change itself (boot included), and `tests/e2e/screens/language.py` holds the result with a
+  detector derived from the dictionary: no visible English UI string while the app is Arabic,
+  and the reverse, at 430px and 1400px, on the round trip and cold on every exported route.
+  The deploy gate asks the same of the live origin (`[C]`). See ROOT-FINDINGS TF-4.
 - Everything outside `next/` is read-only during the port. `next/` imports
   nothing from `../js`, `../css` or `../tools` (guarded); the engine and the
   dataset id mapper are byte-identical copies under `src/engine/` and `tests/`.

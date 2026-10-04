@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { t } from '@/src/i18n.ext.js';
 import * as db from '@/src/db.js';
 
+import { useLocale } from './settings';
 import s from './BackupBanner.module.css';
 
 /**
@@ -25,6 +26,9 @@ const THIRTY_DAYS = 30 * 24 * 3600 * 1000;
 
 export default function BackupBanner() {
   const [show, setShow] = useState(false);
+  // `show` is a boolean, and setting it to the value it already has re-renders nothing — so
+  // this banner kept the language it first appeared in until the next reload. See useLocale().
+  useLocale();
 
   useEffect(() => {
     let alive = true;

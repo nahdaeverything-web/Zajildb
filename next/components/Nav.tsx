@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { t } from '@/src/i18n.ext.js';
+import { useLocale } from '@/src/components/settings';
 import s from './Nav.module.css';
 
 /**
@@ -47,6 +48,10 @@ const NO_TABBAR = ['/bird/new', '/bird/edit', '/cert'];
 export default function Nav() {
   // a plain file server serves the export as /birds.html, /bird/new.html; a static host as the clean path — compare the clean one
   const pathname = (usePathname() ?? '').replace(/\.html$/, '');
+  // The labels below are t() calls, and until 2026-10-04 the ONLY thing that re-rendered this
+  // component was a route change — so the nav kept the language of its last navigation and
+  // read Birds / Breeding / Races… beside an Arabic page. See useLocale().
+  useLocale();
 
   // THE RAIL MEASURES ITSELF. Nav.module.css sizes it to its widest item rather than to a
   // number, so nothing can write its width down: it depends on the label text, the font

@@ -52,6 +52,8 @@ from playwright.sync_api import sync_playwright
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 NEXT = os.path.abspath(os.path.join(HERE, '..', '..'))
+sys.path.insert(0, os.path.join(HERE, 'screens'))
+import _language as L                          # noqa: E402  the dictionary-derived detector
 
 # ── what to test, and what to expect of it ────────────────────────────────────────
 URL = (os.environ.get('ZAJIL_LIVE_URL') or '').strip()
@@ -265,6 +267,54 @@ with sync_playwright() as p:
     check(f'[B2] every one of the {len(hrefs)} rendered links answers 200 COLD',
           not dead, '; '.join(dead[:5]))
     cold2.close()
+    # ── [C] the language, on every surface at once ────────────────────────────────────
+    # FOUND LIVE 2026-10-04, by a person, with this gate green: Arabic selected, and the desktop
+    # rail read Birds / Breeding / Races… and the backup banner «More than 30 days since your
+    # last export.» beside an Arabic page. The nav re-rendered only on a route change and the
+    # banner only when it appeared, so each kept the language of its last render. Nothing here
+    # had ever switched the language at all, and the rail does not exist at this suite's 390px.
+    # So: through English and back WITHOUT a reload — the path that left them stale — at the
+    # tab-bar width and at the rail's, then tab by tab, which is where chrome that outlives a
+    # navigation shows what it kept. The detector is derived from the app's own dictionary
+    # (screens/_language.py); the loft's own text is fetched from this origin and set aside.
+    with urllib.request.urlopen(URL + 'example-loft-large.json', timeout=30) as _r:
+        loft_text = L.strings_of(json.loads(_r.read().decode('utf-8')), set())
+    for vw in (430, 1400):
+        which = 'rail' if vw >= 1100 else 'tabbar'
+        lctx = br.new_context(viewport={'width': vw, 'height': 900})
+        lp = lctx.new_page(); lp.set_default_timeout(60000)
+        lp.goto(URL + 'tools/', wait_until='load')
+        lp.wait_for_selector('[data-testid=set-lang], [data-row=lang]')
+        L.open_row(lp, 'teaching')
+        lp.click('[data-testid=load-large]'); lp.wait_for_timeout(4000)
+        lp.wait_for_function("() => document.querySelectorAll('[data-testid=toast]').length === 0", timeout=20000)
+        check(f'[C] @{vw} the {which} is the nav on screen and the backup banner is up (else this proves nothing)',
+              lp.locator(f'[data-testid={which}]').is_visible() and len(L.nav_labels(lp, which)) == 6
+              and lp.locator('[data-testid=backup-warn]').is_visible(), str(L.nav_labels(lp, which)))
+        L.set_lang(lp, 'en', 1200)
+        check(f'[C] @{vw} «English» tapped: the {which} and the banner answer at once, with the page',
+              L.nav_labels(lp, which) == L.NAV['en']
+              and lp.locator('[data-testid=backup-warn] span').inner_text().strip() == L.BANNER['en'],
+              f"{L.nav_labels(lp, which)} / «{lp.locator('[data-testid=backup-warn] span').inner_text().strip()[:40]}»")
+        lp.reload(wait_until='load'); lp.wait_for_timeout(2500)
+        check(f'[C] @{vw} reloaded with English stored: the {which} comes back in English',
+              L.nav_labels(lp, which) == L.NAV['en'], str(L.nav_labels(lp, which)))
+        L.tab(lp, '/birds', 1800); L.tab(lp, '/tools', 1800)
+        L.set_lang(lp, 'ar', 1200)
+        check(f'[C] @{vw} «العربية» tapped after English: the {which} reads Arabic',
+              L.nav_labels(lp, which) == L.NAV['ar'], str(L.nav_labels(lp, which)))
+        check(f'[C] @{vw} …and so does the backup banner',
+              lp.locator('[data-testid=backup-warn] span').inner_text().strip() == L.BANNER['ar'],
+              f"«{lp.locator('[data-testid=backup-warn] span').inner_text().strip()[:48]}»")
+        english = [('tools · ' + w, s_, k) for w, s_, k in L.leaks(lp, 'ar', loft_text)]
+        for href in L.TABS:
+            L.tab(lp, href, 1800)
+            english += [(f'{href} · {w}', s_, k) for w, s_, k in L.leaks(lp, 'ar', loft_text)]
+        check(f'[C] @{vw} …and NO visible UI string renders in English, there or on any of the six tabs',
+              not english, L.say(english))
+        lctx.close()
+    check('[C] the language scan was not vacuous', L.STATS['scanned'] >= 800, f"{L.STATS['scanned']} visible strings examined")
+
     # leave `page` where the offline section expects it: the walk above ended on whatever
     # route came last, and reloading THERE offline counts zero bird rows for a reason that
     # has nothing to do with offline.

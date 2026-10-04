@@ -1114,3 +1114,97 @@ The form now derives the displayed chips and the stored value from ONE function,
 `effectiveStatus()`, so it cannot show one thing and save another — the first version offered
 «احتياط» on a reference bird because it rendered the raw draft instead of what `collect()`
 would store.
+
+---
+
+## TF-4 — no suite ever changed the language and then looked at anything but the page
+
+**A TOOLING finding, and the second defect a person found on the live deployment with the
+gate green** (1914 assertions, 23 on the deploy gate). Reported 2026-10-04 from a real
+session with Arabic selected: the desktop rail read Birds / Breeding / Races / Health /
+Statistics / Tools and the backup banner read «More than 30 days since your last export.»,
+its full stop on the wrong side, beside an Arabic page.
+
+### The mechanism — measured on the live origin before anything was changed
+
+`t()` reads ONE module variable (`src/i18n.js:484`, set by `configure()`). It is not React
+state, so a component shows a new language only when something ELSE makes it render again:
+
+| surface | what re-rendered it | so it showed |
+|---|---|---|
+| a screen (the page body) | every data-layer change (`useZajilStore`) — and saving a setting raises one | the new language, at once |
+| the nav — tab bar and rail (`components/Nav.tsx`) | a ROUTE change only (`usePathname`) | the language of its last navigation |
+| the backup banner (`BackupBanner.tsx`) | its own boolean flipping — and setting `true` to `true` re-renders nothing | the language it first appeared in, until a reload |
+
+The same seven steps at 1400px and at 430px, on `https://nahdaeverything-web.github.io/zajilv2/`:
+
+| step | `<html>` | page h1 | nav | banner |
+|---|---|---|---|---|
+| 1 cold load, Arabic | ar/rtl | الأدوات والإعدادات | Arabic | Arabic |
+| 2 «English» tapped | en/ltr | Tools & settings | **Arabic** | **Arabic** |
+| 3 reloaded, English stored | en/ltr | Tools & settings | **Arabic** | English |
+| 4 navigated birds → tools | en/ltr | Tools & settings | English | English |
+| 5 «العربية» tapped | ar/rtl | الأدوات والإعدادات | **English** | **English** |
+| 6 navigated to birds | ar/rtl | لوفت إربد التعليمي | Arabic | **English** |
+| 7 reloaded | ar/rtl | لوفت إربد التعليمي | Arabic | Arabic |
+
+Step 5 is the report. **Not a missing key** — both strings have Arabic and render it at steps
+1 and 7. **Not a first-paint race** — a cold load with Arabic stored is correct. **Not a
+hardcoded string.** A stale render. And the full stop is not a second defect: at step 5 the
+banner is an English sentence in an `rtl` paragraph, so its trailing «.» resolves to the
+paragraph's direction and lands on the left (measured: first character x=809, «.» x=806).
+
+Step 3 is the same cause from the other side, and it had a second half: at BOOT
+`applySettings()` raised no signal at all, so a device with English stored kept the
+prerendered Arabic nav until the next navigation.
+
+### Vanilla does not have it
+
+`rerender()` is `applySettings(); renderShell(); route();` (`js/app.js:230-234`) — the nav is
+rebuilt on every language change. The port replaced "redraw everything" with subscriptions
+and gave the layout none. Port-only; nothing to record against the root tree.
+
+### Why 1914 assertions did not see it
+
+`screens/tools.py` did switch to English and back. It asserted `<html dir lang>`, one `h1`
+and one `h3` — the page body, the one surface that was always right. Nothing asserted the
+nav or the banner in any language but the default, the contrast and fidelity suites render
+Arabic only, and the rail exists only at >=1100px while most suites run at 430.
+
+### The fix, and the rule
+
+`applySettings()` — the one function that changes the locale — now ANNOUNCES the change
+through the layer's own change event, the signal the bridge already carries, at boot as on a
+save. `useLocale()` (`src/components/settings.ts`) subscribes a component that reads no data;
+the nav and the banner call it. **Anything in the layout that calls `t()` calls `useLocale()`.**
+
+### What holds it
+
+`tests/e2e/screens/language.py`, with a detector DERIVED FROM THE DICTIONARY
+(`screens/_language.py`): a visible string "renders in English" when it is the `en` value of
+a key whose `ar` differs, an instance of its template, or contains a multi-word phrase of it
+— so it needs no list of surfaces and cannot go stale as strings are added. At 430px and
+1400px: the reported round trip without a reload, then tab by tab; cold on every route the
+export wrote (derived from `out/`); and the reverse direction. Proven to fire:
+
+```
+the deployed commit's build (8eeb2fe)        13 passed, 18 failed   nav + banner, both widths
+M1  the nav unsubscribed                     17 passed, 14 failed   nav-link only
+M2  the banner unsubscribed                  21 passed, 10 failed   backup-warn only
+M3  applySettings applies but stays silent   25 passed,  6 failed   the boot path only
+the fix                                      31 passed,  0 failed
+```
+
+The deploy gate asks the same of the deployment (`live_deployment.py [C]`), through the
+language control itself — a production build has no harness globals. Against the live origin
+before the fix shipped: `26 passed, 10 failed`, all ten `[C]`.
+
+### Two things seen and deliberately left
+
+- **Both navs carry `aria-label="التنقل"` as a literal** (`components/Nav.tsx`, both `<nav>` elements). It is
+  the ruled label and it is not visible text, so nothing above measures it — but an English
+  screen-reader user hears Arabic. Raised, not changed.
+- **First paint is prerendered Arabic on every device.** The language lives in IndexedDB and
+  the export is static, so a device with English stored paints the Arabic shell until the
+  layer has booted and then switches. That is inherent to this architecture, not this defect;
+  what is asserted is the state after boot.
