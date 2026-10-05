@@ -1231,8 +1231,9 @@ the language of the page, step 5 included (rail «الطيور … الأدوا�
 
 ## SF-5 — `tools-v2.html`, as uploaded, spells «المربي» without the shadda; everything else in both trees has «المربّي»
 
-**A SPEC finding. OPEN** — two rulings point in opposite directions, and the second rests on
-something measurement contradicts. Nothing was changed on the strength of it.
+**A SPEC finding. CLOSED 2026-10-05, in favour of the shipped state** — the archive keeps
+the shadda. Two rulings had pointed in opposite directions, the second resting on something
+measurement contradicted; nothing was changed on the strength of it, and the third settled it.
 
 ### What is where — measured 2026-10-05
 
@@ -1265,13 +1266,20 @@ ruling set out to avoid: a second key differing from `set.breederName` only by t
 or changing that key, which also moves the certificate's label away from its own frozen
 spec. Reported rather than forced, as the order's item 2 asked of a disagreement.
 
-### What is left to rule — neither changes a pixel of the deployed app
+### What was put to a ruling — neither option changed a pixel of the deployed app
 
 1. **Leave it as shipped.** The archive carries the shadda and the two-line difference from
    the upload stays recorded. Spec, app, vanilla and the other two specs agree; one key.
 2. **Restore the archive to the upload's bytes.** The app keeps its key, and
    `guards/strings.ruled.json` gains one entry (the existing key wins). Spec and app then
    differ by one diacritic; still one key; no redeploy.
+
+### RULED 2026-10-05 — option 1: leave it as shipped
+
+The archive carries the shadda. The app, vanilla, `certificate-v1.html` and `races-v1.html`
+all agree, and one key renders both surfaces. The two-line difference from the upload stays
+recorded (`design/README.md`, tools-v2, deviation 4; reversing the two lines reproduces the
+upload byte for byte). Nothing to change in either tree, the guards, or the deployment.
 
 ---
 
