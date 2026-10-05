@@ -273,6 +273,13 @@ const guards = {
       ['src/db.js',
        'the facade must re-export exportAllBlob. Divergent only by that one line, and only '
        + 'because src/db/io.js is.'],
+      ['src/db/sync.js',
+       'the account collision (RF-13): signIn() compares the incoming user with the owner of '
+       + 'the data on the device and stops before storing a session that is not the same '
+       + 'account; the owner is recorded in settings (dataOwnerId / dataOwnerHint) and '
+       + 'clearLocalData() is the one explicit way to change it. RULED 2026-10-05 as a '
+       + 'port-only fix. Vanilla has the same defect and is NOT changed — main is the live '
+       + 'deployment.'],
     ]);
     const FILES = [
       'src/db.js', 'src/db/storage.js', 'src/db/oplog.js', 'src/db/records.js',

@@ -331,6 +331,19 @@ export const EXT = {
   // scan.*, about.*, dev.*, integrity.*); these are the strings tools-v1 introduces —
   // its three groups and index, the shorter card-level wordings, and RULING 2's loft
   // branding fields.
+  // ── the account collision (RULED 2026-10-05; ROOT-FINDINGS RF-13) ──
+  // No spec draws this: it is the decision the ruling orders, built from the shared dialog.
+  'signin.owner.title':        { ar: 'هذا الجهاز يحمل بيانات حساب آخر', en: 'This device holds another account\'s data' },
+  'signin.owner.who':          { ar: 'الحساب السابق: {hint}', en: 'Previous account: {hint}' },
+  'signin.owner.whoUnknown':   { ar: 'حساب آخر سبق استخدامه على هذا الجهاز', en: 'Another account used on this device before' },
+  'signin.owner.body':         { ar: 'لن تُدمج تلك البيانات مع حسابك ولن تُرفع إليه. صدّرها أولًا إن أردت الاحتفاظ بها، أو امسحها من هذا الجهاز وادخل بحسابك.', en: 'That data will not be merged into your account or uploaded to it. Export it first if you want to keep it, or clear it from this device and sign in as yourself.' },
+  'signin.owner.export':       { ar: 'تصدير البيانات', en: 'Export the data' },
+  'signin.owner.clear':        { ar: 'مسح والدخول', en: 'Clear and sign in' },
+  'signin.owner.confirmTitle': { ar: 'مسح بيانات هذا الجهاز نهائيًا؟', en: 'Clear this device for good?' },
+  'signin.owner.confirmBody':  { ar: 'سيُحذف من هذا الجهاز {n} طيرًا وكل ما يتبعها من أزواج ونتائج وسجلات صحية وصور ونسخ تلقائية. لا يمكن التراجع. لا يُحذف شيء من الخادم.', en: '{n} birds will be deleted from this device, with every pair, result, health record, photo and automatic snapshot that goes with them. This cannot be undone. Nothing is deleted from the server.' },
+  'signin.owner.confirmGo':    { ar: 'مسح نهائيًا والدخول', en: 'Clear for good and sign in' },
+  'signin.owner.inline':       { ar: 'لم يتم تسجيل الدخول: هذا الجهاز يحمل بيانات حساب آخر.', en: 'Not signed in: this device holds another account\'s data.' },
+  'signin.owner.inlineBody':   { ar: 'اضغط «تسجيل الدخول» مجددًا لتصديرها أو مسحها. لم يُرفع شيء ولم يُحذف شيء.', en: 'Press “Sign in” again to export it or clear it. Nothing was uploaded and nothing was deleted.' },
   // ── tools-v2: the grouped settings list (RULED 2026-10-03) ──
   // Every string below is one the v2 spec draws and the port RENDERS. Spec strings that are
   // synonyms of an existing vanilla key are NOT duplicated here — per 4A acceptance item 14

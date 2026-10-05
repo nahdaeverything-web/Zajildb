@@ -25,17 +25,18 @@ management. The repo root holds the **vanilla** app — plain ES modules, hash-r
 since v1.9.1. `next/` holds a **complete rebuild** of the same product as a static-export
 Next.js app.
 
-The two share a data layer **byte for byte**, with **two declared exceptions**. Fifteen of the
-seventeen modules — `db/{storage,oplog,records,sync}.js`, `dates.js`, `i18n.js`,
+The two share a data layer **byte for byte**, with **three declared exceptions**. Fourteen of the
+seventeen modules — `db/{storage,oplog,records}.js`, `dates.js`, `i18n.js`,
 `sync-config.js` and the eight `engine/` files — are identical between `js/` and `next/src/`,
 and the `data-layer-identity` guard now proves it every build rather than leaving it to care.
 
-**The exceptions, both ruled at the pre-launch close:**
+**The exceptions — the first two ruled at the pre-launch close, the third on 2026-10-05:**
 
 | file | why it diverges |
 |---|---|
 | `src/db/io.js` | `exportAllBlob()`. The old export built the whole payload as one `JSON.stringify` string; past ~180 photos of 2 MB V8 threw **`Invalid string length`** and the failure was **silent** — no file, no toast, «آخر تصدير» unchanged, a button that still looked ready. The port assembles the JSON as Blob parts instead. Vanilla's copy is a separate decision: `main` is the live deployment. |
 | `src/db.js` | one line — the facade must re-export `exportAllBlob`. Divergent only because `io.js` is. |
+| `src/db/sync.js` | **the account collision (ROOT-FINDINGS RF-13).** `signIn()` compares the incoming user with the owner of the data on the device and stops — before storing a session, so before any sync — when they differ. The owner is recorded in settings (`dataOwnerId`, `dataOwnerHint`), outside the four auth keys so it survives sign-out, and `clearLocalData()` is the one explicit way to change it. Nothing about the wire format, the op log or the sync protocol changed: an export, a push and a pull are what they were. **Vanilla has the same defect and is not changed** — `main` is the live deployment. |
 
 The **format** is unchanged and that is asserted in both directions: a port export imports into
 vanilla and a vanilla export imports into the port (`tests/e2e/migration.py`). That
@@ -136,7 +137,7 @@ guard nobody has seen fail is a guard nobody knows works.
 | `no-undefined-token` | a stylesheet reading a custom property declared nowhere. Scoped per module — pooling declarations across files is what let `--gap` pass while both tree connector systems were dead |
 | `no-hardcoded-version` | a `zajil-vX.Y.Z` literal in source; the About row must report what the WORKER says |
 | `no-utc-date` | `new Date().toISOString().slice(0,10)` — the UTC date, which names yesterday east of Greenwich. Covers the python suites too |
-| `data-layer-identity` | a data-layer file drifting from its `js/` counterpart without being declared in DIVERGENT with a reason. Two entries today, both recorded above |
+| `data-layer-identity` | a data-layer file drifting from its `js/` counterpart without being declared in DIVERGENT with a reason. Three entries today, all recorded above |
 | `strings` | any Arabic string a shipped spec renders that is not a key, a template, recorded mock content, or a pending ruling |
 
 **Postbuild** (`guards/postbuild.mjs`, after every build):

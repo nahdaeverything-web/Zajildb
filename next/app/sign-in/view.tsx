@@ -2,9 +2,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as db from '@/src/db.js';
-import { t } from '@/src/i18n.ext.js';
+import { t, fmtNum } from '@/src/i18n.ext.js';
+import { todayISO } from '@/src/dates.js';
 import { COUNTRIES_REGION, COUNTRIES_REST } from '@/src/countries.js';
-import { Loading, initDB } from '@/src/components';
+import { Loading, initDB, toast, confirmDialog, choiceDialog, downloadBlob } from '@/src/components';
 import { useAppVersion } from '@/src/components/version';
 import s from './signin.module.css';
 
@@ -20,7 +21,14 @@ import s from './signin.module.css';
 // (and the button becomes «إعادة المحاولة»), 'config' → sync is not set up on
 // this device. A raw status code is never surfaced, as the spec's own comment
 // demands.
-type State = '' | 'loading' | 'cred' | 'net' | 'cfg';
+//
+// A FOURTH KIND, port-only (RULED 2026-10-05, ROOT-FINDINGS RF-13): 'owner' — the credentials
+// are good but belong to a different account from the one this device's data belongs to.
+// signIn() stops before storing the session, so nothing has synced and nothing can. This
+// screen then puts the decision the ruling orders, and there is no way past it without
+// choosing: export what is here, or clear it and come in as the new account. Cancelling
+// leaves the device exactly as it was — still signed out, every record in place.
+type State = '' | 'loading' | 'cred' | 'net' | 'cfg' | 'owner';
 const Mark = ({ className }: { className: string }) => (
   <div className={className}><svg viewBox="0 0 100 100" fill="#fff" aria-hidden="true">
     <path d="M18 78c14 4 34 4 46-4 10-7 16-18 17-30 0-4-2-6-5-6-2 0-4 1-5 3l-4 8c-6 10-16 16-28 18-8 1-15 5-21 11z" />
@@ -42,11 +50,11 @@ export default function SignInView() {
   const auth = db.authState() as { signedIn: boolean; email: string | null };
   const loading = state === 'loading';
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  // `replaceLocalData` is passed ONLY by decide(), after a person has chosen it twice.
+  async function attempt(replaceLocalData: boolean) {
     setState('loading');
     try {
-      await db.signIn(email.trim(), password);
+      await db.signIn(email.trim(), password, replaceLocalData ? { replaceLocalData: true } : undefined);
       setPassword('');                                // never leave it in the DOM (js/views/tools.js:266)
       // The existing first-login flow, unchanged: syncNow() runs the same cycle the
       // background loop runs, which takes §6's first-login branch on its own. There is
@@ -54,8 +62,43 @@ export default function SignInView() {
       await db.syncNow();
       router.replace('/tools');                       // the sync card is where a signed-in session is managed
     } catch (err) {
-      const kind = (err as { kind?: string }).kind;   // AuthError: 'rejected' | 'network' | 'config'
-      setState(kind === 'network' ? 'net' : kind === 'config' ? 'cfg' : 'cred');
+      const e = err as { kind?: string; previous?: string | null };   // AuthError: 'rejected' | 'network' | 'config' | 'owner'
+      if (e.kind === 'owner') { setState('owner'); await decide(e.previous || null); return; }
+      setState(e.kind === 'network' ? 'net' : e.kind === 'config' ? 'cfg' : 'cred');
+    }
+  }
+  function submit(e: React.FormEvent) { e.preventDefault(); attempt(false); }
+
+  // THE DECISION. Nothing has been stored, merged, pushed or cleared when this opens. Export
+  // returns here — a copy in hand does not settle whose device this is — and clearing asks a
+  // second time, naming what goes, because it cannot be undone.
+  async function decide(previous: string | null) {
+    for (;;) {
+      const choice = await choiceDialog({
+        title: t('signin.owner.title'),
+        who: { label: previous ? t('signin.owner.who', { hint: previous }) : t('signin.owner.whoUnknown') },
+        body: t('signin.owner.body'),
+        cancelLabel: t('act.cancel'),
+        altLabel: t('signin.owner.export'), altKind: 'primary',
+        confirmLabel: t('signin.owner.clear'), confirmKind: 'danger',
+      });
+      if (choice === 'alt') { await exportExisting(); continue; }
+      if (choice !== 'confirm') return;
+      const sure = await confirmDialog({
+        title: t('signin.owner.confirmTitle'),
+        body: t('signin.owner.confirmBody', { n: fmtNum(db.allBirds().length) }),
+        cancelLabel: t('act.cancel'), confirmLabel: t('signin.owner.confirmGo'), confirmKind: 'danger',
+      });
+      if (sure) { await attempt(true); return; }
+    }
+  }
+  async function exportExisting() {
+    try {
+      downloadBlob(await db.exportAllBlob({}), `zajil-export-${todayISO()}.json`);
+      toast(t('toast.exported'), { kind: 'success' });
+    } catch (e) {
+      toast(t('toast.exportFailed'), { kind: 'error' });
+      console.error('export failed', e);
     }
   }
 
@@ -87,6 +130,7 @@ export default function SignInView() {
             {state === 'cred' && <div className={`${s.msg} ${s.cred}`} role="alert" data-testid="msg-cred"><Warn /><span>{t('signin.badCredentials')}</span></div>}
             {state === 'net' && <div className={`${s.msg} ${s.net}`} role="status" data-testid="msg-net"><Warn /><span>{t('signin.offline')}<small>{t('signin.offlineBody')}</small></span></div>}
             {state === 'cfg' && <div className={`${s.msg} ${s.cfg}`} role="status" data-testid="msg-cfg"><Warn /><span>{t('sync.notSetUp')}<small>{t('signin.notConfiguredBody')}</small></span></div>}
+            {state === 'owner' && <div className={`${s.msg} ${s.cfg}`} role="alert" data-testid="msg-owner"><Warn /><span>{t('signin.owner.inline')}<small>{t('signin.owner.inlineBody')}</small></span></div>}
             <button type="submit" className={`${s.cta} ${loading ? s.busy : ''}`} disabled={loading} aria-live="polite" data-testid="signin-submit">
               {loading && <span className={s.spin} />}
               <span className={s.lbl}>{loading ? t('signin.signingIn') : state === 'net' ? t('signin.retry') : t('sync.signIn')}</span>

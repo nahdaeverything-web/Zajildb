@@ -25,7 +25,7 @@
 // confusing rather than obvious.
 
 import {
-  state, setSetting, idbGet, idbGetAll, idbDelete, nowISO, allBirds, emitChange,
+  state, setSetting, idbGet, idbGetAll, idbDelete, idbClear, initDB, nowISO, allBirds, emitChange,
   currentLoft,
 } from './storage.js';
 import { findDuplicateRings } from '../engine/rings.js';
@@ -45,6 +45,30 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../sync-config.js';
  * caught by tests/e2e/auth.py.
  */
 export const AUTH_SETTING_KEYS = ['authAccessToken', 'authRefreshToken', 'authUserId', 'authEmail'];
+
+/**
+ * WHOSE DATA THIS DEVICE HOLDS — the account its records, its op log and its pull cursor
+ * belong to. (Port-only, RULED 2026-10-05; ROOT-FINDINGS RF-13. Vanilla has no such record.)
+ *
+ * WHY THESE LIVE IN SETTINGS, AND OUTSIDE AUTH_SETTING_KEYS. Sign-out deliberately keeps
+ * everything on the device — the birds, the unpushed ops, `syncCursor`, `lastAckedSeq`,
+ * `lastSyncAt` — and every one of those is bookkeeping about ONE account's server state. So
+ * the record of which account that is has to outlive the session exactly as they do, and has
+ * to sit in the same store they sit in: clearSession() nulls the four AUTH keys and nothing
+ * else, so a key that is not on that list survives it by construction. Settings are also
+ * per-device by definition — never synced (storage.js:163), never exported (io.js:46) — so
+ * the record cannot travel to another device inside a backup and name the wrong owner there.
+ *
+ * The id decides. The hint is for the one screen that has to tell a person which account
+ * the data belongs to without handing their address to whoever is holding the phone: the
+ * full email is NOT kept past sign-out (it never was), only `s•••@gmail.com`.
+ */
+export const OWNER_SETTING_KEYS = ['dataOwnerId', 'dataOwnerHint'];
+
+/** What clearLocalData() leaves: this device's identity and its owner's preferences.
+ *  Everything else in settings is about the data being cleared, so it goes with it. */
+const DEVICE_SETTING_KEYS = ['deviceId', 'deviceName', 'opSeq', 'lang', 'numerals', 'dates',
+                             'coiDepth', 'highContrast', 'scanServerUrl', 'syncEnabled'];
 
 /**
  * Thrown by the token endpoint helper. `kind` is the whole point:
@@ -120,7 +144,69 @@ async function storeSession(payload) {
 }
 
 async function clearSession() {
+  // A session that predates the owner record is about to take its identity with it. This is
+  // the last moment this device knows whose data it holds, so it is written down first —
+  // otherwise every device signed in today would forget on sign-out and adopt whoever came next.
+  await claimOwnerIfNone();
   for (const key of AUTH_SETTING_KEYS) await setSetting(key, null);
+}
+
+/** `s•••@gmail.com`: enough for the owner to recognise their own address, not enough to give
+ *  it to anyone else. Null when there is no address to mask. */
+function ownerHint(email) {
+  const m = /^([^@\s])[^@\s]*@([^@\s]+)$/.exec(String(email || '').trim());
+  return m ? `${m[1]}•••@${m[2]}` : null;
+}
+
+/**
+ * The account this device's data belongs to, or `{ id: null }` if nobody has claimed it.
+ *
+ * The recorded owner — or, on a device signed in since before the record existed, whoever
+ * holds its session: that account is where everything here has been syncing, recorded or not.
+ */
+export function dataOwner() {
+  const s = state.settings;
+  return {
+    id: s.dataOwnerId || s.authUserId || null,
+    hint: s.dataOwnerId ? (s.dataOwnerHint || null) : ownerHint(s.authEmail),
+  };
+}
+
+/** Write the owner down if nobody has. Never overwrites: ownership changes only through
+ *  clearLocalData(), which removes the record together with the data it described. */
+async function claimOwnerIfNone() {
+  if (state.settings.dataOwnerId || !state.settings.authUserId) return;
+  await setSetting('dataOwnerId', state.settings.authUserId);
+  await setSetting('dataOwnerHint', ownerHint(state.settings.authEmail));
+}
+
+/**
+ * Empty this device and start it again as a first run. THE ONLY WAY OWNERSHIP CHANGES, and
+ * only ever called from signIn() after a person chose it on the collision decision.
+ *
+ * Everything that is the previous account's goes: the records, their photos, the op log (its
+ * unpushed ops are that account's edits — pushed under any other session they would land in
+ * someone else's loft), the tombstones, the automatic snapshots (a restore would bring the
+ * whole loft back), and every setting that describes that data — the cursor, the acks, the
+ * owner record itself. Nothing is logged and nothing is sent: this is not a delete the server
+ * should hear about, because none of it was ever the new account's to delete.
+ *
+ * What stays is DEVICE_SETTING_KEYS. Then initDB() runs exactly as on a first launch, so the
+ * device comes back with one pristine default loft, `hasEverSynced()` false, and the next
+ * cycle is a real first login: pull from zero, adopt the account's own loft.
+ */
+export async function clearLocalData() {
+  for (const store of ['birds', 'pairs', 'raceResults', 'healthEvents', 'lofts', 'media',
+                       'backups', 'oplog', 'tombstones']) {
+    await idbClear(store);
+  }
+  for (const row of await idbGetAll('settings')) {
+    if (!DEVICE_SETTING_KEYS.includes(row.key)) await idbDelete('settings', row.key);
+  }
+  pendingCount = 0;
+  attempt = 0;
+  await initDB();
+  emitChange({ type: 'import' });
 }
 
 /**
@@ -180,13 +266,41 @@ async function tokenRequest(grantType, body) {
  * @throws {AuthError} kind 'network' (retry later), 'rejected' (wrong
  *   credentials), or 'config' (sync not set up on this device).
  */
-export async function signIn(email, password) {
+export async function signIn(email, password, { replaceLocalData = false } = {}) {
   const payload = await tokenRequest('password', { email, password });
   if (!payload || !payload.access_token || !payload.refresh_token) {
     // a 200 with no tokens is not a session, whatever else it is
     throw new AuthError('rejected', 200, 'the response carried no tokens');
   }
+
+  // THE ACCOUNT COLLISION (RF-13). The credentials are good — and they belong to a different
+  // account from the one this device's data belongs to. Until 2026-10-05 nothing compared
+  // the two: the newcomer inherited the loft on screen, the previous owner's unpushed edits
+  // were pushed into the newcomer's account, and the pull resumed from the previous owner's
+  // cursor. Measured, on the deployed build, with nothing shown to either person.
+  //
+  // So it STOPS HERE, before the session is stored — an unstored session cannot sync, which
+  // is the whole guarantee: no merge, no push, no pull. Nothing is cleared either. The caller
+  // gets kind 'owner' and must come back with a person's explicit choice; `replaceLocalData`
+  // is that choice, and there is no third way past this line.
+  //
+  // A recorded owner needs a POSITIVELY matching id. A response that names no user cannot
+  // prove it is the same account, so it does not pass.
+  const owner = dataOwner();
+  const incoming = (payload.user && payload.user.id) || null;
+  if (owner.id && incoming !== owner.id) {
+    if (!replaceLocalData) {
+      const err = new AuthError('owner', 200, 'this device holds the data of a different account');
+      err.previous = owner.hint;        // masked — never the address itself
+      throw err;
+    }
+    await clearLocalData();
+  }
+
   await storeSession(payload);
+  // No recorded owner (every device before this existed, and every fresh one): the first
+  // account to sign in is the owner. Grandfathering, not a collision.
+  await claimOwnerIfNone();
   return authState();
 }
 
@@ -914,6 +1028,8 @@ export function duplicateRingCount() {
 export async function syncOnce() {
   if (!syncConfig().configured) return { ok: false, reason: 'config' };
   if (!isSignedIn()) return { ok: false, reason: 'signed-out' };
+  // a device signed in since before the owner record existed: this sync is where it is written
+  await claimOwnerIfNone();
 
   if (!hasEverSynced()) {
     // First login. Local records reach the server before anything overwrites

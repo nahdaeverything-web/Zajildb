@@ -1229,6 +1229,114 @@ the language of the page, step 5 included (rail «الطيور … الأدوا�
 
 ---
 
+## RF-13 — a second account signing in on a device inherits the first account's loft, and pushes it under its own name
+
+**In the shared data layer — `js/db/sync.js:183` is the same `signIn()` — so it is present in
+BOTH trees. FIXED IN THE PORT 2026-10-05; NOT in vanilla.** Found by the read-only audit of
+2026-10-05, while measuring what the app does with and without a session.
+
+### The defect
+
+`signIn()` stored whatever session the server returned. It never compared the incoming user
+with the owner of the data already on the device — and sign-out deliberately keeps all of it:
+the records, the unpushed ops, `syncCursor`, `lastAckedSeq`, `lastSyncAt`. So the next account
+to sign in was handed the previous one's loft, op log and cursor, and synced with them.
+
+### Measured before the fix — two shapes, one defect
+
+On a local build, with a stub modelling the real table (owner-only rows, ONE global sequence
+— `docs/SYNC-DESIGN.md:84-152`). Account B has a loft on the server; account A used the device,
+left two edits unpushed and signed out; then B signs in:
+
+```
+✗ BEFORE ANY SYNC: the only thing asked of the server was the token
+      [('TOKEN', ''), ('GET', 'cursor>7: 0'), ('POST', ['أ-4 غير مرفوع', 'أ-5 غير مرفوع'])]
+✗ sync_records for account B is UNCHANGED      3 rows 215febfd14ac  ->  5 rows 00f5cbc4afa2
+✗ no session was stored                        signedIn=True tokens=2 account=b@zajil.test
+```
+
+A's two edits were uploaded into B's account; B's own rows, numbered below A's cursor, never
+arrived; the device went on showing A's five birds under B's name.
+
+On the DEPLOYED build (`gh-pages 7c50004`, backend stubbed by interception), where A's cursor
+happened to be 0, the same defect took its other shape — a silent MERGE:
+
+```
+landed on            : /zajilv2/tools/
+a decision is shown  : NO — nothing was asked
+backend calls as B   : [('TOKEN', ''), ('GET', 'cursor>0 -> 68 row(s)'), ('POST', '1 row(s): lofts')]
+the device now       : 58 birds · lofts ["لوفت إربد التعليمي", "لوفت أ — بعد التعديل"] · account b@zajil.test
+server, B  before    : 68 rows · sha256 acb9fbd704a4e0b3
+server, B  after     : 69 rows · sha256 9dc7eef350f7c25f   CHANGED
+```
+
+### RULED 2026-10-05, and what was built
+
+- **The owner is recorded on the device**, as two settings: `dataOwnerId`, and
+  `dataOwnerHint` — a masked address, `s•••@gmail.com`; the full address is not kept past
+  sign-out and never was. **Why settings, and why outside `AUTH_SETTING_KEYS`:** sign-out
+  nulls exactly those four keys, so anything else in the store survives it by construction —
+  and the store already holds the things the record qualifies (`syncCursor`, `lastAckedSeq`,
+  `lastSyncAt`), each of them bookkeeping about ONE account's server state. Settings are also
+  never synced and never exported, so the record cannot ride a backup to another device.
+- **`signIn()` compares, before it stores the session.** The same account proceeds exactly as
+  before. A different one throws `AuthError('owner')` with the masked hint and stores nothing
+  — an unstored session cannot sync, which is the whole guarantee: no merge, no push, no pull,
+  nothing cleared. A recorded owner needs a positively matching id.
+- **The sign-in screen puts the decision** (the shared three-way dialog): the previous
+  account by its masked hint, and two ways forward — «تصدير البيانات», which returns to the
+  decision, and «مسح والدخول», which asks a second time naming what goes. Cancelling leaves the
+  device exactly as it was. There is no fourth path.
+- **`clearLocalData()` is the only way ownership changes**, and is reached only through that
+  choice: records, photos, op log, tombstones, snapshots and every setting about the data go;
+  the device's identity and preferences stay; `initDB()` then runs as on a first launch, so
+  the next cycle is a real first login. Nothing is logged and nothing is sent — the server
+  hears of no delete, because none of it was the new account's to delete.
+- **No recorded owner — every device today — adopts the first account that signs in.** For a
+  device with a session older than the record, the session names the owner: it is written
+  down by the next sync, and by sign-out before the session is cleared; and signing in OVER a
+  live session of another account is stopped like any other collision.
+
+### What holds it
+
+`tests/e2e/screens/account_collision.py` — 39 assertions; "unchanged" is a digest of an
+account's rows, not a count.
+
+```
+the pre-fix build                              11 passed, 28 failed
+M1  THE COMPARISON removed from signIn()       17 passed, 22 failed   B's rows 3 -> 5; no decision
+M2  clearLocalData() keeps the op log          35 passed,  4 failed   A's six rows pushed as B, then pulled back
+M3  sign-out no longer writes a legacy owner   37 passed,  2 failed
+M4  a live session no longer names the owner   37 passed,  2 failed
+M5  a sync no longer establishes ownership     38 passed,  1 failed
+the fix                                        39 passed,  0 failed
+```
+
+One existing assertion had to say what it meant: `sync/config_injection` pinned the WHOLE of
+`sync.js` to vanilla's, when its claim is about one function — `syncConfig()` reads the
+config at call time, as root does. It now compares that function, byte for byte, and was
+proven to fire by changing one character inside it.
+
+### The same defect exists in vanilla and is NOT fixed there
+
+`js/db/sync.js` is no longer byte-identical to `src/db/sync.js`; the divergence is declared in
+the `data-layer-identity` guard and recorded in `PORT-COMPLETE.md`. Vanilla signs in from its
+tools card with the same `signIn()`, so two accounts on one device behave there as measured
+above. Not fixed, deliberately: `main` is the deployed application. Carry it into the next
+vanilla release.
+
+### Three things seen and left as they are
+
+- **THE RULED LIMIT.** A device that was already signed OUT when the record arrived has no
+  session and no record, so it adopts whoever signs in first — as ruled, and asserted. Its op
+  log does carry the previous account's id (`actorId`, `oplog.js:90`), which could name the
+  owner; that would be an inference where the ruling says adopt, so it is not used. Raised.
+- **A second tab.** A tab left open while another clears the device keeps its own mirror in
+  memory. The same class as a replace-import in another tab; not new, not addressed.
+- **A stopped attempt still obtains a token** from the server, which is discarded unstored.
+
+---
+
 ## SF-5 — `tools-v2.html`, as uploaded, spells «المربي» without the shadda; everything else in both trees has «المربّي»
 
 **A SPEC finding. CLOSED 2026-10-05, in favour of the shipped state** — the archive keeps

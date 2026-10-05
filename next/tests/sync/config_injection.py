@@ -34,7 +34,17 @@ def check(n, ok, d=''):
     global passed, failed; passed += ok; failed += (not ok); print(f"  {'✓' if ok else '✗'} {n}{('  ' + d) if d else ''}")
 h = lambda p: hashlib.sha256(open(p, 'rb').read()).hexdigest()[:16]
 check('next/src/sync-config.js byte-identical to js/sync-config.js', h(f'{ROOT}/js/sync-config.js') == h(f'{ROOT}/next/src/sync-config.js'), h(f'{ROOT}/next/src/sync-config.js'))
-check('next/src/db/sync.js byte-identical to js/db/sync.js', h(f'{ROOT}/js/db/sync.js') == h(f'{ROOT}/next/src/db/sync.js'), h(f'{ROOT}/next/src/db/sync.js'))
+# The claim this suite needs of sync.js is about ONE function: the layer reads the config at
+# call time from globalThis.ZAJIL_SYNC_CONFIG, exactly as root does. Until 2026-10-05 that was
+# asserted by whole-file identity. The file is now DECLARED DIVERGENT (the account collision,
+# ROOT-FINDINGS RF-13 — guards/run.mjs holds the declaration), so the claim is asserted as
+# what it always meant: syncConfig() itself is byte-identical to root's.
+def _fn(path, head='export function syncConfig()'):
+    src = open(path, encoding='utf-8').read(); i = src.index(head); return src[i:src.index('\n}\n', i) + 3]
+_mine, _root = _fn(f'{ROOT}/next/src/db/sync.js'), _fn(f'{ROOT}/js/db/sync.js')
+check("syncConfig() — the function that reads the config at call time — is byte-identical to root's",
+      _mine == _root and 'globalThis.ZAJIL_SYNC_CONFIG' in _mine and len(_mine) > 200,
+      hashlib.sha256(_mine.encode()).hexdigest()[:16] + f' · {len(_mine)} bytes')
 
 # ── the injection point: the committed file is EMPTY ──────────────────────────────
 NEXT = f'{ROOT}/next'
