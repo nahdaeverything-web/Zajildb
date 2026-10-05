@@ -1317,6 +1317,26 @@ One existing assertion had to say what it meant: `sync/config_injection` pinned 
 config at call time, as root does. It now compares that function, byte for byte, and was
 proven to fire by changing one character inside it.
 
+### Re-verification from the live origin
+
+Deployed 2026-10-06 as `gh-pages cd732d5` from `b9423c8`: 160 of 160 staged files served
+byte-identical; `live_deployment.py` 36 passed, 0 failed. The same two-account measurement
+as the BEFORE above, on the deployed build:
+
+```
+landed on            : /zajilv2/sign-in/
+a decision is shown  : هذا الجهاز يحمل بيانات حساب آخر / الحساب السابق: a•••@zajil.test / …
+backend calls as B   : [('TOKEN', '')]
+the device now       : 20 birds · lofts ["لوفت أ — بعد التعديل"] · unpushed 1 · signedIn false · owner user-A
+server, B  before    : 68 rows · sha256 acb9fbd704a4e0b3
+server, B  after     : 68 rows · sha256 acb9fbd704a4e0b3   UNCHANGED
+CANCEL  -> signed in: False · birds 20 · unpushed 1 · B calls so far: [('TOKEN', '')]
+EXPORT  -> 20 birds, loft ['لوفت أ — بعد التعديل'] · the decision is asked again: True
+CLEAR   -> 38 birds · lofts ["لوفت إربد التعليمي"] · account b@zajil.test · owner user-B
+        -> calls as B : [('TOKEN', ''), ('GET', 'cursor>0 -> 68 row(s)')]
+        -> server, B  : UNCHANGED   · server, A: UNCHANGED
+```
+
 ### The same defect exists in vanilla and is NOT fixed there
 
 `js/db/sync.js` is no longer byte-identical to `src/db/sync.js`; the divergence is declared in
