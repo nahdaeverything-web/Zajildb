@@ -1229,6 +1229,52 @@ the language of the page, step 5 included (rail «الطيور … الأدوا�
 
 ---
 
+## SF-5 — `tools-v2.html`, as uploaded, spells «المربي» without the shadda; everything else in both trees has «المربّي»
+
+**A SPEC finding. OPEN** — two rulings point in opposite directions, and the second rests on
+something measurement contradicts. Nothing was changed on the strength of it.
+
+### What is where — measured 2026-10-05
+
+| | «المربي» | «المربّي» |
+|---|---|---|
+| the tools-v2 UPLOAD, lines 411–412 — «اسم المربي», the row label and the field label | **2** | 0 |
+| `design/approved/tools-v2.html` as archived (`d8cee43`) | 0 | 2 |
+| `design/approved/certificate-v1.html` — line 362 is the SAME label, «اسم المربّي» | 0 | 3 |
+| `design/approved/races-v1.html` | 0 | 1 |
+| `src/i18n.js`, and vanilla `js/i18n.js` — `bird.breeder`, `race.fanciers` | 0 | 2 |
+| `src/i18n.ext.js` — `set.breederName`, `cert.breederLine`, `cert.showLoftHint` | 0 | 3 |
+
+The upload is the only place in either tree without the shadda. And `set.breederName`
+«اسم المربّي» (`src/i18n.ext.js:427`) is ONE key rendered in TWO places: the breeder row of
+الأدوات (`app/tools/view.tsx:218`) and the certificate's options panel
+(`app/cert/view.tsx:325`), where `certificate-v1.html:362` draws it with the shadda.
+
+### The two rulings
+
+- **2026-10-03** (the tools-v2 order, item 2; restated 2026-10-05 as ruling 4): archive with
+  «المربّي», matching the existing key. Done — two lines, recorded in `design/README.md`;
+  reversing them reproduces the upload byte for byte. This is what is archived and deployed.
+- **2026-10-05, later:** keep «المربي», "as the spec and the app both have it", because a
+  near-duplicate key would be worse than an inconsistent diacritic.
+
+### Why the second was not applied
+
+The app does not have «المربي» anywhere. Making the build say it would take exactly what the
+ruling set out to avoid: a second key differing from `set.breederName` only by the shadda —
+or changing that key, which also moves the certificate's label away from its own frozen
+spec. Reported rather than forced, as the order's item 2 asked of a disagreement.
+
+### What is left to rule — neither changes a pixel of the deployed app
+
+1. **Leave it as shipped.** The archive carries the shadda and the two-line difference from
+   the upload stays recorded. Spec, app, vanilla and the other two specs agree; one key.
+2. **Restore the archive to the upload's bytes.** The app keeps its key, and
+   `guards/strings.ruled.json` gains one entry (the existing key wins). Spec and app then
+   differ by one diacritic; still one key; no redeploy.
+
+---
+
 ## SUP-1 — a browser's page translation makes the app look half-English, and nothing in the gate can see it
 
 **A SUPPORT finding: a defect in neither tree.** The session behind the TF-4 report was
