@@ -229,8 +229,13 @@ own. Four routes, eight pairs. The other two are the spec's `.fileName` on impor
 `.detailNote` on restore. Measured by running the corrected sweep against the tools-v1 build
 and this one and subtracting the dumps (`CONTRAST_DUMP=1`): all twelve new pairs are
 `--ink-3` on white or page, no new token pair appears, and no other route moved.
-**102 → 110 was restated without a ruling of its own** — it follows from two that exist (the
-four routes, and `--ink-3` standing) — and is flagged as such in the tools-v2 report.
+**RULED 2026-10-05: the ratchet is 110 — a wider instrument, not a regression, for the second
+time and along a second axis.** The first widening added a VIEWPORT: +26 that a phone-only
+scan could never see, 25 of them `--ink-3`. This one added four ROUTES, and on each the nav's
+own two label pairs are counted again: +8. The screen's own pairs cancel — four left with the
+cards, two came with the list, two with the sub-screens. That both steps land on 110 is a
+coincidence; they are different pairs. **The `--ink-3` decision itself stays open and stays
+the design owner's. The token is not to be changed.**
 
 **No defect was added to reach 110, and every line of that table is measured rather than
 derived.** All 26 of the desktop-only ones were read before the number moved: 25 are `--ink-3`

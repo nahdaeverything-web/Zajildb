@@ -59,12 +59,18 @@ nobody has to take that on trust:
           route and are counted once per route because the key carries the route; the other
           two are the spec's .fileName on import and .detailNote on restore
     ───
-    110
+    110   RULED 2026-10-05 as the ratchet
+
+Read the last step as 102 + 8. The screen's own pairs cancel — four left with the cards, two
+came with the list and two with the sub-screens — and what remains is the nav, counted again
+on four routes. It lands on the same 110 as the first widening by coincidence: these are
+different pairs.
 
 The 102 → 110 step was measured the same way as the rest: the corrected sweep run against the
 tools-v1 build (8eeb2fe) and against this one, and the two dumps subtracted (CONTRAST_DUMP=1
-prints them). Every one of the twelve new pairs is #8c97a2 — --ink-3, the token RULED to
-stand — on white or page; no new token pair appears, and no other route changed by one line.
+prints them). Every one of the twelve new pairs is #8c97a2 — --ink-3, whose fate is the design
+owner's OPEN decision and which is not to be changed here — on white or page; no new token
+pair appears, and no other route changed by one line.
 
 Every line of that is measured, not derived. Two of the disabled fixes — sign-in's input and
 breeding's pair save — removed nothing from this table, because neither state is reachable by
@@ -109,6 +115,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'sync'))
 from _serve import serve
 
+# RULED 2026-10-05 — a WIDER SCAN twice, never decay: +26 from a second viewport (84→110; 102 after three rulings), then +8 from the nav's own two label pairs re-counted on four new routes (102→110). --ink-3 stays an open decision; do not change the token.
 BASELINE = 110
 # BOTH, not just the phone. A desktop-only control cannot fail a suite that never renders it:
 # that is exactly how a 1.00:1 button reached a real browsing session.
