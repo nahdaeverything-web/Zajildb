@@ -41,7 +41,8 @@ Changing a file in `approved/` is a design decision, not an edit.
 | Stats | `approved/stats-v1.html` | approved |
 | Shared states (component gallery) | `approved/shared-states-v1.html` | approved |
 | Pedigree certificate | `approved/certificate-v1.html` | approved |
-| Tools & settings | `approved/tools-v1.html` | approved |
+| Tools & settings | `approved/tools-v2.html` | **approved — the file the React port implements** |
+| Tools & settings | `approved/tools-v1.html` | superseded by v2 (grouped settings list) |
 
 Where two versions of a screen are listed, **the highest `-vN` is the one to
 build**. Earlier versions stay in place unchanged so a decision already made
@@ -197,8 +198,8 @@ block can populate.
 is expected behaviour, not an error — the same rule the shared-states gallery
 specifies.
 
-**Tools & settings (`tools-v1.html`) — deliberate differences from today's
-app. Implement the spec, not the current behaviour.**
+**Tools & settings (`tools-v1.html`) — superseded by `tools-v2.html` (below)
+on 2026-10-03; kept as history. Its deliberate differences from today's app:**
 
 1. **The nine cards are grouped into three sections** — إعدادات · بيانات ·
    متقدّم — with an **in-page index** (`<nav class="index"
@@ -223,6 +224,54 @@ it. Standard tokens apply everywhere else.
 **On «الأنساب»:** it appears once, as prose in the scanner card («…ويقترح
 الأنساب»). RULED: the ban covers a nav *tab* named الأنساب, not the word —
 the tab bar and rail carry exactly the ruled six.
+
+**Tools & settings (`tools-v2.html`) — the nine cards become a grouped settings
+list.** Six sections — حسابي · اللوفت · البيانات · الفحوصات · الإعدادات · متقدّم — each
+a list of disclosure rows, one open per section. Archived 2026-10-05.
+
+**Three rows are drawn and NOT built.** Each is marked `NEW — NOT YET BUILT` in the file;
+the port omits each, and each waits on something that does not exist yet:
+
+1. **«الخطة الحالية» with its usage meter** — waits on a plan/limits system. The spec
+   itself says the 50-bird figure is a commercial proposal, not frozen.
+2. **«معرفة مزايا Pro»** — waits on Pro existing.
+3. **«الإشعارات والتذكير»** — waits on the care/reminder feature (health-v1's التطعيم
+   القادم panel, still unruled: a health event carries no recurrence to remind from).
+
+**Four deviations, RULED** (2026-10-03, restated 2026-10-05):
+
+1. **Hybrid navigation.** Four rows NAVIGATE to a real route — not a modal — for the six
+   controls the list has no room for: البحث عن تكرار → `/tools/duplicates/` (the groups
+   with their per-copy «حذف»); استيراد → `/tools/import/` (the mode and the file picker);
+   استرجاع نسخة → `/tools/restore/` (choosing a snapshot); المزامنة → `/tools/sync/` (the
+   status line, the error line, the rejected-records list, «مزامنة الآن» / «إيقاف
+   المزامنة»). A route survives a back gesture and a reload. Everything else is inline as
+   drawn, and no control is further than two taps. Two consequences: the spec's «فتح أداة
+   الدمج» is not rendered (there is no merge tool; the per-copy delete is the only action a
+   fancier has on a found duplicate), and the import row carries no «دمج» value (the mode
+   is chosen on the sub-screen, so the list cannot know it).
+2. **The developer panel is kept** inside متقدّم, collapsed, as tools-v1 had it. It is the
+   only in-app route to the engine checks and the round-trip verification.
+3. **Two tools-v1 strings the spec drops are kept** — both are facts about the fancier's
+   data: «آخر فحص» (the duplicates row's help, and the integrity row — whose time and
+   result persist as settings, so the row still reads «آخر فحص» after a reload) and «آخر
+   نسخة تلقائية» (the restore screen).
+4. **Copy: «المربّي», with the shadda** — matching the existing key `set.breederName`
+   rather than creating a near-duplicate. The archived file differs from the upload in
+   exactly two lines (the row label and the field label, «اسم المربي» → «اسم المربّي»):
+   sha256 `2850f6a6…` → `1ecc43c8…`, 55,295 → 55,299 bytes.
+
+**Also recorded — consequences of those rulings and of earlier ones, not new decisions:**
+
+- **The teaching-data row is kept** — tools-v1's «تحميل بيانات تجريبية للتعلّم» with its
+  two datasets, which the spec has no row for, as the fourth row of البيانات. Every
+  tools-v1 control must stay reachable, and this is the only one the spec dropped outright.
+- **«إعادة الفحص» is not rendered.** The duplicate finder is computed from the live store
+  on every render, so the button would have nothing to do; a control with no action behind
+  it is omitted rather than faked.
+- **The inline sign-in form is not rendered** (the account row's signed-out state). RULING
+  1 of the Phase 4 order stands: signed out, the row explains and offers «تسجيل الدخول»,
+  which navigates to `/sign-in`.
 
 **Design contract:** [`ZAJIL-DESIGN-KIT.md`](ZAJIL-DESIGN-KIT.md) — brief,
 inventory, responsive rules; brand `#128C6E`.

@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>زاجل — الأدوات والإعدادات v2</title>
+<!-- Fonts are linked, never embedded. If remote fonts are unavailable, system fallbacks remain usable. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#128C6E;
+  --brand-deep:#0E6F57;
+  --brand-tint:#E3F4EE; /* existing frozen focus-ring token */
+  --ink:#101820;
+  --ink-2:#4A5560;
+  --ink-3:#8C97A2;
+  --line:#E4E9ED;
+  --page:#F5F7F8;
+  --surface:#FFFFFF;
+  --gold:#C9971F;
+}
+*{box-sizing:border-box}
+html{background:var(--page);scroll-behavior:smooth}
+body{margin:0;background:var(--page);color:var(--ink);font-family:'Alexandria',system-ui,sans-serif;line-height:1.5;min-height:100vh}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled{cursor:default;opacity:.55}
+[hidden]{display:none!important}
+.num,.data{font-family:'IBM Plex Mono',monospace;direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums}
+.icon{width:24px;height:24px;display:block;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.icon.sm{width:20px;height:20px}
+
+/* Focus: the only sanctioned box-shadow use. */
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,a:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 3px var(--brand-tint);
+}
+
+.app{min-height:100vh;padding-bottom:92px}
+.header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.header-in{max-width:960px;margin:0 auto;padding:22px 20px 18px}
+.header h1{font-size:34px;line-height:1.08;font-weight:900;margin:0}
+.header .sub{margin-top:5px;color:var(--ink-2);font-size:13px;font-weight:600}
+
+.content{max-width:960px;margin:0 auto;padding:6px 20px 120px}
+.section{padding-top:26px;scroll-margin-top:96px}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:0 2px 10px}
+.section-head h2{font-size:21px;line-height:1.2;font-weight:900;margin:0}
+.section-head .note{font-size:12px;color:var(--ink-3);font-weight:600;text-align:left}
+.group-list{background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.group-foot{margin:10px 4px 0;color:var(--ink-3);font-size:12.5px;font-weight:600}
+
+.row-details{margin:0;border:0}
+.row-details+ .row-details,.static-row+ .row-details,.row-details+ .static-row{border-top:1px solid var(--line)}
+.row-details>summary{list-style:none}
+.row-details>summary::-webkit-details-marker{display:none}
+.setting-row,.static-row{min-height:68px;display:grid;grid-template-columns:44px minmax(0,1fr) auto 22px;align-items:center;gap:12px;padding:10px 16px;background:var(--surface)}
+.setting-row:hover{background:var(--page)}
+.row-icon{width:40px;height:40px;border-radius:14px;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-2);background:var(--surface)}
+.row-details[open]>.setting-row .row-icon{color:var(--brand);border-color:var(--brand)}
+.row-copy{min-width:0}
+.row-label{font-size:15px;font-weight:800;line-height:1.35}
+.row-help{font-size:12px;font-weight:600;color:var(--ink-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-value{font-size:13.5px;font-weight:700;color:var(--ink-2);text-align:left;max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-value.brand{color:var(--brand-deep)}
+.row-value.gold{color:var(--gold)}
+.chev{width:20px;height:20px;color:var(--ink-3);transition:transform .18s ease}
+.row-details[open]>.setting-row .chev{transform:rotate(-90deg);color:var(--brand)}
+.detail{border-top:1px solid var(--line);background:var(--page);padding:16px}
+.detail-inner{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px}
+.detail-inner+ .detail-inner{margin-top:10px}
+.detail-title{font-size:14px;font-weight:900;margin:0 0 4px}
+.detail-text{font-size:13px;font-weight:600;color:var(--ink-2);margin:0}
+.detail-note{font-size:12px;font-weight:600;color:var(--ink-3);margin:8px 0 0}
+
+/* Status row: same structure, every sync state represented by review switcher. */
+.status-line{display:flex;align-items:flex-start;gap:10px;padding:13px 14px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.status-line .status-icon{color:var(--brand);margin-top:1px}
+.status-line.gold .status-icon{color:var(--gold)}
+.status-line .status-main{min-width:0;flex:1}
+.status-line .status-title{font-size:13.5px;font-weight:800}
+.status-line .status-text{font-size:12.5px;font-weight:600;color:var(--ink-2);margin-top:2px}
+.status-line .status-code{font-size:11px;color:var(--ink-3);margin-top:4px;text-align:right}
+
+.kv{margin-top:12px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--surface)}
+.kv-row{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:50px;padding:9px 13px}
+.kv-row+ .kv-row{border-top:1px solid var(--line)}
+.kv-k{font-size:12.5px;font-weight:700;color:var(--ink-2)}
+.kv-v{font-size:13px;font-weight:800;text-align:left;min-width:0}
+.kv-v.big{font-size:22px;color:var(--brand);line-height:1}
+
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:16px;min-height:46px;padding:0 16px;font-size:13.5px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.primary{background:var(--brand-deep);border-color:var(--brand-deep);color:var(--surface)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+.btn.wide{width:100%}
+.btn:hover{border-color:var(--ink)}
+.btn.primary:hover{background:var(--brand)}
+.btn.gold:hover{border-color:var(--ink)}
+
+.field{margin-top:12px}
+.field:first-child{margin-top:0}
+.field label{display:block;font-size:12.5px;font-weight:800;color:var(--ink-2);margin:0 0 6px}
+.field input,.field select{width:100%;min-height:52px;border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:0 14px;font-size:14px;font-weight:650}
+.field input:focus,.field select:focus{border-color:var(--brand)}
+.inline-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;gap:6px;margin-top:8px}
+.seg button{flex:1;min-height:44px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:13px;font-weight:800}
+.seg button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+
+.meter{margin-top:12px}
+.meter-top{display:flex;justify-content:space-between;gap:14px;align-items:baseline}
+.meter-top .label{font-size:12.5px;font-weight:700;color:var(--ink-2)}
+.meter-top .value{font-size:12px;font-weight:700;color:var(--ink-2)}
+.track{height:8px;background:var(--page);border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:6px}
+.fill{height:100%;width:84%;background:var(--brand)}
+
+.toggle-line{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.switch{width:54px;height:30px;border:1px solid var(--line);border-radius:999px;background:var(--page);position:relative;flex:none;padding:0}
+.switch:before{content:"";position:absolute;width:22px;height:22px;border-radius:50%;background:var(--ink-3);top:3px;right:4px}
+.switch[aria-pressed="true"]{border-color:var(--brand);background:var(--surface)}
+.switch[aria-pressed="true"]:before{background:var(--brand);right:26px}
+
+.stepper{display:flex;align-items:center;gap:9px;direction:ltr;margin-top:10px}
+.stepper button{width:44px;height:44px;border:1px solid var(--line);background:var(--surface);border-radius:999px;font-size:20px;font-weight:800}
+.stepper input{width:70px;height:44px;text-align:center;border:1px solid var(--line);border-radius:14px;background:var(--surface);font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600}
+.stepper .range{font-size:11.5px;color:var(--ink-3);margin-right:auto}
+
+.filebox{display:flex;align-items:center;gap:10px;margin-top:10px;border:1px dashed var(--line);border-radius:16px;background:var(--surface);padding:10px}
+.filebox input{position:absolute;opacity:0;pointer-events:none}
+.file-name{font-size:12.5px;font-weight:600;color:var(--ink-3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.snapshot-list,.reject-list,.dup-list{margin-top:12px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--surface)}
+.snapshot,.reject,.dup-item{padding:11px 13px}
+.snapshot+ .snapshot,.reject+ .reject,.dup-item+ .dup-item{border-top:1px solid var(--line)}
+.snapshot{display:flex;justify-content:space-between;gap:14px;align-items:center}
+.snapshot .meta{font-size:12px;color:var(--ink-3);font-weight:600}
+.reject .t,.dup-item .t{font-size:13px;font-weight:800}
+.reject .m,.dup-item .m{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.ring-plate{display:inline-flex;align-items:center;background:var(--ink);color:var(--surface);border-radius:10px;overflow:hidden;font-family:'IBM Plex Mono',monospace;font-weight:600;direction:ltr;unicode-bidi:isolate;font-size:12.5px}
+.ring-plate .season{background:var(--gold);color:var(--ink);padding:5px 7px}
+.ring-plate .ring{padding:5px 8px}
+
+.dev-tools{margin-top:12px}
+.dev-output{margin-top:10px;background:var(--ink);color:var(--surface);border-radius:16px;padding:13px;font:500 11.5px/1.65 'IBM Plex Mono',monospace;direction:ltr;text-align:left;white-space:pre-wrap;overflow:auto}
+.dev-output .ok{color:var(--brand)}
+.dev-output .warn{color:var(--gold)}
+
+/* Bottom tabs: frozen six, exact order. */
+.tabbar{position:fixed;bottom:0;right:0;left:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);display:flex;padding:9px 4px 13px}
+.tabbar button{flex:1;min-width:0;border:0;background:transparent;color:var(--ink-3);font-size:10px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:4px;padding:2px 0}
+.tabbar button.active{color:var(--brand)}
+.tabbar .icon,.rail .icon{width:25px;height:25px;stroke-width:2.2}
+
+/* Desktop rail: right edge because this is RTL. */
+.rail{display:none;position:fixed;top:0;right:0;bottom:0;width:144px;background:var(--surface);border-left:1px solid var(--line);z-index:35;padding:22px 12px;flex-direction:column;gap:4px}
+.rail .brand-mark{font-size:20px;font-weight:900;color:var(--brand);padding:4px 10px 18px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.rail button{border:0;background:transparent;color:var(--ink-3);min-height:48px;border-radius:14px;padding:0 10px;display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:750;text-align:right}
+.rail button.active{color:var(--brand);border:1px solid var(--brand);background:var(--surface)}
+.rail button:hover{color:var(--brand-deep);background:var(--page)}
+
+/* Review controls are not product UI. Engineers can delete this entire block. */
+.review{position:fixed;top:10px;left:10px;z-index:100;width:min(330px,calc(100vw - 20px));background:var(--ink);color:var(--surface);border:1px solid var(--line);border-radius:16px;padding:8px}
+.review summary{list-style:none;font-size:11.5px;font-weight:800;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
+.review summary::-webkit-details-marker{display:none}
+.review-grid{display:grid;gap:6px;margin-top:8px}
+.review-line{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.review-line .label{font-size:10px;color:var(--ink-3);min-width:64px}
+.review button{border:1px solid var(--ink-2);background:var(--ink);color:var(--surface);border-radius:999px;padding:5px 8px;font-size:10px;font-weight:700}
+.review button.on{border-color:var(--surface)}
+
+@media(max-width:700px){
+  .header-in{padding:21px 18px 17px}
+  .content{padding:4px 16px 118px}
+  .section{padding-top:24px}
+  .setting-row,.static-row{grid-template-columns:42px minmax(0,1fr) auto 20px;padding:10px 13px;gap:10px}
+  .row-value{max-width:110px;font-size:12.5px}
+  .inline-2{grid-template-columns:1fr}
+  .review{width:min(310px,calc(100vw - 20px))}
+}
+
+@media(min-width:701px) and (max-width:1099px){
+  .app{max-width:720px;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+  .header-in,.content{max-width:720px}
+  .setting-row,.static-row{padding-inline:18px}
+}
+
+@media(min-width:1100px){
+  .app{padding-bottom:0;margin-right:144px}
+  .rail{display:flex}
+  .tabbar{display:none}
+  .header-in{padding:30px 28px 22px}
+  .content{padding:8px 28px 70px}
+  .section{padding-top:32px}
+  .section-head h2{font-size:23px}
+  .group-list{border-radius:20px}
+  .setting-row,.static-row{min-height:72px;padding:12px 18px;grid-template-columns:46px minmax(0,1fr) auto 22px}
+  .detail{padding:18px 18px 20px}
+  .detail-inner{padding:18px}
+  .row-value{max-width:320px}
+  .review{left:16px;top:16px}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- DESIGN REVIEW ONLY: remove before production. It exposes required screen states without changing product IA. -->
+  <details class="review">
+    <summary><span>حالات المراجعة</span><span>⌄</span></summary>
+    <div class="review-grid">
+      <div class="review-line"><span class="label">الحساب</span>
+        <button data-review="account" data-value="in" class="on">داخل</button>
+        <button data-review="account" data-value="out">خارج</button>
+        <button data-review="account" data-value="off">غير مهيأ</button>
+      </div>
+      <div class="review-line"><span class="label">تسجيل الدخول</span>
+        <button data-review="login" data-value="idle" class="on">جاهز</button>
+        <button data-review="login" data-value="busy">تحميل</button>
+        <button data-review="login" data-value="credentials">بيانات خاطئة</button>
+        <button data-review="login" data-value="network">لا اتصال</button>
+      </div>
+      <div class="review-line"><span class="label">المزامنة</span>
+        <button data-review="sync" data-value="healthy" class="on">سليم</button>
+        <button data-review="sync" data-value="offline">دون اتصال</button>
+        <button data-review="sync" data-value="syncing">جارٍ</button>
+        <button data-review="sync" data-value="pending">معلّق</button>
+        <button data-review="sync" data-value="error">خطأ</button>
+        <button data-review="sync" data-value="rejected">مرفوض</button>
+      </div>
+      <div class="review-line"><span class="label">الحلقات</span>
+        <button data-review="dup" data-value="clean" class="on">نظيف</button>
+        <button data-review="dup" data-value="found">مكرر</button>
+      </div>
+    </div>
+  </details>
+
+  <header class="header">
+    <div class="header-in">
+      <h1>الأدوات</h1>
+      <div class="sub">الحساب، بيانات المربط، النسخ، الفحوصات وإعدادات التطبيق</div>
+    </div>
+  </header>
+
+  <main class="content">
+
+    <!-- ═══════════════════ حسابي ═══════════════════ -->
+    <section class="section" id="account-section">
+      <div class="section-head"><h2>حسابي</h2></div>
+      <div class="group-list">
+
+        <!-- NEW — NOT YET BUILT. Safe to omit until plans exist; account/sync rows below remain complete without it. -->
+        <details class="row-details" id="plan-row">
+          <summary class="setting-row">
+            <span class="row-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M5 19h14M6 17l-2-9 5 4 3-7 3 7 5-4-2 9z"/></svg></span>
+            <span class="row-copy"><span class="row-label">الخطة الحالية</span><span class="row-help">استخدام الخطة المجانية</span></span>
+            <span class="row-value brand">مجاني</span>
+            <svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+          </summary>
+          <div class="detail">
+            <div class="detail-inner">
+              <div class="detail-title">الخطة المجانية</div>
+              <div class="meter">
+                <div class="meter-top"><span class="label">طيور المربط</span><span class="value num">42 / 50</span></div>
+                <div class="track" aria-label="42 من 50 طيرًا"><div class="fill"></div></div>
+              </div>
+              <p class="detail-note">الحد العددي مقترح تجاريًا ولم يُجمّد بعد؛ لا تعتمد القيمة <span class="num">50</span> في منطق المنتج قبل قرار نهائي.</p>
+            </div>
+          </div>
+        </details>
+
+        <!-- NEW — NOT YET BUILT. Safe to omit until Pro exists. -->
+        <details class="row-details" id="pro-row">
+          <summary class="setting-row">
+            <span class="row-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M4 12h16M12 4v16M7 7l10 10M17 7L7 17"/></svg></span>
+            <span class="row-copy"><span class="row-label">معرفة مزايا Pro</span><span class="row-help">الوقت، التوسّع، قرارات التزاوج والرعاية</span></span>
+            <span class="row-value"></span>
+            <svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+          </summary>
+          <div class="detail">
+            <div class="detail-inner">
+              <div class="detail-title">زاجل Pro</div>
+              <p class="detail-text">هذه نقطة دخول إلى صفحة المزايا عند بنائها. لا يجب أن تمنع أي وظيفة حالية في هذه الشاشة.</p>
+            </div>
+          </div>
+        </details>
+
+        <details class="row-details" id="account-row" open>
+          <summary class="setting-row">
+            <span class="row-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+            <span class="row-copy"><span class="row-label">الحساب</span><span class="row-help" id="account-help">الحساب المستخدم للمزامنة</span></span>
+            <span class="row-value data" id="account-value">ahmad.alfuheis@gmail.com</span>
+            <svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+          </summary>
+          <div class="detail">
+            <div data-account="in">
+              <div class="detail-inner">
+                <div class="kv">
+                  <div class="kv-row"><span class="kv-k">البريد الإلكتروني</span><span class="kv-v data">ahmad.alfuheis@gmail.com</span></div>
+                </div>
+                <div class="actions"><button class="btn">تسجيل الخروج</button></div>
+                <p class="detail-note">تسجيل الخروج يوقف المزامنة فقط — بياناتك تبقى على هذا الجهاز.</p>
+              </div>
+            </div>
+
+            <div data-account="out" hidden>
+              <div class="detail-inner">
+                <p class="detail-text">سجّل الدخول لمزامنة بياناتك بين أجهزتك.</p>
+                <form onsubmit="return false">
+                  <div class="field"><label for="email">البريد الإلكتروني</label><input id="email" class="data" type="email" value="ahmad.alfuheis@gmail.com" autocomplete="username"></div>
+                  <div class="field"><label for="password">كلمة المرور</label><input id="password" type="password" value="12345678" autocomplete="current-password"></div>
+                  <div class="status-line gold" data-login="credentials" hidden style="margin-top:12px">
+                    <svg class="icon sm status-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 17h.01"/></svg>
+                    <div class="status-main"><div class="status-title">البريد الإلكتروني أو كلمة المرور غير صحيحة.</div><div class="status-code data">HTTP 401</div></div>
+                  </div>
+                  <div class="status-line gold" data-login="network" hidden style="margin-top:12px">
+                    <svg class="icon sm status-icon" viewBox="0 0 24 24"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19h.01M4 4l16 16"/></svg>
+                    <div class="status-main"><div class="status-title">تعذّر الاتصال بالخادم.</div><div class="status-text">تحقّق من الشبكة وحاول مجددًا.</div><div class="status-code data">HTTP 0</div></div>
+                  </div>
+                  <div class="actions">
+                    <button class="btn primary wide" data-login="idle credentials network">تسجيل الدخول</button>
+                    <button class="btn primary wide" data-login="busy" hidden disabled><span>جارٍ تسجيل الدخول…</span></button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- NOT CONFIGURED: explanation only, deliberately no sign-in form. -->
+            <div data-account="off" hidden>
+              <div class="detail-inner">
+                <div class="status-line">
+                  <svg class="icon sm status-icon" viewBox="0 0 24 24"><path d="M4 12h16M12 4v16"/></svg>
+                  <div class="status-main"><div class="status-title">المزامنة غير مهيأة على هذا الجهاز.</div><div class="status-text">إعداد الخادم غير موجود في هذه النسخة، لذلك لا يظهر نموذج تسجيل الدخول.</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="row-details" id="sync-row">
+          <summary class="setting-row">
+            <span class="row-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M20 7h-4V3M4 17h4v4M18.5 5.5A8 8 0 0 0 5 9M5.5 18.5A8 8 0 0 0 19 15"/></svg></span>
+            <span class="row-copy"><span class="row-label">المزامنة</span><span class="row-help" id="sync-help">آخر مزامنة 07 / 09 / 2026 · 21:40</span></span>
+            <span class="row-value brand" id="sync-value">متزامن</span>
+            <svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+          </summary>
+          <div class="detail">
+            <div data-account="in">
+              <div class="detail-inner">
+                <div data-sync="healthy" class="status-line">
+                  <svg class="icon sm status-icon" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg>
+                  <div class="status-main"><div class="status-title">تمت المزامنة</div><div class="status-text">لا توجد تغييرات بانتظار الرفع.</div></div>
+                </div>
+                <div data-sync="offline" class="status-line" hidden>
+                  <svg class="icon sm status-icon" viewBox="0 0 24 24"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19h.01M4 4l16 16"/></svg>
+                  <div class="status-main"><div class="status-title">دون اتصال — يعمل محليًا</div><div class="status-text">أي تغييرات جديدة ستبقى على هذا الجهاز حتى يعود الاتصال.</div></div>
+                </div>
+                <div data-sync="syncing" class="status-line" hidden>
+                  <svg class="icon sm status-icon" viewBox="0 0 24 24"><path d="M20 7h-4V3M4 17h4v4M18.5 5.5A8 8 0 0 0 5 9M5.5 18.5A8 8 0 0 0 19 15"/></svg>
+                  <div class="status-main"><div class="status-title">جارٍ المزامنة…</div><div class="status-text">يتم رفع أحدث التغييرات وتنزيل ما تغيّر على الأجهزة الأخرى.</div></div>
+                </div>
+                <div data-sync="pending" class="status-line" hidden>
+                  <svg class="icon sm status-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></svg>
+                  <div class="status-main"><div class="status-title">بانتظار المزامنة: <span class="num">12</span></div><div class="status-text">التغييرات محفوظة محليًا وستُرسل عند توفر الاتصال.</div></div>
+                </div>
+                <div data-sync="error" class="status-line gold" hidden>
+                  <svg class="icon sm status-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 17h.01"/></svg>
+                  <div class="status-main"><div class="status-title">آخر خطأ: انتهت صلاحية الجلسة.</div><div class="status-text">أعد تسجيل الدخول لاستكمال المزامنة.</div><div class="status-code data">HTTP 401 · 07 / 09 / 2026 · 21:40</div></div>
+                </div>
+                <div data-sync="rejected" class="status-line gold" hidden>
+                  <svg class="icon sm status-icon" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg>
+                  <div class="status-main"><div class="status-title">سجلات لم يقبلها الخادم: <span class="num">3</span></div><div class="status-text">بياناتك الأصلية ما زالت على الجهاز. راجع السجلات أدناه.</div></div>
+                </div>
+
+                <div class="kv">
+                  <div class="kv-row"><span class="kv-k">آخر مزامنة</span><span class="kv-v data">07 / 09 / 2026 · 21:40</span></div>
+                  <div class="kv-row"><span class="kv-k">بانتظار المزامنة</span><span class="kv-v big num" id="pending-count">0</span></div>
+                </div>
+
+                <div class="reject-list" data-sync="rejected" hidden>
+                  <div class="reject"><div class="t">نتيجة سباق لطير محذوف</div><div class="m data">race · 2026-05-14</div></div>
+                  <div class="reject"><div class="t">بيضة بلا زوج مرتبط</div><div class="m data">egg · 2026-03-02</div></div>
+                  <div class="reject"><div class="t">حدث صحي بتاريخ غير صالح</div><div class="m data">health · 0000-00-00</div></div>
+                </div>
+
+                <div class="actions"><button class="btn primary">مزامنة الآن</button><button class="btn">إيقاف المزامنة</button></div>
+              </div>
+            </div>
+            <div data-account="out" hidden><div class="detail-inner"><p class="detail-text">سجّل الدخول أولًا لتشغيل المزامنة بين الأجهزة.</p></div></div>
+            <div data-account="off" hidden><div class="detail-inner"><p class="detail-text">المزامنة غير مهيأة على هذا الجهاز.</p></div></div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ═══════════════════ اللوفت ═══════════════════ -->
+    <section class="section" id="loft-section">
+      <div class="section-head"><h2>اللوفت</h2></div>
+      <div class="group-list">
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M4 20V8l8-5 8 5v12M8 20v-6h8v6"/></svg></span><span class="row-copy"><span class="row-label">اسم اللوفت</span></span><span class="row-value">لوفت الفحيص</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><div class="field"><label for="loft-name">اسم اللوفت</label><input id="loft-name" type="text" value="لوفت الفحيص" placeholder="لوفت بلا اسم"></div><div class="actions"><button class="btn primary">حفظ</button></div></div></div>
+        </details>
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 21s6-5.3 6-11a6 6 0 1 0-12 0c0 5.7 6 11 6 11z"/><circle cx="12" cy="10" r="2"/></svg></span><span class="row-copy"><span class="row-label">الموقع</span></span><span class="row-value">الفحيص، البلقاء</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><div class="field"><label for="location">الموقع</label><input id="location" type="text" value="الفحيص، البلقاء"></div><div class="actions"><button class="btn primary">حفظ</button></div></div></div>
+        </details>
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><span class="row-copy"><span class="row-label">اسم المربّي</span></span><span class="row-value">أحمد الحياري</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><div class="field"><label for="breeder">اسم المربّي</label><input id="breeder" type="text" value="أحمد الحياري"></div><div class="actions"><button class="btn primary">حفظ</button></div></div></div>
+        </details>
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M7 3h3l2 5-2 1a16 16 0 0 0 5 5l1-2 5 2v3c0 2-2 4-4 4C9 20 4 15 3 7c0-2 2-4 4-4z"/></svg></span><span class="row-copy"><span class="row-label">الهاتف</span></span><span class="row-value data">+962 79 555 0184</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><div class="field"><label for="phone">الهاتف</label><input id="phone" class="data" type="tel" value="+962 79 555 0184"></div><div class="actions"><button class="btn primary">حفظ</button></div></div></div>
+        </details>
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></span><span class="row-copy"><span class="row-label">الموقع الإلكتروني</span></span><span class="row-value data">alfuheisloft.com</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><div class="field"><label for="site">الموقع الإلكتروني</label><input id="site" class="data" type="url" value="https://alfuheisloft.com"></div><div class="actions"><button class="btn primary">حفظ</button></div></div></div>
+        </details>
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 17l5-4 3 2 3-3 5 5"/></svg></span><span class="row-copy"><span class="row-label">شعار اللوفت</span></span><span class="row-value">موجود</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><p class="detail-text">الشعار الحالي: <span class="data">alfuheis-loft-logo.png</span></p><div class="filebox"><label class="btn" for="logo-file">اختيار شعار</label><input id="logo-file" type="file" accept="image/*"><span class="file-name">PNG أو JPG</span></div><div class="actions"><button class="btn primary">حفظ</button><button class="btn">إزالة الشعار</button></div></div></div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ═══════════════════ البيانات ═══════════════════ -->
+    <section class="section" id="data-section">
+      <div class="section-head"><h2>البيانات</h2></div>
+      <div class="group-list">
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"/></svg></span><span class="row-copy"><span class="row-label">تصدير كل البيانات</span><span class="row-help">ملف JSON كامل</span></span><span class="row-value data">04 / 09 / 2026</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><p class="detail-text">آخر تصدير: <span class="data">04 / 09 / 2026</span></p><div class="actions"><button class="btn primary wide"><svg class="icon sm" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"/></svg>تصدير كل البيانات (JSON)</button></div></div></div>
+        </details>
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20V9M7 14l5-5 5 5M4 4h16"/></svg></span><span class="row-copy"><span class="row-label">استيراد بيانات</span><span class="row-help">دمج أو استبدال كامل</span></span><span class="row-value">دمج</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner">
+            <div class="field"><label>طريقة الاستيراد</label><div class="seg"><button aria-pressed="true">دمج — الأحدث يبقى</button><button aria-pressed="false">استبدال كامل</button></div></div>
+            <div class="filebox"><label class="btn" for="json-file">اختيار ملف</label><input id="json-file" type="file" accept="application/json,.json"><span class="file-name">لم يُختر ملف · .json</span></div>
+            <div class="actions"><button class="btn primary">استيراد</button></div>
+          </div></div>
+        </details>
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M4 7h16v13H4zM8 7V4h8v3M8 11h8"/></svg></span><span class="row-copy"><span class="row-label">استرجاع نسخة تلقائية</span><span class="row-help">نسخة داخلية محفوظة على هذا الجهاز</span></span><span class="row-value">4 متاحة</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner">
+            <div class="snapshot-list">
+              <div class="snapshot"><span><strong class="data">2026-09-08 09:00</strong><div class="meta">34 طيرًا</div></span><button class="btn">استرجاع</button></div>
+              <div class="snapshot"><span><strong class="data">2026-09-07 21:00</strong><div class="meta">34 طيرًا</div></span><button class="btn">استرجاع</button></div>
+              <div class="snapshot"><span><strong class="data">2026-09-07 09:00</strong><div class="meta">33 طيرًا</div></span><button class="btn">استرجاع</button></div>
+              <div class="snapshot"><span><strong class="data">2026-09-06 21:00</strong><div class="meta">33 طيرًا</div></span><button class="btn">استرجاع</button></div>
+            </div>
+          </div></div>
+        </details>
+      </div>
+      <p class="group-foot">ينشئ زاجل نسخة داخلية تلقائيًا كل <span class="num">12</span> ساعة ويحتفظ بآخر <span class="num">7</span> نسخ.</p>
+    </section>
+
+    <!-- ═══════════════════ الفحوصات ═══════════════════ -->
+    <section class="section" id="checks-section">
+      <div class="section-head"><h2>الفحوصات</h2></div>
+      <div class="group-list">
+        <details class="row-details" id="duplicates-row">
+          <summary class="setting-row">
+            <span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="9" r="5"/><path d="M13 13l7 7M15 4h5v5"/></svg></span>
+            <span class="row-copy"><span class="row-label">البحث عن تكرار أرقام الحلقات</span><span class="row-help" id="dup-help">آخر فحص: لا يوجد تكرار</span></span>
+            <span class="row-value brand" id="dup-value">نظيف</span>
+            <svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+          </summary>
+          <div class="detail">
+            <div data-dup="clean">
+              <div class="detail-inner"><div class="status-line"><svg class="icon sm status-icon" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><div class="status-main"><div class="status-title">لا توجد أرقام حلقات مكررة.</div><div class="status-text">تم فحص سجلات الطيور في هذا اللوفت.</div></div></div><div class="actions"><button class="btn">إعادة الفحص</button></div></div>
+            </div>
+            <div data-dup="found" hidden>
+              <div class="detail-inner">
+                <div class="status-line gold"><svg class="icon sm status-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 17h.01"/></svg><div class="status-main"><div class="status-title">وُجد رقما حلقة مكرران.</div><div class="status-text">احتفظ بالسجل المرتبط واحذف النسخة الزائدة بعد المراجعة.</div></div></div>
+                <div class="dup-list">
+                  <div class="dup-item"><div class="t"><span class="ring-plate"><span class="season">24</span><span class="ring">JOR 17352</span></span> · برق</div><div class="m">نسختان · السجل الأساسي مرتبط بـ 7 علاقات</div></div>
+                  <div class="dup-item"><div class="t"><span class="ring-plate"><span class="season">23</span><span class="ring">NL 1408811</span></span> · غيمة</div><div class="m">نسختان · كلا السجلين مرتبطان ببيانات نسب أو صحة</div></div>
+                </div>
+                <div class="actions"><button class="btn">فتح أداة الدمج</button><button class="btn">إعادة الفحص</button></div>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M8 12l3 3 5-6"/></svg></span><span class="row-copy"><span class="row-label">فحص سلامة البيانات</span><span class="row-help">العلاقات، السجلات اليتيمة، والتواريخ</span></span><span class="row-value brand">سليم</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><div class="status-line"><svg class="icon sm status-icon" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><div class="status-main"><div class="status-title">لم يجد الفحص مشاكل في سلامة البيانات.</div><div class="status-text">آخر فحص: <span class="data">08 / 09 / 2026 · 09:14</span></div></div></div><div class="actions"><button class="btn">تشغيل الفحص</button></div></div></div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ═══════════════════ الإعدادات ═══════════════════ -->
+    <section class="section" id="settings-section">
+      <div class="section-head"><h2>الإعدادات</h2></div>
+      <div class="group-list">
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7 9h10M9 15h6M12 3c2.5 2.6 3.5 5.6 3.5 9S14.5 18.4 12 21M12 3C9.5 5.6 8.5 8.6 8.5 12S9.5 18.4 12 21"/></svg></span><span class="row-copy"><span class="row-label">اللغة</span></span><span class="row-value">العربية</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><div class="seg"><button aria-pressed="true">العربية</button><button aria-pressed="false">English</button></div></div></div>
+        </details>
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M6 5h4v14M16 5h2v14M5 10h6M15 10h4"/></svg></span><span class="row-copy"><span class="row-label">الأرقام</span><span class="row-help">أرقام الحلقات تبقى غربية دائمًا</span></span><span class="row-value num">0123456789</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><div class="seg"><button aria-pressed="true">غربية <span class="num">0123456789</span></button><button aria-pressed="false">مشرقية <span>٠١٢٣٤٥٦٧٨٩</span></button></div><p class="detail-note">أرقام الحلقات تُعرض دائمًا بالأرقام الغربية مهما كان هذا الإعداد.</p></div></div>
+        </details>
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></svg></span><span class="row-copy"><span class="row-label">عرض التاريخ</span></span><span class="row-value">ميلادي</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><div class="seg"><button aria-pressed="true">ميلادي</button><button aria-pressed="false">هجري</button><button aria-pressed="false">ميلادي + هجري</button></div></div></div>
+        </details>
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M5 18c3-8 11-8 14 0M8 8a4 4 0 1 1 8 0M4 4l16 16"/></svg></span><span class="row-copy"><span class="row-label">عمق حساب COI</span><span class="row-help">من 3 إلى 15 جيلًا</span></span><span class="row-value"><span class="num">10</span> أجيال</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><div class="detail-title">عمق حساب COI</div><div class="stepper"><button aria-label="إنقاص">−</button><input type="number" min="3" max="15" value="10"><button aria-label="زيادة">+</button><span class="range num">3–15</span></div></div></div>
+        </details>
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span><span class="row-copy"><span class="row-label">وضع التباين العالي</span><span class="row-help">للعمل تحت ضوء الشمس</span></span><span class="row-value">موقوف</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><div class="toggle-line"><div><div class="detail-title">وضع التباين العالي</div><p class="detail-text">يزيد الفرق بين النص والخلفية في ظروف الإضاءة القوية.</p></div><button class="switch" aria-pressed="false" aria-label="تفعيل وضع التباين العالي"></button></div></div></div>
+        </details>
+
+        <!-- NEW — NOT YET BUILT. Safe to omit until the care/reminder feature ships. -->
+        <details class="row-details" id="notifications-row">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></span><span class="row-copy"><span class="row-label">الإشعارات والتذكير</span><span class="row-help">التطعيمات، الأدوية والمكملات</span></span><span class="row-value">الإعدادات</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><p class="detail-text">نقطة دخول مستقبلية لإعدادات تنبيهات جدول الرعاية. لا يوجد اعتماد عليها في الشاشة الحالية.</p></div></div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ═══════════════════ متقدّم ═══════════════════ -->
+    <section class="section" id="advanced-section">
+      <div class="section-head"><h2>متقدّم</h2><span class="note">يُستخدم نادرًا</span></div>
+      <div class="group-list">
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h6M7 16h8"/></svg></span><span class="row-copy"><span class="row-label">ماسح شهادات النسب الورقية</span><span class="row-help">عنوان خادم الرؤية</span></span><span class="row-value">غير مفعّل</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><div class="field"><label for="vision-url">عنوان خادم الرؤية (اختياري)</label><input id="vision-url" class="data" type="url" placeholder="https://vision.example.org"></div><div class="status-line" style="margin-top:12px"><svg class="icon sm status-icon" viewBox="0 0 24 24"><path d="M4 4l16 16M5 12h14"/></svg><div class="status-main"><div class="status-title">غير مفعّل</div><div class="status-text">التطبيق يعمل بالكامل دون خادم الرؤية؛ هذا الحقل يفعّل قراءة الشهادات فقط.</div></div></div><div class="actions"><button class="btn primary">حفظ</button></div></div></div>
+        </details>
+
+        <details class="row-details" id="developer-tools">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M14 5l-4 14"/></svg></span><span class="row-copy"><span class="row-label">أدوات المطوّر</span><span class="row-help">فحوصات المحرّك · للمطوّرين فقط</span></span><span class="row-value">مطوي</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><div class="actions"><button class="btn">تشغيل الفحوصات</button><button class="btn">فحص التصدير والاستيراد</button><button class="btn">فحص ترابط البيانات</button></div><pre class="dev-output"><span class="ok">PASS</span> engine.integrity      0 orphaned records
+<span class="ok">PASS</span> export.import.roundtrip sha256 match
+<span class="warn">WARN</span> rings.unique          2 collisions flagged</pre></div></div>
+        </details>
+
+        <details class="row-details">
+          <summary class="setting-row"><span class="row-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></svg></span><span class="row-copy"><span class="row-label">الإصدار</span></span><span class="row-value data">zajil-v1.9.1</span><svg class="icon chev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></summary>
+          <div class="detail"><div class="detail-inner"><p class="detail-text">الإصدار المثبّت فعليًا على هذا الجهاز كما يبلّغ عنه عامل الخدمة.</p><p class="detail-note">قد يختلف عن آخر إصدار منشور حتى تُحدَّث الصفحة.</p></div></div>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <!-- Frozen six-tab navigation: الطيور · التزاوج · السباقات · الصحة · الإحصائيات · الأدوات -->
+  <nav class="tabbar" aria-label="التنقل الرئيسي">
+    <button><svg class="icon" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>الطيور</span></button>
+    <button><svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg><span>التزاوج</span></button>
+    <button><svg class="icon" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg><span>السباقات</span></button>
+    <button><svg class="icon" viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg><span>الصحة</span></button>
+    <button><svg class="icon" viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg><span>الإحصائيات</span></button>
+    <button class="active" aria-current="page"><svg class="icon" viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg><span>الأدوات</span></button>
+  </nav>
+
+  <nav class="rail" aria-label="التنقل الرئيسي — سطح المكتب">
+    <div class="brand-mark">زاجل</div>
+    <button><svg class="icon" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>الطيور</span></button>
+    <button><svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg><span>التزاوج</span></button>
+    <button><svg class="icon" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg><span>السباقات</span></button>
+    <button><svg class="icon" viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg><span>الصحة</span></button>
+    <button><svg class="icon" viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg><span>الإحصائيات</span></button>
+    <button class="active" aria-current="page"><svg class="icon" viewBox="0 0 24 24"><path d="M4 8h6M14 8h6M4 16h10M18 16h2"/><circle cx="12" cy="8" r="2"/><circle cx="16" cy="16" r="2"/></svg><span>الأدوات</span></button>
+  </nav>
+</div>
+
+<script>
+const state={account:'in',login:'idle',sync:'healthy',dup:'clean'};
+
+function showBy(name,value){
+  document.querySelectorAll(`[data-${name}]`).forEach(el=>{
+    const allowed=(el.dataset[name]||'').split(' ');
+    el.hidden=!allowed.includes(value);
+  });
+}
+
+function apply(){
+  showBy('account',state.account);
+  showBy('login',state.login);
+  showBy('sync',state.sync);
+  showBy('dup',state.dup);
+
+  const accountValue=document.getElementById('account-value');
+  const accountHelp=document.getElementById('account-help');
+  if(state.account==='in'){
+    accountValue.textContent='ahmad.alfuheis@gmail.com';
+    accountValue.classList.add('data');
+    accountHelp.textContent='الحساب المستخدم للمزامنة';
+  }else if(state.account==='out'){
+    accountValue.textContent='تسجيل الدخول';
+    accountValue.classList.remove('data');
+    accountHelp.textContent='لا يوجد حساب مسجل على هذا الجهاز';
+  }else{
+    accountValue.textContent='غير مهيأ';
+    accountValue.classList.remove('data');
+    accountHelp.textContent='إعداد الخادم غير موجود في هذه النسخة';
+  }
+
+  const syncValue=document.getElementById('sync-value');
+  const syncHelp=document.getElementById('sync-help');
+  const pending=document.getElementById('pending-count');
+  syncValue.className='row-value';
+  if(state.account==='out'){
+    syncValue.textContent='متوقفة';
+    syncHelp.textContent='سجّل الدخول لتشغيل المزامنة';
+    pending.textContent='0';
+  }else if(state.account==='off'){
+    syncValue.textContent='غير مهيأة';
+    syncHelp.textContent='إعداد الخادم غير موجود';
+    pending.textContent='0';
+  }else{
+    const map={
+      healthy:['متزامن','آخر مزامنة 07 / 09 / 2026 · 21:40','0','brand'],
+      offline:['دون اتصال','يعمل محليًا','3',''],
+      syncing:['جارٍ…','جارٍ رفع وتنزيل التغييرات','3','brand'],
+      pending:['12 معلّقًا','محفوظة محليًا بانتظار الاتصال','12','gold'],
+      error:['خطأ أخير','انتهت صلاحية الجلسة','12','gold'],
+      rejected:['3 مرفوضة','لم يقبلها الخادم','3','gold']
+    }[state.sync];
+    syncValue.textContent=map[0];
+    syncHelp.textContent=map[1];
+    pending.textContent=map[2];
+    if(map[3]) syncValue.classList.add(map[3]);
+  }
+
+  const dupValue=document.getElementById('dup-value');
+  const dupHelp=document.getElementById('dup-help');
+  if(state.dup==='clean'){
+    dupValue.textContent='نظيف';dupValue.className='row-value brand';dupHelp.textContent='آخر فحص: لا يوجد تكرار';
+  }else{
+    dupValue.textContent='2 مكرران';dupValue.className='row-value gold';dupHelp.textContent='تحتاج مراجعة قبل الحذف أو الدمج';
+  }
+}
+
+document.querySelector('.review').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-review]');
+  if(!b)return;
+  state[b.dataset.review]=b.dataset.value;
+  document.querySelectorAll(`button[data-review="${b.dataset.review}"]`).forEach(x=>x.classList.toggle('on',x===b));
+  apply();
+});
+
+/* Only one settings row expands at a time inside a section; this keeps the grouped-list rhythm compact. */
+document.querySelectorAll('.group-list').forEach(group=>{
+  group.addEventListener('toggle',e=>{
+    const current=e.target;
+    if(current.tagName!=='DETAILS'||!current.open)return;
+    group.querySelectorAll('details[open]').forEach(other=>{if(other!==current)other.open=false;});
+  },true);
+});
+
+/* Demo-only interaction for segmented controls and switches. */
+document.addEventListener('click',e=>{
+  const seg=e.target.closest('.seg button');
+  if(seg){seg.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b===seg?'true':'false'));}
+  const sw=e.target.closest('.switch');
+  if(sw){sw.setAttribute('aria-pressed',sw.getAttribute('aria-pressed')==='true'?'false':'true');}
+});
+
+apply();
+</script>
+</body>
+</html>
