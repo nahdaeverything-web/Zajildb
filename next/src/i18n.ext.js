@@ -331,6 +331,86 @@ export const EXT = {
   // scan.*, about.*, dev.*, integrity.*); these are the strings tools-v1 introduces —
   // its three groups and index, the shorter card-level wordings, and RULING 2's loft
   // branding fields.
+  // ── tools-v2: the grouped settings list (RULED 2026-10-03) ──
+  // Every string below is one the v2 spec draws and the port RENDERS. Spec strings that are
+  // synonyms of an existing vanilla key are NOT duplicated here — per 4A acceptance item 14
+  // the existing key wins and the variant is registered in guards/strings.ruled.json. Spec
+  // strings the port does not render (the three NOT-YET-BUILT rows, the inline sign-in form
+  // superseded by /sign-in, the review switcher) are ruled or mock there too.
+  'tools.sub':                { ar: 'الحساب، بيانات المربط، النسخ، الفحوصات وإعدادات التطبيق', en: 'Account, loft details, backups, checks and app settings' },
+  'tools.sec.account':        { ar: 'حسابي', en: 'My account' },
+  'tools.sec.data':           { ar: 'البيانات', en: 'Data' },
+  'tools.sec.checks':         { ar: 'الفحوصات', en: 'Checks' },
+  'tools.sec.advancedNote':   { ar: 'يُستخدم نادرًا', en: 'Rarely used' },
+  // account row
+  'tools.account.helpIn':     { ar: 'الحساب المستخدم للمزامنة', en: 'The account used for sync' },
+  'tools.account.helpOut':    { ar: 'لا يوجد حساب مسجل على هذا الجهاز', en: 'No account on this device' },
+  'tools.account.helpOff':    { ar: 'إعداد الخادم غير موجود في هذه النسخة', en: 'No server configuration in this build' },
+  'tools.account.off':        { ar: 'غير مهيأ', en: 'Not configured' },
+  'tools.account.offNote':    { ar: 'إعداد الخادم غير موجود في هذه النسخة، لذلك لا يظهر نموذج تسجيل الدخول.', en: 'This build has no server configuration, so there is no sign-in form.' },
+  // sync row + sub-screen
+  'tools.sync.helpOut':       { ar: 'سجّل الدخول لتشغيل المزامنة', en: 'Sign in to turn sync on' },
+  'tools.sync.helpOff':       { ar: 'إعداد الخادم غير موجود', en: 'No server configuration' },
+  'tools.sync.helpOffline':   { ar: 'يعمل محليًا', en: 'Working locally' },
+  'tools.sync.helpSyncing':   { ar: 'جارٍ رفع وتنزيل التغييرات', en: 'Uploading and downloading changes' },
+  'tools.sync.helpPending':   { ar: 'محفوظة محليًا بانتظار الاتصال', en: 'Saved locally, waiting for a connection' },
+  'tools.sync.helpRejected':  { ar: 'لم يقبلها الخادم', en: 'Not accepted by the server' },
+  'tools.sync.stopped':       { ar: 'متوقفة', en: 'Stopped' },
+  'tools.sync.notSetUpShort': { ar: 'غير مهيأة', en: 'Not configured' },
+  'tools.sync.offlineShort':  { ar: 'دون اتصال', en: 'Offline' },
+  'tools.sync.syncingShort':  { ar: 'جارٍ…', en: 'Syncing…' },
+  'tools.sync.pendingShort':  { ar: '{n} معلّقًا', en: '{n} pending' },
+  'tools.sync.errorShort':    { ar: 'خطأ أخير', en: 'Last error' },
+  'tools.sync.rejectedShort': { ar: '{n} مرفوضة', en: '{n} rejected' },
+  'tools.sync.st.synced':     { ar: 'تمت المزامنة', en: 'Synced' },
+  'tools.sync.st.syncedText': { ar: 'لا توجد تغييرات بانتظار الرفع.', en: 'Nothing is waiting to upload.' },
+  'tools.sync.st.offlineText':{ ar: 'أي تغييرات جديدة ستبقى على هذا الجهاز حتى يعود الاتصال.', en: 'New changes stay on this device until the connection returns.' },
+  'tools.sync.st.syncingText':{ ar: 'يتم رفع أحدث التغييرات وتنزيل ما تغيّر على الأجهزة الأخرى.', en: 'Uploading the latest changes and downloading what changed elsewhere.' },
+  'tools.sync.st.pendingText':{ ar: 'التغييرات محفوظة محليًا وستُرسل عند توفر الاتصال.', en: 'Changes are saved locally and will be sent when a connection is available.' },
+  'tools.sync.errorHint':     { ar: 'أعد تسجيل الدخول لاستكمال المزامنة.', en: 'Sign in again to continue syncing.' },
+  'tools.sync.rejectedText':  { ar: 'بياناتك الأصلية ما زالت على الجهاز. راجع السجلات أدناه.', en: 'Your original data is still on this device. Review the records below.' },
+  'tools.sync.outNote':       { ar: 'سجّل الدخول أولًا لتشغيل المزامنة بين الأجهزة.', en: 'Sign in first to sync between devices.' },
+  // loft / logo
+  'tools.logo.present':       { ar: 'موجود', en: 'Set' },
+  'tools.logo.current':       { ar: 'الشعار الحالي: {name}', en: 'Current logo: {name}' },
+  'tools.logo.pick':          { ar: 'اختيار شعار', en: 'Choose a logo' },
+  'tools.logo.types':         { ar: 'PNG أو JPG', en: 'PNG or JPG' },
+  'tools.logo.remove':        { ar: 'إزالة الشعار', en: 'Remove the logo' },
+  // data
+  'tools.row.export':         { ar: 'تصدير كل البيانات', en: 'Export all data' },
+  'tools.export.help':        { ar: 'ملف JSON كامل', en: 'A complete JSON file' },
+  'tools.import.help':        { ar: 'دمج أو استبدال كامل', en: 'Merge, or replace everything' },
+  'tools.restore.help':       { ar: 'نسخة داخلية محفوظة على هذا الجهاز', en: 'An internal copy kept on this device' },
+  'tools.restore.available':  { ar: '{n} متاحة', en: '{n} available' },
+  'tools.restore.btn':        { ar: 'استرجاع', en: 'Restore' },
+  'tools.restore.last':       { ar: 'آخر نسخة تلقائية: {d}', en: 'Last automatic snapshot: {d}' },
+  // checks
+  'tools.row.dup':            { ar: 'البحث عن تكرار أرقام الحلقات', en: 'Find duplicate ring numbers' },
+  'tools.dup.helpClean':      { ar: 'آخر فحص: لا يوجد تكرار', en: 'Last check: no duplicates' },
+  'tools.dup.helpFound':      { ar: 'تحتاج مراجعة قبل الحذف أو الدمج', en: 'Needs review before deleting or merging' },
+  'tools.dup.clean':          { ar: 'نظيف', en: 'Clean' },
+  'tools.dup.foundN':         { ar: '{n} مكرر', en: '{n} duplicate' },
+  'tools.dup.scanned':        { ar: 'تم فحص سجلات الطيور في هذا اللوفت.', en: 'The bird records in this loft were checked.' },
+  'tools.integrity.help':     { ar: 'العلاقات، السجلات اليتيمة، والتواريخ', en: 'Links, orphaned records, and dates' },
+  'tools.integrity.ok':       { ar: 'سليم', en: 'Sound' },
+  'tools.integrity.run':      { ar: 'تشغيل الفحص', en: 'Run the check' },
+  'tools.integrity.never':    { ar: 'لم يُشغَّل بعد', en: 'Not run yet' },
+  'tools.lastCheck':          { ar: 'آخر فحص: {d}', en: 'Last check: {d}' },
+  // settings
+  'tools.numerals.help':      { ar: 'أرقام الحلقات تبقى غربية دائمًا', en: 'Ring numbers always stay Western' },
+  'tools.coi.help':           { ar: 'من 3 إلى 15 جيلًا', en: '3 to 15 generations' },
+  'tools.coi.valueMany':      { ar: '{n} جيلًا', en: '{n} generations' },
+  'tools.coi.value':          { ar: '{n} أجيال', en: '{n} generations' },
+  'tools.hc.help':            { ar: 'للعمل تحت ضوء الشمس', en: 'For working in sunlight' },
+  'tools.hc.off':             { ar: 'موقوف', en: 'Off' },
+  'tools.hc.on':              { ar: 'مفعّل', en: 'On' },
+  'tools.hc.text':            { ar: 'يزيد الفرق بين النص والخلفية في ظروف الإضاءة القوية.', en: 'Increases the difference between text and background in strong light.' },
+  'tools.hc.aria':            { ar: 'تفعيل وضع التباين العالي', en: 'Turn on high contrast' },
+  // advanced
+  'tools.scan.help':          { ar: 'عنوان خادم الرؤية', en: 'Vision server address' },
+  'tools.scan.offShort':      { ar: 'غير مفعّل', en: 'Off' },
+  'tools.dev.collapsed':      { ar: 'مطوي', en: 'Collapsed' },
+  'tools.about.note':         { ar: 'قد يختلف عن آخر إصدار منشور حتى تُحدَّث الصفحة.', en: 'May differ from the latest published version until the page is refreshed.' },
   'tools.index':              { ar: 'فهرس الصفحة', en: 'Page index' },
   'tools.settings':           { ar: 'الإعدادات', en: 'Settings' },
   'tools.group.settings':     { ar: 'إعدادات', en: 'Settings' },

@@ -96,7 +96,7 @@ try:
         ctx = br.new_context(accept_downloads=True)
         g = ctx.new_page(); g.set_default_timeout(900000)
         gerr = []; g.on('pageerror', lambda e: gerr.append(str(e)))
-        g.goto(ORIGIN + 'tools/', wait_until='load'); g.wait_for_timeout(2000)
+        g.goto(ORIGIN + 'tools/import/', wait_until='load'); g.wait_for_timeout(2000)
         for _ in range(30):
             if g.locator('[data-testid=toast]').count() == 0:
                 break
@@ -146,6 +146,7 @@ try:
             ta = ctx_a.new_page(); ta.set_default_timeout(1800000)
             ta.goto(ORIGIN + 'tools/', wait_until='load'); ta.wait_for_timeout(1500)
             with ta.expect_download(timeout=1800000) as dl:
+                ta.locator('[data-row=export] summary').click(); ta.wait_for_timeout(300)   # tools-v2: the row opens first
                 ta.click('[data-testid=export-all]')
             near = '/tmp/zajil-boundary-near.json'
             dl.value.save_as(near)
@@ -157,7 +158,7 @@ try:
             ctx_b = br.new_context(accept_downloads=True)
             b2 = ctx_b.new_page(); b2.set_default_timeout(1800000)
             berr = []; b2.on('pageerror', lambda e: berr.append(str(e)))
-            b2.goto(ORIGIN_B + 'tools/', wait_until='load'); b2.wait_for_timeout(2000)
+            b2.goto(ORIGIN_B + 'tools/import/', wait_until='load'); b2.wait_for_timeout(2000)
             for _ in range(30):
                 if b2.locator('[data-testid=toast]').count() == 0:
                     break

@@ -281,8 +281,12 @@ with sync_playwright() as p:
     }""")
     page.goto(ROOT + 'tools/', wait_until='load'); page.wait_for_timeout(1800)
     body = page.inner_text('body')
-    check('الأدوات has a المزامنة card', 'المزامنة' in body)
+    check('الأدوات has a المزامنة row', 'المزامنة' in body)
     check('...showing the signed-in account', 'spike-a@zajil.test' in body, body[:200].replace('\n', ' '))
+    check('...and the row itself says the last cycle errored', 'خطأ أخير' in body)
+    # tools-v2 (RULED 2026-10-03, hybrid shape): the sync DETAIL is its own route
+    page.goto(ROOT + 'tools/sync/', wait_until='load'); page.wait_for_timeout(1800)
+    body = page.inner_text('body')
     check('...the last sync time', 'آخر مزامنة' in body)
     check('...the pending count', 'بانتظار المزامنة' in body)
     check('...a «مزامنة الآن» button', 'مزامنة الآن' in body)

@@ -162,10 +162,17 @@ until a cutover ruling.
   carried — real rings are not all JO-YYYY-NNNNN). Deletes for the pair, a
   round or an egg confirm inline (spec) and undo through the shell; the
   stored `season` stays a plain year and is shown as the spec shows it.
-- **Tools & settings (4D)** — nine cards in the spec's three groups behind its
-  sticky index, at `/tools`. RULING 1 (Phase 4 order): the sync card's
+- **Tools & settings (4D; `tools-v2` since 2026-10-05)** — a grouped settings list
+  in the spec's six sections at `/tools`, every row a disclosure, one open per
+  section. HYBRID SHAPE (RULED): four rows navigate to real sub-routes —
+  `/tools/sync`, `/tools/duplicates`, `/tools/import`, `/tools/restore` — for the
+  six controls the list has no room for; nothing is further than two taps, and
+  `screens/tools.py` walks every control tools-v1 shipped to prove none was lost.
+  `design/README.md` records the four ruled deviations and the three rows the spec
+  draws that are NOT built. (Until then: tools-v1's nine cards in three groups
+  behind a sticky index.) RULING 1 (Phase 4 order): the account row's
   signed-out state is the explanation line plus a «تسجيل الدخول» button that
-  navigates to `/sign-in`; the inline form the spec draws inside the card is
+  navigates to `/sign-in`; the inline form the spec draws there is
   superseded, and the not-configured state is unchanged and carries no button
   (there is nothing on that device to sign into). RULING 2: breeder name,
   phone, website and `logoMediaId` join the loft record through `Lofts.save`,

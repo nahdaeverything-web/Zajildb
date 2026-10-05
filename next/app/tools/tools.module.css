@@ -1,231 +1,181 @@
-/* Copied from design/approved/tools-v1.html <style> — screen rules only.
- * Dropped: the :root, body and universal resets, .phone (the layout frames the page), .tabbar/.rail (Nav.module.css owns
- * the nav), .demo (design-review switcher). Element rules (button/input/select, a, [hidden], details/summary) are scoped
- * under the view root .screen. Port-necessary additions are at the end, each with its reason. See the tools commit. */
+/* Copied from design/approved/tools-v2.html <style> — screen rules only. Every value is the spec's.
+ * Dropped: the :root, html, body and universal resets; .tabbar/.rail (Nav.module.css owns the nav); .review (the
+ * design-review switcher); .meter/.track/.fill and .btn.gold (the plan row — NEW, NOT YET BUILT, omitted by ruling).
+ * Class names are camelCased for CSS-module access (.row-icon → .rowIcon). Port-necessary additions are at the end,
+ * each with its reason. Rows that NAVIGATE (hybrid shape, RULED 2026-10-03) are <a>s carrying the same .row grid. */
 .screen{ display:block; }
-
-  .screen button, .screen input, .screen select, .screen textarea{ font-family:var(--f); }
+  .screen button, .screen input, .screen select{ font:inherit; color:inherit; font-family:var(--f); }
+  .screen button{ cursor:pointer; }
   .screen [hidden]{ display:none !important; }
-  .num{ font-family:var(--f-mono); font-weight:600; direction:ltr; unicode-bidi:isolate; font-variant-numeric:tabular-nums; }
-  /* Arabic-Indic digits are not in Plex Mono either — the eastern sample needs the
-     Arabic face or it previews the wrong glyphs for the very setting it illustrates */
-  .numAr{ font-weight:600; unicode-bidi:isolate; font-variant-numeric:tabular-nums; }
-  .screen a{ color:var(--ink); }
+  .num, .data{ font-family:var(--f-mono); direction:ltr; unicode-bidi:isolate; font-variant-numeric:tabular-nums; }
+  .icon{ width:24px; height:24px; display:block; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .icon.sm{ width:20px; height:20px; }
 
-  /* ── header + sticky index ── */
-  .lofthead{ background:var(--surface); border-bottom:1px solid var(--line); padding:20px 20px 0; position:sticky; top:0; z-index:9; }
-  .lofthead .season{ font-size:13px; font-weight:700; color:var(--ink-3); }
-  .lofthead h1{ font-size:34px; font-weight:900; line-height:1.1; }
-  .index{ display:flex; gap:6px; padding:14px 0 12px; overflow-x:auto; scrollbar-width:none; }
-  .index::-webkit-scrollbar{ display:none; }
-  .index a{ flex:none; text-decoration:none; border:1px solid var(--line); background:var(--page); color:var(--ink-2); border-radius:999px; padding:9px 16px; font-size:13.5px; font-weight:700; min-height:40px; display:flex; align-items:center; gap:8px; }
-  .index a .c{ font-family:var(--f-mono); font-weight:600; font-size:12px; color:var(--ink-3); }
-  .index a.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
-  .index a.on .c{ color:rgba(255,255,255,.7); }
+  /* ── header ── */
+  .head{ position:sticky; top:0; z-index:9; background:var(--surface); border-bottom:1px solid var(--line); }
+  .headIn{ max-width:960px; margin:0 auto; padding:22px 20px 18px; }
+  .head h1{ font-size:34px; line-height:1.08; font-weight:900; margin:0; }
+  .sub{ margin-top:5px; color:var(--ink-2); font-size:13px; font-weight:600; }
 
-  .panel{ padding:8px 20px 110px; }
-  .group{ padding-top:22px; scroll-margin-top:118px; }
-  .group > .gh{ display:flex; align-items:baseline; gap:12px; margin-bottom:12px; }
-  .group > .gh h2{ font-size:26px; font-weight:900; line-height:1.1; }
-  .group > .gh .c{ font-size:13px; font-weight:700; color:var(--ink-3); }
-  .cards{ display:grid; gap:14px; }
+  .content{ max-width:960px; margin:0 auto; padding:6px 20px 120px; }
+  .section{ padding-top:26px; scroll-margin-top:96px; }
+  .sectionHead{ display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin:0 2px 10px; }
+  .sectionHead h2{ font-size:21px; line-height:1.2; font-weight:900; margin:0; }
+  .sectionHead .note{ font-size:12px; color:var(--ink-3); font-weight:600; text-align:left; }
+  .groupList{ background:var(--surface); border:1px solid var(--line); border-radius:20px; overflow:hidden; }
+  .groupFoot{ margin:10px 4px 0; color:var(--ink-3); font-size:12.5px; font-weight:600; }
 
-  /* ── cards ── */
-  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:20px; min-width:0; }
-  .card h3{ font-size:19px; font-weight:800; line-height:1.3; }
-  .card .sub{ font-size:13px; font-weight:600; color:var(--ink-2); margin-top:4px; text-wrap:pretty; }
-  .card .sub.mute{ color:var(--ink-3); }
-  .hint{ font-size:12.5px; font-weight:600; color:var(--ink-3); margin-top:8px; text-wrap:pretty; }
+  /* ── rows ── */
+  .details{ margin:0; border:0; }
+  .groupList > * + *{ border-top:1px solid var(--line); }
+  .details > summary{ list-style:none; }
+  .details > summary::-webkit-details-marker{ display:none; }
+  .row{ min-height:68px; display:grid; grid-template-columns:44px minmax(0,1fr) auto 22px; align-items:center; gap:12px; padding:10px 16px; background:var(--surface); cursor:pointer; color:var(--ink); text-decoration:none; }
+  .rowIcon{ width:40px; height:40px; border-radius:14px; border:1px solid var(--line); display:grid; place-items:center; color:var(--ink-2); background:var(--surface); }
+  .details[open] > .row .rowIcon{ color:var(--brand); border-color:var(--brand); }
+  .rowCopy{ min-width:0; }
+  .rowLabel{ display:block; font-size:15px; font-weight:800; line-height:1.35; }
+  .rowHelp{ display:block; font-size:12px; font-weight:600; color:var(--ink-3); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rowValue{ font-size:13.5px; font-weight:700; color:var(--ink-2); text-align:left; max-width:210px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rowValue.brand{ color:var(--brand-deep); }
+  /* the spec paints this with --gold, which is 2.65:1 on white as TEXT. --gold-ink is the sanctioned dark gold for
+     text (tokens.css), the same substitution the sync row and the dialog's warning list already make. Icons keep --gold. */
+  .rowValue.gold{ color:var(--gold-ink); }
+  .chev{ width:20px; height:20px; color:var(--ink-3); transition:transform .18s ease; }
+  .details[open] > .row .chev{ transform:rotate(-90deg); color:var(--brand); }
+  .detail{ border-top:1px solid var(--line); background:var(--page); padding:16px; }
+  .detailInner{ background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px; }
+  .detailInner + .detailInner{ margin-top:10px; }
+  .detailTitle{ font-size:14px; font-weight:900; margin:0 0 4px; }
+  .detailText{ font-size:13px; font-weight:600; color:var(--ink-2); margin:0; }
+  .detailNote{ font-size:12px; font-weight:600; color:var(--ink-3); margin:8px 0 0; }
 
-  /* setting rows */
-  .set{ padding:16px 0; border-top:1px solid var(--line); }
-  .set:first-of-type{ border-top:none; }
-  .set > label, .set .k{ display:block; font-size:13.5px; font-weight:800; color:var(--ink-2); margin-bottom:10px; }
-  .seg{ display:flex; gap:6px; }
-  .seg button{ flex:1; border:1px solid var(--line); background:var(--page); padding:12px 4px; cursor:pointer; font-size:14.5px; font-weight:700; color:var(--ink-2); border-radius:999px; min-height:48px; display:flex; align-items:center; justify-content:center; gap:6px; }
-  .seg button .num{ font-size:12.5px; }
-  .seg button[aria-pressed="true"]{ background:var(--ink); border-color:var(--ink); color:#fff; }
-  .seg button[aria-pressed="true"] .num{ color:rgba(255,255,255,.75); }
+  /* ── status line ── */
+  .status{ display:flex; align-items:flex-start; gap:10px; padding:13px 14px; border:1px solid var(--line); border-radius:16px; background:var(--surface); }
+  .status + .status, .detailText + .status, .field + .status{ margin-top:12px; }
+  .statusIcon{ color:var(--brand); margin-top:1px; }
+  .status.gold .statusIcon{ color:var(--gold); }
+  .statusMain{ min-width:0; flex:1; }
+  .statusTitle{ font-size:13.5px; font-weight:800; }
+  .statusText{ font-size:12.5px; font-weight:600; color:var(--ink-2); margin-top:2px; }
+  .statusCode{ font-size:11px; color:var(--ink-3); margin-top:4px; text-align:right; }
 
-  .stepper{ display:flex; align-items:center; gap:10px; direction:ltr; justify-content:flex-end; }
-  .stepper button{ width:48px; height:48px; border-radius:999px; border:1px solid var(--line); background:var(--page); font-size:22px; font-weight:700; color:var(--ink); cursor:pointer; }
-  .stepper input{ width:72px; height:48px; border:2px solid var(--line); border-radius:var(--r-btn); background:var(--surface); text-align:center; font-family:var(--f-mono); font-size:22px; font-weight:600; color:var(--brand-deep); outline:none; }
-  .stepper .rng{ font-family:var(--f-mono); font-size:12px; color:var(--ink-3); margin-inline-end:auto; }
+  /* ── key / value ── */
+  .kv{ margin-top:12px; border:1px solid var(--line); border-radius:16px; overflow:hidden; background:var(--surface); }
+  .kvRow{ display:flex; align-items:center; justify-content:space-between; gap:14px; min-height:50px; padding:9px 13px; }
+  .kvRow + .kvRow{ border-top:1px solid var(--line); }
+  .kvK{ font-size:12.5px; font-weight:700; color:var(--ink-2); }
+  .kvV{ font-size:13px; font-weight:800; text-align:left; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+  .kvV.big{ font-size:22px; color:var(--brand); line-height:1; }
+  .kvV.big.zero{ color:var(--ink-3); }
 
-  .check{ display:flex; align-items:center; gap:14px; cursor:pointer; min-height:48px; }
-  .check .box{ width:28px; height:28px; flex:none; border-radius:9px; border:2px solid var(--ink-3); background:var(--surface); display:grid; place-items:center; }
-  .check .box svg{ width:16px; height:16px; stroke:#fff; stroke-width:3.4; fill:none; stroke-linecap:round; stroke-linejoin:round; display:none; }
-  .check input{ position:absolute; opacity:0; pointer-events:none; }
-  .check input:checked + .box{ background:var(--ink); border-color:var(--ink); }
-  .check input:checked + .box svg{ display:block; }
-  .check .t{ font-size:15px; font-weight:700; }
-
-  /* fields */
-  .field{ margin-top:16px; }
-  .field:first-child{ margin-top:0; }
-  .field > label{ display:block; font-size:13.5px; font-weight:800; color:var(--ink-2); margin-bottom:8px; }
-  .field input, .field select{ width:100%; border:2px solid var(--line); border-radius:var(--r-btn); padding:15px 16px; font-size:16px; font-weight:600; background:var(--page); color:var(--ink); outline:none; min-height:56px; appearance:none; -webkit-appearance:none; }
-  .field select{ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234A5560' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:left 16px center; background-size:18px; padding-left:44px; }
-  .field input:focus, .field select:focus{ border-color:var(--brand); background:var(--surface); }
-  .field input.data{ font-family:var(--f-mono); font-weight:500; direction:ltr; text-align:left; }
-  .field input.err{ border-color:var(--danger); background:var(--surface); }
-  .field input::placeholder{ color:var(--ink-3); font-weight:500; }
-  .file{ display:flex; align-items:center; gap:12px; border:2px dashed var(--line); border-radius:var(--r-btn); padding:12px 12px 12px 16px; min-height:56px; background:var(--page); }
-  .file .pick{ flex:none; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:9px 16px; font-size:13.5px; font-weight:800; color:var(--ink); cursor:pointer; min-height:40px; }
-  .file .fn{ font-size:13.5px; font-weight:600; color:var(--ink-3); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  /* this holds «شعار محفوظ على هذا الجهاز» as often as it holds a filename */
-  .file .fn.has{ font-weight:500; color:var(--ink); unicode-bidi:isolate; }
-
-  /* buttons */
-  .btn{ border:none; border-radius:var(--r-btn); min-height:56px; padding:0 20px; font-size:16px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; width:100%; }
-  .btn svg{ width:20px; height:20px; stroke:currentColor; stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
-  .btn.primary{ background:var(--brand-deep); color:#fff; }
-  .btn.ink{ background:var(--surface); color:var(--ink); border:2px solid var(--ink); }
-  .btn.ghost{ background:var(--page); color:var(--ink); border:1px solid var(--line); }
-  .btn.danger{ background:var(--surface); color:var(--danger); border:2px solid var(--danger); }
-  .btn.sm{ min-height:46px; font-size:14.5px; padding:0 16px; width:auto; }
-  /* the ruled disabled pattern — src/components/shared.module.css, ruling at
-   * app/bird/form.module.css:96-108. This was `opacity:.55`, which took the primary
-   * button to 2.45:1. These buttons are disabled because they are BUSY, so the spinner
-   * ring moves to --ink-2 with them or it vanishes into the grey. */
+  /* ── actions / buttons ── */
+  .actions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .btn{ border:1px solid var(--line); background:var(--surface); border-radius:16px; min-height:46px; padding:0 16px; font-size:13.5px; font-weight:800; color:var(--ink); display:inline-flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; }
+  .btn svg{ width:20px; height:20px; }
+  .btn.primary{ background:var(--brand-deep); border-color:var(--brand-deep); color:var(--surface); }
+  .btn.wide{ width:100%; }
+  /* the ruled disabled pattern (src/components/shared.module.css; app/bird/form.module.css:96-108) replaces the spec's
+     `button:disabled{opacity:.55}`, which took the primary button to 2.45:1 */
   .btn:disabled{ background:var(--line); color:var(--ink-2); border-color:var(--line); cursor:default; }
-  .btn:disabled .spin{ border-color:rgba(74,85,96,.35); border-top-color:var(--ink-2); }
-  .btn .spin{ width:18px; height:18px; border-radius:50%; border:3px solid rgba(255,255,255,.35); border-top-color:#fff; animation:spin .8s linear infinite; }
-  @keyframes spin{ to{ transform:rotate(360deg);} }
-  .btns{ display:grid; gap:10px; margin-top:16px; }
-  .btns.row{ grid-template-columns:1fr 1fr; }
 
-  /* kv rows (sync signed-in) */
-  .kv{ display:grid; margin-top:14px; border-top:1px solid var(--line); }
-  .kv > div{ display:flex; justify-content:space-between; align-items:center; gap:12px; min-height:52px; border-bottom:1px solid var(--line); }
-  .kv .k{ font-size:14px; font-weight:700; color:var(--ink-2); flex:none; }
-  .kv .v{ font-size:15px; font-weight:700; text-align:left; min-width:0; overflow:hidden; text-overflow:ellipsis; }
-  .kv .v.num{ font-size:15px; }
-  .kv .v .big{ font-family:var(--f-mono); font-weight:600; font-size:26px; line-height:1; color:var(--brand-deep); direction:ltr; }
-  .kv .v .big.zero{ color:var(--ink-3); }
-  .kv .v.mute{ color:var(--ink-3); }
+  /* ── fields ── */
+  .field{ margin-top:12px; }
+  .field:first-child{ margin-top:0; }
+  .field label{ display:block; font-size:12.5px; font-weight:800; color:var(--ink-2); margin:0 0 6px; }
+  .field input, .field select{ width:100%; min-height:52px; border:1px solid var(--line); border-radius:16px; background:var(--surface); padding:0 14px; font-size:14px; font-weight:650; color:var(--ink); outline:none; }
+  .field input:focus, .field select:focus{ border-color:var(--brand); }
+  .field input.data{ font-family:var(--f-mono); font-weight:500; direction:ltr; text-align:left; }
+  .field input::placeholder{ color:var(--ink-3); font-weight:500; }
+  .seg{ display:flex; gap:6px; margin-top:8px; }
+  .seg button{ flex:1; min-height:44px; border:1px solid var(--line); border-radius:999px; background:var(--surface); font-size:13px; font-weight:800; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; }
+  .seg button[aria-pressed="true"]{ background:var(--ink); border-color:var(--ink); color:var(--surface); }
+  /* Arabic-Indic digits are not in Plex Mono — the eastern sample needs the Arabic face (tools-v1 port note) */
+  .numAr{ font-weight:600; unicode-bidi:isolate; font-variant-numeric:tabular-nums; }
 
-  /* messages */
-  .msg{ border-radius:var(--r-btn); padding:14px 16px; margin-top:14px; font-size:14px; font-weight:700; text-wrap:pretty; }
-  .msg .code{ display:block; font-family:var(--f-mono); font-weight:500; font-size:12px; color:var(--ink-3); direction:ltr; text-align:right; margin-top:6px; }
-  .msg.danger{ background:var(--danger-tint); color:var(--danger); border:1px solid var(--danger); }   /* the spec's edge tint is not a token; the spec itself borders .msg.amber with the full --gold, so danger matches */
-  .msg.danger .code{ color:#A83223; }   /* the sanctioned darker danger (the spec's value is drift, ruled out at Phase 1) */
-  .msg.amber{ background:var(--gold-tint); color:#7A5A0E; border:1px solid var(--gold); }   /* the spec's value is one digit off the sanctioned #7A5A0E — drift, ruled out at Phase 1 */
-  .msg.amber .code{ color:#8A6410; }
-  .msg.calm{ background:var(--page); color:var(--ink-2); border:1px solid var(--line); }
-  .msg.ok{ background:var(--brand-tint); color:var(--brand-deep); border:1px solid var(--brand); }   /* as .msg.danger: the token, not an untokenised edge tint */
-  .msg.ok svg{ width:18px; height:18px; stroke:var(--brand-deep); stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; vertical-align:-3px; margin-inline-end:6px; }
-  .msg h4{ font-size:14px; font-weight:800; margin-bottom:6px; }
-  .msg ul{ list-style:none; display:grid; gap:6px; }
-  .msg li{ display:flex; justify-content:space-between; gap:10px; font-size:13.5px; font-weight:600; }
-  .msg li .num{ font-size:12.5px; font-weight:500; }
+  .toggleLine{ display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  .switch{ width:54px; height:30px; border:1px solid var(--line); border-radius:999px; background:var(--page); position:relative; flex:none; padding:0; }
+  .switch::before{ content:""; position:absolute; width:22px; height:22px; border-radius:50%; background:var(--ink-3); top:3px; right:4px; }
+  .switch[aria-pressed="true"]{ border-color:var(--brand); background:var(--surface); }
+  .switch[aria-pressed="true"]::before{ background:var(--brand); right:26px; }
 
-  /* duplicates */
-  .dup{ margin-top:14px; border:1px solid var(--line); border-radius:18px; overflow:hidden; }
-  .dup .ring{ background:var(--ink); color:#fff; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
-  .dup .ring .plate{ font-family:var(--f-mono); font-weight:600; font-size:17px; direction:ltr; letter-spacing:.5px; }
-  .dup .ring .plate span{ color:var(--gold); }
-  .dup .ring .n{ font-size:12.5px; font-weight:700; color:rgba(255,255,255,.7); }
-  .dup .copy{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-top:1px solid var(--line); }
-  .dup .copy:first-of-type{ border-top:none; }
-  .dup .copy .name{ font-size:16px; font-weight:800; }
-  .dup .copy .links{ font-size:12.5px; font-weight:600; color:var(--ink-2); margin-top:2px; }
-  .dup .copy .links.none{ color:var(--ink-3); }
-  .dup .copy .links b{ font-family:var(--f-mono); font-weight:600; direction:ltr; unicode-bidi:isolate; }
-  .dup .del{ flex:none; border:1.5px solid var(--danger); color:var(--danger); background:var(--surface); border-radius:999px; padding:8px 16px; font-size:13.5px; font-weight:800; cursor:pointer; min-height:40px; }
+  .stepper{ display:flex; align-items:center; gap:9px; direction:ltr; margin-top:10px; }
+  .stepper button{ width:44px; height:44px; border:1px solid var(--line); background:var(--surface); border-radius:999px; font-size:20px; font-weight:800; color:var(--ink); }
+  .stepper input{ width:70px; height:44px; text-align:center; border:1px solid var(--line); border-radius:14px; background:var(--surface); font-family:var(--f-mono); font-size:18px; font-weight:600; color:var(--ink); }
+  .stepper .range{ font-size:11.5px; color:var(--ink-3); margin-right:auto; }
 
-  /* dataset buttons */
-  .ds{ display:grid; gap:10px; margin-top:16px; }
-  .ds button{ text-align:start; border:1px solid var(--line); background:var(--page); border-radius:18px; padding:16px; cursor:pointer; display:flex; align-items:center; gap:14px; min-height:64px; }
-  .ds .ico{ width:44px; height:44px; flex:none; border-radius:14px; background:var(--brand-tint); display:grid; place-items:center; }
-  .ds .ico svg{ width:22px; height:22px; stroke:var(--brand); stroke-width:2.4; fill:none; stroke-linecap:round; stroke-linejoin:round; }
-  .ds .t{ font-size:15.5px; font-weight:800; }
-  .ds .d{ font-size:12.5px; font-weight:600; color:var(--ink-2); margin-top:2px; }
+  .filebox{ display:flex; align-items:center; gap:10px; margin-top:10px; border:1px dashed var(--line); border-radius:16px; background:var(--surface); padding:10px; }
+  .filebox input{ position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+  .fileName{ font-size:12.5px; font-weight:600; color:var(--ink-3); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* this holds a chosen filename as often as the «لم يُختر ملف» placeholder (tools-v1 port note) */
+  .fileName.has{ font-weight:500; color:var(--ink); unicode-bidi:isolate; }
 
-  /* backup */
-  .stat{ display:flex; align-items:baseline; gap:10px; margin-top:12px; }
-  .stat .k{ font-size:14px; font-weight:700; color:var(--ink-2); }
-  /* «آخر تصدير» holds either a formatted Arabic date or «لم يتم التصدير بعد» — Arabic text
-     in both cases, never LTR data. mono has no Arabic glyphs and direction:ltr reorders
-     the date's runs, so neither belongs here. */
-  .stat .v{ font-weight:600; font-size:20px; color:var(--ink); unicode-bidi:isolate; }
-  .stat .v.mute{ font-family:var(--f); font-weight:700; color:var(--ink-3); font-size:15px; }
-  .subsec{ margin-top:22px; padding-top:18px; border-top:1px solid var(--line); }
-  .subsec h4{ font-size:15.5px; font-weight:800; margin-bottom:12px; }
-  .inline{ display:grid; grid-template-columns:1fr auto; gap:10px; align-items:end; }
+  /* ── lists: snapshots, rejected records, duplicates ── */
+  .list{ margin-top:12px; border:1px solid var(--line); border-radius:16px; overflow:hidden; background:var(--surface); }
+  .item{ padding:11px 13px; }
+  .item + .item{ border-top:1px solid var(--line); }
+  .snap{ display:flex; justify-content:space-between; gap:14px; align-items:center; }
+  .snap .meta{ font-size:12px; color:var(--ink-3); font-weight:600; }
+  .t{ font-size:13px; font-weight:800; }
+  .m{ font-size:11.5px; color:var(--ink-3); margin-top:2px; }
+  .plate{ display:inline-flex; align-items:center; background:var(--ink); color:var(--surface); border-radius:10px; padding:5px 8px; font-family:var(--f-mono); font-weight:600; direction:ltr; unicode-bidi:isolate; font-size:12.5px; }
+  /* the per-copy delete is tools-v1's (the spec draws «فتح أداة الدمج», and there is no merge tool — RULED 2026-10-03) */
+  .dupHead{ display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--page); }
+  .dupCopy{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .dupLinks{ font-size:11.5px; font-weight:600; color:var(--ink-2); margin-top:2px; }
+  .dupLinks.none{ color:var(--ink-3); }
+  .del{ flex:none; border:1.5px solid var(--danger); color:var(--danger); background:var(--surface); border-radius:999px; padding:8px 16px; font-size:13.5px; font-weight:800; min-height:40px; }
 
-  /* developer disclosure */
-  details.dev{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r); }
-  details.dev summary{ list-style:none; cursor:pointer; padding:20px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
-  details.dev summary::-webkit-details-marker{ display:none; }
-  details.dev summary h3{ font-size:19px; font-weight:800; }
-  details.dev summary .sub{ margin-top:2px; }
-  details.dev summary .chev{ width:36px; height:36px; flex:none; border-radius:999px; border:1px solid var(--line); display:grid; place-items:center; }
-  details.dev summary .chev svg{ width:18px; height:18px; stroke:var(--ink-2); stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; transition:transform .2s; }
-  details.dev[open] summary .chev svg{ transform:rotate(180deg); }
-  details.dev .body{ padding:0 20px 20px; }
-  details.dev .body h4{ font-size:15.5px; font-weight:800; padding-top:4px; }
-  .devbtns{ display:grid; gap:8px; margin-top:12px; }
-  .devbtns button{ border:1px solid var(--line); background:var(--page); border-radius:var(--r-btn); min-height:50px; padding:0 16px; font-size:14.5px; font-weight:800; color:var(--ink); cursor:pointer; text-align:start; display:flex; align-items:center; gap:10px; }
-  .devbtns button svg{ width:18px; height:18px; stroke:currentColor; stroke-width:2.6; fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none; }
-  /* Developer console ONLY: the bright palette below (#5CD6A8 ok · #FF8A78 fail · #E6B84A warn · #D8DEE3 text)
-     is scoped to this dark monospace surface and must NOT be reused elsewhere in the app — standard tokens apply everywhere else. */
-  .out{ margin-top:12px; background:var(--ink); color:#D8DEE3; border-radius:var(--r-btn); padding:16px; font-family:var(--f-mono); font-weight:500; font-size:12.5px; line-height:1.65; direction:ltr; text-align:left; white-space:pre; overflow-x:auto; min-height:180px; }
-  .out .ok{ color:#5CD6A8; }
-  .out .bad{ color:#FF8A78; }
-  .out .dim{ color:#8C97A2; }
-  .out .hd{ color:#fff; font-weight:600; }
-  .out .gold{ color:#E6B84A; }
+  /* ── the teaching datasets (port addition, deviation 4): tools-v1's two dataset buttons ── */
+  .ds{ display:grid; gap:10px; }
+  .ds button{ text-align:start; border:1px solid var(--line); background:var(--surface); border-radius:16px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:14px; min-height:56px; }
+  .ds .t{ font-size:14px; }
+  .ds .n{ font-size:12px; font-weight:600; color:var(--ink-2); }
+  .ds button:disabled{ background:var(--line); color:var(--ink-2); border-color:var(--line); cursor:default; }
 
-  /* about */
-  .ver{ display:flex; align-items:baseline; gap:12px; margin-top:12px; }
-  .ver .v{ font-family:var(--f-mono); font-weight:600; font-size:30px; color:var(--brand-deep); direction:ltr; line-height:1; }
-  .ver .k{ font-size:14px; font-weight:700; color:var(--ink-2); }
+  /* ── developer output ── */
+  .devOut{ margin-top:10px; background:var(--ink); color:var(--surface); border-radius:16px; padding:13px; font:500 11.5px/1.65 var(--f-mono); direction:ltr; text-align:left; white-space:pre-wrap; overflow:auto; max-height:420px; }
+  .devOut.fail{ border:2px solid var(--gold); }
 
-  /* ── nav ── */
-  .tabbar{ position:fixed; bottom:0; inset-inline:0; margin-inline:auto; max-width:430px; background:var(--surface); border-top:1px solid var(--line); display:flex; padding:10px 4px 14px; z-index:10; }
-
-  @media (hover:hover){
-    .btn.primary:hover{ background:var(--brand-deep); box-shadow:inset 0 0 0 2px var(--brand-tint); }
-    .btn.ink:hover, .dup .del:hover{ background:var(--ink); color:#fff; border-color:var(--ink); }
-    .btn.ghost:hover, .ds button:hover, .devbtns button:hover, .file .pick:hover{ background:var(--brand-tint); border-color:var(--brand); }
-    .btn.danger:hover{ background:var(--danger); color:#fff; }
-    .index a:hover{ border-color:var(--ink); color:var(--ink); }
-    .index a.on:hover{ color:#fff; }
-    .seg button:hover{ border-color:var(--ink); }
+  @media (max-width:700px){
+    .headIn{ padding:21px 18px 17px; }
+    .content{ padding:4px 16px 118px; }
+    .section{ padding-top:24px; }
+    .row{ grid-template-columns:42px minmax(0,1fr) auto 20px; padding:10px 13px; gap:10px; }
+    .rowValue{ max-width:110px; font-size:12.5px; }
   }
-  .screen button:focus-visible, .screen a:focus-visible, summary:focus-visible, .screen input:focus-visible, .screen select:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
+  @media (min-width:701px) and (max-width:1099px){
+    .screen{ max-width:720px; margin:0 auto; border-left:1px solid var(--line); border-right:1px solid var(--line); }
+    .headIn, .content{ max-width:720px; }
+    .row{ padding-inline:18px; }
+  }
+  @media (min-width:1100px){
+    .headIn{ padding:30px 28px 22px; }
+    .content{ padding:8px 28px 70px; }
+    .section{ padding-top:32px; }
+    .sectionHead h2{ font-size:23px; }
+    .row{ min-height:72px; padding:12px 18px; grid-template-columns:46px minmax(0,1fr) auto 22px; }
+    .detail{ padding:18px 18px 20px; }
+    .detailInner{ padding:18px; }
+    .rowValue{ max-width:320px; }
+  }
+  @media (hover:hover){
+    .row:hover{ background:var(--page); }
+    .btn:hover{ border-color:var(--ink); }
+    .btn.primary:hover{ background:var(--brand); }
+    .btn:disabled:hover{ border-color:var(--line); }
+    .seg button:hover, .stepper button:hover{ border-color:var(--ink); }
+    .del:hover{ background:var(--danger); color:var(--surface); }
+    .ds button:hover{ background:var(--brand-tint); border-color:var(--brand); }
+  }
+  /* the spec's focus ring is a box-shadow; the port's rings are outlines everywhere (tools-v1 module), kept uniform */
+  .screen button:focus-visible, .screen a:focus-visible, .screen summary:focus-visible, .screen input:focus-visible, .screen select:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; }
   .field input:focus-visible, .field select:focus-visible{ outline:none; }
 
-  /* ── demo switcher (design review only) ── */
-  .demo{ position:fixed; top:14px; inset-inline-end:14px; z-index:50; display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
-  @media (min-width:1100px){
-    .lofthead{ padding:32px 32px 0; }
-    .lofthead .in{ margin-inline:auto; max-width:1024px; }
-    .index{ padding:18px 0 14px; }
-    .panel{ margin-inline:auto; max-width:1024px; width:100%; padding:8px 32px 80px; }
-    .group{ padding-top:32px; scroll-margin-top:140px; }
-    .group > .gh h2{ font-size:30px; }
-    /* MULTICOL, not grid, so the two columns BALANCE BY HEIGHT. A two-column grid places
-     * cards row by row, and a row is as tall as its tallest card — measured here as
-     * settings(625) and loft(792) both in the right column against sync(131) alone in the
-     * left, a 1286px empty band at 1920px. Multicol fills to an even height instead, and
-     * `column-span:all` keeps the full-width cards full-width, which is why this works where
-     * `grid-template-rows:masonry` (not yet broadly supported) would have been needed. */
-    .cards{ display:block; columns:2; column-gap:16px; }   /* display:block — `columns` does not apply to a grid container */
-    .cards > .card{ break-inside:avoid; margin-bottom:16px; }
-    .card.span{ column-span:all; }
-    .card.span .two{ display:grid; grid-template-columns:1fr 1fr; gap:0 40px; }
-    .card.span .two > .col:last-child{ border-inline-start:1px solid var(--line); padding-inline-start:40px; }
-    .btns.desk3{ grid-template-columns:1fr 1fr 1fr; }
-  }
-
 /* ── port additions (not in the spec) ── */
-/* RULING 1 (Phase 4 order): the sync card's signed-out state is the explanation line plus a button that NAVIGATES to
-   /sign-in — the spec's inline email/password form inside this card is superseded. The button is an <a>. */
-.screen a.btn{ display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
-/* the dev panel prints the engine suite's own output; it scrolls rather than stretching the card */
-.dev .out{ max-height:420px; overflow:auto; }
-/* the file input is a real <input type=file>: the spec draws a .pick button and a filename, so the input is visually
-   hidden and the button proxies to it (a label would lose the spec's button styling) */
-.file input[type=file]{ position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+/* HYBRID SHAPE (RULED 2026-10-03): four rows navigate to a sub-screen. The sub-screen's header carries a back link
+   to the list, in the chrome every other sub-screen of the app uses (app/bird/view.tsx's back-link). */
+.back{ display:inline-flex; align-items:center; gap:4px; min-height:40px; margin:0 0 4px -8px; padding:0 8px; border-radius:12px; color:var(--ink-2); font-size:13px; font-weight:800; text-decoration:none; }
+.back svg{ width:18px; height:18px; }
+/* a navigating row is an <a>: it takes the .row grid and nothing else */
+.link{ display:grid; }

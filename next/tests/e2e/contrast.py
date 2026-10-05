@@ -37,7 +37,7 @@ opaque, so a transparent control over a card is measured against the card. The t
 composited over that background, and the element's own `opacity` is folded in, because a
 label at 60% opacity really is lower contrast.
 
-BASELINE: 102 distinct failing combinations over the routes below, at BOTH widths. THE
+BASELINE: 110 distinct failing combinations over the routes below, at BOTH widths. THE
 INCREASE FROM 84 IS COVERAGE, NOT REGRESSION, and the arithmetic is written out here so that
 nobody has to take that on trust:
 
@@ -49,7 +49,22 @@ nobody has to take that on trust:
      -3   the other gold fills, ruled the same way and swept uniformly
      -3   three disabled treatments that were dimming (tools ×2, the certificate ×1)
     ───
-    102
+    102   the baseline while الأدوات was tools-v1's nine cards
+     -4   tools-v2: four of that screen's eight pairs went with the cards
+     +2   tools-v2: two of the list's own — .rowHelp (12px/600 on white) and .groupFoot
+          (12.5px/600 on page), both the spec's --ink-3 secondary text
+    +10   FOUR NEW ROUTES — tools/sync, tools/duplicates, tools/import, tools/restore (the
+          hybrid shape, RULED 2026-10-03). EIGHT of the ten are the nav's own two inactive-
+          label pairs (10.5px/700 in the tab bar, 13px/700 in the rail), which sit on every
+          route and are counted once per route because the key carries the route; the other
+          two are the spec's .fileName on import and .detailNote on restore
+    ───
+    110
+
+The 102 → 110 step was measured the same way as the rest: the corrected sweep run against the
+tools-v1 build (8eeb2fe) and against this one, and the two dumps subtracted (CONTRAST_DUMP=1
+prints them). Every one of the twelve new pairs is #8c97a2 — --ink-3, the token RULED to
+stand — on white or page; no new token pair appears, and no other route changed by one line.
 
 Every line of that is measured, not derived. Two of the disabled fixes — sign-in's input and
 breeding's pair save — removed nothing from this table, because neither state is reachable by
@@ -94,12 +109,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'sync'))
 from _serve import serve
 
-BASELINE = 102
+BASELINE = 110
 # BOTH, not just the phone. A desktop-only control cannot fail a suite that never renders it:
 # that is exactly how a 1.00:1 button reached a real browsing session.
 VIEWPORTS = [(430, 900), (1400, 1000)]
 ROUTES = ['birds', 'bird', 'bird/new', 'breeding', 'races', 'races?tab=fci', 'health',
-          'stats', 'tools', 'pedigree', 'cert', 'sign-in']
+          'stats', 'tools', 'tools/sync', 'tools/duplicates', 'tools/import', 'tools/restore',
+          'pedigree', 'cert', 'sign-in']
 BRAND = ('#128c6e', '#0e6f57')
 WHITE = ('#ffffff', '#fefefe')
 # 'near white' is the page and surface grounds the brand is ever set as text on
@@ -140,8 +156,13 @@ SCAN = """() => {
     return 0.2126*ch[0] + 0.7152*ch[1] + 0.0722*ch[2]; };
   const hex = (c) => '#' + [c.r,c.g,c.b].map(v => Math.round(v).toString(16).padStart(2,'0')).join('');
   const out = [];
+  // checkVisibility, not getClientRects alone: text inside a CLOSED <details> keeps its layout
+  // rects under content-visibility but nobody can see it — the same correction the filled-control
+  // probe below already makes for the tools dev panel, now that the tools screen is a list of
+  // disclosure rows (2026-10-03: this was counting «3–15» and «PNG أو JPG» inside closed rows).
+  const seen = (e) => e.checkVisibility({ checkVisibilityCSS: true, contentVisibilityAuto: true });
   for (const el of document.body.querySelectorAll('*')) {
-    if (!el.getClientRects().length) continue;
+    if (!el.getClientRects().length || !seen(el)) continue;
     const own = [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim();
     if (!own) continue;
     const cs = getComputedStyle(el);
@@ -428,6 +449,8 @@ try:
         worst = min((d['ratio'] for d in disabled), default=None)
         print(f"    note: {len(disabled)} disabled controls measured, worst {worst}:1")
 
+        if os.environ.get('CONTRAST_DUMP'):   # the combinations themselves, for restating the baseline honestly
+            for f in sorted(fails): print('    DUMP ' + ' | '.join(str(x) for x in f))
         check(f'[RATCHET] distinct AA failures have not grown beyond {BASELINE}',
               len(fails) <= BASELINE, f'{len(fails)} distinct combinations')
         if len(fails) < BASELINE:

@@ -225,7 +225,7 @@ try:
               str(page.locator('[data-testid=bird-row]').count()))
         page.goto(URL + 'tools', wait_until='load'); page.wait_for_timeout(2000)
         check('OFFLINE a clean URL under the prefix finds its own document',
-              page.locator('[data-testid=card-settings]').count() == 1,
+              page.locator('[data-testid=tools-list]').count() == 1,
               page.url.split('/')[-1])
         check('OFFLINE the version row still reports the worker under the prefix',
               'zajil-v' in page.locator('[data-testid=about-version]').inner_text(),

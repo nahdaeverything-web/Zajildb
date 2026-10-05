@@ -207,6 +207,7 @@ try:
         ta.goto(ORIGIN_A + 'tools/', wait_until='load'); ta.wait_for_timeout(1200)
         t0 = time.time()
         with ta.expect_download(timeout=120000) as dl:
+            ta.locator('[data-row=export] summary').click(); ta.wait_for_timeout(300)   # tools-v2: the row opens first
             ta.click('[data-testid=export-all]')
         path = dl.value.path()
         elapsed = time.time() - t0
@@ -229,7 +230,7 @@ try:
         exists = b.evaluate(DB_EXISTS)
         check('origin B: the zajil database does NOT exist — a first-ever open, not a wiped one',
               exists is False, f'indexedDB.databases() says exists={exists}')
-        b.goto(ORIGIN_B + 'tools/', wait_until='load'); b.wait_for_timeout(1800)
+        b.goto(ORIGIN_B + 'tools/import/', wait_until='load'); b.wait_for_timeout(1800)
 
         b.set_input_files('[data-testid=file-input]',
                           files=[{'name': 'zajil-export.json', 'mimeType': 'application/json', 'buffer': raw}])
@@ -310,7 +311,7 @@ try:
         victim['dataURL'] = f'{head},{b64[:400]}{flipped}{b64[401:]}'
         ctx_n = br.new_context(accept_downloads=True)
         n = ctx_n.new_page()
-        n.goto(ORIGIN_B + 'tools/', wait_until='load'); n.wait_for_timeout(1800)
+        n.goto(ORIGIN_B + 'tools/import/', wait_until='load'); n.wait_for_timeout(1800)
         n.set_input_files('[data-testid=file-input]', files=[{'name': 'tampered.json',
                           'mimeType': 'application/json', 'buffer': json.dumps(tampered).encode('utf-8')}])
         n.wait_for_timeout(400)
