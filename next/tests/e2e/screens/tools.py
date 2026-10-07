@@ -412,10 +412,14 @@ try:
         pg.reload(); pg.wait_for_selector('[data-testid=tools-list]', timeout=8000); pg.wait_for_timeout(1200)
         open_row(pg, 'export')
         pg.click('[data-testid=export-all]')
-        pg.wait_for_selector('[data-testid=export-progress]', timeout=8000)
-        busy_label = pg.locator('[data-testid=export-all]').inner_text().strip()
-        busy_disabled = pg.locator('[data-testid=export-all]').is_disabled()
-        prog = pg.locator('[data-testid=export-progress]').inner_text().strip()
+        # ONE round trip. The indicator lives ~320 ms for eight photos (measured 2026-10-05); four
+        # separate reads raced it and, on 2026-10-05/07, lost — `inner_text` then waited 30 s for an
+        # element that had already gone. The three facts are read in the frame that sees it appear.
+        snap = pg.wait_for_function("""() => {
+            const p = document.querySelector('[data-testid=export-progress]'); if (!p) return null;
+            const b = document.querySelector('[data-testid=export-all]');
+            return { label: b.innerText.trim(), disabled: b.disabled, prog: p.innerText.trim() }; }""", timeout=8000).json_value()
+        busy_label, busy_disabled, prog = snap['label'], snap['disabled'], snap['prog']
         check('[pre-launch] while exporting, the button says so and refuses a second click',
               busy_disabled and busy_label == 'جارٍ التصدير…', f'{busy_label!r} disabled={busy_disabled}')
         check('[pre-launch] …and it reports progress through the photos rather than sitting blank',

@@ -1229,6 +1229,52 @@ the language of the page, step 5 included (rail «الطيور … الأدوا�
 
 ---
 
+## TF-5 — `tools.py` read an export-progress indicator in four round trips, and the indicator lives for ~320 ms
+
+**A TOOLING finding: the gate's one intermittent failure, three times** — once on 2026-10-05
+and twice in the gate runs of 2026-10-07, never when the suite ran alone:
+
+```
+  [FAIL] screens/tools.py                        ?  75s
+         NO SUMMARY LINE — could not count | Traceback (most recent call last): |
+         playwright._impl._errors.TimeoutError: Locator.inner_text: Timeout 30000ms exceeded.
+```
+
+A suite that dies without a summary line is a FAILED step (the gate refuses to count it), so
+every such run had to be judged by re-running one suite by hand — a gate "green except for
+the flake" is a weaker claim than a green gate, and the order of 2026-10-07 wanted the
+stronger one.
+
+### The mechanism — measured
+
+The export-all check (`screens/tools.py`, "[pre-launch] while exporting, the button says so")
+adds eight 2 MB photos, clicks «تصدير الكل», waits for `[data-testid=export-progress]`, and
+then made THREE MORE round trips — the button's label, its disabled state, the progress text.
+The indicator is rendered only while the export runs (`app/tools/parts.tsx`,
+`busy && progress`); for eight photos that is ~320 ms. When the third read arrived after the
+export had finished, `Locator.inner_text` waited its full 30 s for an element that would never
+return. Not a product defect: the button DID say «جارٍ التصدير…», DID refuse a second click and
+DID report progress — the suite was reading a sentence after the page had turned.
+
+**Made deterministic before changing anything:** a 1 s pause inserted after the indicator
+appears produced the identical traceback every time (line 419, the progress read).
+
+### The fix
+
+The three facts are read in the ONE `wait_for_function` evaluation that sees the indicator
+appear — label, `disabled`, progress text, in the same frame. The assertions are unchanged.
+Proof: the fixed suite passes as is (137/0) and with the same 1 s pause inserted after the
+snapshot (137/0) — the pause that broke the old reads no longer matters.
+
+### The rule it leaves
+
+A read of something the page shows only WHILE it works (a busy label, a progress line, a
+toast that clears itself) is one round trip, taken when the thing is first seen — never a
+`wait_for_selector` followed by separate reads. `wait_for_function` returning the facts, or a
+single `evaluate`, is the shape.
+
+---
+
 ## RF-13 — a second account signing in on a device inherits the first account's loft, and pushes it under its own name
 
 **In the shared data layer — `js/db/sync.js:183` is the same `signIn()` — so it is present in
