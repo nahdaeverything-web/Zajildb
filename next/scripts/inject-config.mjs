@@ -50,8 +50,12 @@ if (!existsSync(TARGET)) {
 
 if (check) {
   const src = readFileSync(TARGET, 'utf8');
-  const url = (src.match(/url:\s*'([^']*)'/) || [])[1];
-  const key = (src.match(/publishableKey:\s*'([^']*)'/) || [])[1];
+  // the committed source says `url: '…'`; the line THIS script writes is JSON, `"url":"…"`. Until
+  // 2026-10-07 the check knew only the first shape and so refused every correctly injected file
+  // ("does not have the expected shape") — a verifier that could not verify its own output (TF-7).
+  const pick = (m) => (m ? (m[1] ?? m[2]) : undefined);
+  const url = pick(src.match(/"url"\s*:\s*"([^"]*)"|url:\s*'([^']*)'/));
+  const key = pick(src.match(/"publishableKey"\s*:\s*"([^"]*)"|publishableKey:\s*'([^']*)'/));
   if (url === undefined || key === undefined) fail(`${TARGET} does not have the expected shape`);
   console.log(`✓ inject-config --check  url ${url ? 'set (' + url + ')' : 'EMPTY'} · publishableKey ${key ? 'set (' + key.slice(0, 16) + '…, ' + key.length + ' chars)' : 'EMPTY'}`);
   process.exit(0);
