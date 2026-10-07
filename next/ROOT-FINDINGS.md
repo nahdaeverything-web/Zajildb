@@ -1295,7 +1295,8 @@ server, B  after     : 69 rows · sha256 9dc7eef350f7c25f   CHANGED
 - **No recorded owner — every device today — adopts the first account that signs in.** For a
   device with a session older than the record, the session names the owner: it is written
   down by the next sync, and by sign-out before the session is cleared; and signing in OVER a
-  live session of another account is stopped like any other collision.
+  live session of another account is stopped like any other collision. *(Narrowed 2026-10-07,
+  below: the op log names the owner too, so only a device never signed in adopts.)*
 
 ### What holds it
 
@@ -1347,10 +1348,23 @@ vanilla release.
 
 ### Three things seen and left as they are
 
-- **THE RULED LIMIT.** A device that was already signed OUT when the record arrived has no
-  session and no record, so it adopts whoever signs in first — as ruled, and asserted. Its op
-  log does carry the previous account's id (`actorId`, `oplog.js:90`), which could name the
-  owner; that would be an inference where the ruling says adopt, so it is not used. Raised.
+- **THE RULED LIMIT — CLOSED 2026-10-07, reversing the 2026-10-05 ruling.** A device that was
+  already signed OUT when the record arrived has no session and no record, and adopted
+  whoever signed in first. Its op log carries the previous account's id (`actorId`,
+  `oplog.js:90`) on every op made while signed in — and the first sync re-logs every record
+  — so that inference was raised here and not used, because the ruling said adopt.
+  **Reversed, and why:** a sign-in gate is the next piece of work, and a gate turns that
+  adoption from an incidental risk (nobody has to sign in) into a compulsory one (everybody
+  must, and the only thing between a person and the collision is typing the same address as
+  last time). Now the most recent non-null `actorId` in the op log is the owner of record
+  when no owner key and no session exist, compared exactly as the recorded owner is. Measured
+  before the change on exactly that device: B signing in landed on /tools/ with calls
+  `TOKEN, GET cursor>19: 0, POST ['ج-1-edit']` and account B's rows went 3 → 4. After: the
+  decision, `TOKEN` only, the device unchanged byte for byte, both accounts' digests
+  unchanged, and the previous account named only as «حساب آخر سبق استخدامه على هذا الجهاز»
+  — the log carries no address. A long-synced device pruned to its 500-op tail still names
+  its owner in every remaining op. **Adoption now applies only to a device that was never
+  signed in** — every op `null` — which is the one case with nothing to protect.
 - **A second tab.** A tab left open while another clears the device keeps its own mirror in
   memory. The same class as a replace-import in another tab; not new, not addressed.
 - **A stopped attempt still obtains a token** from the server, which is discarded unstored.

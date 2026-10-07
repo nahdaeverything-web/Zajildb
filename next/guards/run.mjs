@@ -276,7 +276,8 @@ const guards = {
       ['src/db/sync.js',
        'the account collision (RF-13): signIn() compares the incoming user with the owner of '
        + 'the data on the device and stops before storing a session that is not the same '
-       + 'account; the owner is recorded in settings (dataOwnerId / dataOwnerHint) and '
+       + 'account; the owner is recorded in settings (dataOwnerId / dataOwnerHint), failing '
+       + 'that named by the session, failing that by the op log (RULED 2026-10-07), and '
        + 'clearLocalData() is the one explicit way to change it. RULED 2026-10-05 as a '
        + 'port-only fix. Vanilla has the same defect and is NOT changed — main is the live '
        + 'deployment.'],

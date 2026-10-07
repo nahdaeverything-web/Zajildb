@@ -161,15 +161,30 @@ function ownerHint(email) {
 /**
  * The account this device's data belongs to, or `{ id: null }` if nobody has claimed it.
  *
- * The recorded owner — or, on a device signed in since before the record existed, whoever
- * holds its session: that account is where everything here has been syncing, recorded or not.
+ * Three sources, in order:
+ *   1. the recorded owner;
+ *   2. a live session older than the record — that account is where everything here has
+ *      been syncing, recorded or not;
+ *   3. the op log. RULED 2026-10-07, closing RF-13's limit. Every op made while signed in
+ *      carries that account's id (oplog.js:90), and the first sync re-logs every record, so
+ *      a device that has ever synced names its owner in its own history — after sign-out,
+ *      which leaves the log alone, and after pruning, which keeps the last OPLOG_KEEP ops.
+ *      The most recent such op wins: that is the account the cursor and the acks belong to.
+ *      The log carries no address, so this owner has no hint.
+ *
+ * A device whose ops all carry null was never signed in. Nothing on it was ever any
+ * account's, so it has no owner and adopts the first account that signs in — now the ONLY
+ * case that adopts.
  */
-export function dataOwner() {
+export async function dataOwner() {
   const s = state.settings;
-  return {
-    id: s.dataOwnerId || s.authUserId || null,
-    hint: s.dataOwnerId ? (s.dataOwnerHint || null) : ownerHint(s.authEmail),
-  };
+  if (s.dataOwnerId) return { id: s.dataOwnerId, hint: s.dataOwnerHint || null };
+  if (s.authUserId) return { id: s.authUserId, hint: ownerHint(s.authEmail) };
+  const ops = await getOpsSinceSeq(0);                       // seq order
+  for (let i = ops.length - 1; i >= 0; i--) {
+    if (ops[i].actorId) return { id: ops[i].actorId, hint: null };
+  }
+  return { id: null, hint: null };
 }
 
 /** Write the owner down if nobody has. Never overwrites: ownership changes only through
@@ -286,7 +301,7 @@ export async function signIn(email, password, { replaceLocalData = false } = {})
   //
   // A recorded owner needs a POSITIVELY matching id. A response that names no user cannot
   // prove it is the same account, so it does not pass.
-  const owner = dataOwner();
+  const owner = await dataOwner();
   const incoming = (payload.user && payload.user.id) || null;
   if (owner.id && incoming !== owner.id) {
     if (!replaceLocalData) {
@@ -298,7 +313,7 @@ export async function signIn(email, password, { replaceLocalData = false } = {})
   }
 
   await storeSession(payload);
-  // No recorded owner (every device before this existed, and every fresh one): the first
+  // No owner by any of the three sources — a device that was never signed in: the first
   // account to sign in is the owner. Grandfathering, not a collision.
   await claimOwnerIfNone();
   return authState();

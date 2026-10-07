@@ -13,6 +13,12 @@ sync — no merge, no push, nothing silently cleared — and is put a decision: 
 here, or clear it and come in as the new account. A device with no recorded owner adopts the
 first account that signs in.
 
+RULED 2026-10-07, closing the limit: a device with no record and no session still names its
+owner through its op log — the most recent op made while signed in carries that account's id
+— and that owner is compared exactly as the recorded one. Adoption is now ONLY for a device
+that was never signed in, the one case with nothing to protect. A gate that forces sign-in
+would have turned the old "adopt" from an incidental risk into a compulsory one.
+
 THE SERVER HERE models the real table (docs/SYNC-DESIGN.md:84-152): rows are owner-only, and
 ONE global sequence numbers every account's rows. Both matter — the first is what makes a push
 under the wrong session land in the wrong loft, the second is why one account's cursor is
@@ -330,14 +336,55 @@ try:
         check('[grandfathered] a sync establishes ownership for a session older than the record', census(pg)['owner'] == 'user-F', str(census(pg)['owner']))
         ctx.close()
 
-        # (d) THE RULED LIMIT: already signed OUT when the record arrived — nothing on the device says whose it is
+        # (d) THE LIMIT, CLOSED (RULED 2026-10-07): signed OUT before the record existed — no session, no
+        #     record — and the op log still names the owner. Proven on the legacy device as measured:
+        #     C synced, left one edit unpushed, signed out; B has a loft of its own on the server.
         ctx, pg = device(b)
-        name_loft(pg, 'لوفت ز'); birds(pg, ['ز-1'])
-        run(pg, "async (db) => { await db.signIn('g@zajil.test', 'pw'); await db.syncNow(); await db.signOut(); }"); run(pg, FORGET)
-        mark = len(srv.log); submit(pg, 'h@zajil.test'); settled(pg)
-        c = census(pg)
-        check('[RULED LIMIT] a device with no session and no record adopts whoever signs in first — as ruled, with no question',
-              pg.locator('[data-testid=dialog]').count() == 0 and c['account'] == 'h@zajil.test' and c['owner'] == 'user-H', f"{c['account']} / {c['owner']}")
+        name_loft(pg, 'لوفت ج'); birds(pg, ['ج-1', 'ج-2'])
+        run(pg, "async (db) => { await db.signIn('g@zajil.test', 'pw'); await db.syncNow(); }"); birds(pg, ['ج-1-edit']); run(pg, "async (db) => { await db.signOut(); }"); run(pg, FORGET)
+        before = census(pg); b0, g0 = srv.digest('B'), srv.digest('G')
+        check('[CLOSED LIMIT] the legacy device: no session, no owner record, one edit still unpushed',
+              not before['signedIn'] and before['owner'] is None and before['unpushed'] == ['ج-1-edit'], f"owner={before['owner']} unpushed={before['unpushed']}")
+        mark = len(srv.log); submit(pg, 'b@zajil.test'); settled(pg)
+        after = census(pg); d = dialog(pg)
+        check('[CLOSED LIMIT] B signing in is STOPPED — the op log named the owner',
+              pg.locator('[data-testid=dialog]').count() == 1 and pg.url.endswith('/sign-in/') and srv.calls('B', mark) == [('TOKEN', '')],
+              f"{pg.url} · calls {srv.calls('B', mark)} · dialog: {d[:50] or 'NONE'}")
+        check("[CLOSED LIMIT] …C's edit stays local, and nothing on the device changed — not even an owner record",
+              after == before and after['unpushed'] == ['ج-1-edit'] and after['owner'] is None,
+              json.dumps({k: (before[k], after[k]) for k in before if before[k] != after[k]}, ensure_ascii=False)[:200])
+        check('[CLOSED LIMIT] …server state for BOTH accounts unchanged, by digest',
+              srv.digest('B') == b0 and srv.digest('G') == g0, f"B {b0} -> {srv.digest('B')} · G {g0} -> {srv.digest('G')}")
+        check('[CLOSED LIMIT] …and the previous account is named only as what the log knows — no address at all',
+              'حساب آخر سبق استخدامه على هذا الجهاز' in d and '@' not in d, d[:100])
+        pg.click('[data-testid=dialog-cancel]'); pg.wait_for_timeout(300)
+        mark = len(srv.log); submit(pg, 'g@zajil.test'); settled(pg); after = census(pg)
+        check('[CLOSED LIMIT] …while the account the log names goes straight through, and its edit goes up',
+              pg.locator('[data-testid=dialog]').count() == 0 and after['account'] == 'g@zajil.test' and after['owner'] == 'user-G'
+              and ('POST', ['ج-1-edit']) in srv.calls('G', mark), f"{after['account']} / {after['owner']} / {srv.calls('G', mark)}")
+        ctx.close()
+
+        # (e) the same, after the log has been PRUNED: the forensic tail (OPLOG_KEEP) still carries the id
+        ctx, pg = device(b)
+        name_loft(pg, 'لوفت ط'); birds(pg, [f'ط-{i}' for i in range(300)])
+        run(pg, "async (db) => { await db.signIn('t@zajil.test', 'pw'); await db.syncNow(); }"); birds(pg, [f'ط-{i}' for i in range(300, 620)])
+        run(pg, "async (db) => { await db.syncNow(); await db.signOut(); }"); run(pg, FORGET)
+        actors = run(pg, "async (db) => { const a = {}; for (const o of await db.listOps()) a[o.actorId || 'null'] = (a[o.actorId || 'null'] || 0) + 1; return a; }")
+        check('[CLOSED LIMIT] a long-synced device, pruned to its tail, still names its owner in every remaining op',
+              actors == {'user-T': 500}, str(actors))
+        b0 = srv.digest('B'); mark = len(srv.log); submit(pg, 'b@zajil.test'); settled(pg)
+        check('[CLOSED LIMIT] …so B is stopped there too', pg.locator('[data-testid=dialog]').count() == 1 and srv.calls('B', mark) == [('TOKEN', '')] and srv.digest('B') == b0,
+              str(srv.calls('B', mark)))
+        ctx.close()
+
+        # (f) WHAT STILL ADOPTS — and the only thing that does: a device never signed in. Its ops all carry null.
+        ctx, pg = device(b)
+        name_loft(pg, 'لوفت ك'); birds(pg, ['ك-1'])
+        actors = run(pg, "async (db) => { const a = {}; for (const o of await db.listOps()) a[o.actorId || 'null'] = (a[o.actorId || 'null'] || 0) + 1; return a; }")
+        mark = len(srv.log); submit(pg, 'h@zajil.test'); settled(pg); c = census(pg)
+        check('[NEVER SYNCED] a device never signed in carries no account in its log, and adopts the first account — nothing to protect',
+              actors == {'null': 2} and pg.locator('[data-testid=dialog]').count() == 0 and c['account'] == 'h@zajil.test' and c['owner'] == 'user-H',
+              f"{actors} · {c['account']} / {c['owner']}")
         ctx.close()
         b.close()
 finally:
