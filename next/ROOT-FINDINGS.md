@@ -1365,6 +1365,13 @@ vanilla release.
   — the log carries no address. A long-synced device pruned to its 500-op tail still names
   its owner in every remaining op. **Adoption now applies only to a device that was never
   signed in** — every op `null` — which is the one case with nothing to protect.
+  **Deployed 2026-10-07 as `gh-pages 0e917e4` from `29bd481`** — 160 of 160 staged files
+  served byte-identical, `live_deployment.py` 36 passed, 0 failed — and re-measured on the
+  live origin on a legacy device (owner record removed through IndexedDB, 44 ops stamped
+  `user-C`, one edit unpushed). Before, on `cd732d5`: B landed on `/tools/`, calls
+  `TOKEN, GET cursor>0 -> 68, POST 1 row`, the device went from 20 birds to 58 and account
+  B's rows changed. After: `/sign-in/` with the decision, `TOKEN` only, the device unchanged,
+  both accounts' digests unchanged.
 - **A second tab.** A tab left open while another clears the device keeps its own mirror in
   memory. The same class as a replace-import in another tab; not new, not addressed.
 - **A stopped attempt still obtains a token** from the server, which is discarded unstored.
