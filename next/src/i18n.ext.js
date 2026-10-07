@@ -331,6 +331,9 @@ export const EXT = {
   // scan.*, about.*, dev.*, integrity.*); these are the strings tools-v1 introduces —
   // its three groups and index, the shorter card-level wordings, and RULING 2's loft
   // branding fields.
+  // ── the sign-in gate (RULED 2026-10-07) — the loft, never the account ──
+  'gate.holds':                { ar: 'هذا الجهاز يحمل {loft}', en: 'This device holds {loft}' },
+  'gate.signInToReach':        { ar: 'سجّل الدخول بالحساب الذي استخدمته على هذا الجهاز للوصول إليه.', en: 'Sign in with the account you used on this device to reach it.' },
   // ── the account collision (RULED 2026-10-05; ROOT-FINDINGS RF-13) ──
   // No spec draws this: it is the decision the ruling orders, built from the shared dialog.
   'signin.owner.title':        { ar: 'هذا الجهاز يحمل بيانات حساب آخر', en: 'This device holds another account\'s data' },

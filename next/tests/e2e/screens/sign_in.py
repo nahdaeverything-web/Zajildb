@@ -49,7 +49,7 @@ try:
         check('the screen renders signed out: brand, tagline, email + password, «تسجيل الدخول»',
               pg.locator('[data-testid=f-email]').count() == 1 and pg.locator('[data-testid=f-password]').count() == 1
               and pg.locator('[data-testid=signin-submit]').inner_text().strip() == 'تسجيل الدخول' and 'سجل لوفتك' in pg.locator('[data-testid=pane-signin]').inner_text())
-        check('[ruling 1] it is NOT a launch wall: nothing in the shell routes here, and every tab stays reachable',
+        check('[ruling 1, narrowed 2026-10-07] on a build with NO sync configuration there is nothing to sign into, so this is no wall: every tab stays reachable',
               pg.evaluate("() => [...document.querySelectorAll('nav a')].map(a => a.getAttribute('href'))").count('/sign-in') == 0)
         check('the version line shows the service worker\'s answer — «غير معروف» when there is none, never blank',
               pg.locator('[data-testid=version]').inner_text().strip() != '' and 'غير معروف' in pg.locator('[data-testid=version]').inner_text(), pg.locator('[data-testid=version]').inner_text())
@@ -58,7 +58,7 @@ try:
             const r = f.getBoundingClientRect(); return { bottom: Math.round(r.bottom), barTop: nav ? Math.round(nav.getBoundingClientRect().top) : null, docH: Math.round(document.documentElement.scrollHeight) }; }""")
         check('[ruling C] …and that line is not hidden under the tab bar (the bar stays: ruling 1 is that this is no wall)',
               vis['barTop'] is not None and vis['bottom'] <= vis['barTop'], vis)
-        check('[ruling 1] every tab is reachable from here, signed out', pg.locator('nav a').count() >= 6)
+        check('[ruling 1, unconfigured] every tab is reachable from here, signed out', pg.locator('nav a').count() >= 6)
         shots(pg, 'signed-out')
         check_caret(pg, check, 'f-email', 'someone@example.com', 'sign-in')
         check_caret(pg, check, 'f-password', 'a-long-passphrase', 'sign-in')

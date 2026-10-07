@@ -4,6 +4,7 @@ import { alexandria, plexMono } from './fonts';
 import Nav from '@/components/Nav';
 import ShellHost from '@/src/components/ShellHost';
 import BackupBanner from '@/src/components/BackupBanner';
+import Gate from '@/src/components/Gate';
 import SyncNotices from '@/src/components/SyncNotices';
 import AppSettings from '@/src/components/AppSettings';
 import ServiceWorker from '@/src/components/ServiceWorker';
@@ -42,9 +43,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             It is a normal public asset, so the worker precaches it by URL and the config
             survives offline — a config fetched at runtime would 404 there. */}
         <Script src={`${BASE}/sync-config.js`} strategy="beforeInteractive" />
-        <BackupBanner />
-        <main className={s.main}>{children}</main>
-        <Nav />
+        {/* THE SIGN-IN GATE (RULED 2026-10-07): the banner, the page and the nav all stand behind it. The
+            shell host stays outside, because the gate's own export and the collision decision use it. */}
+        <Gate>
+          <BackupBanner />
+          <main className={s.main}>{children}</main>
+          <Nav />
+        </Gate>
         <ShellHost />
         <SyncNotices />
         <AppSettings />

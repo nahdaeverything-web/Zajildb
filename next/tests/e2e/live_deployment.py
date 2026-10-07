@@ -104,11 +104,42 @@ VISIBLE_NAV_LINKS = """() => {
   return navs.reduce((a, n) => a + n.querySelectorAll('[data-testid=nav-link]').length, 0);
 }"""
 
+# ── THE SIGN-IN GATE (RULED 2026-10-07) ─────────────────────────────────────────────
+# A configured deployment shows the sign-in screen on every route until a session exists, so
+# every walk below signs in first. The backend host is read from the DEPLOYED sync-config.js
+# and answered by a stub through request interception: the real project is never contacted
+# and no credential is used — a session on this device is all the gate asks for. An
+# unconfigured deployment has nothing to sign into and does not gate; then this is a no-op.
+with urllib.request.urlopen(URL + 'sync-config.js', timeout=30) as _r:
+    _m = re.search(r"url:\s*'([^']*)'", _r.read().decode('utf-8'))
+BACKEND = (_m.group(1) if _m else '').rstrip('/')
+_seq = {'n': 0}
+def _stub(route, request):
+    if '/auth/v1/token' in request.url:
+        route.fulfill(status=200, content_type='application/json', body=json.dumps({
+            'access_token': 'ACCESS-G', 'refresh_token': 'REFRESH-G', 'token_type': 'bearer', 'expires_in': 3600,
+            'user': {'id': 'user-gate', 'email': 'gate@zajil.test'}})); return
+    if request.method == 'POST':
+        rows = json.loads(request.post_data or '[]'); out = []
+        for r_ in rows: _seq['n'] += 1; out.append(dict(r_, server_seq=_seq['n'], owner='user-gate'))
+        route.fulfill(status=200, content_type='application/json', body=json.dumps(out)); return
+    route.fulfill(status=200, content_type='application/json', body='[]')
+def stubbed(ctx_):
+    if BACKEND: ctx_.route(BACKEND + '/**', _stub)
+    return ctx_
+def through_gate(pg_):
+    """If the gate is up, sign in through it (the only way past it) and wait for it to lift."""
+    pg_.wait_for_timeout(1500)
+    if pg_.locator('[data-testid=signin-screen][data-gate]').count() == 0: return False
+    pg_.fill('[data-testid=f-email]', 'gate@zajil.test'); pg_.fill('[data-testid=f-password]', 'pw'); pg_.click('[data-testid=signin-submit]')
+    pg_.wait_for_selector('[data-testid=signin-screen][data-gate]', state='detached', timeout=30000); pg_.wait_for_timeout(1200)
+    return True
+
 with sync_playwright() as p:
     br = p.chromium.launch()
-    ctx = br.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True,
+    ctx = stubbed(br.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True,
                          user_agent='Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 '
-                                    '(KHTML, like Gecko) Chrome/126 Mobile Safari/537.36')
+                                    '(KHTML, like Gecko) Chrome/126 Mobile Safari/537.36'))
     page = ctx.new_page()
     page.set_default_timeout(60000)
     errs, bad = [], []
@@ -117,6 +148,9 @@ with sync_playwright() as p:
 
     # 'load', never 'networkidle': a page controlled by a service worker never goes idle
     page.goto(URL, wait_until='load'); page.wait_for_timeout(3000)
+    gated = through_gate(page)
+    check('[GATE] a configured deployment shows the sign-in gate to a device with no session, on the first route it opens',
+          gated == bool(BACKEND), f'backend {"configured" if BACKEND else "not configured"} · gate seen: {gated}')
 
     check('secure context (HTTPS)', page.evaluate('window.isSecureContext'))
     n = page.evaluate(VISIBLE_NAV_LINKS)
@@ -232,8 +266,9 @@ with sync_playwright() as p:
           href: a.getAttribute('href'), resolved: a.href,
           testid: a.getAttribute('data-testid') || '', text: (a.textContent||'').trim().slice(0,18) }))"""
     hrefs = {}
-    empty = br.new_context(viewport={'width': 390, 'height': 844})
+    empty = stubbed(br.new_context(viewport={'width': 390, 'height': 844}))
     ep = empty.new_page(); ep.set_default_timeout(60000)
+    ep.goto(URL + 'birds/', wait_until='load'); through_gate(ep)       # the empty loft, signed in: the gate stands in front of it too
     for who, pg_ in (('empty loft', ep), ('seeded loft', page)):
         for r in export_routes:
             pg_.goto(ORIGIN + r, wait_until='load'); pg_.wait_for_timeout(700)
@@ -281,9 +316,9 @@ with sync_playwright() as p:
         loft_text = L.strings_of(json.loads(_r.read().decode('utf-8')), set())
     for vw in (430, 1400):
         which = 'rail' if vw >= 1100 else 'tabbar'
-        lctx = br.new_context(viewport={'width': vw, 'height': 900})
+        lctx = stubbed(br.new_context(viewport={'width': vw, 'height': 900}))
         lp = lctx.new_page(); lp.set_default_timeout(60000)
-        lp.goto(URL + 'tools/', wait_until='load')
+        lp.goto(URL + 'tools/', wait_until='load'); through_gate(lp)
         lp.wait_for_selector('[data-testid=set-lang], [data-row=lang]')
         L.open_row(lp, 'teaching')
         lp.click('[data-testid=load-large]'); lp.wait_for_timeout(4000)
@@ -324,6 +359,8 @@ with sync_playwright() as p:
     ctx.set_offline(True)
     page.reload(wait_until='load'); page.wait_for_timeout(2500)
     check('OFFLINE: app boots with no connection', page.evaluate(VISIBLE_NAV_LINKS) == 6)
+    check('[GATE] OFFLINE: a signed-in device goes straight through — the session is read locally, nothing is asked of the network',
+          page.locator('[data-testid=signin-screen][data-gate]').count() == 0)
     rows_off = page.locator('[data-testid=bird-row]').count()
     check('OFFLINE: data intact', rows_off == 38, f'{rows_off} rows')
 

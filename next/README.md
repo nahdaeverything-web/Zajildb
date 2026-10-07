@@ -368,6 +368,16 @@ until a cutover ruling.
   because the cache is keyed by version and written once — per-entry revisioning is what
   a library would buy and this gives up; and the update path still needs two reloads to
   show a new version, which is vanilla's inherited wart (HANDOFF.md:339).
+- **Since 2026-10-07: THE SIGN-IN GATE** (`src/components/Gate.tsx`, in the layout in front
+  of the banner, the page and the nav). It keys off two things the device has and nothing
+  else: a session, and whether local records exist. Session → through, online or offline;
+  no session and no records → the sign-in screen; no session and records → the sign-in
+  screen showing THE LOFT — its name and the breeder's name, never an account — with export
+  on the gate itself and no way in without signing in. A build with no sync configuration
+  has nothing to sign into and does not gate; the test-harness route stands outside it.
+  `tests/e2e/screens/gate.py` holds the three states, export from the gate, both wrong-address
+  answers, and the offline pass-through; the deploy gate signs in through it on the live
+  origin. This supersedes Phase 4's RULING 1 ("never a launch wall") on configured builds.
 - **Since 2026-10-04: anything in the layout that calls `t()` calls `useLocale()`**
   (`src/components/settings.ts`). `t()` reads a module variable, not React state, so a
   component shows a new language only when something makes it render again. Screens

@@ -1392,6 +1392,18 @@ tools card with the same `signIn()`, so two accounts on one device behave there 
 above. Not fixed, deliberately: `main` is the deployed application. Carry it into the next
 vanilla release.
 
+### Follow-ups named by the sign-in-gate ruling (2026-10-07) — recorded, NOT built
+
+- **The double loft after export → clear → import.** Measured 2026-10-07: a fancier who
+  cannot recall his address can export from the gate, clear the device, sign in as another
+  account and import the file — and the loft then lives twice on the server, once under
+  each account, with nothing telling him so. A line of copy on the import or the clear,
+  warning that the original stays under the old account, is wanted; to be ruled separately.
+- **An admin route from a device's user id to an address.** The device keeps the previous
+  account's id (the owner record, or the op log), never the address, so a person who has
+  forgotten which address he used has no local way to learn it. Only the admin side can map
+  the id it holds to an address. Not designed here.
+
 ### Three things seen and left as they are
 
 - **THE RULED LIMIT — CLOSED 2026-10-07, reversing the 2026-10-05 ruling.** A device that was

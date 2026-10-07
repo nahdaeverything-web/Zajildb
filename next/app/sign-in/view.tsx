@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import * as db from '@/src/db.js';
 import { t, fmtNum } from '@/src/i18n.ext.js';
 import { todayISO } from '@/src/dates.js';
@@ -9,10 +9,12 @@ import { Loading, initDB, toast, confirmDialog, choiceDialog, downloadBlob } fro
 import { useAppVersion } from '@/src/components/version';
 import s from './signin.module.css';
 
-// Sign-in — design/approved/sign-in-v1.html. RULING 1 (Phase 4 order): this
-// standalone screen is canonical and is NEVER a launch wall — the app opens
-// usable and offline without an account, and nothing routes here on its own.
-// The tools sync card sends you here; everything else works signed out.
+// Sign-in — design/approved/sign-in-v1.html. RULING 1 (Phase 4 order) made this
+// standalone screen canonical, and NOT a launch wall. SUPERSEDED 2026-10-07: the
+// same screen now stands as THE SIGN-IN GATE on a configured build (see `gate`
+// below and src/components/Gate.tsx) — with no session the app shows it on every
+// route. A signed-in device goes through, online or offline; a build with no
+// sync configuration has nothing to sign into and does not gate.
 //
 // There is no vanilla view to port: the vanilla app signs in from inside the
 // tools card (js/views/tools.js). Its WIRING is the reference — signIn() on the
@@ -37,8 +39,17 @@ const Mark = ({ className }: { className: string }) => (
 );
 const Warn = () => <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v6M12 16.5h.01" /></svg>;
 
-export default function SignInView() {
+/**
+ * `gate` — the screen is standing as THE SIGN-IN GATE (src/components/Gate.tsx) in front of
+ * whatever route the person opened. With data on the device it shows the loft — its name and
+ * the breeder's name, never an account — and offers export right here; a successful sign-in
+ * then stays on the route that was opened instead of leaving for الأدوات.
+ */
+export type GateInfo = { empty: true } | { loft: string; breeder: string };
+
+export default function SignInView({ gate }: { gate?: GateInfo } = {}) {
   const router = useRouter();
+  const atSignIn = (usePathname() ?? '').replace(/\.html$/, '').replace(/\/$/, '') === '/sign-in';
   const [booted, setBooted] = useState(false);
   const [pane, setPane] = useState<'signin' | 'early'>('signin');
   const [state, setState] = useState<State>('');
@@ -60,7 +71,7 @@ export default function SignInView() {
       // background loop runs, which takes §6's first-login branch on its own. There is
       // no second code path for "just signed in" (js/views/tools.js:267-270).
       await db.syncNow();
-      router.replace('/tools');                       // the sync card is where a signed-in session is managed
+      if (!gate || atSignIn) router.replace('/tools');   // the sync card is where a signed-in session is managed; a gate on any other route lifts in place
     } catch (err) {
       const e = err as { kind?: string; previous?: string | null };   // AuthError: 'rejected' | 'network' | 'config' | 'owner'
       if (e.kind === 'owner') { setState('owner'); await decide(e.previous || null); return; }
@@ -103,7 +114,7 @@ export default function SignInView() {
   }
 
   return (
-    <section className={s.screen} data-testid="signin-screen">
+    <section className={s.screen} data-testid="signin-screen" data-gate={gate ? ('empty' in gate ? 'empty' : 'records') : undefined}>
       {pane === 'signin' ? (
         <main className={s.auth} data-testid="pane-signin">
           <div className={s.brand}>
@@ -111,6 +122,18 @@ export default function SignInView() {
             <h1>{t('app.name')}</h1>
             <p className={s.sub}>{t('signin.tagline')}</p>
           </div>
+          {gate && !('empty' in gate) && (
+            // THE LOFT, NOT THE ACCOUNT. A fancier recognising his own loft knows he is in the right
+            // place and needs the right address — not locked out by a screen that tells him nothing.
+            <div className={s.gate} data-testid="gate">
+              <div className={s.gateLoft} data-testid="gate-loft">{t('gate.holds', { loft: gate.loft || t('loft.unnamed') })}</div>
+              {gate.breeder && <div className={s.gateBreeder} data-testid="gate-breeder">{t('cert.breederLine', { n: gate.breeder })}</div>}
+              <p className={s.gateNote}>{t('gate.signInToReach')}</p>
+              {/* export, on the gate itself — the escape hatch, never a bypass */}
+              <button type="button" className={s.gateExport} onClick={exportExisting} data-testid="gate-export">{t('signin.owner.export')}</button>
+            </div>
+          )}
+          {gate && 'empty' in gate && <div data-testid="gate" hidden />}
           {auth.signedIn ? (
             <div className={`${s.msg} ${s.net}`} role="status" data-testid="already-signed-in">
               <Warn /><span>{`${t('sync.account')}: ${auth.email || ''}`}<small>{t('signin.alreadyBody')}</small></span>
@@ -136,7 +159,7 @@ export default function SignInView() {
               <span className={s.lbl}>{loading ? t('signin.signingIn') : state === 'net' ? t('signin.retry') : t('sync.signIn')}</span>
             </button>
             <p className={s.alt}>{t('signin.noAccount')} <button type="button" className={s.linkbtn} onClick={() => { setPane('early'); window.scrollTo(0, 0); }} data-testid="go-early">{t('signin.earlyAccess')}</button></p>
-            <p className={s.forgot}><span>{t('signin.forgot')}</span> <span>{t('signin.forgotHelp')}</span></p>
+            <p className={s.forgot} data-testid="signin-help"><span>{t('signin.forgot')}</span> <span>{t('signin.forgotHelp')}</span></p>
             <p className={s.invite}>{t('signin.inviteOnly')}</p>
           </form>
           {/* the installed version, as the service worker reports it — never a constant in the source (version_display.py) */}

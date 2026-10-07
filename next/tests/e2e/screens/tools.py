@@ -728,40 +728,23 @@ try:
         ctx2.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};")
         ctx2.route(f'{STUB}/**', handler)
         sp = ctx2.new_page(); errs2 = []; sp.on('pageerror', lambda e: errs2.append(str(e)))
-        sp.goto(TOOLS, wait_until='load'); sp.wait_for_selector('[data-testid=tools-list]', timeout=8000)
+        sp.goto(TOOLS, wait_until='load'); sp.wait_for_selector('[data-testid=signin-screen][data-gate]', timeout=8000); sp.wait_for_timeout(400)
 
-        # ── [sync_ui #23 #25, RULING 1] signed out ──
-        check('[sync_ui #23 / RULING 1] signed out, the account row (open by default) explains what signing in is FOR',
-              sp.locator('[data-testid=sync-signed-out]').count() == 1
-              and 'لمزامنة بياناتك' in sp.locator('[data-testid=sync-signed-out]').inner_text(),
-              sp.locator('[data-testid=sync-signed-out]').inner_text().replace('\n', ' ')[:100])
-        check('[RULING 1] …and offers a button, not an inline form — the form lives at /sign-in now',
-              sp.locator('[data-row=account] input').count() == 0
-              and sp.locator('[data-testid=go-signin]').count() == 1)
-        check('[sync_ui #25] …reading «تسجيل الدخول»',
-              sp.locator('[data-testid=go-signin]').inner_text().strip() == 'تسجيل الدخول')
-        check('…and both rows say so: the account row\'s value, and the sync row «متوقفة»',
-              row_value(sp, 'account') == 'تسجيل الدخول' and row_value(sp, 'sync') == 'متوقفة'
-              and row_help(sp, 'sync') == 'سجّل الدخول لتشغيل المزامنة',
-              f"{row_value(sp, 'account')!r} / {row_value(sp, 'sync')!r} / {row_help(sp, 'sync')!r}")
+        # ── THE GATE (RULED 2026-10-07) — with no session, الأدوات is the sign-in screen, like every route ──
+        # The signed-out account-row states RULING 1 once drew here are unreachable now: a device with
+        # no session never sees الأدوات. They are asserted on the gate itself in screens/gate.py.
+        check('[GATE] a configured device with no session meets the sign-in gate at الأدوات, not the list',
+              sp.locator('[data-testid=signin-form]').count() == 1 and sp.locator('[data-testid=tools-list]').count() == 0
+              and sp.locator('[data-testid=nav-link]').count() == 0, sp.url)
         check('[sync_ui #26] …with no way to create an account',
               not any(w in sp.inner_text('body') for w in ['إنشاء حساب', 'Create account', 'Sign up', 'تسجيل جديد']))
         shots(sp, 'signed-out')
-        go_sub(sp, 'sync', 'card-sync')
-        check('[hybrid] signed out, the sync screen says to sign in first, and offers the button',
-              sp.locator('[data-testid=sync-signed-out]').count() == 1 and sp.locator('[data-testid=go-signin]').count() == 1
-              and 'سجّل الدخول أولًا' in sp.locator('[data-testid=sync-signed-out]').inner_text(),
-              sp.locator('[data-testid=sync-signed-out]').inner_text().replace('\n', ' ')[:80])
-        sp.go_back(); sp.wait_for_selector('[data-testid=tools-list]', timeout=8000); sp.wait_for_timeout(300)
-        check('[hybrid] the back gesture returns to the list', sp.url.endswith('/tools/'), sp.url)
-        sp.click('[data-testid=go-signin]'); sp.wait_for_selector('[data-testid=signin-form]', timeout=8000)
-        check('[RULING 1] …and the sign-in button actually navigates there',
-              '/sign-in' in sp.url, sp.url.split('/')[-1])
-        sp.go_back(); sp.wait_for_selector('[data-testid=tools-list]', timeout=8000)
 
         # ── [sync_ui #34 #37] signed in ──
         run(sp, "async (db) => { await db.signIn('spike-a@zajil.test','pw'); await db.syncNow(); }")
         sp.wait_for_selector('[data-testid=sync-signed-in]', timeout=8000); sp.wait_for_timeout(300)
+        check('[GATE] signing in lifts the gate in place: الأدوات, where the session is managed, with the account row open',
+              sp.locator('[data-testid=tools-list]').count() == 1 and sp.url.endswith('/tools/'), sp.url)
         check('[sync_ui #34] signing in switches the account row to the signed-in state, naming the account',
               sp.locator('[data-testid=sync-account]').inner_text().strip() == 'spike-a@zajil.test'
               and row_value(sp, 'account') == 'spike-a@zajil.test', row_value(sp, 'account'))
@@ -843,23 +826,23 @@ try:
         check('…and sign-out asks first, repeating that the data stays',
               'بياناتك تبقى على هذا الجهاز' in sp.locator('[data-testid=dialog]').inner_text(),
               sp.locator('[data-testid=dialog]').inner_text().replace('\n', ' ')[:100])
-        sp.click('[data-testid=dialog-confirm]'); sp.wait_for_selector('[data-testid=sync-signed-out]', timeout=8000)
+        sp.click('[data-testid=dialog-confirm]'); sp.wait_for_selector('[data-testid=signin-screen][data-gate]', timeout=8000); sp.wait_for_timeout(300)
         after_out = run(sp, """(db) => ({ signedIn: db.authState().signedIn, birds: db.allBirds().length,
             tokens: db.AUTH_SETTING_KEYS.map(k => db.state.settings[k]).filter(Boolean).length })""")
         check('[sync_ui #38] signing out clears every token', after_out['tokens'] == 0, str(after_out))
         check('[sync_ui #39] SIGNING OUT IS NOT DELETING — the birds are still there',
               after_out['birds'] == birds_before, f"{birds_before} -> {after_out['birds']}")
-        check('[sync_ui #40] …and the signed-out state comes back, with the button that leads to /sign-in',
-              sp.locator('[data-testid=sync-signed-out]').count() == 1
-              and sp.locator('[data-testid=go-signin]').count() == 1 and row_value(sp, 'sync') == 'متوقفة')
+        check('[sync_ui #40 / GATE] …and the gate comes back at once, naming the loft the device holds',
+              sp.locator('[data-testid=signin-screen]').get_attribute('data-gate') == 'records'
+              and sp.locator('[data-testid=gate-loft]').count() == 1, sp.locator('[data-testid=gate-loft]').inner_text() if sp.locator('[data-testid=gate-loft]').count() else 'no loft line')
 
         # a rejected sign-in never reaches THIS row: the message belongs to /sign-in
         srv_state['token_mode'] = 'reject'
         rejected = run(sp, "async (db) => { try { await db.signIn('x@y.test','wrong'); return 'signed-in'; } catch (e) { return e.kind || e.message; } }")
         sp.wait_for_timeout(500)
-        check('a rejected sign-in leaves the row signed out and puts no status code on screen',
-              rejected != 'signed-in' and sp.locator('[data-testid=sync-signed-out]').count() == 1
-              and not any(c.isdigit() for c in sp.locator('[data-row=account]').inner_text()),
+        check('a rejected sign-in leaves the gate standing and puts no status code on screen',
+              rejected != 'signed-in' and sp.locator('[data-testid=signin-screen][data-gate]').count() == 1
+              and not any(c.isdigit() for c in sp.locator('[data-testid=gate]').inner_text()),
               str(rejected))
         srv_state['token_mode'] = 'ok'
 

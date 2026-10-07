@@ -130,7 +130,8 @@ def device(b, downloads=False):
     ctx.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};")
     ctx.route(f'{STUB}/**', handler)
     pg = ctx.new_page(); pg.errs = []; pg.on('pageerror', lambda e: pg.errs.append(str(e)))
-    pg.goto(ROOT + 'tools/', wait_until='load'); pg.wait_for_selector('[data-testid=tools-list]', timeout=10000)
+    # the harness page, not a screen: with no session, every screen is the sign-in gate now
+    pg.goto(HARNESS, wait_until='load'); pg.wait_for_timeout(600); pg.evaluate("async () => { await window.__zajilReady; }")
     return ctx, pg
 
 
@@ -196,7 +197,7 @@ try:
         birds(pg, ['أ-4 غير مرفوع', 'أ-5 غير مرفوع'])
         pg.goto(ROOT + 'tools/', wait_until='load'); pg.wait_for_selector('[data-testid=sign-out]', timeout=10000)
         pg.click('[data-testid=sign-out]'); pg.wait_for_selector('[data-testid=dialog]'); pg.click('[data-testid=dialog-confirm]')
-        pg.wait_for_selector('[data-testid=sync-signed-out]', timeout=10000); pg.wait_for_timeout(400)
+        pg.wait_for_selector('[data-testid=gate]', state='attached', timeout=10000); pg.wait_for_timeout(400)   # the gate: there is data and no session
         before = census(pg); a0, b0 = srv.digest('A'), srv.digest('B')
         check('[ownership survives sign-out] the session is gone and the owner record is not',
               not before['signedIn'] and before['tokens'] == 0 and before['owner'] == 'user-A' and before['hint'] == 'a•••@zajil.test',
