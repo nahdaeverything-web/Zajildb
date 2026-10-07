@@ -1275,6 +1275,105 @@ single `evaluate`, is the shape.
 
 ---
 
+## TF-6 — the deploy gate read the backend from the deployed config with the wrong shape, routed no stub, and signed in against the real project
+
+**A TOOLING finding, and a breach of the standing rule that live measurements never contact
+the real project.** Found 2026-10-07 in the first rehearsal of the gate-aware deploy gate
+(`tests/e2e/live_deployment.py`, 24c572e) on the local Pages stand-in.
+
+### What happened — measured
+
+The deploy gate reads the backend host from the DEPLOYED `sync-config.js` so that it can
+answer it with a stub through request interception. It read it with the committed source's
+shape, `url: '…'`. The injected line is JSON — `"url":"…"` (`scripts/inject-config.mjs:104`) —
+so on a configured build the parse found nothing, `BACKEND` was `''`, `stubbed()` routed
+nothing, and the gate's sign-in (`gate@zajil.test` / `pw`) went where the app sends it: the
+dev project's `/auth/v1/token`. The project refused it, the gate stayed, and the suite died at
+a 30 s wait with no summary line.
+
+What reached the real project: password-grant requests with a made-up address, from the
+rehearsal's first three contexts before the crash. Failed logins; nothing read, nothing written,
+no row touched. The rule was still broken, and broken silently — a reader of the traceback saw
+a timeout, not an escaped request.
+
+### The fix, proved on the stand-in
+
+- Both shapes are parsed (`"url":"…"` and `url: '…'`).
+- **THE NET.** Every request to the backend host family that the stub does not answer is
+  aborted on the device and counted; the gate asserts the count is zero («every request to the
+  backend host was answered by the stub — nothing reached the real project»). Registered beneath
+  the stub, so it is the fallback for any third shape, any new endpoint, any mistake of this
+  kind. With the old parse put back on purpose, the sign-in now gets «لا يوجد اتصال» — the
+  request aborted, never sent — and the gate reports it as a counted failure, not a crash.
+- The COLD (no worker) walk signs in through the gate once, so "six nav links at each deep
+  link" still proves the whole app at that route rather than the sign-in screen.
+
+Stand-in rehearsal after the fix: 39 passed, 0 failed (91a0c17).
+
+### The rule it leaves
+
+A measurement that intercepts the backend proves it intercepts: a catch-all beneath the stub
+that aborts and counts, asserted empty at the end. "No stub matched" must be a failure the
+suite reports, never a request that leaves.
+
+---
+
+## TF-7 — the deploy pipeline's "verify" step ran the injector again, and the injector's own `--check` could not read what it writes
+
+**A TOOLING finding in the deploy pipeline itself.** Found 2026-10-07 by the byte comparison
+after the gate deployment: 157 of 158 served files identical to the staged release, and
+`sync-config.js` not.
+
+### What happened — measured
+
+Two scripts have a verify mode and they are not the same flag: `scripts/stage-release.mjs
+--verify-only <dir>` checks a staged directory (worker prefix, root-absolute references,
+`.nojekyll`, source maps); `scripts/inject-config.mjs --check <dir>` checks an injected
+config. The pipeline notes said "`--verify-only release`" after the injection, and on
+2026-10-07 that was run against `inject-config.mjs`, which does not know the flag, ignores
+it, and injects. So the release was injected twice and the deploy clone three times:
+
+| copy | injection stamps | config line |
+|---|---|---|
+| the previous deployment (gh-pages 0e917e4) | 1 | correct |
+| `release/` after stage → inject → "verify" | 2 | correct |
+| the clone after copy → "verify" → push (gh-pages 5cfa9af) | 3 | correct |
+
+The injector REPLACES the config line and APPENDS its comment stamp, so every copy carried
+one correct config and the served app was right (the live deploy gate parsed and stubbed it,
+39/0). The bytes were still not the artefact the pipeline claims to deploy.
+
+Then the real check was run, and it failed on a correct file: `inject-config.mjs --check`
+parsed `url: '…'` — the committed source's shape — while the line the same script writes is
+JSON, `"url":"…"`. The injector's verifier had never been able to verify an injected file
+(the same shape mistake as TF-6, in the other direction).
+
+### The fix, proved
+
+- `--check` parses both shapes (8b16942). Proved: the injected release and the served three-stamp copy pass
+  with their values shown; the committed-empty source still reports EMPTY; a file with the
+  config line removed still fails.
+- The release's `sync-config.js` was rebuilt from the same build's empty copy and injected
+  ONCE (one stamp, 40 lines, the other 157 files untouched), verified by BOTH verifiers —
+  `stage-release.mjs --verify-only release` with `NEXT_PUBLIC_BASE_PATH=/zajilv2` set (without
+  it the verifier assumes a root deployment and rightly refuses the worker), and
+  `inject-config.mjs --check release` — scanned again (15/0), and redeployed.
+
+### The rule it leaves
+
+The deploy pipeline, in order, with each flag belonging to the script named:
+`NEXT_PUBLIC_BASE_PATH=/zajilv2 node scripts/stage-release.mjs` → `node scripts/inject-config.mjs
+release` (env loaded by the redacting wrapper) → `NEXT_PUBLIC_BASE_PATH=/zajilv2 node
+scripts/stage-release.mjs --verify-only release` → `node scripts/inject-config.mjs --check
+release` → the staged-bytes scan → the same two verifiers on the deploy clone → push. A flag
+is read from the script's usage block, never from notes.
+
+Seen and left: `--check` on a config whose values are EMPTY exits 0 with «EMPTY» printed —
+true of the committed source, and a pipeline that forgot to inject would pass it. The
+staged-bytes scan and the live deploy gate both catch that case; not changed here.
+
+---
+
 ## RF-13 — a second account signing in on a device inherits the first account's loft, and pushes it under its own name
 
 **In the shared data layer — `js/db/sync.js:183` is the same `signIn()` — so it is present in
@@ -1403,6 +1502,50 @@ vanilla release.
   account's id (the owner record, or the op log), never the address, so a person who has
   forgotten which address he used has no local way to learn it. Only the admin side can map
   the id it holds to an address. Not designed here.
+
+### The sign-in gate — deployed and re-verified from the live origin (2026-10-07)
+
+Built as `src/components/Gate.tsx` (24c572e; README «Since 2026-10-07: THE SIGN-IN GATE»),
+deployed as `gh-pages 5cfa9af` and, after TF-7, `bf6cd00` — all 158 staged files served
+byte-identical. Full gate on the committed tree: **2053 passed, 0 failed across 30 steps**
+(`screens/gate.py` 24/24, `screens/tools.py` 137/137 after TF-5). Mutation-proved: the
+session check removed → the five "through" assertions fail; the records check removed → the
+loft-panel assertions fail.
+
+The same probe script, backend answered by a stub through interception, run against the live
+origin BEFORE (`0e917e4`) and AFTER (`bf6cd00`), verbatim:
+
+```
+BEFORE
+1 no session, no records  : {"path": "/zajilv2/birds/", "gate": null, "navLinks": 12, "birdRows": 0, "account": false}
+2 no session, records     : {"path": "/zajilv2/tools/", "gate": null, "loft": null, "exportBtn": false, "navLinks": 12}
+  wrong password           : {"msgCred": "البريد الإلكتروني أو كلمة المرور غير صحيحة", "dialog": null} · device unchanged True
+  another account (B)      : {"dialog": "هذا الجهاز يحمل بيانات حساب آخر", "msgCred": null} · device unchanged True · A/B unchanged True
+3 session present, OFFLINE: {"path": "/zajilv2/birds/", "gate": null, "navLinks": 12, "birdRows": 20}
+
+AFTER
+1 no session, no records  : {"path": "/zajilv2/birds/", "gate": "empty", "loft": null, "exportBtn": false, "navLinks": 0, "birdRows": 0, "account": false}
+  …and at /tools/         : {"path": "/zajilv2/tools/", "gate": "empty", "navLinks": 0}
+2 no session, records     : {"path": "/zajilv2/tools/", "gate": "records", "loft": "هذا الجهاز يحمل لوفت أبو خالد", "breeder": "المربّي: خالد العمري", "exportBtn": true, "navLinks": 0, "account": false}
+  export from the gate     : zajil-export-2026-10-07.json · 20 birds · any account in the file: False
+  wrong password           : {"msgCred": "البريد الإلكتروني أو كلمة المرور غير صحيحة", "dialog": null, "gate": "records"} · calls [('TOKEN', '')] · device unchanged True
+  another account (B)      : {"dialog": "هذا الجهاز يحمل بيانات حساب آخر", "msgCred": null, "gate": "records"} · calls [('TOKEN', '')] · device unchanged True · A/B unchanged True
+  the owner signs in       : {"path": "/zajilv2/tools/", "gate": null, "navLinks": 12}
+3 session present, OFFLINE: {"path": "/zajilv2/birds/", "gate": null, "navLinks": 12, "birdRows": 20}
+```
+
+Before, a device with no session opened every route (12 nav links, the two navs' pairs) and
+the only thing the gate ruling asked for that already held was the RF-13 decision. After,
+the two gate states stand on every route, the records gate names the loft and the breeder
+and nothing matching `user-|@|•••`, export from the gate hands over the file without a
+session and without an account in it, each wrong attempt costs one token request and
+changes nothing on the device or on either account's rows, the owner's sign-in lifts the
+gate in place, and a signed-in device goes straight through offline. `live_deployment.py`
+against the live origin: **39 passed, 0 failed**, the three `[GATE]` checks among them,
+nothing reaching the real project (TF-6's net, counted zero).
+
+Raised, not ruled: a build with no sync configuration has nothing to sign into and does not
+gate (`screens/gate.py`, "[unconfigured]"); the test-harness route stands outside the gate.
 
 ### Three things seen and left as they are
 
