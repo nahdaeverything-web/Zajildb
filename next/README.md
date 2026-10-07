@@ -374,7 +374,8 @@ until a cutover ruling.
   no session and no records → the sign-in screen; no session and records → the sign-in
   screen showing THE LOFT — its name and the breeder's name, never an account — with export
   on the gate itself and no way in without signing in. A build with no sync configuration
-  has nothing to sign into and does not gate; the test-harness route stands outside it.
+  has nothing to sign into and does not gate (RULED 2026-10-08: correct — a build with nothing
+  to sign into must not lock anyone out); the test-harness route stands outside it.
   `tests/e2e/screens/gate.py` holds the three states, export from the gate, both wrong-address
   answers, and the offline pass-through; the deploy gate signs in through it on the live
   origin. This supersedes Phase 4's RULING 1 ("never a launch wall") on configured builds.

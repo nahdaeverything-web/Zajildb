@@ -1316,6 +1316,17 @@ A measurement that intercepts the backend proves it intercepts: a catch-all bene
 that aborts and counts, asserted empty at the end. "No stub matched" must be a failure the
 suite reports, never a request that leaves.
 
+**RULED 2026-10-08: THE NET stays permanently, and it should apply to every stub-backed run,
+not only the deploy gate.** Where it stands on that date, measured: eleven files route a stub;
+the net is in ONE, `live_deployment.py` — the only run against a CONFIGURED build, where the
+app itself knows the real host. The other ten run the harness build, which the postbuild guard
+`no-sync-config-in-build` proves carries no endpoint, with a made-up host injected by init
+script (`https://stub.zajil.test`, `https://stub.example.test`). Probed on that build with the
+family catch-all beneath the stub, through sign-in, a sync, an edit, a second sync and
+sign-out: the stub answered 4 requests, **0 escaped to the backend family**. They cannot address
+the real project by construction; they do not yet assert it. Extending them is one shared
+helper (`net(ctx)` returning the counter, asserted at each suite's end) — proposed, not built.
+
 ---
 
 ## TF-7 — the deploy pipeline's "verify" step ran the injector again, and the injector's own `--check` could not read what it writes
@@ -1544,8 +1555,11 @@ gate in place, and a signed-in device goes straight through offline. `live_deplo
 against the live origin: **39 passed, 0 failed**, the three `[GATE]` checks among them,
 nothing reaching the real project (TF-6's net, counted zero).
 
-Raised, not ruled: a build with no sync configuration has nothing to sign into and does not
-gate (`screens/gate.py`, "[unconfigured]"); the test-harness route stands outside the gate.
+RULED 2026-10-08: a build with no sync configuration has nothing to sign into and does not
+gate — correct, left as built: a build with nothing to sign into must not lock anyone out
+(`screens/gate.py`, "[unconfigured]"); the test-harness route stands outside the gate. Also
+ruled 2026-10-08: the records panel takes the form's 560-px cap from 1100 px up
+(`signin.module.css`, `.auth .gate`) — accepted, matching the form.
 
 ### Three things seen and left as they are
 
