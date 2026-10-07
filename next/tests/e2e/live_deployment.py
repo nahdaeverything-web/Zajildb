@@ -48,7 +48,7 @@ import sys
 import urllib.request
 import uuid as _uuid
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 NEXT = os.path.abspath(os.path.join(HERE, '..', '..'))
@@ -111,8 +111,17 @@ VISIBLE_NAV_LINKS = """() => {
 # and no credential is used — a session on this device is all the gate asks for. An
 # unconfigured deployment has nothing to sign into and does not gate; then this is a no-op.
 with urllib.request.urlopen(URL + 'sync-config.js', timeout=30) as _r:
-    _m = re.search(r"url:\s*'([^']*)'", _r.read().decode('utf-8'))
-BACKEND = (_m.group(1) if _m else '').rstrip('/')
+    # the committed source says `url: '…'`; the INJECTED line is JSON, `"url":"…"` (scripts/inject-config.mjs).
+    # On 2026-10-07 this knew only the first shape, read '' from a configured build, routed no stub — and the
+    # gate's sign-in left for the real project. Both shapes now, and the net below catches any third.
+    _m = re.search(r"""(?:"url"\s*:\s*"([^"]*)"|url:\s*'([^']*)')""", _r.read().decode('utf-8'))
+BACKEND = ((_m.group(1) or _m.group(2)) if _m else '').rstrip('/')
+# THE NET: any request to the backend host family that the stub does not answer is aborted here, never sent.
+# Registered first, so it is the fallback behind the stub; `_escaped` must stay empty.
+_BACKEND_FAMILY = re.compile(r'^https://[a-z0-9-]+\.supabase\.co/.*')
+_escaped = []
+def _net(route, request):
+    _escaped.append(f'{request.method} {request.url[:80]}'); route.abort()
 _seq = {'n': 0}
 def _stub(route, request):
     if '/auth/v1/token' in request.url:
@@ -125,6 +134,7 @@ def _stub(route, request):
         route.fulfill(status=200, content_type='application/json', body=json.dumps(out)); return
     route.fulfill(status=200, content_type='application/json', body='[]')
 def stubbed(ctx_):
+    ctx_.route(_BACKEND_FAMILY, _net)
     if BACKEND: ctx_.route(BACKEND + '/**', _stub)
     return ctx_
 def through_gate(pg_):
@@ -132,7 +142,12 @@ def through_gate(pg_):
     pg_.wait_for_timeout(1500)
     if pg_.locator('[data-testid=signin-screen][data-gate]').count() == 0: return False
     pg_.fill('[data-testid=f-email]', 'gate@zajil.test'); pg_.fill('[data-testid=f-password]', 'pw'); pg_.click('[data-testid=signin-submit]')
-    pg_.wait_for_selector('[data-testid=signin-screen][data-gate]', state='detached', timeout=30000); pg_.wait_for_timeout(1200)
+    try:
+        pg_.wait_for_selector('[data-testid=signin-screen][data-gate]', state='detached', timeout=30000); pg_.wait_for_timeout(1200)
+    except PlaywrightTimeoutError:
+        # a counted failure, not a crash without a summary line — the net's check below must still print
+        check('[GATE] the stub sign-in lifted the gate', False,
+              pg_.evaluate("() => [...document.querySelectorAll('[data-testid^=msg-]')].map(e => e.innerText.replace(/\\n/g, ' ').slice(0, 80)).join(' | ')") or 'no message shown')
     return True
 
 with sync_playwright() as p:
@@ -202,8 +217,11 @@ with sync_playwright() as p:
     # served the navigation from its precache and the network was never consulted. That is a
     # true statement about returning visitors and says nothing about the host — and a first
     # visit to a shared deep link is exactly the case that has no worker yet.
-    cold = br.new_context(viewport={'width': 390, 'height': 844}, service_workers='block')
+    cold = stubbed(br.new_context(viewport={'width': 390, 'height': 844}, service_workers='block'))
     cpage = cold.new_page(); cpage.set_default_timeout(60000)
+    # the gate stands in front of a cold device too (RULED 2026-10-07); a session is what lets the walk
+    # below prove the whole app at each deep link — six nav links — rather than the sign-in screen
+    cpage.goto(URL + 'birds/', wait_until='load'); through_gate(cpage)
     for route in ('birds/', 'tools/', 'breeding/', 'birds', 'tools'):
         resp = cpage.goto(URL + route, wait_until='load')
         cpage.wait_for_timeout(1200)
@@ -372,6 +390,8 @@ with sync_playwright() as p:
 
     ctx.set_offline(False)
     check('zero page errors', not errs, '; '.join(errs[:2]))
+    check('[GATE] every request to the backend host was answered by the stub — nothing reached the real project',
+          not _escaped, '; '.join(_escaped[:3]))
     br.close()
 
 print(f'\n{ok} passed, {fail} failed')
