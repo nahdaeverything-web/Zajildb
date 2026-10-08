@@ -1385,6 +1385,59 @@ staged-bytes scan and the live deploy gate both catch that case; not changed her
 
 ---
 
+## TF-8 — `run_all.py` printed a suite `[ok  ]` on exit 0 with no summary line: the UNCOUNTABLE class, in the runner
+
+**A TOOLING finding in the ported runner, found 2026-10-08** when `tests/e2e/_net.py` arrived
+and `run_all.py` ran it as a suite:
+
+```
+  [ok  ] _net.py                    (no summary — suite errored)
+  517 assertions passed, 0 failed, 0 suite(s) errored, 5 skipped
+```
+
+"ok" and "errored" on the same row, and the total unmoved. Two defects: `SUITES` was every
+`*.py` in the directory but `run_all.py` and the opt-ins, so a helper was a suite; and the flag
+was `ok` when `failed == 0 and returncode == 0`, so a suite that printed NO summary and exited
+0 passed with nothing counted — the class `scripts/gate.mjs` refuses on principle ("a step
+whose summary it cannot read is a FAILURE, not a zero") and the class TF-5 was about. The
+runner was not honouring the gate's own rule. A suite that never reports read as a pass.
+
+### Whether any past run_all green hid a suite on that path — measured
+
+It would have taken a `*.py` in `tests/e2e/` that ends with exit 0 and no summary line.
+
+- **Every root suite's summary print is its unconditional last statement** (all 28 files,
+  `print(f'\n{ok} passed, {fail} failed')` or the `passed/failed` twin), and none has an early
+  `sys.exit(0)`, `exit()` or `os._exit(0)`. A suite that dies by exception exits 1, which the
+  runner already failed; a suite the runner times out raises in the runner itself.
+- **No non-suite `*.py` ever lived directly in `tests/e2e/`** (`git log --all --diff-filter=A`
+  over the branch's history): every file ever added there is a suite, or `run_all.py`. The only
+  helpers ever, `screens/_language.py` and `screens/_layout.py`, live in `screens/`, which the
+  runner never globbed.
+- **Every row reports its own count.** The clean run after the fix lists 23 suites, each with
+  its own `N passed, 0 failed`, totalling 517 — exactly 511 (every total recorded before the
+  net) + 6 (one `[NET]` assertion in each of the six root suites that stub the backend).
+
+So the path was unreachable before today, and `_net.py` on 2026-10-08 was the first and only
+file to take it. Past run_all greens are not weakened by this; the runner was wrong all the
+same, and the next helper or the next early-exiting suite would have passed silently.
+
+### The fix, proved
+
+`_name.py` is a helper, never a suite — the convention of `screens/` and `sync/`; and no
+summary line is a FAILURE. Proved: a temporary suite that prints nothing and exits 0 →
+`[FAIL] zz_nosummary.py (no summary — suite errored)`, exit 1, `_net.py` not listed; removed,
+the clean run is `517 assertions passed, 0 failed, 0 suite(s) errored`, `_net.py` not listed.
+
+### The rule it leaves
+
+A runner counts what a suite REPORTS, never what it does not: a row with no summary is a
+failure of the run, whatever the exit code. The same rule stands in `scripts/gate.mjs`,
+`tests/e2e/run_all.py` and, since TF-5, in how a suite reads a thing that lives only while
+the page works.
+
+---
+
 ## RF-13 — a second account signing in on a device inherits the first account's loft, and pushes it under its own name
 
 **In the shared data layer — `js/db/sync.js:183` is the same `signIn()` — so it is present in

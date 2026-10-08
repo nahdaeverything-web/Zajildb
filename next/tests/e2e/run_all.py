@@ -39,7 +39,10 @@ OPT_IN = {
     # that "the deploy gate did not run" can never read as "the deploy gate passed".
     'live_deployment.py': ('--live-deploy', 'tests a DEPLOYED origin over the internet; needs ZAJIL_LIVE_URL'),
 }
-SUITES = sorted(f for f in glob.glob(os.path.join(HERE, '*.py')) if os.path.basename(f) not in ({'run_all.py'} | set(OPT_IN)))
+# `_name.py` is a helper, never a suite — the convention of screens/ and sync/ (`_serve`, `_layout`,
+# `_language`). On 2026-10-08 `_net.py` arrived here and was run as one: no summary, exit 0, "[ok  ]".
+SUITES = sorted(f for f in glob.glob(os.path.join(HERE, '*.py'))
+                if os.path.basename(f) not in ({'run_all.py'} | set(OPT_IN)) and not os.path.basename(f).startswith('_'))
 skipped = []
 for _name, (_flag, _reason) in OPT_IN.items():
     if _flag in sys.argv: SUITES.append(os.path.join(HERE, _name))
@@ -62,7 +65,8 @@ try:
             except (ValueError, IndexError):
                 pass
         total_pass += p; total_fail += f
-        flag = 'ok  ' if (f == 0 and r.returncode == 0) else 'FAIL'
+        # a suite with no summary line is a FAILURE, never an ok with zero counted — the gate's own rule
+        flag = 'ok  ' if (last and f == 0 and r.returncode == 0) else 'FAIL'
         if flag == 'FAIL':
             failed_suites.append(name)
             for line in out.splitlines():
