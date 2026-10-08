@@ -10,6 +10,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve
 from _layout import check_clearance, check_caret, shot
+sys.path.insert(0, os.path.join(HERE, '..'))
+from _net import Net                          # THE NET (RULED 2026-10-08): armed beneath the stubs, asserted at the end
+NET = Net()
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'sign-in')); os.makedirs(FID, exist_ok=True)
 passed = failed = 0
 def check(n, ok, d=''):
@@ -29,7 +32,7 @@ def shots(pg, name, widths=(430, 900, 1400)):
 try:
     with sync_playwright() as p:
         b = p.chromium.launch()
-        ctx = b.new_context(viewport={'width': 430, 'height': 900})
+        ctx = NET.arm(check=check, ctx=b.new_context(viewport={'width': 430, 'height': 900}))
         pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
 
         # ── NOT CONFIGURED (the shipped build has no project — sync-config.js is empty by design) ──
@@ -159,6 +162,7 @@ try:
         check('«العودة إلى تسجيل الدخول» comes back to the sign-in pane', pg.locator('[data-testid=pane-signin]').count() == 1)
         check_clearance(pg, check, 'sign-in')
         check('zero page errors', not errs and not errs2, (errs + errs2)[:2])
+        NET.assert_empty(check)
         b.close()
 finally:
     srv.terminate()

@@ -36,6 +36,9 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve                      # noqa: E402
+sys.path.insert(0, os.path.join(HERE, '..'))
+from _net import Net                          # noqa: E402  THE NET (RULED 2026-10-08): armed beneath the stub, asserted at the end
+NET = Net()
 
 passed = failed = 0
 
@@ -126,7 +129,7 @@ def census(pg):
 
 
 def device(b, downloads=False):
-    ctx = b.new_context(viewport={'width': 430, 'height': 900}, accept_downloads=downloads)
+    ctx = NET.arm(check=check, ctx=b.new_context(viewport={'width': 430, 'height': 900}, accept_downloads=downloads))
     ctx.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};")
     ctx.route(f'{STUB}/**', handler)
     pg = ctx.new_page(); pg.errs = []; pg.on('pageerror', lambda e: pg.errs.append(str(e)))
@@ -387,6 +390,7 @@ try:
               actors == {'null': 2} and pg.locator('[data-testid=dialog]').count() == 0 and c['account'] == 'h@zajil.test' and c['owner'] == 'user-H',
               f"{actors} · {c['account']} / {c['owner']}")
         ctx.close()
+        NET.assert_empty(check)
         b.close()
 finally:
     srvp.terminate()

@@ -11,6 +11,8 @@
 # CAN be authoritative.
 import json, os, re
 from playwright.sync_api import sync_playwright
+from _net import Net                           # THE NET (RULED 2026-10-08): armed beneath the stub, asserted at the end
+NET = Net()
 
 BASE = os.environ.get('ZAJIL_URL', 'http://127.0.0.1:8123/')
 STUB_URL = 'https://stub.zajil.test'
@@ -96,7 +98,7 @@ with sync_playwright() as p:
     errs = []
 
     def device(label):
-        ctx = br.new_context()
+        ctx = NET.arm(check=check, ctx=br.new_context())
         ctx.add_init_script(
             f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB_URL}', publishableKey: '{STUB_KEY}' }};")
         ctx.route(f'{STUB_URL}/**', handler)
@@ -362,6 +364,7 @@ with sync_playwright() as p:
     check('...so it IS enqueued for the server', pushed['loftOps'] >= 1, str(pushed))
 
     check('zero page errors across all devices', not errs, '; '.join(errs[:2]))
+    NET.assert_empty(check)
     br.close()
 
 print(f'\n{ok} passed, {fail} failed')

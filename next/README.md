@@ -368,6 +368,16 @@ until a cutover ruling.
   because the cache is keyed by version and written once — per-entry revisioning is what
   a library would buy and this gives up; and the update path still needs two reloads to
   show a new version, which is vanilla's inherited wart (HANDOFF.md:339).
+- **Since 2026-10-08: every suite that stubs the backend arms THE NET** (`tests/e2e/_net.py`,
+  RULED after TF-6). `NET.arm(ctx)` goes on every context BEFORE the suite's own stub route,
+  so it is the fallback beneath the stub: a request to the backend host family that no stub
+  answers is aborted on the device — it never leaves — and recorded. `NET.assert_empty(check)`
+  stands before the summary line of all eleven stub-backed suites. "Safe by construction" (a
+  build with no endpoint, a made-up stub host) is not the same as asserted; TF-6 happened in
+  exactly the suite where the build knew the real host, and the next suite written against a
+  configured build inherits the net instead of the gap. Proven to fire: `screens/gate.py` with
+  its app config pointed at the host family and the stub left on the fake host fails the
+  `[NET]` assertion naming the aborted token request.
 - **Since 2026-10-07: THE SIGN-IN GATE** (`src/components/Gate.tsx`, in the layout in front
   of the banner, the page and the nav). It keys off two things the device has and nothing
   else: a session, and whether local records exist. Session → through, online or offline;

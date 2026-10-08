@@ -18,6 +18,8 @@
 # things a person can actually act on.
 import json, os
 from playwright.sync_api import sync_playwright
+from _net import Net                           # THE NET (RULED 2026-10-08): armed beneath the stub, asserted at the end
+NET = Net()
 
 HARNESS = os.environ.get('ZAJIL_URL', 'http://127.0.0.1:8123/test-harness/')
 ROOT = HARNESS.replace('test-harness/', '')
@@ -89,7 +91,7 @@ def clear_toasts(page, timeout=12000):
 
 with sync_playwright() as p:
     br = p.chromium.launch()
-    ctx = br.new_context()
+    ctx = NET.arm(check=check, ctx=br.new_context())
     ctx.add_init_script(
         f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB_URL}', publishableKey: '{STUB_KEY}' }};")
     ctx.route(f'{STUB_URL}/**', handler)
@@ -348,6 +350,7 @@ with sync_playwright() as p:
     check('...and still saves birds', unc['saved'] is True)
 
     check('zero page errors', not errs, '; '.join(errs[:2]))
+    NET.assert_empty(check)
     br.close()
 
 print(f'\n{ok} passed, {fail} failed')

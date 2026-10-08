@@ -1324,8 +1324,43 @@ app itself knows the real host. The other ten run the harness build, which the p
 script (`https://stub.zajil.test`, `https://stub.example.test`). Probed on that build with the
 family catch-all beneath the stub, through sign-in, a sync, an edit, a second sync and
 sign-out: the stub answered 4 requests, **0 escaped to the backend family**. They cannot address
-the real project by construction; they do not yet assert it. Extending them is one shared
-helper (`net(ctx)` returning the counter, asserted at each suite's end) — proposed, not built.
+the real project by construction; they did not yet assert it.
+
+**RULED 2026-10-08 and BUILT the same day: the shared net, in all eleven.** `tests/e2e/_net.py`
+— `NET.arm(check=check, ctx=…)` on every context BEFORE the suite's stub route (Playwright
+matches routes newest-first, page routes before context routes, so the net is the fallback
+beneath the stub); each escape is aborted on the device and FAILED AT ONCE through the suite's
+own `check()`; `NET.assert_empty(check)` is the zero assertion before each summary line. At
+once, because a suite whose sign-in was just aborted dies before its summary (measured on
+`gate.py` and `sign_in.py`: the end-of-suite assertion never printed; the first version of the
+helper only recorded). `service_worker.py` stubs files, not the backend — armed all the same.
+
+Proven to fire, each suite's app config pointed at the host family with its stub left on the
+fake host (verbatim):
+
+```
+=== MUTATED sign_in.py (app config → the host family; stubs on the fake host): exit 1
+  ✗ [NET] a request to the backend host family was answered by NO stub — aborted on the device, never sent: POST https://mutation-never.supabase.co/auth/v1/token?grant_type=password
+=== MUTATED gate.py (app config → the host family; stubs on the fake host): exit 1
+  ✗ [NET] a request to the backend host family was answered by NO stub — aborted on the device, never sent: POST https://mutation-never.supabase.co/auth/v1/token?grant_type=password
+=== RESTORED, clean runs:
+sign_in.py: exit 0 → 31 passed, 0 failed · NET: 1 ✓ / 0 ✗
+gate.py: exit 0 → 25 passed, 0 failed · NET: 1 ✓ / 0 ✗
+```
+
+The rule for a new suite: if it stubs the backend, it arms the net; if it runs against a
+configured build, the net is what stands between a wrong stub and the real project.
+
+**The lesson of the first proof (recorded at the ruling's request).** The first mutation
+pointed `gate.py` at the host family and the suite died at its seed sign-in — a traceback,
+no summary, the `[NET]` line never printed. The escape had happened and had been aborted, but
+it READ as a crash, not as a failure, and a reader of that output could not tell the two
+apart. Two things fixed that: the proof moved to a suite whose sign-ins are checks rather than
+seeds, and `arm()` took the suite's own `check()` so that an escape fails the suite it
+happened in, at the moment it happens, counted in that suite's tally — whatever the suite does
+afterwards. A guard that only speaks at the end speaks only to suites that reach it.
+
+The runner's own defect this uncovered is TF-8.
 
 ---
 

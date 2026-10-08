@@ -54,6 +54,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 NEXT = os.path.abspath(os.path.join(HERE, '..', '..'))
 sys.path.insert(0, os.path.join(HERE, 'screens'))
 import _language as L                          # noqa: E402  the dictionary-derived detector
+from _net import Net                           # noqa: E402  THE NET (TF-6; RULED 2026-10-08 for every stub-backed suite)
+NET = Net()
 
 # ── what to test, and what to expect of it ────────────────────────────────────────
 URL = (os.environ.get('ZAJIL_LIVE_URL') or '').strip()
@@ -116,12 +118,6 @@ with urllib.request.urlopen(URL + 'sync-config.js', timeout=30) as _r:
     # gate's sign-in left for the real project. Both shapes now, and the net below catches any third.
     _m = re.search(r"""(?:"url"\s*:\s*"([^"]*)"|url:\s*'([^']*)')""", _r.read().decode('utf-8'))
 BACKEND = ((_m.group(1) or _m.group(2)) if _m else '').rstrip('/')
-# THE NET: any request to the backend host family that the stub does not answer is aborted here, never sent.
-# Registered first, so it is the fallback behind the stub; `_escaped` must stay empty.
-_BACKEND_FAMILY = re.compile(r'^https://[a-z0-9-]+\.supabase\.co/.*')
-_escaped = []
-def _net(route, request):
-    _escaped.append(f'{request.method} {request.url[:80]}'); route.abort()
 _seq = {'n': 0}
 def _stub(route, request):
     if '/auth/v1/token' in request.url:
@@ -134,7 +130,7 @@ def _stub(route, request):
         route.fulfill(status=200, content_type='application/json', body=json.dumps(out)); return
     route.fulfill(status=200, content_type='application/json', body='[]')
 def stubbed(ctx_):
-    ctx_.route(_BACKEND_FAMILY, _net)
+    NET.arm(check=check, ctx=ctx_)                       # the fallback beneath the stub (tests/e2e/_net.py)
     if BACKEND: ctx_.route(BACKEND + '/**', _stub)
     return ctx_
 def through_gate(pg_):
@@ -265,7 +261,7 @@ with sync_playwright() as p:
     check('the route list was derived from the deployment, not typed here',
           len(export_routes) >= 10, f'{len(export_routes)} routes from the served precache manifest')
 
-    cold2 = br.new_context(viewport={'width': 390, 'height': 844}, service_workers='block')
+    cold2 = NET.arm(check=check, ctx=br.new_context(viewport={'width': 390, 'height': 844}, service_workers='block'))
     cp = cold2.new_page(); cp.set_default_timeout(60000)
     missing = []
     for r in export_routes:
@@ -390,8 +386,7 @@ with sync_playwright() as p:
 
     ctx.set_offline(False)
     check('zero page errors', not errs, '; '.join(errs[:2]))
-    check('[GATE] every request to the backend host was answered by the stub — nothing reached the real project',
-          not _escaped, '; '.join(_escaped[:3]))
+    NET.assert_empty(check)
     br.close()
 
 print(f'\n{ok} passed, {fail} failed')

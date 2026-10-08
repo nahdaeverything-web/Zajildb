@@ -25,6 +25,8 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'sync'))
 from _serve import serve                      # noqa: E402
+from _net import Net                          # noqa: E402  THE NET (RULED 2026-10-08): this suite stubs files, not the backend — armed all the same
+NET = Net()
 
 # The shipped datasets carry real uuids (v1.9.1). Python's uuid5 derives exactly what
 # tools/idmap.js derives from the same namespace and key, so these suites keep naming birds
@@ -51,7 +53,7 @@ ROOT = HARNESS.replace('test-harness/', '')
 
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(); ctx = b.new_context(); page = ctx.new_page()
+        b = p.chromium.launch(); ctx = NET.arm(check=check, ctx=b.new_context()); page = ctx.new_page()
         page.set_default_timeout(30000)
         errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
 
@@ -128,7 +130,7 @@ try:
             return pg.evaluate("""async () => { const k = (await caches.keys()).find(x => x.startsWith('zajil-'));
                 return k ? (await (await caches.open(k)).keys()).length : -1; }""")
 
-        opt = b.new_context()
+        opt = NET.arm(check=check, ctx=b.new_context())
         opt.route('**/stats.txt', lambda route: route.fulfill(status=404, body=''))
         op = opt.new_page(); operrs = []; op.on('pageerror', lambda e: operrs.append(str(e)))
         op.goto(ROOT + 'birds/', wait_until='load'); op.wait_for_timeout(4000)
@@ -140,7 +142,7 @@ try:
         check('…and nothing was raised at the page about it', not operrs, '; '.join(operrs[:2]))
         opt.close()
 
-        crit = b.new_context()
+        crit = NET.arm(check=check, ctx=b.new_context())
         crit.route('**/sample-data.json', lambda route: route.fulfill(status=404, body=''))
         cp = crit.new_page()
         cp.goto(ROOT + 'birds/', wait_until='load'); cp.wait_for_timeout(4000)
@@ -149,6 +151,7 @@ try:
               n_crit <= 0, f'{n_crit} entries — a half-installed shell is worse than none')
         crit.close()
 
+        NET.assert_empty(check)
         b.close()
 finally:
     srv.terminate()

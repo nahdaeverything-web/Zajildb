@@ -11,6 +11,8 @@
 # honouring server_seq=gt.<cursor> and limit exactly as PostgREST would.
 import json, os, re
 from playwright.sync_api import sync_playwright
+from _net import Net                           # THE NET (RULED 2026-10-08): armed beneath the stub, asserted at the end
+NET = Net()
 
 BASE = os.environ.get('ZAJIL_URL', 'http://127.0.0.1:8123/')
 STUB_URL = 'https://stub.zajil.test'
@@ -107,7 +109,7 @@ REMOTE_BIRD = {
 }
 
 with sync_playwright() as p:
-    br = p.chromium.launch(); page = br.new_page(); page.set_default_timeout(60000)
+    br = p.chromium.launch(); page = br.new_page(); page.set_default_timeout(60000); NET.arm(check=check, ctx=page.context)
     errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
     page.add_init_script(
         f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB_URL}', publishableKey: '{STUB_KEY}' }};")
@@ -508,6 +510,7 @@ with sync_playwright() as p:
     check('pull on an unconfigured build reports config, not a crash', unc['reason'] == 'config', str(unc))
 
     check('zero page errors overall', not errs, '; '.join(errs[:2]))
+    NET.assert_empty(check)
     br.close()
 
 print(f'\n{ok} passed, {fail} failed')
