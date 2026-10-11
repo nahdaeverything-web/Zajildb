@@ -1735,6 +1735,115 @@ upload byte for byte). Nothing to change in either tree, the guards, or the depl
 
 ---
 
+## RF-14 — a device whose current loft is removed remotely keeps pointing at it, and files new birds under the dead id
+
+**In the shared data layer, so present in BOTH trees. Same class as RF-12: the integrity of
+`currentLoftId`, a device setting that nothing re-checks.** Found 2026-10-11 by measurement on
+a stub project while answering what a replace-import does to the server (see RF-15).
+
+### Measured
+
+A PC that had adopted the teaching loft at first login (it was the only remote loft). The
+teaching loft was then removed by another device through the app's own `Lofts.remove()`,
+which tombstones and pushes `deleted = true`; the PC pulled it:
+
+```
+A  PC after: lofts ["لوفت أبو خالد"], currentLoftId a52d53b8 (the removed loft), ui h1 «لوفت بلا اسم»
+D  the first PC after reopening: lofts ["لوفت أبو خالد"], currentLoftId a52d53b8, current "(none)", h1 «لوفت بلا اسم»
+E1 on that PC, a new bird would be filed under loftId: {"loftId": "2d7ccf0d…" (the dead id), "exists": false}
+E2 its loft settings card (currentLoft): null
+```
+
+`currentLoft()` is `state.lofts.get(state.currentLoftId) || null` (storage.js:155); boot keeps
+any stored id (`state.currentLoftId = state.settings.currentLoftId || first key`, storage.js:143),
+so a reload changes nothing; and `record.loftId = state.currentLoftId` on save (storage.js:183)
+files every new record under a loft that no longer exists — invisibly, since no screen filters
+by loft. `applySyncDelete` on a loft does not touch `currentLoftId`.
+
+### What a person sees
+
+The loft card empty, the home heading «لوفت بلا اسم», everything else apparently fine. The
+birds entered from then on belong to no loft; a later device adopting the real loft shows them
+all the same (no filter), so the split surfaces only when loft identity starts to matter.
+
+### Not changed here — recorded on the ruling of 2026-10-11
+
+The fix belongs with RF-12's: when the current loft is deleted (locally or by a pulled
+tombstone), re-point `currentLoftId` — to the one remaining loft when there is exactly one,
+otherwise to a fresh pristine loft — and never leave it dangling. The measured recovery today is
+a replace-import of a good export (E3: lands on «لوفت أبو خالد» with the right current id) or
+starting the device over.
+
+---
+
+## RF-15 — a replace-import does not reset the sync baseline: rows above the cursor come back, and the file's loft becomes a second loft on the server
+
+**In the shared data layer, present in BOTH trees — but a SYNC behaviour, so it bites only
+on a configured, signed-in device.** `importAll(payload, 'replace')` (io.js:218-233) clears the
+five data stores and media and deliberately leaves the op log, the tombstones and the settings
+— including `syncCursor` and `lastAckedSeq` — untouched. Its own A2 note says a replace
+"RESETS THE SYNC BASELINE" and that "a future sync layer must treat a replace as a new starting
+point rather than replaying history across it… That reconciliation is a v1.9 concern; nothing
+here depends on it yet." The sync layer now exists and has no such handling (nothing in
+sync.js reads an import origin or a baseline). Measured 2026-10-11, stub project, through the UI:
+
+```
+2 phone after REPLACE-import of an empty export: cursor 4, acked 8, birds [], lofts ["(unnamed)/f5285b88"], pending ["put:lofts:f5285b88(import)"], tombstones 0
+  delete ops written: 0 · server unchanged: true
+4 next sync, phone whose last cycle ended with a push:  GET >4 → ["تعليمي-4"]  → phone after: birds ["تعليمي-4/982ab0db", "حقيقي-1", "حقيقي-2"]
+  next sync, settled phone:                               GET >4 → []           → phone after: birds ["حقيقي-1", "حقيقي-2"]
+  server after (either): lofts ["لوفت أبو خالد", "لوفت إربد التعليمي"], birds [تعليمي-1..3(4), حقيقي-1, حقيقي-2]
+```
+
+Three consequences, each measured:
+
+1. **The server keeps everything the replace removed** — no delete op, no tombstone, so the
+   records a person wiped locally stay live for every other device and every future one.
+2. **Rows above the cursor resurrect on the next pull.** A cycle pulls before it pushes, so
+   a device's own last push sits above its cursor; after the replace those rows come back
+   (تعليمي-4), filed under a loft the device no longer holds.
+3. **The file's loft becomes the current loft**, with a new id. A fresh install's export
+   carries its unnamed pristine loft; after the replace that loft is current, so everything
+   entered afterwards is a SECOND loft beside the one still on the server — which is why a
+   second device then meets two lofts and adopts neither (RF-16).
+
+Not changed here. What a reset would have to do is the A2 reconciliation: on a replace, write
+tombstones for every record the replace removed (so the server and other devices follow), and
+decide whether the imported records are new puts (they are logged as such today). To be ruled.
+
+---
+
+## RF-16 — no screen removes a loft: a fancier who loads the teaching loft has no way out
+
+**In BOTH trees. Not one person's problem: the first thing a pilot fancier is invited to do is
+load «لوفت تعليمي كامل», and the register then holds a loft they can never remove.** Found
+2026-10-11.
+
+`Lofts.remove(id)` exists in the data layer (records.js `makeGeneric`: logs a `delete` op,
+writes a tombstone) and syncs correctly — measured: `POST [lofts لوفت إربد التعليمي deleted=true]`,
+the other device and a brand-new one both drop it, and a brand-new device then adopts the one
+remaining loft («لوفت أبو خالد», breeder shown). Nothing in `app/` calls it (grep: no
+`Lofts.remove`, no loft delete control). Birds can be deleted one by one from the UI; the
+loft row cannot.
+
+Consequence on a synced account: the teaching loft row stays on the server for good. Every
+new device signing in meets two remote lofts, `adoptRemoteLoftIfPristine()` refuses (≠1), and
+the device lands on its own unnamed loft — h1 «لوفت بلا اسم», every bird of every loft listed:
+
+```
+a brand-new PC signing in: lofts ["(unnamed)", "لوفت أبو خالد", "لوفت إربد التعليمي"], currentLoftId = its own, h1 «لوفت بلا اسم»
+```
+
+Locally (no sync) the same person is left with two lofts and the RF-12 split. The only exits
+today are the console (`Lofts.remove` through the app's own code) or a replace-import of an
+export that does not carry the loft — which, on a synced device, is RF-15.
+
+Not changed here. Wanted, to be ruled: a loft delete in the loft settings, through
+`Lofts.remove`, with the three-way dialog's honesty about what goes with it, refusing while the
+loft is current unless another loft exists to become current (RF-14).
+
+---
+
 ## SUP-1 — a browser's page translation makes the app look half-English, and nothing in the gate can see it
 
 **A SUPPORT finding: a defect in neither tree.** The session behind the TF-4 report was
