@@ -1844,6 +1844,50 @@ loft is current unless another loft exists to become current (RF-14).
 
 ---
 
+## RF-17 — the teaching dataset changed every id at v1.9.1, so a loft loaded before and after exists TWICE on the server
+
+**A data finding on the real dev project, measured by Samir 2026-10-12 with the read-only SELECT
+(account 6092c513-…, 140 rows):**
+
+```
+  loft-irbid-demo                        «لوفت إربد التعليمي»  67 live
+  8f268d1b-3dbe-57be-8d77-ede52297a2cd   «لوفت إربد التعليمي»  68 live
+  2b466fd7-b14a-48bc-8e76-cff1871931ee   «Hummar»               3 live
+  (no loftId field)                                             2 live
+```
+
+The pre-v1.9.1 datasets carried readable ids (`loft-irbid-demo`, `g5-faris26` — see the
+SYNC-DESIGN amendment "client ids are opaque strings"). v1.9.1 rewrote every dataset id to
+`uuid5(ID_NAMESPACE, key)` (`tools/idmap.js`, namespace `7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f`):
+`uuid5(ns, 'loft-irbid-demo') = 8f268d1b-3dbe-57be-8d77-ede52297a2cd`, and likewise
+`uuid5(ns, 'loft-zarqa') = b5ab67a5-483f-5a6c-997c-a5de423cb53f` for the small example. A device
+that loaded the teaching loft before the change and again after it pushed both generations:
+68 rows for the new (its loft record carries `loftId`), 67 + the loft record for the old (whose
+loft record has no `loftId` field — one of the two "(no loftId)" rows). Same name, two ids,
+two full copies, and nothing in the app can tell them apart or remove either (RF-16).
+
+Consequences: every clean-up must name BOTH ids; a snippet that took one constant would have
+cleaned one generation and left 67 rows of the other — the exact two-lofts state the clean-up
+exists to end (RF-14/RF-16). The prepared console snippets take a list and refuse unless every
+named id is held locally. Any device that still holds a pre-v1.9.1 export can re-create the old
+generation by importing it.
+
+Not changed here. To rule: whether the app should recognise the readable-key generation of
+its own datasets (a fixed, small set of keys) and offer to retire it.
+
+---
+
+## DF-2 — the dev project holds two spike accounts' rows and must be cleared before production
+
+Recorded 2026-10-12 from the same SELECT: `spike-a@zajil.test` (69 rows) and
+`spike-b@zajil.test` (34 rows) from the September sync spike remain in `public.sync_records`
+on the DEV project. Out of scope for the 2026-10-12 clean-up and NOT to be touched by it. The
+production project is created fresh at pre-pilot (SYNC-DESIGN §1), so nothing carries over by
+itself; the dev project is to be cleared of spike rows before it is used for anything a person
+relies on. Owner of that step: Samir, dashboard, on his ruling.
+
+---
+
 ## SUP-1 — a browser's page translation makes the app look half-English, and nothing in the gate can see it
 
 **A SUPPORT finding: a defect in neither tree.** The session behind the TF-4 report was
