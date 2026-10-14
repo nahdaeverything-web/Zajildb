@@ -1861,6 +1861,24 @@ skips every one (`[own · seen]` in the suite); a "load again" needs its own rul
 device that joined while the teaching lofts stood keeps its own pristine loft beside the real one
 after they go (RF-12's adoption runs only at first login) — the RF-12 class, left.
 
+### Deployed and re-verified from the live origin (2026-10-14)
+
+`gh-pages 029bd23` from `df6a42a`; all 158 staged files served byte-identical. Full gate on the
+committed tree **1552 passed, 0 failed across 30 steps** plus the root control run by hand
+(548/548 — the gate had skipped it because the `:8123` repo-root server was down; TF-1's
+neighbour, now in memory). `screens/example_remove.py` 37/37, eight mutations each red.
+`live_deployment.py` against the live origin **43 passed, 0 failed**, the four `[EXAMPLE]`
+checks among them. Samir's exact case on the live build, stub-backed, verbatim:
+
+```
+  imported the PRE-v1.9.1 generation through the import screen: تم الاستيراد: 38 طير، 5 زوج، 17 نتيجة.
+2 register rows with both generations: 76 · removal row present: 1 · value 76
+  lofts line: الألوفت التجريبية: «لوفت إربد التعليمي»، «لوفت إربد التعليمي»
+3 dialog: إزالة البيانات التجريبية؟  سيُحذف 76 طيرًا و10 زوجًا و34 نتيجة و14 سجلًا صحيًا من «لوفت إربد التعليمي»، «لوفت إربد التعليمي»، ثم اللوفت التجريبي نفسه. لا يُمسّ أي طير من طيورك.
+4 register rows after: 0 · row present: 0
+5 «مزامنة الآن»: synced · pushed [(119, 119), (17, 17)] · deleted rows pushed 136 · server {'birds†': 76, 'healthEvents†': 14, 'lofts†': 2, 'pairs†': 10, 'raceResults†': 34}
+```
+
 What was wanted before that ruling: a loft delete in the loft settings, through
 `Lofts.remove`, with the three-way dialog's honesty about what goes with it, refusing while the
 loft is current unless another loft exists to become current (RF-14).
