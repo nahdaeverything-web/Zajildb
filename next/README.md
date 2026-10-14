@@ -368,6 +368,24 @@ until a cutover ruling.
   because the cache is keyed by version and written once — per-entry revisioning is what
   a library would buy and this gives up; and the update path still needs two reloads to
   show a new version, which is vanilla's inherited wart (HANDOFF.md:339).
+- **Since 2026-10-14: REMOVING THE EXAMPLE DATA, and RF-14** (`src/example-data.js`, the row in
+  الأدوات → البيانات beside «تحميل سرب تعليمي»). What the dataset loaders put in can be taken out
+  in one action: the row appears only while a dataset loft is on the device, identified by the
+  datasets' own ids — the two keys `loft-irbid-demo` / `loft-zarqa` and their uuid5 forms,
+  DERIVED in the browser from `tools/idmap.js`'s namespace, never typed (both generations exist
+  on real devices, RF-17). It confirms with the real counts, goes through `deleteBird()`, the
+  generic `remove()` and `Lofts.remove()` so every deletion tombstones and syncs, and touches
+  nothing outside the named lofts. Inside them only dataset records go (uuid v5 or readable
+  ids); records the fancier made there (uuid v4 — on a fresh device the teaching loft is
+  current, so his first birds land in it) are re-filed, never deleted; example birds his own
+  birds descend from are kept as reference birds — the whole ancestor closure — and the dialog
+  says how many and why. **This is NOT general loft management**: a fancier deleting a loft he
+  made himself (the only one, the current one, one holding another device's records) is a
+  separate, later item, not ruled. RF-14 with it: `ensureCurrentLoft()` validates `currentLoftId`
+  at boot and after every loft removal, local or pulled — exactly one loft left → adopted,
+  otherwise a fresh pristine loft — so `currentLoft()` is never null and a new bird is never
+  filed under an id no loft has. `tests/e2e/screens/example_remove.py` holds the proofs; the
+  deploy gate removes what it loaded on the live origin.
 - **Since 2026-10-08: every suite that stubs the backend arms THE NET** (`tests/e2e/_net.py`,
   RULED after TF-6). `NET.arm(ctx)` goes on every context BEFORE the suite's own stub route,
   so it is the fallback beneath the stub: a request to the backend host family that no stub

@@ -385,6 +385,23 @@ with sync_playwright() as p:
     check('OFFLINE: pedigree + COI compute on a deep route', '12.5' in badge, badge)
 
     ctx.set_offline(False)
+    # ── REMOVING THE EXAMPLE DATA (RULED 2026-10-14) — last, because every walk above uses the loaded example ──
+    # The row stands beside the loader in الأدوات → البيانات only while a dataset loft is on the device; the removal goes
+    # through the app's own delete paths, so the stub must receive the tombstones on the next «مزامنة الآن».
+    page.goto(URL + 'tools/', wait_until='load'); page.wait_for_selector('[data-testid=tools-list]', timeout=30000); page.wait_for_timeout(1000)
+    check('[EXAMPLE] the removal row is on the live build while the teaching loft is loaded', page.locator('[data-row=example-remove]').count() == 1)
+    if page.locator('[data-row=example-remove]').count():
+        row = page.locator('[data-row=example-remove]')
+        if row.get_attribute('open') is None: row.locator('summary').click(); page.wait_for_timeout(300)
+        page.click('[data-testid=example-remove]'); page.wait_for_selector('[data-testid=dialog]', timeout=10000)
+        dtext = page.locator('[data-testid=dialog]').inner_text().replace('\n', ' ')
+        check('[EXAMPLE] the dialog names the real count before anything is touched', re.sub(r'[٠-٩]', lambda m: str('٠١٢٣٤٥٦٧٨٩'.index(m.group())), dtext).find('38') >= 0 and 'لوفت إربد التعليمي' in dtext, dtext[:160])
+        page.click('[data-testid=dialog-confirm]'); page.wait_for_selector('[data-row=example-remove]', state='detached', timeout=120000); page.wait_for_timeout(1500)
+        page.goto(URL + 'birds/', wait_until='load'); page.wait_for_timeout(2000)
+        check('[EXAMPLE] one action removed it: the register is empty again and the row is gone', page.locator('[data-testid=bird-row]').count() == 0)
+        before_posts = _seq['n']
+        page.goto(URL + 'tools/sync/', wait_until='load'); page.wait_for_selector('[data-testid=card-sync]', timeout=30000); page.click('[data-testid=sync-now]'); page.wait_for_timeout(6000)
+        check('[EXAMPLE] «مزامنة الآن» pushed the tombstones to the (stubbed) project — the removal syncs', _seq['n'] - before_posts >= 68, f'{_seq["n"] - before_posts} rows pushed')
     check('zero page errors', not errs, '; '.join(errs[:2]))
     NET.assert_empty(check)
     br.close()

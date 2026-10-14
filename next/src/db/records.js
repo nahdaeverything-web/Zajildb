@@ -9,7 +9,7 @@
 
 import { classifySave } from '../engine/validate.js';
 import {
-  REFERENCE_STATUS, allBirds, emitChange, getBird, idbDelete, idbGet, idbGetAll, idbPut, nowISO, stamp, state, uuid,
+  REFERENCE_STATUS, allBirds, emitChange, ensureCurrentLoft, getBird, idbDelete, idbGet, idbGetAll, idbPut, nowISO, stamp, state, uuid,
 } from './storage.js';
 import { clearTombstone, diffFields, getTombstone, logOp, writeTombstone } from './oplog.js';
 
@@ -250,6 +250,7 @@ export function makeGeneric(storeName, stateMap, typeName) {
       state[stateMap].delete(id);
       const seq = await logOp({ origin: 'user', store: storeName, op: 'delete', recordId: id, record: rec });
       await writeTombstone(storeName, id, seq);
+      if (storeName === 'lofts') await ensureCurrentLoft();   // RF-14: removing the current loft must not leave it dangling
       emitChange({ type: typeName, id });
       return rec;
     },
@@ -425,6 +426,7 @@ export async function applySyncDelete(store, recordId, at) {
   // seq is null: there is no local op behind this deletion. `at` is the remote
   // operation time, so the tombstone claims the moment the delete happened.
   await writeTombstone(store, recordId, null, at);
+  if (store === 'lofts') await ensureCurrentLoft();   // RF-14: a loft removed on another device may be this one's current loft
   emitChange({ type: 'sync', store, id: recordId });
   return { applied: true, skipped: null, anomaly: null };
 }

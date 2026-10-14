@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds } from '@/src/db/react';
@@ -336,6 +336,55 @@ export function ExamplesDetail() {
       <button type="button" disabled={busy} onClick={() => load('./sample-data.json')} data-testid="load-sample"><span className={s.t}>{t('example.small')}</span><span className={s.n}>{t('example.smallN', { n: fmtNum(20) })}</span></button>
       <button type="button" disabled={busy} onClick={() => load('./example-loft-large.json')} data-testid="load-large"><span className={s.t}>{t('example.large')}</span><span className={s.n}>{t('example.largeN', { n: fmtNum(38), g: fmtNum(5) })}</span></button>
     </div>
+  );
+}
+
+/**
+ * REMOVING THE EXAMPLE DATA (RULED 2026-10-14). Loaded in the row above, removed here — the symmetry is the point.
+ * Rendered only while a dataset loft is present (identified by the datasets' own ids, derived in src/example-data.js),
+ * so a device that never loaded one never sees it. Goes through deleteBird()/remove()/Lofts.remove(), so the removal
+ * tombstones and syncs; confirms with the real counts; keeps example ancestors of the fancier's own birds as pedigree
+ * references and says so. NOT general loft management (README). A deviation from the frozen tools-v2 spec, recorded.
+ */
+type Presence = { ids: string[]; lofts: Array<{ id: string; name: string; birds: number; pairs: number; races: number; health: number }>;
+  birds: number; pairs: number; races: number; health: number; media: number; kept: number; own: number; ownBirds: number; current: boolean };
+export function ExampleRemoveRow() {
+  const [p, setP] = useState<Presence | null>(null);
+  const [busy, setBusy] = useState(false);
+  // recomputed on EVERY layer change (loading, removing, a pulled tombstone): useZajilStore's selector hands back the
+  // same mutated state object, so it cannot be an effect dependency — the layer's own change feed is subscribed instead
+  useEffect(() => {
+    let live = true;
+    const recompute = () => { (db.examplePresence() as Promise<Presence | null>).then((x) => { if (live) setP(x); }); };
+    recompute();
+    const off = db.onChange(recompute) as (() => void) | undefined;
+    return () => { live = false; if (typeof off === 'function') off(); };
+  }, []);
+  if (!p) return null;
+  const lofts = p.lofts.map((l) => `«${l.name || t('loft.unnamed')}»`).join('، ');
+  async function remove() {
+    if (busy || !p) return;
+    const body = t('example.remove.body', { birds: fmtNum(p.birds), pairs: fmtNum(p.pairs), races: fmtNum(p.races), health: fmtNum(p.health), lofts })
+      + (p.kept ? ' ' + t('example.remove.kept', { k: fmtNum(p.kept) }) : '')
+      + (p.own ? ' ' + t('example.remove.own', { m: fmtNum(p.own) }) : '');
+    const ok = await confirmDialog({ title: t('example.remove.title'), body, cancelLabel: t('act.cancel'), confirmLabel: t('example.remove.go'), confirmKind: 'danger' });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const r = await db.removeExampleData() as { birds: number; pairs: number; races: number; health: number; kept: number } | null;
+      if (r) toast(t('example.remove.done', { birds: fmtNum(r.birds), pairs: fmtNum(r.pairs), races: fmtNum(r.races), health: fmtNum(r.health) }) + (r.kept ? t('example.remove.doneKept', { k: fmtNum(r.kept) }) : ''), { timeout: 9000, kind: 'success' });
+    } finally { setBusy(false); }
+  }
+  return (
+    <Row id="example-remove" icon="teaching" label={t('example.remove.label')} help={t('example.remove.help', { n: fmtNum(p.birds + p.kept) })} value={fmtNum(p.birds + p.kept)} valueKind="gold">
+      <div className={s.ds} data-testid="example-remove-detail">
+        <p className={s.detailNote} data-testid="example-remove-lofts">{t('example.remove.lofts', { lofts })}</p>
+        <button type="button" disabled={busy} onClick={remove} data-testid="example-remove" aria-busy={busy}>
+          <span className={s.t}>{busy ? t('example.remove.busy') : t('example.remove.button')}</span>
+          <span className={s.n}>{p.lofts.map((l) => fmtNum(l.birds)).join(' + ')}</span>
+        </button>
+      </div>
+    </Row>
   );
 }
 

@@ -7,7 +7,7 @@ import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { findDuplicateRings } from '@/src/engine/rings.js';
 import { SyncRow, Loading, toast, confirmDialog, downscaleImage, saveSetting, initDB } from '@/src/components';
 import { useAppVersion } from '@/src/components/version';
-import { Section, Row, Seg, StatusLine, ExportDetail, ExamplesDetail, IntegrityDetail, ScannerDetail, DevDetail, syncRowCopy, Lofts } from './parts';
+import { Section, Row, Seg, StatusLine, ExportDetail, ExamplesDetail, ExampleRemoveRow, IntegrityDetail, ScannerDetail, DevDetail, syncRowCopy, Lofts } from './parts';
 import type { Loft, Bird, Backup, SyncStatus, Anomaly } from './parts';
 import s from './tools.module.css';
 
@@ -109,6 +109,8 @@ export default function ToolsView() {
           <Row id="teaching" icon="teaching" label={t('example.title')} help={t('example.hint')}>
             <ExamplesDetail />
           </Row>
+          {/* loaded above, removed here (RULED 2026-10-14); present only while example data is on the device */}
+          <ExampleRemoveRow />
         </Section>
 
         {/* ═══ الفحوصات ═══ */}

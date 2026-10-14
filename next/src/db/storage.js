@@ -141,6 +141,11 @@ export async function initDB() {
     await setSetting('currentLoftId', loft.id);
   }
   state.currentLoftId = state.settings.currentLoftId || [...state.lofts.keys()][0];
+  // RF-14 (RULED 2026-10-14): a stored currentLoftId is a device setting that nothing re-checked, so a
+  // loft removed here or by a pulled tombstone left it dangling — currentLoft() null, the loft card
+  // empty, every new bird filed under an id no loft has, and a reload kept it. Validated here and
+  // after every loft removal (records.js); never trusted again.
+  await ensureCurrentLoft();
 
   // Device identity. Generated ONCE and never regenerated: it is what lets a
   // future sync layer attribute an op to the machine that made it, and what
@@ -153,6 +158,35 @@ export async function initDB() {
 }
 
 export function currentLoft() { return state.lofts.get(state.currentLoftId) || null; }
+
+/**
+ * RF-14: make currentLoftId point at a loft that exists, or do nothing if it already does.
+ *
+ * Exactly one loft on the device → it is adopted (there is nothing to guess). Otherwise — none,
+ * or several with the current one gone — a fresh pristine loft is created and made current, as
+ * on a first run: a clear state the fancier can act on (name it, or file under it), and one that
+ * `isPristineLoft()` recognises, so a later adoption can still drop it. Choosing among several
+ * remaining lofts is the guess R4 refuses to make. A new bird is never filed under an id no loft
+ * has: `newBird()` takes state.currentLoftId, and this is what keeps it real.
+ *
+ * @returns the id adopted or created, or null when nothing needed doing.
+ */
+export async function ensureCurrentLoft() {
+  if (state.lofts.get(state.currentLoftId)) return null;
+  let id;
+  if (state.lofts.size === 1) {
+    id = [...state.lofts.keys()][0];
+  } else {
+    const loft = { id: uuid(), name: '', location: '', statuses: DEFAULT_STATUSES, createdAt: nowISO(), updatedAt: nowISO() };
+    await idbPut('lofts', loft);
+    state.lofts.set(loft.id, loft);
+    id = loft.id;
+  }
+  await setSetting('currentLoftId', id);
+  state.currentLoftId = id;
+  emitChange({ type: 'loft', id });
+  return id;
+}
 export function loftStatuses({ includeReference = false } = {}) {
   const l = currentLoft();
   const base = (l && Array.isArray(l.statuses) && l.statuses.length) ? l.statuses : DEFAULT_STATUSES;

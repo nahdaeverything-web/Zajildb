@@ -1766,7 +1766,19 @@ The loft card empty, the home heading «لوفت بلا اسم», everything els
 birds entered from then on belong to no loft; a later device adopting the real loft shows them
 all the same (no filter), so the split surfaces only when loft identity starts to matter.
 
-### Not changed here — recorded on the ruling of 2026-10-11
+### FIXED 2026-10-14 (RULED, with the example-data removal)
+
+`ensureCurrentLoft()` (`src/db/storage.js`, port-only — PORT-COMPLETE): at boot the stored
+`currentLoftId` is validated instead of trusted, and `records.js` calls it after the generic
+`remove()` of a loft and after `applySyncDelete()` of one. Dangling → exactly one loft left is
+adopted, otherwise a fresh pristine loft is made current (a clear state the fancier can act on;
+choosing among several would be the guess R4 refuses). Proven in
+`tests/e2e/screens/example_remove.py`: the current loft removed locally → recovered at once; a
+bird added afterwards is filed under a loft that exists; a reload keeps the recovery (the stored
+id names a loft that exists); the current loft removed by a PULLED tombstone → recovered at once.
+Mutation-proved: the call in `remove()` taken out → the recovery assertions fail.
+
+### What it was before the fix — recorded on the ruling of 2026-10-11
 
 The fix belongs with RF-12's: when the current loft is deleted (locally or by a pulled
 tombstone), re-point `currentLoftId` — to the one remaining loft when there is exactly one,
@@ -1838,7 +1850,18 @@ Locally (no sync) the same person is left with two lofts and the RF-12 split. Th
 today are the console (`Lofts.remove` through the app's own code) or a replace-import of an
 export that does not carry the loft — which, on a synced device, is RF-15.
 
-Not changed here. Wanted, to be ruled: a loft delete in the loft settings, through
+**ADDRESSED IN SCOPE 2026-10-14 (RULED as a pilot blocker):** one action in الأدوات → البيانات,
+beside «تحميل سرب تعليمي», removes exactly what the dataset loaders put in — both generations of
+both datasets, identified by derived ids — through the app's own code paths, with the real counts
+confirmed, the fancier's own records re-filed, and example ancestors of his birds kept as
+references (README «Since 2026-10-14»). General loft removal stays a separate later item, as ruled.
+Seen on the way, not ruled: after the removal, loading the same dataset again on that device
+imports nothing — the removal's tombstones are newer than the dataset's records, so the merge
+skips every one (`[own · seen]` in the suite); a "load again" needs its own ruling. Also seen: a
+device that joined while the teaching lofts stood keeps its own pristine loft beside the real one
+after they go (RF-12's adoption runs only at first login) — the RF-12 class, left.
+
+What was wanted before that ruling: a loft delete in the loft settings, through
 `Lofts.remove`, with the three-way dialog's honesty about what goes with it, refusing while the
 loft is current unless another loft exists to become current (RF-14).
 

@@ -30,12 +30,14 @@ seventeen modules — `db/{storage,oplog,records}.js`, `dates.js`, `i18n.js`,
 `sync-config.js` and the eight `engine/` files — are identical between `js/` and `next/src/`,
 and the `data-layer-identity` guard now proves it every build rather than leaving it to care.
 
-**The exceptions — the first two ruled at the pre-launch close, the third on 2026-10-05:**
+**The exceptions — the first two ruled at the pre-launch close, the third on 2026-10-05, the last two on 2026-10-14:**
 
 | file | why it diverges |
 |---|---|
 | `src/db/io.js` | `exportAllBlob()`. The old export built the whole payload as one `JSON.stringify` string; past ~180 photos of 2 MB V8 threw **`Invalid string length`** and the failure was **silent** — no file, no toast, «آخر تصدير» unchanged, a button that still looked ready. The port assembles the JSON as Blob parts instead. Vanilla's copy is a separate decision: `main` is the live deployment. |
-| `src/db.js` | one line — the facade must re-export `exportAllBlob`. Divergent only because `io.js` is. |
+| `src/db.js` | the facade re-exports `exportAllBlob` (because `io.js` is divergent), `ensureCurrentLoft` (RF-14) and the port-only example-data module `src/example-data.js` (RULED 2026-10-14). |
+| `src/db/storage.js` | **RF-14 (RULED 2026-10-14).** `ensureCurrentLoft()`: a stored `currentLoftId` is validated at boot instead of trusted; a dangling one adopts the single remaining loft, otherwise a fresh pristine loft is made current — so `currentLoft()` is never null and a new bird is never filed under an id no loft has. Vanilla has the same defect and is NOT changed — main is the live deployment. |
+| `src/db/records.js` | **RF-14.** The generic `remove()` and `applySyncDelete()` call `ensureCurrentLoft()` after a loft goes, locally or by a pulled tombstone. Port-only, as `storage.js`. |
 | `src/db/sync.js` | **the account collision (ROOT-FINDINGS RF-13).** `signIn()` compares the incoming user with the owner of the data on the device and stops — before storing a session, so before any sync — when they differ. The owner is recorded in settings (`dataOwnerId`, `dataOwnerHint`), outside the four auth keys so it survives sign-out; a device with no record is named by its session, or by the most recent signed-in op in its op log (RULED 2026-10-07); `clearLocalData()` is the one explicit way to change it. Nothing about the wire format, the op log or the sync protocol changed: an export, a push and a pull are what they were. **Vanilla has the same defect and is not changed** — `main` is the live deployment. |
 
 The **format** is unchanged and that is asserted in both directions: a port export imports into

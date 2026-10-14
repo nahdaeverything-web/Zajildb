@@ -271,8 +271,17 @@ const guards = {
        + 'past ~180 photos V8 threw `Invalid string length` and the failure was SILENT. '
        + "Vanilla's copy is a separate decision — main is the live deployment."],
       ['src/db.js',
-       'the facade must re-export exportAllBlob. Divergent only by that one line, and only '
-       + 'because src/db/io.js is.'],
+       'the facade must re-export exportAllBlob (because src/db/io.js is divergent), '
+       + 'ensureCurrentLoft (RF-14) and the example-data module src/example-data.js '
+       + '(RULED 2026-10-14, port-only).'],
+      ['src/db/storage.js',
+       'RF-14 (RULED 2026-10-14): ensureCurrentLoft() — a stored currentLoftId is validated at boot '
+       + 'instead of trusted; a dangling one adopts the single remaining loft or gets a fresh pristine '
+       + 'loft, so a new bird is never filed under an id no loft has. Vanilla has the same defect and '
+       + 'is NOT changed — main is the live deployment.'],
+      ['src/db/records.js',
+       'RF-14 (RULED 2026-10-14): the generic remove() and applySyncDelete() call ensureCurrentLoft() '
+       + 'after a loft goes, locally or by a pulled tombstone. Port-only, as storage.js.'],
       ['src/db/sync.js',
        'the account collision (RF-13): signIn() compares the incoming user with the owner of '
        + 'the data on the device and stops before storing a session that is not the same '
