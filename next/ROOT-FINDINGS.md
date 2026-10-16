@@ -1855,9 +1855,25 @@ beside «تحميل سرب تعليمي», removes exactly what the dataset load
 both datasets, identified by derived ids — through the app's own code paths, with the real counts
 confirmed, the fancier's own records re-filed, and example ancestors of his birds kept as
 references (README «Since 2026-10-14»). General loft removal stays a separate later item, as ruled.
-Seen on the way, not ruled: after the removal, loading the same dataset again on that device
+Seen on the way (RULED 2026-10-16 as not acceptable — a silent no-op; measured below, proposal
+pending Samir's ruling, NOT implemented): after the removal, loading the same dataset again on that device
 imports nothing — the removal's tombstones are newer than the dataset's records, so the merge
-skips every one (`[own · seen]` in the suite); a "load again" needs its own ruling. Also seen: a
+skips every one (`[own · seen]` in the suite); a "load again" needs its own ruling.
+
+**Measured 2026-10-16 (stub project modelling the trigger's LWW; `scratchpad/reload_probe.py`):** clearing
+the tombstones for exactly the dataset's ids (68, none v4) and loading again imports 38/5/17/7 and logs 68
+`put:import` ops stamped at load time; the push passes the server's LWW (0 rejected — the puts are newer
+than the removal); a device that had pulled the removal gets the data back on its next pull with its
+tombstones cleared (§2a's corollary); a device that removed locally BEFORE the reload and syncs after it
+pulls first, its 128 pending ops are superseded by the newer rows, it pushes nothing and holds the data
+again; a device that removes AFTER the reload wins instead (its deletes are newer) and everyone follows —
+the latest intent wins either way; a brand-new device ends with whatever the latest intent was. On a
+device whose current loft is the pristine recovery loft, the reloaded teaching loft is adopted as current
+(RF-12's rule); on other devices it arrives beside their current loft. Clean. Proposed: the loader
+clears the tombstones for exactly the ids in the file it is about to load — refusing any v4 id — then
+merges as today; the canonical ids are kept, so the removal row's detection keeps working.
+
+Also seen: a
 device that joined while the teaching lofts stood keeps its own pristine loft beside the real one
 after they go (RF-12's adoption runs only at first login) — the RF-12 class, left.
 
