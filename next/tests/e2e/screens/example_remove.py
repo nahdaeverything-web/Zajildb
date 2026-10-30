@@ -13,7 +13,7 @@ import os
 import re
 import sys
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
@@ -21,6 +21,7 @@ from _serve import serve                      # noqa: E402
 sys.path.insert(0, os.path.join(HERE, '..'))
 from _net import Net                          # noqa: E402  THE NET (RULED 2026-10-08): armed beneath the stub, asserted at the end
 NET = Net()
+PAGES = []                                    # every device page; the final check reads THEIR error lists (TF-9)
 
 passed = failed = 0
 def check(n, ok, d=''):
@@ -67,7 +68,7 @@ def device(b, H, email='x@zajil.test', downloads=False):
     """A configured device, signed in through the stub (the sign-in gate stands on every route otherwise)."""
     ctx = NET.arm(check=check, ctx=b.new_context(viewport={'width': 430, 'height': 900}, accept_downloads=downloads))
     ctx.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};"); ctx.route(f'{STUB}/**', handler)
-    pg = ctx.new_page(); pg.errs = []; pg.on('pageerror', lambda e: pg.errs.append(str(e)))
+    pg = ctx.new_page(); pg.errs = []; pg.on('pageerror', lambda e: pg.errs.append(str(e))); PAGES.append(pg)
     pg.goto(H, wait_until='load'); pg.wait_for_function('window.__zajilReady'); run(pg, "async (db, e) => { await db.signIn(e, 'pw'); }", email); return ctx, pg
 def open_row(pg, row):
     r = pg.locator(f'[data-row={row}]')
@@ -79,14 +80,19 @@ def load_large(pg, ROOT):
 def row_present(pg, ROOT):
     tools(pg, ROOT); return pg.locator('[data-row=example-remove]').count()
 def ui_remove(pg, ROOT, confirm=True):
-    """Open the row, press, read the dialog, confirm (or cancel). Returns the dialog's text and the toast."""
+    """Open the row, press, read the dialog, confirm (or cancel). Returns the dialog's text, the toast, and whether the row is gone."""
     tools(pg, ROOT); open_row(pg, 'example-remove'); pg.click('[data-testid=example-remove]'); pg.wait_for_selector('[data-testid=dialog]', timeout=8000)
     text = pg.locator('[data-testid=dialog]').inner_text().replace('\n', ' ')
     pg.click('[data-testid=dialog-confirm]' if confirm else '[data-testid=dialog-cancel]')
-    if confirm: pg.wait_for_selector('[data-row=example-remove]', state='detached', timeout=120000); pg.wait_for_timeout(1500)
+    if confirm:
+        # bounded and NON-RAISING (TF-9, 2026-10-30): a removal that never completes must fail a named check with the toast
+        # as evidence — the R1 mutant died here on the 120 s timeout, red for the wrong reason, never reaching an assertion
+        try: pg.wait_for_function("() => !document.querySelector('[data-row=example-remove]') || [...document.querySelectorAll('[data-testid=toast]')].some(t => (t.textContent || '').includes('لم تُزل'))", timeout=120000)
+        except PWTimeout: pass
+        pg.wait_for_timeout(1500)
     else: pg.wait_for_timeout(500)
     toast = pg.locator('[data-testid=toast]').last.inner_text().replace('\n', ' ') if pg.locator('[data-testid=toast]').count() else ''
-    return text, toast
+    return text, toast, pg.locator('[data-row=example-remove]').count() == 0
 def sync_ui(pg, ROOT):
     pg.goto(ROOT + 'tools/sync/', wait_until='load'); pg.wait_for_selector('[data-testid=card-sync]', timeout=15000); pg.click('[data-testid=sync-now]'); pg.wait_for_timeout(5000)
     return pg.locator('[data-testid=sync-status]').get_attribute('data-state')
@@ -122,10 +128,10 @@ try:
         cc, c3 = device(b, H, 'a@zajil.test'); run(c3, "async (db) => { await db.syncNow(); }")   # a third device that pulled the teaching data
         check('[both] the row appears, counting the example birds of both lofts', row_present(pc, ROOT) == 1 and digits(pc.locator('[data-row=example-remove] [data-testid=row-value]').inner_text()).strip() == '76',
               pc.locator('[data-row=example-remove] [data-testid=row-value]').inner_text() if row_present(pc, ROOT) else 'no row')
-        text, _ = ui_remove(pc, ROOT, confirm=False)
+        text, _, _ = ui_remove(pc, ROOT, confirm=False)
         check('[both] the dialog names the real counts and both lofts, before anything is touched', all(x in digits(text) for x in ['76', '10', '34', '14']) and text.count('لوفت إربد التعليمي') == 2 and 'لا يُمسّ أي طير من طيورك' in text, text[:200])
         s1 = run(pc, STATE); check('[both] cancelling changes nothing', s1 == s0)
-        posts = len(srv.posts); text, toast = ui_remove(pc, ROOT, confirm=True); s2 = run(pc, STATE)
+        posts = len(srv.posts); text, toast, gone = ui_remove(pc, ROOT, confirm=True); s2 = run(pc, STATE)
         check('[both] ONE action removes both generations: the example records and both loft records are gone, the real loft untouched',
               s2['lofts'] == {k: v for k, v in s0['lofts'].items() if v == 'لوفت أبو خالد'} and s2['birds'] == 2 and s2['pairs'] == s2['races'] == s2['health'] == 0, {k: s2[k] for k in ('lofts', 'birds', 'pairs', 'races', 'health')})
         check('[both] every deletion was tombstoned — 136 tombstones, nothing pushed yet', s2['tombstones'] == 136 and len(srv.posts) == posts, (s2['tombstones'], len(srv.posts) - posts))
@@ -143,7 +149,8 @@ try:
         c1, d1 = device(b, H, 'b@zajil.test'); run(d1, "async (db) => { await db.syncNow(); }"); load_large(d1, ROOT)
         d1.goto(H, wait_until='load'); d1.wait_for_function('window.__zajilReady'); run(d1, "async (db) => { await db.syncNow(); }")
         s = run(d1, STATE); check('[one] after loading the teaching loft on a fresh device it IS the current loft (RF-12)', s['currentName'] == 'لوفت إربد التعليمي' and s['birds'] == 38, s['currentName'])
-        text, toast = ui_remove(d1, ROOT); s = run(d1, STATE)
+        text, toast, gone = ui_remove(d1, ROOT); s = run(d1, STATE)
+        check('[one] the removal ran to completion — the row detached', gone and 'لم تُزل' not in toast, toast[:200])
         check('[one] removes that generation cleanly: 38 birds, 5 pairs, 17 races, 7 health, the loft', '38' in digits(text) and s['birds'] == 0 and s['pairs'] == 0 and s['tombstones'] == 68, (digits(text)[:120], s['birds'], s['tombstones']))
         check('[one · RF-14] the current loft was the one removed: the device recovered onto a real loft', s['current'] is not None and s['current'] == s['storedCurrent'] and s['current'] in s['lofts'] and s['currentName'] == '(unnamed)', {k: s[k] for k in ('current', 'storedCurrent', 'lofts')})
         check('[one] its sync pushes 68 tombstones', sync_ui(d1, ROOT) == 'synced' and srv.summary('user-B') == {'birds†': 38, 'healthEvents†': 7, 'lofts†': 1, 'pairs†': 5, 'raceResults†': 17}, srv.summary('user-B'))
@@ -158,7 +165,7 @@ try:
             const closure = new Set(); const stack = [sire.id]; while (stack.length) { const id = stack.pop(); if (!id || closure.has(id)) continue; const a = db.state.birds.get(id); if (!a) continue; closure.add(id); stack.push(a.sireId, a.damId); }
             return { sire: sire.name, sireLoft: sire.loftId.slice(0, 8), mineLoft: mine.loftId.slice(0, 8), chainDepth: chain.length, chain, closure: closure.size }; }""")
         check('[own] the fancier’s birds were filed IN the teaching loft (it is current), one of them with an example sire whose own line has depth', own['mineLoft'] == own['sireLoft'] and own['chainDepth'] >= 2 and own['closure'] > own['chainDepth'], own)
-        text, toast = ui_remove(d2, ROOT); s = run(d2, STATE)
+        text, toast, gone = ui_remove(d2, ROOT); s = run(d2, STATE)
         kept_expected = own['chainDepth']   # the sire and his whole paternal chain at least
         check('[own] the dialog says how many example birds are kept as references and why, and that own records are moved', 'كمراجع في النسب' in text and 'تُنقل إلى لوفتك' in text, text[:220])
         bird = run(d2, """async (db) => { const m = [...db.state.birds.values()].find(b => b.name === 'طيري-1'); const sire = db.state.birds.get(m.sireId);
@@ -212,7 +219,8 @@ try:
         check('[shape · invariant] …and the row is still there with its count', row_present(ds, ROOT) == 1 and digits(ds.locator('[data-row=example-remove] [data-testid=row-value]').inner_text()).strip() == '76')
         run(ds, """async (db) => { for (const b of db.state.birds.values()) { if (b.sex === 'hen' && [...db.state.birds.values()].some(c => c.sireId === b.id)) { await db.idbPut('birds', { ...b, sex: 'cock' }); b.sex = 'cock'; } } }""")   # undo the forced error
         # now the removal itself, as on his PC
-        text, toast = ui_remove(ds, ROOT); s2 = run(ds, STATE)
+        text, toast, gone = ui_remove(ds, ROOT); s2 = run(ds, STATE)
+        check('[shape] the removal RAN TO COMPLETION — the row detached, no failure toast (R1 fails here: the flag not passed)', gone and 'لم تُزل' not in toast, toast[:200])
         after = run(ds, """async (db) => { const V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i; const birds = [...db.state.birds.values()];
             const kept = birds.filter(b => !V4.test(b.id)); const rings = {}; for (const b of kept) rings[b.id] = JSON.stringify(b.rings || []);
             const own = birds.filter(b => V4.test(b.id)); return { exampleLeft: kept.length, keptAllRefs: kept.every(b => b.external && b.status === 'reference'), keptRings: rings, ownLofts: own.map(b => [b.name, b.loftId]), current: db.state.currentLoftId }; }""")
@@ -234,7 +242,8 @@ try:
         check('[boot · RF-14] a bird added afterwards is filed under a loft that exists', nb)
         cl.close()
 
-        check('zero page errors', not any(getattr(x, 'errs', []) for x in []))
+        # TF-9 (2026-10-30): until this date the check iterated over an EMPTY list and could not fail
+        check(f'zero page errors across {len(PAGES)} devices', not any(p.errs for p in PAGES), [e[:160] for p in PAGES for e in p.errs][:3])
         NET.assert_empty(check)
         b.close()
 finally:
