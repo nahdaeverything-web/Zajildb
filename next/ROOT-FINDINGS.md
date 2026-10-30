@@ -1855,6 +1855,10 @@ beside «تحميل سرب تعليمي», removes exactly what the dataset load
 both datasets, identified by derived ids — through the app's own code paths, with the real counts
 confirmed, the fancier's own records re-filed, and example ancestors of his birds kept as
 references (README «Since 2026-10-14»). General loft removal stays a separate later item, as ruled.
+The tools-v2 deviation record for the row (deviation 5 of `design/README.md`) was committed on the port
+branch on 2026-10-14 and tripped the gate's isolation step on 2026-10-30 (`main..HEAD` outside `next/` must be
+empty — design records land on `main` on Samir's order, as the other four did). Taken off the branch
+2026-10-30; the text is held for `main` (`scratchpad/design-readme-deviation5.patch`, and in the report).
 Seen on the way (RULED 2026-10-16 as not acceptable — a silent no-op; measured below, proposal
 pending Samir's ruling, NOT implemented): after the removal, loading the same dataset again on that device
 imports nothing — the removal's tombstones are newer than the dataset's records, so the merge

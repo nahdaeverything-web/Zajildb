@@ -260,13 +260,6 @@ the port omits each, and each waits on something that does not exist yet:
    rather than creating a near-duplicate. The archived file differs from the upload in
    exactly two lines (the row label and the field label, «اسم المربي» → «اسم المربّي»):
    sha256 `2850f6a6…` → `1ecc43c8…`, 55,295 → 55,299 bytes.
-5. **A fifth row in البيانات, beside «تحميل سرب تعليمي»: «إزالة البيانات التجريبية»** — RULED
-   2026-10-14 as a pilot blocker (ROOT-FINDINGS RF-16: a fancier who loads the teaching loft
-   had no way to remove it). Not in the frozen spec. It reuses the row and confirm patterns the
-   screen already has — the same disclosure row, the same `.ds` button block as the loader
-   beside it, the same confirm dialog as the replace-import — and appears only while a dataset
-   loft is on the device, so a device that never loaded one never sees it. Loaded there,
-   removed there: the symmetry is the point. Noted for a later design pass; not re-drawn here.
 
 **Also recorded — consequences of those rulings and of earlier ones, not new decisions:**
 
