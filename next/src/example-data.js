@@ -97,9 +97,14 @@ export async function removeExampleData() {
   const p = await examplePresence();
   if (!p) return null;
   const SET = new Set(p.ids);
+  // RULED 2026-10-30: these internal re-saves pass allowWarnings — and ONLY these (guard `allow-warnings-bounded`).
+  // The records already exist exactly as they are; the removal flips two fields or a loftId. The warning that
+  // blocked it on every real device (RF-18) was val.dupRing: with both dataset generations present every kept
+  // ancestor has a twin wearing its ring — a twin this same action deletes. Errors still block, unchanged.
+  const INTERNAL = { allowWarnings: true };
   for (const id of p.keep) {                               // kept ancestors first, so nothing below can touch them
     const b = state.birds.get(id);
-    await saveBird({ ...b, external: true, status: REFERENCE_STATUS });
+    await saveBird({ ...b, external: true, status: REFERENCE_STATUS }, INTERNAL);
   }
   let birds = 0;
   for (const b of [...state.birds.values()]) {
@@ -112,7 +117,7 @@ export async function removeExampleData() {
   const target = state.currentLoftId;
   let moved = 0;
   const refile = async (map, api) => { for (const r of [...map.values()]) { if (SET.has(r.loftId)) { await api.save({ ...r, loftId: target }); moved++; } } };
-  for (const b of [...state.birds.values()]) { if (SET.has(b.loftId)) { await saveBird({ ...b, loftId: target }); moved++; } }
+  for (const b of [...state.birds.values()]) { if (SET.has(b.loftId)) { await saveBird({ ...b, loftId: target }, INTERNAL); moved++; } }
   await refile(state.pairs, Pairs); await refile(state.raceResults, Races); await refile(state.healthEvents, Health);
   emitChange({ type: 'import' });
   // what was removed in all — the presence counts; the sweep only catches what deleteBird's cascade did not reach

@@ -368,6 +368,13 @@ until a cutover ruling.
   because the cache is keyed by version and written once — per-entry revisioning is what
   a library would buy and this gives up; and the update path still needs two reloads to
   show a new version, which is vanilla's inherited wart (HANDOFF.md:339).
+- **Since 2026-10-30: THE INVARIANT of destructive actions in الأدوات** (`destructive()` in
+  `app/tools/parts.tsx`, RULED after RF-18): no path through a destructive action returns having
+  changed nothing without telling the user — a caught failure produces a toast naming the reason,
+  never a silent return. The example-data removal runs through it; the other mutating handlers in
+  the tools screens (8 of 9 await without a catch — RF-18) are measured and await a ruling. With it:
+  the removal's two internal re-saves pass `allowWarnings` — bounded by the guard
+  `allow-warnings-bounded`, which pins every site that sets the flag and its count.
 - **Since 2026-10-14: REMOVING THE EXAMPLE DATA, and RF-14** (`src/example-data.js`, the row in
   الأدوات → البيانات beside «تحميل سرب تعليمي»). What the dataset loaders put in can be taken out
   in one action: the row appears only while a dataset loft is on the device, identified by the

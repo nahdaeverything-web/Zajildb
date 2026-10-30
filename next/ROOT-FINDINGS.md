@@ -1949,6 +1949,73 @@ relies on. Owner of that step: Samir, dashboard, on his ruling.
 
 ---
 
+## RF-18 — the example-data removal was blocked by a duplicate-ring WARNING on every real device, and failed silently
+
+**Found 2026-10-30 on the deployed build (`gh-pages 029bd23`), reproduced with Samir's exact shape,
+stub-backed, IndexedDB measured before and after.** He saw the row with its badge 76, the panel
+«38 + 38» (per-loft example-bird counts), pressed, and the badge stayed 76 with two errors in DevTools.
+
+```
+3 after the press — dialog present: 1
+  dialog: سيُحذف 47 طيرًا و10 زوجًا و34 نتيجة و14 سجلًا صحيًا … يبقى 29 طيرًا تجريبيًا كمراجع في النسب … لديك 1 من سجلاتك داخل اللوفت التجريبي
+  console after confirm: ['PAGEERROR: zajil/validation-failed', …]
+4 IndexedDB after: identical — deleted: 0 birds · tombstones + 0
+5 row present after: 1 · badge: 76 · toast: (none)
+6 removeExampleData() called directly: {"threw": "zajil/validation-failed", "errors": []}
+```
+
+### The mechanism — measured
+
+The removal's first step flips the kept ancestors to reference birds through `saveBird()`, which refuses a save
+on WARNINGS as well as errors unless `allowWarnings` is passed (validate.js:104). Duplicate rings are a warning
+(`val.dupRing`), and with both dataset generations present (RF-17) every kept ancestor has a twin wearing its ring:
+
+```
+thrown: {"errors": [], "warnings": ["val.dupRing {ring: JO-2026-13002, otherId: g5-najma26 (the pre-v1.9.1 twin)}"]}
+with { allowWarnings: true }: saved · keptWithWarnings: 29/29 · warningKinds: {val.dupRing: 31}
+```
+
+So the action threw before its first deletion; and `remove()` had no catch, so the fancier got no toast and no
+dialog — a silent no-op of the class ruled out for the loader on 2026-10-20.
+
+**Why the suite was blind:** the kept-ancestor case was proven on one generation (no twins, no warning); the
+two-generation case had no linked birds (kept 0). His shape is the intersection — and it is the shape of every
+device that loaded the teaching loft before and after v1.9.1.
+
+### Fixed 2026-10-30 (RULED)
+
+1. **`allowWarnings` on the removal's own re-saves only** — the reference flips and the re-files inside
+   `removeExampleData()`, as one `INTERNAL` option. The records already exist exactly as they are; the action
+   flips two fields or a `loftId`; the warning concerns a twin the same action deletes. Errors block, unchanged.
+   Bounded by the guard `allow-warnings-bounded`: every site that sets the flag is pinned with its count (the
+   removal's one, the bird form's two after the fancier confirmed the warnings, «اجعله مرجعًا»'s one, the breeding
+   screen's four, two doc comments); a new site, one more use, or `INTERNAL` rewritten fails the guard — proven
+   both ways.
+   **The warnings `saveBird` can raise, enumerated:** `val.dupRing` (a ring another bird wears), `val.dupRingSameBird`
+   (the same ring twice on one bird), `val.parentSameDay` (parent and bird hatched the same day). In this shape the
+   removal bypasses `val.dupRing` (31 across the 29 kept); in principle any of the three on a kept or re-filed record.
+   None is load-bearing: each is an "are you sure" about data that already exists and which the removal does not
+   alter (no ring, no date is touched). The nine errors (`val.cycle`, `val.selfParent`, `val.sireIsHen`, …) still block.
+2. **THE INVARIANT, in code:** `destructive()` in `app/tools/parts.tsx` — no path through a destructive action in
+   الأدوات returns having changed nothing without telling the user; a caught failure produces a toast naming the
+   reason (the first validation issue in the fancier's language, or the message). The removal runs through it.
+3. `screens/example_remove.py` gained his shape: both generations, a linked own bird (closure 29), a record of his
+   inside a teaching loft — 47 deleted, 29 kept with their rings intact, the own record re-filed, both lofts
+   tombstoned; and the invariant: a forced ERROR (a kept ancestor's sire recorded as a hen → `val.sireIsHen`)
+   produces the toast «لم تُزل البيانات التجريبية — لم يتغيّر شيء. السبب: …» with nothing changed and no page error.
+   Mutations: `allowWarnings` removed → red; the catch removed → red.
+
+### Measured, NOT fixed in this change — for a ruling: the pattern
+
+Mutating async handlers in `app/tools/*.tsx` that `await` a data-layer write **without a catch**: **8 of 9** —
+`sync-now` (parts.tsx:172), `del` (duplicates' per-copy delete, :192), `restore` (a snapshot, :298), `load` (the
+example loaders, :326), `remove` (this one, :365, now through `destructive()`), `signOut` (view.tsx:56),
+`pickLogo` (:197), `removeLogo` (:202). Only `importFile` (:255) catches. A thrown failure in any of the other
+seven reaches the console and nothing else. The invariant exists in code now; routing the seven through it is
+one change, to be ruled.
+
+---
+
 ## SUP-1 — a browser's page translation makes the app look half-English, and nothing in the gate can see it
 
 **A SUPPORT finding: a defect in neither tree.** The session behind the TF-4 report was

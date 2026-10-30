@@ -340,6 +340,24 @@ export function ExamplesDetail() {
 }
 
 /**
+ * THE INVARIANT (RULED 2026-10-30, RF-18): no path through a destructive action in الأدوات returns having
+ * changed nothing without telling the user. Every such handler runs its work through this; a caught failure
+ * produces a toast naming the reason — never a silent return. The reason is the first validation issue in the
+ * fancier's language when the failure is a ValidationError, the message otherwise.
+ */
+export async function destructive(work: () => Promise<void>, failed: (reason: string) => string): Promise<boolean> {
+  try { await work(); return true; }
+  catch (e) {
+    const err = e as { name?: string; message?: string; errors?: Array<{ key: string; params?: Record<string, unknown> }>; warnings?: Array<{ key: string; params?: Record<string, unknown> }> };
+    const issue = err?.name === 'ValidationError' ? ((err.errors || [])[0] || (err.warnings || [])[0]) : null;
+    const reason = issue ? t('tools.failed.validation', { what: t(issue.key, issue.params as Record<string, string | number> | undefined) })
+                         : t('tools.failed.unknown', { what: err?.message || String(e) });
+    toast(failed(reason), { kind: 'error', timeout: 12000 });
+    return false;
+  }
+}
+
+/**
  * REMOVING THE EXAMPLE DATA (RULED 2026-10-14). Loaded in the row above, removed here — the symmetry is the point.
  * Rendered only while a dataset loft is present (identified by the datasets' own ids, derived in src/example-data.js),
  * so a device that never loaded one never sees it. Goes through deleteBird()/remove()/Lofts.remove(), so the removal
@@ -371,8 +389,10 @@ export function ExampleRemoveRow() {
     if (!ok) return;
     setBusy(true);
     try {
-      const r = await db.removeExampleData() as { birds: number; pairs: number; races: number; health: number; kept: number } | null;
-      if (r) toast(t('example.remove.done', { birds: fmtNum(r.birds), pairs: fmtNum(r.pairs), races: fmtNum(r.races), health: fmtNum(r.health) }) + (r.kept ? t('example.remove.doneKept', { k: fmtNum(r.kept) }) : ''), { timeout: 9000, kind: 'success' });
+      await destructive(async () => {
+        const r = await db.removeExampleData() as { birds: number; pairs: number; races: number; health: number; kept: number } | null;
+        if (r) toast(t('example.remove.done', { birds: fmtNum(r.birds), pairs: fmtNum(r.pairs), races: fmtNum(r.races), health: fmtNum(r.health) }) + (r.kept ? t('example.remove.doneKept', { k: fmtNum(r.kept) }) : ''), { timeout: 9000, kind: 'success' });
+      }, (reason) => t('example.remove.failed', { reason }));
     } finally { setBusy(false); }
   }
   return (

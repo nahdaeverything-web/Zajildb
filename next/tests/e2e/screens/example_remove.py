@@ -189,6 +189,40 @@ try:
         check('[pulled · RF-14] when the pulled tombstone removes its current loft, the device recovers at once', sb['current'] is not None and sb['current'] in sb['lofts'] and sb['current'] == sb['storedCurrent'] and sb['birds'] == 0, {k: sb[k] for k in ('current', 'storedCurrent', 'lofts', 'birds')})
         ca.close(); cb.close()
 
+        # ═══ SAMIR'S EXACT SHAPE (RF-18, 2026-10-30): both generations AND a linked own bird AND a record of his inside a teaching loft ═══
+        cs_, ds = device(b, H, 'f@zajil.test')
+        shape = run(ds, """async (db, old) => { await db.Lofts.save({ ...db.currentLoft(), name: 'Hummar' }); const mine = db.currentLoft();
+            const big = await (await fetch('/example-loft-large.json')).json(); await db.importAll(big, 'merge'); await db.importAll(old, 'merge');
+            const deep = [...db.state.birds.values()].find(x => x.name === 'نجمة ٢٦' && x.loftId === '8f268d1b-3dbe-57be-8d77-ede52297a2cd');
+            await db.saveBird(db.newBird({ name: 'حمّار-1', sex: 'hen', loftId: mine.id, damId: deep.id }));
+            await db.saveBird(db.newBird({ name: 'حمّار-2', sex: 'cock', loftId: '8f268d1b-3dbe-57be-8d77-ede52297a2cd' }));
+            const p = await db.examplePresence(); const rings = {}; for (const id of p.keep) rings[id] = JSON.stringify(db.state.birds.get(id).rings || []);
+            return { mine: mine.id, kept: p.kept, birds: p.birds, own: p.own, keptRings: rings, dup: db.state.birds.size }; }""", OLD)
+        s0 = run(ds, STATE)
+        check('[shape] his shape: 78 example birds (both generations) + 2 of his, 29 to keep, 47 to delete, 1 record of his inside a teaching loft', s0['birds'] == 78 and shape['kept'] == 29 and shape['birds'] == 47 and shape['own'] == 1, (s0['birds'], shape['kept'], shape['birds'], shape['own']))
+        # the default save path still refuses a warning — the bypass is the removal's alone
+        chk = run(ds, "async (db) => { const k = db.state.birds.get([...(await db.examplePresence()).keep][0]); try { await db.saveBird({ ...k, external: true, status: db.REFERENCE_STATUS }); return 'saved'; } catch (e) { return (e.warnings || []).map(w => w.key).join(','); } }")
+        check('[shape] saveBird without the flag still refuses the duplicate-ring warning (the user-facing path is unchanged)', chk == 'val.dupRing' or chk.startswith('val.dupRing'), chk)
+        # THE INVARIANT first: a failure that blocks (an ERROR, not a warning) must reach the fancier as a toast, and change nothing
+        run(ds, """async (db) => { const p = await db.examplePresence(); for (const id of p.keep) { const k = db.state.birds.get(id); const sire = k.sireId && db.state.birds.get(k.sireId); if (sire) { await db.idbPut('birds', { ...sire, sex: 'hen' }); sire.sex = 'hen'; return; } } }""")   # a kept ancestor's sire recorded as a hen → val.sireIsHen, an error
+        tools(ds, ROOT); open_row(ds, 'example-remove'); ds.click('[data-testid=example-remove]'); ds.wait_for_selector('[data-testid=dialog]', timeout=8000); ds.click('[data-testid=dialog-confirm]'); ds.wait_for_timeout(4000)
+        ftoast = ds.locator('[data-testid=toast]').last.inner_text().replace('\n', ' ') if ds.locator('[data-testid=toast]').count() else ''
+        s1 = run(ds, STATE)
+        check('[shape · invariant] a removal that cannot proceed SAYS SO — a toast naming the reason, nothing changed', 'لم تُزل البيانات التجريبية' in ftoast and 'لم يتغيّر شيء' in ftoast and 'الأب' in ftoast and s1['birds'] == 78 and s1['tombstones'] == 0 and not ds.errs, (ftoast[:160], s1['birds'], s1['tombstones'], ds.errs[:1]))
+        check('[shape · invariant] …and the row is still there with its count', row_present(ds, ROOT) == 1 and digits(ds.locator('[data-row=example-remove] [data-testid=row-value]').inner_text()).strip() == '76')
+        run(ds, """async (db) => { for (const b of db.state.birds.values()) { if (b.sex === 'hen' && [...db.state.birds.values()].some(c => c.sireId === b.id)) { await db.idbPut('birds', { ...b, sex: 'cock' }); b.sex = 'cock'; } } }""")   # undo the forced error
+        # now the removal itself, as on his PC
+        text, toast = ui_remove(ds, ROOT); s2 = run(ds, STATE)
+        after = run(ds, """async (db) => { const V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i; const birds = [...db.state.birds.values()];
+            const kept = birds.filter(b => !V4.test(b.id)); const rings = {}; for (const b of kept) rings[b.id] = JSON.stringify(b.rings || []);
+            const own = birds.filter(b => V4.test(b.id)); return { exampleLeft: kept.length, keptAllRefs: kept.every(b => b.external && b.status === 'reference'), keptRings: rings, ownLofts: own.map(b => [b.name, b.loftId]), current: db.state.currentLoftId }; }""")
+        check('[shape] the dialog said 47 deleted, 29 kept, 1 of his inside', all(x in digits(text) for x in ['47', '29']) and 'لديك 1' in digits(text), digits(text)[:200])
+        check('[shape] 47 deleted — 29 example birds remain, every one a reference bird', after['exampleLeft'] == 29 and after['keptAllRefs'] and s2['birds'] == 31, (after['exampleLeft'], after['keptAllRefs'], s2['birds']))
+        check('[shape] the 29 kept WITH THEIR RINGS INTACT', all(after['keptRings'].get(k) == v for k, v in shape['keptRings'].items()), sum(1 for k, v in shape['keptRings'].items() if after['keptRings'].get(k) != v))
+        check('[shape] his record inside the teaching loft was re-filed to his loft, which is current', all(l == shape['mine'] for _, l in after['ownLofts']) and after['current'] == shape['mine'] and s2['lofts'] == {shape['mine']: 'Hummar'}, (after['ownLofts'], s2['lofts']))
+        check('[shape] both teaching lofts gone, tombstoned, the toast reports 47 and 29', s2['tombstones'] >= 47 + 10 + 34 + 14 + 2 and '47' in digits(toast) and '29' in digits(toast), (s2['tombstones'], digits(toast)[:120]))
+        cs_.close()
+
         # ═══ RF-14 AT BOOT: a device that dangled BEFORE this build (a loft removed by an older version, or by the console route) ═══
         cl, dl = device(b, H, 'e@zajil.test'); run(dl, "async (db) => { await db.Lofts.save({ ...db.currentLoft(), name: 'لوفتي' }); await db.setSetting('currentLoftId', 'ghost-loft-id'); }")
         dl.goto(H, wait_until='load'); dl.wait_for_function('window.__zajilReady'); sl = run(dl, STATE)

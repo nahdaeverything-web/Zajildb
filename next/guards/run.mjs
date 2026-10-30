@@ -264,6 +264,42 @@ const guards = {
   // DIVERGENT lists the files the port is RULED to own. Each needs a reason in
   // PORT-COMPLETE.md. The list is meant to stay short; a file arriving here silently is the
   // failure this guard exists to prevent.
+  // RULED 2026-10-30 (RF-18): the removal's bypass of save-time WARNINGS is bounded to its own two re-saves. The
+  // flag already exists in four ruled places (the bird form's save after the fancier confirmed the warnings, the
+  // «make it a reference» path, the breeding screen's chick saves, and the layer's own defaults); this guard pins
+  // every site and its count, so a save path that gains the flag — a new file, one more use in an old one, or the
+  // removal's INTERNAL moved into something shared — fails here. Errors are not affected by the flag at all.
+  'allow-warnings-bounded'() {
+    const ALLOWED = new Map([
+      ['src/example-data.js', 1],        // const INTERNAL = { allowWarnings: true } — the removal's reference flips and re-files
+      ['app/bird/form.tsx', 2],          // the save after the fancier confirmed the warnings dialog; the sibling-of save
+      ['app/bird/view.tsx', 1],          // «اجعله مرجعًا»: a bird in pairs or races raises warnings none of which apply to a reference
+      ['app/breeding/shared.tsx', 4],    // chick saves from the breeding screen (ringing, hatch date, parents)
+      ['src/db/records.js', 1],          // a doc comment on saveBird ("Pass { allowWarnings: true } once the user has confirmed"), not a use
+      ['src/engine/validate.js', 1],     // a doc comment on classifySave, not a use
+    ]);
+    const bad = [];
+    const seen = new Map();
+    for (const f of files('.js', '.mjs', '.ts', '.tsx')) {
+      if (f.includes('/node_modules/') || f.includes('/out/') || f.includes('/release/') || f.includes('/.next/')) continue;
+      const rel_ = relative(ROOT, f);
+      if (!/^(src|app)\//.test(rel_)) continue;
+      const src = readFileSync(f, 'utf8');
+      // any value but `false` counts — `true`, `!0`, a variable: the point is the property being set at all
+      const uses = (src.match(/allowWarnings\s*:/g) || []).length - (src.match(/allowWarnings\s*:\s*false\b/g) || []).length;
+      seen.set(rel_, uses);
+      if (!uses) continue;
+      const allowed = ALLOWED.get(rel_);
+      if (allowed === undefined) bad.push(`${rel_} sets allowWarnings (${uses}×) — not a ruled site; the removal's bypass must not spread`);
+      else if (uses !== allowed) bad.push(`${rel_} sets allowWarnings ${uses}× — ${allowed} ruled`);
+    }
+    // every ruled site must still be exactly as pinned, including one that has lost its use (a stale list hides a move)
+    for (const [rel_, n] of ALLOWED) if ((seen.get(rel_) || 0) !== n) bad.push(`${rel_}: ${seen.get(rel_) || 0} use(s) of allowWarnings, ${n} pinned — re-rule the list`);
+    const ex = readFileSync(join(ROOT, 'src/example-data.js'), 'utf8');
+    if (!/const INTERNAL = \{ allowWarnings: true \};/.test(ex)) bad.push('src/example-data.js: the removal must set the flag exactly as `const INTERNAL = { allowWarnings: true };`, for its own re-saves');
+    return bad;
+  },
+
   'data-layer-identity'() {
     const DIVERGENT = new Map([
       ['src/db/io.js',
