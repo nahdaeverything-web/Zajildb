@@ -2005,6 +2005,25 @@ device that loaded the teaching loft before and after v1.9.1.
    produces the toast «لم تُزل البيانات التجريبية — لم يتغيّر شيء. السبب: …» with nothing changed and no page error.
    Mutations: `allowWarnings` removed → red; the catch removed → red.
 
+### Deployed and re-verified from the live origin (2026-10-30)
+
+`gh-pages 823dd68` from `e394cb0`; all 158 staged files served byte-identical. Full gate on the fix tree
+**2108 passed, 1 failed across 31 steps** — the one failure was the isolation step over the branch-only
+`design/README.md` record (taken off the branch in `8cc0177`; `main..HEAD` outside `next/` is empty again);
+every suite step green, the root control 548/548 included, `example_remove.py` 46/46 with his shape and the
+invariant; mutations: the flag not passed → red (the removal never completes), the catch silenced → red.
+`live_deployment.py` against the live origin **43 passed, 0 failed**. The same probe that caught it, on
+the deployed build, his shape, IndexedDB measured — before and after the fix:
+
+```
+BEFORE (029bd23): IndexedDB before {"birds": 78, "exampleIdBirds": 76, "lofts": ["Hummar", "لوفت إربد التعليمي", "لوفت إربد التعليمي"], "tombstones": 0}
+                  console: ['PAGEERROR: zajil/validation-failed'] · IndexedDB after: identical · deleted: 0 · badge 76 · toast (none)
+AFTER  (823dd68): IndexedDB before {"birds": 78, "exampleIdBirds": 76, "lofts": ["Hummar", "لوفت إربد التعليمي", "لوفت إربد التعليمي"], "tombstones": 0}
+                  dialog: سيُحذف 47 … يبقى 29 … لديك 1 من سجلاتك داخل اللوفت التجريبي
+                  IndexedDB after {"birds": 31, "exampleIdBirds": 29, "lofts": ["Hummar"], "tombstones": 107, "byLoft": {<Hummar>: 31}, "refs": 29}
+                  deleted: 47 birds · tombstones + 107 (47 + 10 + 34 + 14 + 2) · row gone · no page error
+```
+
 ### Measured, NOT fixed in this change — for a ruling: the pattern
 
 Mutating async handlers in `app/tools/*.tsx` that `await` a data-layer write **without a catch**: **8 of 9** —
