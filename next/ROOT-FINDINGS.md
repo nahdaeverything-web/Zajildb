@@ -1473,6 +1473,91 @@ the page works.
 
 ---
 
+## TF-9 — two RF-18 proofs read as red for the wrong reason: a mutant that died on a timeout, and a page-error check over an empty list
+
+**A TOOLING finding in `tests/e2e/screens/example_remove.py`, found 2026-10-30** on re-reading the RF-18
+mutation output under the discipline *a mutation must reach and fail its ASSERTION*:
+
+1. **The R1 mutant never reached an assertion — twice.** The first form (the `allowWarnings` literal
+   deleted) stopped at the prebuild guard `allow-warnings-bounded` — build exit 1 in 1 s, the harness never
+   built — and was reported red. The corrected form (the flag not passed at the call site, the literal left
+   in place, so the guard passes) reached the suite and died in `ui_remove()` on a raw
+   `wait_for_selector('[data-row=example-remove]', state='detached', timeout=120000)`: a Playwright
+   timeout traceback after 200 s (`242 × locator resolved to visible <details …>`), no summary line, no
+   assertion named. Red for the wrong reason, both times. Only R2 (the catch silenced) was a proof.
+2. **The suite's last check could not fail.** `check('zero page errors', not any(getattr(x, 'errs', [])
+   for x in []))` — every device page collected its errors (`pg.errs`), but no list of pages existed, so the
+   check iterated over `[]` since the suite was written on 2026-10-14. The pre-fix RF-18 run, which raised
+   `PAGEERROR: zajil/validation-failed` on the device, would have passed it.
+
+### Fixed 2026-10-30
+
+- `ui_remove()` waits, **bounded and non-raising**, for the row to detach OR a failure toast («لم تُزل …»)
+  to appear, and returns a third value: whether the row is gone. `[one]` and `[shape]` gain a named
+  completion check; a removal that never completes is now a `✗` with the toast as evidence, never a
+  traceback. (`[both]` and `[own]` already asserted the row gone through `row_present()`.)
+- `PAGES` holds every device page; the final check reads their lists and prints the first three errors.
+- Suite 46 → 48 checks.
+
+### The three proofs, verbatim (`scratchpad/mutate_rf18b.py`: each mutant is built, run, restored)
+
+```
+
+══ R1 the flag not passed to the removal's reference flips (the shipped defect; the INTERNAL literal stays, so the prebuild guard passes)  (build exit 0, suite exit 1, 80s)
+   ✗ [shape] the removal RAN TO COMPLETION — the row detached, no failure toast (R1 fails here: the flag not passed)  لم تُزل البيانات التجريبية — لم يتغيّر شيء. السبب: سجلّ لم يجتز التحقق (رقم الحلقة JO-2026-13002 مستخدم لطير آخر (نجمة ٢٦).
+   ✗ [shape] 47 deleted — 29 example birds remain, every one a reference bird  (76, False, 78)
+   ✗ [shape] his record inside the teaching loft was re-filed to his loft, which is current  ([['حمّار-2', '8f268d1b-3dbe-57be-8d77-ede52297a2cd'], ['حمّار-1', 'b51a8c17-e73f-40dd-a22a-b4e9fdcab90d']], {'8f268d1b-3dbe-57be-8d77-ede52297a2cd': 'لوفت إربد التعليمي', 'b51a8c17-e73f-40dd-a22a-b4e9fdcab90d
+   ✗ [shape] both teaching lofts gone, tombstoned, the toast reports 47 and 29  (0, 'لم تُزل البيانات التجريبية — لم يتغيّر شيء. السبب: سجلّ لم يجتز التحقق (رقم الحلقة JO-2026-13002 مستخدم لطير آخر (نجمة 2')
+   44 passed, 4 failed
+   verdict: PROOF — reached and failed its assertion(s)
+
+══ R2 the catch no longer reports — destructive() rethrows without a toast  (build exit 0, suite exit 1, 82s)
+   ✗ [shape · invariant] a removal that cannot proceed SAYS SO — a toast naming the reason, nothing changed  ('', 78, 0, ['zajil/validation-failed'])
+   ✗ zero page errors across 10 devices  ['zajil/validation-failed']
+   46 passed, 2 failed
+   verdict: PROOF — reached and failed its assertion(s)
+
+══ R3 a page error planted after a successful removal (proves the page-error check reads real lists, TF-9)  (build exit 0, suite exit 1, 82s)
+   ✗ zero page errors across 10 devices  ['MUTATION: planted page error', 'MUTATION: planted page error', 'MUTATION: planted page error']
+   47 passed, 1 failed
+   verdict: PROOF — reached and failed its assertion(s)
+
+══ RESTORED (build exit 0): 48 passed, 0 failed
+```
+
+Each mutant built (the guard is not what stopped it), reached the suite, failed named checks, and printed
+its summary line. R2 now trips two checks: the invariant's, and — because an unhandled rejection is a page
+error — the page-error check that was blind before. R3 exists only to prove the page-error check reads real
+lists. After restore: 48 passed, 0 failed.
+
+### The guard `allow-warnings-bounded` — its blind spots, declared (2026-10-30)
+
+It is a regex over source text: per file under `src/` and `app/`, the count of `allowWarnings\s*:` minus
+`allowWarnings\s*:\s*false`, pinned per ruled file; plus the literal `const INTERNAL = { allowWarnings:
+true };` in `src/example-data.js`. A `!0` passed its first draft, which matched only `true`; it now counts any
+non-`false` value. What it still cannot see:
+
+1. **Shorthand and computed keys** — `{ allowWarnings }` (a true variable in scope), `{ ['allowWarnings']:
+   true }`, `{ ['allow' + 'Warnings']: true }`: no `allowWarnings:` text, uncounted.
+2. **Assignment and defaults** — `opts.allowWarnings = true`, `Object.assign(opts, …)`,
+   `Object.defineProperty`, `function f({ allowWarnings = true } = {})`: uncounted.
+3. **The option object travelling** — it pins the literal but counts no USE of `INTERNAL`: a third
+   `saveBird(x, INTERNAL)` in the same file, `export { INTERNAL }`, `{ ...INTERNAL }` in another file, or
+   `INTERNAL.force = true` (the object is not frozen) are all invisible to it.
+4. **Counts, not sites** — a pinned file keeps its count if a use moves to a different save path in the same
+   file, or if a pinned doc comment (`records.js`, `validate.js`, 1 each) is deleted and a real use added.
+5. **Scope** — `src/` and `app/` only, `.js .mjs .ts .tsx` only: a `.jsx`/`.cjs` file or a new top-level
+   directory is unscanned (tests set the flag freely, by design).
+6. **Not its subject** — `{ force: true }` skips errors AND warnings in `classifySave`; it has no caller in
+   `src/` or `app/` today (two doc comments) and the guard does not bound it. Nor does the guard see
+   `idbPut()` and `importAll()`, which write without `classifySave` at all, by design.
+
+What it sees conservatively: any non-`false` value counts (`true`, `!0`, a variable, `Boolean(x)`), so those
+fail safe; text in comments and strings counts, so a commented-out use fails safe too. A guard with declared
+gaps, as ruled, rather than one that reads as airtight. Not rewritten; an AST-based check is a later item.
+
+---
+
 ## RF-13 — a second account signing in on a device inherits the first account's loft, and pushes it under its own name
 
 **In the shared data layer — `js/db/sync.js:183` is the same `signIn()` — so it is present in
@@ -1858,7 +1943,9 @@ references (README «Since 2026-10-14»). General loft removal stays a separate 
 The tools-v2 deviation record for the row (deviation 5 of `design/README.md`) was committed on the port
 branch on 2026-10-14 and tripped the gate's isolation step on 2026-10-30 (`main..HEAD` outside `next/` must be
 empty — design records land on `main` on Samir's order, as the other four did). Taken off the branch
-2026-10-30; the text is held for `main` (`scratchpad/design-readme-deviation5.patch`, and in the report).
+2026-10-30; the text is held on the local branch `design/tools-v2-deviation-5` (commit `5e404b9`, one commit on top of
+`main`, fast-forwardable, NOT pushed — a scratchpad file is not a durable place). What lands it on `main`, on Samir's order:
+`git checkout main && git merge --ff-only design/tools-v2-deviation-5 && git push origin main`.
 Seen on the way (RULED 2026-10-16 as not acceptable — a silent no-op; measured below, proposal
 pending Samir's ruling, NOT implemented): after the removal, loading the same dataset again on that device
 imports nothing — the removal's tombstones are newer than the dataset's records, so the merge
@@ -2026,12 +2113,32 @@ AFTER  (823dd68): IndexedDB before {"birds": 78, "exampleIdBirds": 76, "lofts": 
 
 ### Measured, NOT fixed in this change — for a ruling: the pattern
 
-Mutating async handlers in `app/tools/*.tsx` that `await` a data-layer write **without a catch**: **8 of 9** —
-`sync-now` (parts.tsx:172), `del` (duplicates' per-copy delete, :192), `restore` (a snapshot, :298), `load` (the
-example loaders, :326), `remove` (this one, :365, now through `destructive()`), `signOut` (view.tsx:56),
-`pickLogo` (:197), `removeLogo` (:202). Only `importFile` (:255) catches. A thrown failure in any of the other
-seven reaches the console and nothing else. The invariant exists in code now; routing the seven through it is
-one change, to be ruled.
+Mutating async handlers in `app/tools/*.tsx` that `await` a data-layer write **without a catch**.
+
+**Re-measured 2026-10-30 (second pass, every `async` in the two files read): 11 of 14.** The first count,
+"8 of 9", written the same morning, was an UNDERCOUNT — it listed the handlers behind a confirm dialog and
+missed four plain ones. The full table, by file and line as of `b085441`:
+
+| handler | where | awaits | catch? |
+|---|---|---|---|
+| `sync-now` | parts.tsx:172 | `db.syncNow()` | no (`try … finally` only) |
+| sync toggle | parts.tsx:173 | `db.setSyncEnabled()`, `db.refreshSyncStatus()` | no (no `try` at all) — missed in the first count |
+| `del` (a duplicate copy) | parts.tsx:192 | `db.deleteBird()` | no |
+| `exportAll` | parts.tsx:226 | `saveSetting('lastExport')` | **yes** |
+| `importFile` | parts.tsx:255 | `db.importAll()` | **yes** |
+| `restore` (a snapshot) | parts.tsx:298 | `db.importAll(…, 'replace')` | no |
+| `load` (the example loaders) | parts.tsx:326 | `db.importAll(…, 'merge')` | no (`try … finally` only) |
+| `remove` (the example data) | parts.tsx:383 | `db.removeExampleData()` | **yes** — through `destructive()` |
+| integrity `run` | parts.tsx:417 | `saveSetting()` ×2 | no (`try … finally` only) — missed |
+| scanner save | parts.tsx:449/453 | `saveSetting('scanServerUrl')` | no; the `onBlur` form is not even awaited — missed |
+| `signOut` | view.tsx:56 | `db.signOut()`, `db.refreshSyncStatus()` | no |
+| loft `save` | view.tsx:192 | `Lofts.save()` | no — missed |
+| `pickLogo` | view.tsx:197 | `db.addMedia()` | no |
+| `removeLogo` | view.tsx:202 | `db.deleteMedia()`, `save()` | no |
+
+Not counted: the dev panel's `runTests`, `roundtrip` and `integrity` (view-only; the first two catch, the
+third reads only). A thrown failure in any of the eleven reaches the console and nothing else. The invariant
+exists in code now; routing the eleven through it is one change, to be ruled — **measurement only, no fix.**
 
 ---
 

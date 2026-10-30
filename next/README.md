@@ -372,9 +372,13 @@ until a cutover ruling.
   `app/tools/parts.tsx`, RULED after RF-18): no path through a destructive action returns having
   changed nothing without telling the user — a caught failure produces a toast naming the reason,
   never a silent return. The example-data removal runs through it; the other mutating handlers in
-  the tools screens (8 of 9 await without a catch — RF-18) are measured and await a ruling. With it:
+  the tools screens (11 of 14 await without a catch — RF-18, re-measured; the first count of 8 of 9 was an
+  undercount) are measured and await a ruling. With it:
   the removal's two internal re-saves pass `allowWarnings` — bounded by the guard
   `allow-warnings-bounded`, which pins every site that sets the flag and its count.
+- **Since 2026-10-30: a MUTATION PROOF reaches and fails a named check** — its `✗` line and the suite's
+  summary printed verbatim. A build-guard stop or a traceback is NOT a proof (TF-9); a suite waits on a UI
+  outcome bounded and non-raising, so a hang is a failed check with evidence, never an exception.
 - **Since 2026-10-14: REMOVING THE EXAMPLE DATA, and RF-14** (`src/example-data.js`, the row in
   الأدوات → البيانات beside «تحميل سرب تعليمي»). What the dataset loaders put in can be taken out
   in one action: the row appears only while a dataset loft is on the device, identified by the
