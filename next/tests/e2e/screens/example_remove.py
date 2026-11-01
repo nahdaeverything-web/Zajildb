@@ -115,7 +115,7 @@ try:
         check('[absent] a device with no example data shows no removal row', row_present(pg, ROOT) == 0)
         c0.close()
 
-        # ═══ SAMIR'S CASE: a real loft on the phone; the PC holds BOTH teaching generations and removes them in one action ═══
+        # ═══ THE PHONE + PC CASE (CONSTRUCTED from a description, not from any export — TF-10): a real loft on the phone; the PC holds BOTH teaching generations and removes them in one action ═══
         cph, ph = device(b, H, 'a@zajil.test')
         run(ph, """async (db) => { await db.Lofts.save({ ...db.currentLoft(), name: 'لوفت أبو خالد', breederName: 'خالد العمري' });
             for (const n of ['حقيقي-1', 'حقيقي-2']) await db.saveBird(db.newBird({ name: n, sex: 'cock', loftId: db.currentLoft().id })); await db.syncNow(); }""")
@@ -196,7 +196,7 @@ try:
         check('[pulled · RF-14] when the pulled tombstone removes its current loft, the device recovers at once', sb['current'] is not None and sb['current'] in sb['lofts'] and sb['current'] == sb['storedCurrent'] and sb['birds'] == 0, {k: sb[k] for k in ('current', 'storedCurrent', 'lofts', 'birds')})
         ca.close(); cb.close()
 
-        # ═══ SAMIR'S EXACT SHAPE (RF-18, 2026-10-30): both generations AND a linked own bird AND a record of his inside a teaching loft ═══
+        # ═══ THE INTERSECTION SHAPE (RF-18, 2026-10-30 — CONSTRUCTED, TF-10: this step GIVES the own bird the teaching dam نجمة ٢٦; no export ever held that link): both generations AND an own bird linked to a teaching parent AND an own record inside a teaching loft ═══
         cs_, ds = device(b, H, 'f@zajil.test')
         shape = run(ds, """async (db, old) => { await db.Lofts.save({ ...db.currentLoft(), name: 'Hummar' }); const mine = db.currentLoft();
             const big = await (await fetch('/example-loft-large.json')).json(); await db.importAll(big, 'merge'); await db.importAll(old, 'merge');
@@ -206,7 +206,7 @@ try:
             const p = await db.examplePresence(); const rings = {}; for (const id of p.keep) rings[id] = JSON.stringify(db.state.birds.get(id).rings || []);
             return { mine: mine.id, kept: p.kept, birds: p.birds, own: p.own, keptRings: rings, dup: db.state.birds.size }; }""", OLD)
         s0 = run(ds, STATE)
-        check('[shape] his shape: 78 example birds (both generations) + 2 of his, 29 to keep, 47 to delete, 1 record of his inside a teaching loft', s0['birds'] == 78 and shape['kept'] == 29 and shape['birds'] == 47 and shape['own'] == 1, (s0['birds'], shape['kept'], shape['birds'], shape['own']))
+        check('[shape] the constructed intersection: 78 example birds (both generations) + 2 own birds, 29 to keep, 47 to delete, 1 own record inside a teaching loft', s0['birds'] == 78 and shape['kept'] == 29 and shape['birds'] == 47 and shape['own'] == 1, (s0['birds'], shape['kept'], shape['birds'], shape['own']))
         # the default save path still refuses a warning — the bypass is the removal's alone
         chk = run(ds, "async (db) => { const k = db.state.birds.get([...(await db.examplePresence()).keep][0]); try { await db.saveBird({ ...k, external: true, status: db.REFERENCE_STATUS }); return 'saved'; } catch (e) { return (e.warnings || []).map(w => w.key).join(','); } }")
         check('[shape] saveBird without the flag still refuses the duplicate-ring warning (the user-facing path is unchanged)', chk == 'val.dupRing' or chk.startswith('val.dupRing'), chk)
@@ -218,16 +218,16 @@ try:
         check('[shape · invariant] a removal that cannot proceed SAYS SO — a toast naming the reason, nothing changed', 'لم تُزل البيانات التجريبية' in ftoast and 'لم يتغيّر شيء' in ftoast and 'الأب' in ftoast and s1['birds'] == 78 and s1['tombstones'] == 0 and not ds.errs, (ftoast[:160], s1['birds'], s1['tombstones'], ds.errs[:1]))
         check('[shape · invariant] …and the row is still there with its count', row_present(ds, ROOT) == 1 and digits(ds.locator('[data-row=example-remove] [data-testid=row-value]').inner_text()).strip() == '76')
         run(ds, """async (db) => { for (const b of db.state.birds.values()) { if (b.sex === 'hen' && [...db.state.birds.values()].some(c => c.sireId === b.id)) { await db.idbPut('birds', { ...b, sex: 'cock' }); b.sex = 'cock'; } } }""")   # undo the forced error
-        # now the removal itself, as on his PC
+        # now the removal itself
         text, toast, gone = ui_remove(ds, ROOT); s2 = run(ds, STATE)
         check('[shape] the removal RAN TO COMPLETION — the row detached, no failure toast (R1 fails here: the flag not passed)', gone and 'لم تُزل' not in toast, toast[:200])
         after = run(ds, """async (db) => { const V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i; const birds = [...db.state.birds.values()];
             const kept = birds.filter(b => !V4.test(b.id)); const rings = {}; for (const b of kept) rings[b.id] = JSON.stringify(b.rings || []);
             const own = birds.filter(b => V4.test(b.id)); return { exampleLeft: kept.length, keptAllRefs: kept.every(b => b.external && b.status === 'reference'), keptRings: rings, ownLofts: own.map(b => [b.name, b.loftId]), current: db.state.currentLoftId }; }""")
-        check('[shape] the dialog said 47 deleted, 29 kept, 1 of his inside', all(x in digits(text) for x in ['47', '29']) and 'لديك 1' in digits(text), digits(text)[:200])
+        check('[shape] the dialog said 47 deleted, 29 kept, 1 own record inside', all(x in digits(text) for x in ['47', '29']) and 'لديك 1' in digits(text), digits(text)[:200])
         check('[shape] 47 deleted — 29 example birds remain, every one a reference bird', after['exampleLeft'] == 29 and after['keptAllRefs'] and s2['birds'] == 31, (after['exampleLeft'], after['keptAllRefs'], s2['birds']))
         check('[shape] the 29 kept WITH THEIR RINGS INTACT', all(after['keptRings'].get(k) == v for k, v in shape['keptRings'].items()), sum(1 for k, v in shape['keptRings'].items() if after['keptRings'].get(k) != v))
-        check('[shape] his record inside the teaching loft was re-filed to his loft, which is current', all(l == shape['mine'] for _, l in after['ownLofts']) and after['current'] == shape['mine'] and s2['lofts'] == {shape['mine']: 'Hummar'}, (after['ownLofts'], s2['lofts']))
+        check('[shape] the own record inside the teaching loft was re-filed to the own loft, which is current', all(l == shape['mine'] for _, l in after['ownLofts']) and after['current'] == shape['mine'] and s2['lofts'] == {shape['mine']: 'Hummar'}, (after['ownLofts'], s2['lofts']))
         check('[shape] both teaching lofts gone, tombstoned, the toast reports 47 and 29', s2['tombstones'] >= 47 + 10 + 34 + 14 + 2 and '47' in digits(toast) and '29' in digits(toast), (s2['tombstones'], digits(toast)[:120]))
         cs_.close()
 

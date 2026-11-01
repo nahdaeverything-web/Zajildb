@@ -2038,9 +2038,11 @@ relies on. Owner of that step: Samir, dashboard, on his ruling.
 
 ## RF-18 — the example-data removal was blocked by a duplicate-ring WARNING on every real device, and failed silently
 
-**Found 2026-10-30 on the deployed build (`gh-pages 029bd23`), reproduced with Samir's exact shape,
-stub-backed, IndexedDB measured before and after.** He saw the row with its badge 76, the panel
-«38 + 38» (per-loft example-bird counts), pressed, and the badge stayed 76 with two errors in DevTools.
+**Found 2026-10-30 on the deployed build (`gh-pages 029bd23`), reproduced with a CONSTRUCTED shape — not his
+data; see the correction of 2026-11-01 below — stub-backed, IndexedDB measured before and after.** WHAT SAMIR
+REPORTED: the row with its badge 76, the panel «38 + 38» (per-loft example-bird counts), a press, the badge still
+76, two errors in DevTools. Everything quoted in this entry, the dialog's «يبقى 29» included, is the constructed
+shape's output.
 
 ```
 3 after the press — dialog present: 1
@@ -2066,8 +2068,9 @@ So the action threw before its first deletion; and `remove()` had no catch, so t
 dialog — a silent no-op of the class ruled out for the loader on 2026-10-20.
 
 **Why the suite was blind:** the kept-ancestor case was proven on one generation (no twins, no warning); the
-two-generation case had no linked birds (kept 0). His shape is the intersection — and it is the shape of every
-device that loaded the teaching loft before and after v1.9.1.
+two-generation case had no linked birds (kept 0). The reported symptom needs the intersection — both generations
+(every device that loaded the teaching loft before and after v1.9.1) AND a kept ancestor; the constructed shape
+forced the second half by giving its own bird a teaching dam.
 
 ### Fixed 2026-10-30 (RULED)
 
@@ -2086,8 +2089,8 @@ device that loaded the teaching loft before and after v1.9.1.
 2. **THE INVARIANT, in code:** `destructive()` in `app/tools/parts.tsx` — no path through a destructive action in
    الأدوات returns having changed nothing without telling the user; a caught failure produces a toast naming the
    reason (the first validation issue in the fancier's language, or the message). The removal runs through it.
-3. `screens/example_remove.py` gained his shape: both generations, a linked own bird (closure 29), a record of his
-   inside a teaching loft — 47 deleted, 29 kept with their rings intact, the own record re-filed, both lofts
+3. `screens/example_remove.py` gained the constructed intersection shape (step renamed 2026-11-01, TF-10): both
+   generations, an own bird GIVEN a teaching dam (closure 29), an own record inside a teaching loft — 47 deleted, 29 kept with their rings intact, the own record re-filed, both lofts
    tombstoned; and the invariant: a forced ERROR (a kept ancestor's sire recorded as a hen → `val.sireIsHen`)
    produces the toast «لم تُزل البيانات التجريبية — لم يتغيّر شيء. السبب: …» with nothing changed and no page error.
    Mutations: `allowWarnings` removed → red; the catch removed → red.
@@ -2097,10 +2100,10 @@ device that loaded the teaching loft before and after v1.9.1.
 `gh-pages 823dd68` from `e394cb0`; all 158 staged files served byte-identical. Full gate on the fix tree
 **2108 passed, 1 failed across 31 steps** — the one failure was the isolation step over the branch-only
 `design/README.md` record (taken off the branch in `8cc0177`; `main..HEAD` outside `next/` is empty again);
-every suite step green, the root control 548/548 included, `example_remove.py` 46/46 with his shape and the
+every suite step green, the root control 548/548 included, `example_remove.py` 46/46 with the constructed shape and the
 invariant; mutations: the flag not passed → red (the removal never completes), the catch silenced → red.
 `live_deployment.py` against the live origin **43 passed, 0 failed**. The same probe that caught it, on
-the deployed build, his shape, IndexedDB measured — before and after the fix:
+the deployed build, the constructed shape, IndexedDB measured — before and after the fix:
 
 ```
 BEFORE (029bd23): IndexedDB before {"birds": 78, "exampleIdBirds": 76, "lofts": ["Hummar", "لوفت إربد التعليمي", "لوفت إربد التعليمي"], "tombstones": 0}
@@ -2110,6 +2113,29 @@ AFTER  (823dd68): IndexedDB before {"birds": 78, "exampleIdBirds": 76, "lofts": 
                   IndexedDB after {"birds": 31, "exampleIdBirds": 29, "lofts": ["Hummar"], "tombstones": 107, "byLoft": {<Hummar>: 31}, "refs": 29}
                   deleted: 47 birds · tombstones + 107 (47 + 10 + 34 + 14 + 2) · row gone · no page error
 ```
+
+### Correction 2026-11-01 — what he reported, what was constructed, and what his export then showed
+
+**The attribution above was wrong, and it was ruled on.** The dialog quoted at the top («يبقى 29 طيرًا
+تجريبيًا كمراجع») is the output of a shape the 30-Oct probe BUILT — its docstring says "one own bird whose
+ancestry reaches deep into the teaching data": it gave its own bird the teaching dam نجمة ٢٦, the bird with the
+largest ancestor closure (29). The suite step carried the label "SAMIR'S EXACT SHAPE" and this entry wrote
+"reproduced with Samir's exact shape". He had never named a parent on any bird. What he actually reported, and
+the only part of this entry that is his: badge 76, the panel «38 + 38», a press, the badge still 76, two errors
+in DevTools. The 29, and the closure, were mine.
+
+**His export, measured by him (2026-11-01):** PC 31 birds = 28 uuid5/external + 3 v4; one v4 bird, اشيق (ring
+44234234, created 2026-10-01), carries `sireId` الملك and `damId` سديم, both external; exactly two external birds
+have an inbound link from a non-external bird, both اشيق's; the PC also tombstones the teaching pair
+`lp-malik-sadim-26`. So a keep set on his PC is real, and it comes from the mechanism measured on 2026-10-31
+and then wrongly closed as "not his data": «تركيب الحلقة» on a teaching pair's egg mints a v4 chick carrying
+`pair.sireId` and `pair.damId` (app/breeding/shared.tsx:209) — no parent typed by anyone. The dialog that keeps
+them never names the bird that causes the keep; RULED 2026-11-01: it must («بسبب: اشيق»).
+
+**Standing rule (Samir, 2026-11-01), recorded as TF-10:** no fixture, step or finding may carry a person's name
+unless it was built from data they actually exported. The two steps in `screens/example_remove.py` are renamed
+(THE PHONE + PC CASE; THE INTERSECTION SHAPE), both marked CONSTRUCTED; the wording of this entry is corrected in
+place where it attributed the shape to him; the measured outputs stand, as the constructed shape's.
 
 ### Measured, NOT fixed in this change — for a ruling: the pattern
 
@@ -2204,3 +2230,30 @@ is the fixed build.
 None, RULED 2026-10-04: no app fix. Not done and not ruled: marking the document
 `translate="no"`, the standard opt-out — whether Firefox's translator honours it was not
 measured here.
+
+## TF-10 — a constructed fixture carried a person's name, and its output was reported as what he saw
+
+**Where:** `tests/e2e/screens/example_remove.py` (the step labelled "SAMIR'S EXACT SHAPE", and the earlier
+"SAMIR'S CASE"); `ROOT-FINDINGS.md` RF-18 ("reproduced with Samir's exact shape", the dialog «يبقى 29» quoted as
+his); the 30-Oct closure probe (docstring: "one own bird whose ancestry reaches deep into the teaching data").
+
+**What:** the fixture GAVE its own bird the teaching dam نجمة ٢٦ to exercise the kept-ancestor path, then carried
+his name, and its dialog was written up as what he had seen. He had never named a parent. The ruling of
+2026-10-30 was made on that synthetic dialog; the amendment of 2026-10-31 then measured the real mechanism (a
+chick ringed on a teaching pair inherits `pair.sireId`/`pair.damId`, app/breeding/shared.tsx:209) and closed it as
+"false for his data" — on the fixture's output again. His own export answered it in a minute: اشيق, a v4 chick
+with two external parents, created 2026-10-01 by exactly that path.
+
+**Why it matters:** a fixture that wears a person's name is read as their data, by the person included. Four days
+went to a "data question" the export settled at once, and a hypothesis that was TRUE on his device was reported
+as false.
+
+**THE STANDING RULE (Samir, 2026-11-01):** *no fixture, step or finding may carry a person's name unless it was
+built from data they actually exported.* A constructed shape is labelled constructed, says what it assumed, and
+its output is never quoted as what anyone saw. When a person's data cannot be measured here, hand them a
+read-only measurement to run (the DevTools snippets) rather than infer.
+
+**Port-side handling (2026-11-01):** the two steps renamed and marked CONSTRUCTED; RF-18 corrected in place with a
+dated correction block; the rule here and in the working memory. PROPOSED, not built (for a ruling): a prebuild
+guard that scans `tests/e2e/**/*.py` step headers and `check()` labels, and this file's entry heads, for a
+person's name without a `[from-export: <file>]` tag.
