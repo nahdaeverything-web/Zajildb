@@ -173,4 +173,5 @@ export {
   syncOnce,
   syncStatus,
   takeSyncDuplicateNotice,
+  unsentChanges,
 } from './db/sync.js';

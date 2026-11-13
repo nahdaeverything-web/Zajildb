@@ -1131,6 +1131,7 @@ export function backoffDelay(attempt) {
 
 let phase = 'idle';          // 'idle' | 'syncing'
 let pendingCount = 0;        // unpushed, un-superseded ops
+let pendingKnown = false;    // has the op log been COUNTED since this page loaded? Until it has, nothing may claim «متزامن»
 let attempt = 0;             // consecutive failures, for the backoff curve
 let timer = null;
 let interruptedFor = null;   // the error we have already interrupted about
@@ -1142,8 +1143,29 @@ export async function refreshSyncStatus() {
     const ops = await getOpsSinceSeq(state.settings.lastAckedSeq || 0);
     pendingCount = ops.filter((op) => !op.superseded).length;
   }
+  pendingKnown = true;
+  // SINCE WHEN there has been unsent work: written when the count leaves zero, cleared when it returns to it. A
+  // setting, so it survives a reload — the fancier is told how long, not how many (an op count means nothing to them).
+  const since = state.settings.pendingSince || null;
+  if (pendingCount > 0 && !since) await setSetting('pendingSince', nowISO());
+  else if (pendingCount === 0 && since) await setSetting('pendingSince', null);
   emitChange({ type: 'sync-status' });
   return pendingCount;
+}
+
+/**
+ * How many changes on this device have not reached the server — whoever is, or is not, signed in.
+ *
+ * For the questions asked before something destructive (a replace, a restore, the example removal, the collision
+ * clear): refreshSyncStatus() answers 0 for a signed-out device, which is right for the status row and wrong here,
+ * where a signed-out device may be holding its owner's unsent edits. A device that never had an owner has nothing
+ * that was ever going anywhere, so it answers 0.
+ */
+export async function unsentChanges() {
+  const owner = await dataOwner();
+  if (!owner.id) return 0;
+  const ops = await getOpsSinceSeq(state.settings.lastAckedSeq || 0);
+  return ops.filter((op) => !op.superseded).length;
 }
 
 const online = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false);
@@ -1160,12 +1182,17 @@ export function syncStatus() {
   const error = s.lastSyncError || null;
   const base = {
     pending: pendingCount,
+    pendingSince: s.pendingSince || null,
     email: s.authEmail || null,
     lastSyncAt: s.lastSyncAt || null,
     error,
   };
   if (!syncConfig().configured || !isSignedIn()) return { ...base, state: 'hidden', pending: 0 };
   if (s.syncEnabled === false) return { ...base, state: 'off' };
+  // HONEST STATUS (RULED 2026-11-13, RF-19): «متزامن» MEANS SYNCED — nothing unsent, no error, online. The count
+  // lives in memory and starts at zero on every load, so until the op log has been counted the answer is 'unknown',
+  // never 'synced'. Measured before this: 52 unsent ops and «متزامن» after a reload.
+  if (!pendingKnown) return { ...base, state: 'unknown' };
   if (phase === 'syncing') return { ...base, state: 'syncing' };
 
   if (error) {
@@ -1186,7 +1213,8 @@ export function syncStatus() {
     const since = Date.parse(error.since || error.at || '');
     const persisted = Number.isFinite(since) && (Date.now() - since) >= SOFT_FAIL_WINDOW_MS;
     if (persisted) return { ...base, state: 'error' };
-    return { ...base, state: pendingCount ? 'pending' : 'synced' };
+    // inside the quiet window the failure is not shown — but a cycle that just failed is not "synced" either
+    return { ...base, state: pendingCount ? 'pending' : 'unknown' };
   }
 
   if (!online()) return { ...base, state: 'offline' };
@@ -1379,6 +1407,7 @@ export function startSyncLoop() {
   const offChange = onChange((ev) => {
     // a pulled record and the status events are not the fancier's work; everything else is
     if (!ev || String(ev.type || '').startsWith('sync')) return;
+    refreshSyncStatus();                                     // the status knows about a change the moment it is made
     if (debounce) clearTimeout(debounce);
     debounce = setTimeout(() => { debounce = null; runSyncCycle(); }, CHANGE_DEBOUNCE_MS);
   });

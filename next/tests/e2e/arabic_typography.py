@@ -46,6 +46,7 @@ from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'sync'))
 from _serve import serve
+sys.path.insert(0, HERE)
 
 passed = failed = 0
 
@@ -58,33 +59,8 @@ def check(n, ok, d=''):
 srv, HARNESS = serve()
 ROOT = HARNESS.replace('test-harness/', '')
 
-SCAN = """() => {
-  const ARABIC = /[\\u0600-\\u06FF\\u0750-\\u077F]/;
-  const cv = document.createElement('canvas').getContext('2d');
-  const covers = (family, text) => {
-    const w = ['monospace', 'serif', 'sans-serif'].map((g) => {
-      cv.font = `20px ${family}, ${g}`; return cv.measureText(text).width;
-    });
-    return Math.abs(w[0] - w[1]) < 0.01 && Math.abs(w[1] - w[2]) < 0.01;
-  };
-  const out = [];
-  for (const el of document.body.querySelectorAll('*')) {
-    if (!el.getClientRects().length) continue;              // not rendered
-    const own = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
-    if (!ARABIC.test(own)) continue;
-    const cs = getComputedStyle(el);
-    const face = cs.fontFamily.split(',')[0].trim().replace(/^["']|["']$/g, '');
-    const ls = cs.letterSpacing;
-    const spaced = ls && ls !== 'normal' && parseFloat(ls) !== 0;
-    const arabic = own.replace(/[^\\u0600-\\u06FF\\u0750-\\u077F]/g, '');
-    const uncovered = arabic.length > 1 && !covers(JSON.stringify(face), arabic);
-    if (!uncovered && !spaced) continue;
-    out.push({ why: (uncovered ? 'NO-ARABIC-COVERAGE ' : '') + (spaced ? 'LETTER-SPACED' : ''),
-               face, ls, testid: el.getAttribute('data-testid') || '',
-               text: own.slice(0, 40) });
-  }
-  return out;
-}"""
+from _typography import SCAN   # shared with screens/sync_auto.py (2026-11-13)
+
 
 ROUTES = ['birds', 'bird', 'breeding', 'races', 'races?tab=fci', 'health', 'stats', 'tools',
           'pedigree', 'cert', 'sign-in']

@@ -3,12 +3,16 @@
     "التزاوج": "RULED (4A acceptance): nav.breeding is renamed to the spec word in i18n.ext.js — resolves as a key now; entry kept for the record.",
     "3 تغييرات بانتظار المزامنة": "RULED (4A acceptance, item 14): plural forms — the existing vanilla template wins where the meaning is identical. Was: plural agreement: spec «3 تغييرات …» vs vanilla template sync.pending «{n} تغييرًا …». Awaiting ruling on plural forms.",
     "إعادة المحاولة": "RULED (4A acceptance, item 14): shared-states wins — the sync error row links to nav.tools. Was: sync error-row link: loft-home says «إعادة المحاولة», shared-states says «الأدوات» (nav.tools). Shared-states wins by its precedence rule; the port links to الأدوات. Recorded.",
-    "إضافة طائر": "RULED (4A acceptance, item 14): synonyms — vanilla act.newBird wins for the add button; act.addBird retired. Was: «إضافة طائر»"
+    "إضافة طائر": "RULED (4A acceptance, item 14): synonyms — vanilla act.newBird wins for the add button; act.addBird retired. Was: «إضافة طائر»",
+    "دون اتصال — يعمل محليًا": "RULED 2026-11-13 (honest status, RF-19): the port's wording replaces the spec's — «دون اتصال — تغييراتك محفوظة وستُرسل عند عودة الاتصال» (i18n.ext.js sync.offline): offline now says what happens to the fancier's changes.",
+    "تعذّرت المزامنة": "RULED 2026-11-13 (honest status, RF-19): the port's wording replaces the spec's — «تعذّر الإرسال — راجع الأدوات» (i18n.ext.js sync.error): the row says what failed and where to look."
   },
   "shared-states-v1.html": {
     "3 تغييرات بانتظار المزامنة": "RULED (4A acceptance, item 14): plural forms — the existing vanilla template wins where the meaning is identical. Was: plural agreement: spec «3 تغييرات …» vs vanilla template sync.pending «{n} تغييرًا …». Awaiting ruling on plural forms.",
     "تمت المزامنة. وُجدت 3 حلقات مكررة": "RULED (4A acceptance, item 14): plural forms — the existing vanilla template wins where the meaning is identical. Was: plural agreement + link split: spec «وُجدت 3 حلقات مكررة — راجعها(link)» vs vanilla sync.duplicates «وُجدت {n} حلقة مكررة — راجعها.». Awaiting ruling.",
-    "حفظ رغم ذلك": "RULED (4A acceptance, item 14): synonyms — vanilla act.saveAnyway wins for the warnings dialog; val.saveAnyway retired. Was: «حفظ رغم ذلك»"
+    "حفظ رغم ذلك": "RULED (4A acceptance, item 14): synonyms — vanilla act.saveAnyway wins for the warnings dialog; val.saveAnyway retired. Was: «حفظ رغم ذلك»",
+    "دون اتصال — يعمل محليًا": "RULED 2026-11-13 (honest status, RF-19): the port's wording replaces the spec's — «دون اتصال — تغييراتك محفوظة وستُرسل عند عودة الاتصال» (i18n.ext.js sync.offline): offline now says what happens to the fancier's changes.",
+    "تعذّرت المزامنة": "RULED 2026-11-13 (honest status, RF-19): the port's wording replaces the spec's — «تعذّر الإرسال — راجع الأدوات» (i18n.ext.js sync.error): the row says what failed and where to look."
   },
   "bird-profile-v1.html": {
     "التزاوج": "RULED (4A acceptance): nav.breeding is renamed to the spec word in i18n.ext.js — resolves as a key now; entry kept for the record.",
@@ -104,6 +108,7 @@
     "ينشئ زاجل نسخة داخلية تلقائيًا كل 12 ساعة ويحتفظ بآخر 7 نسخ.": "RULED (4A acceptance, item 14): synonym — the existing vanilla key wins: backup.auto «نسخ تلقائي داخلي كل {h} ساعة (آخر {n} نسخ)», rendered as the group foot under البيانات.",
     "استيراد بيانات": "RULED (4A acceptance, item 14): synonym — the existing vanilla key wins: backup.import «استيراد ملف JSON» — the row label and the sub-screen title.",
     "دمج": "RULED 2026-10-03 (hybrid shape): the import row NAVIGATES, so the mode is chosen on the sub-screen and the list row carries no value — a value the list cannot know would be a lie.",
-    "إعادة الفحص": "NOT RENDERED: the finder is computed from the live store on every render (findDuplicateRings over the mirror), so a re-check button would have nothing to do. A control with no action behind it is omitted and recorded in design/README.md."
+    "إعادة الفحص": "NOT RENDERED: the finder is computed from the live store on every render (findDuplicateRings over the mirror), so a re-check button would have nothing to do. A control with no action behind it is omitted and recorded in design/README.md.",
+    "دون اتصال — يعمل محليًا": "RULED 2026-11-13 (honest status, RF-19): the port's wording replaces the spec's — «دون اتصال — تغييراتك محفوظة وستُرسل عند عودة الاتصال» (i18n.ext.js sync.offline): offline now says what happens to the fancier's changes."
   }
 }

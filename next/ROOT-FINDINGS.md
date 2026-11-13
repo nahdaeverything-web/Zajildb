@@ -2415,6 +2415,10 @@ RELOAD: sync row absent · syncStatus() = synced, pending 0 · ops pending in th
 **Status:** RULED 2026-11-13 — fixed by the change set recorded as RF-19 (the re-enqueue law, automatic sync,
 honest status), after RF-15.
 
+**Items 2 and 4 FIXED 2026-11-13 — honest status (RF-19 § 3):** the count is taken at boot and on every change, the
+status is `unknown` until it has been, and replace, restore, the example removal and the clear say so when changes
+are unsent. "First sync done" is still `lastSyncAt` existing; the enqueue no longer depends on it (item 3).
+
 **Item 1 FIXED 2026-11-13 — automatic sync (the design is RF-19).** One coordinator, started at boot by
 `src/components/SyncCoordinator.tsx`, owns every trigger; `screens/sync_auto.py` § coordinator (19 checks) and the
 rewritten `tests/sync/loop_flag.py`. Measured BEFORE the build, coordinator on in every suite and the test-only
@@ -2473,3 +2477,118 @@ Media metadata syncs; blobs do not (SYNC-DESIGN §7). Measured 2026-11-13, deplo
 4032×3024 photo is 792 KB on the device that took it after the app's downscale, 400 bytes on the server (no
 blob), and a second device receives the row with no bytes and shows a placeholder. A lost or cleared device
 loses its photos unless an export was taken. Not a defect against the design; a decision to make before a pilot.
+
+## RF-19 — the sync change set: the design, as ruled and as built (2026-11-13)
+
+**Why:** the port synced only when a button was pressed, and said «متزامن» while it had not (RF-20). Silent data
+loss with a reassuring label. One change set, four commits, shipped together: RF-15 first, because automatic sync
+fires a pull seconds after every replace and restore.
+
+### 1. The re-enqueue law
+The first-login enqueue runs once (`firstEnqueueSeq`); a cycle that cannot reach the server logs nothing.
+
+### 2. Automatic sync — one coordinator
+`src/db/sync.js` owns every reason a cycle runs; `src/components/SyncCoordinator.tsx` starts it once, after the
+shared boot. Guard `sync-single-owner` pins every call site outside it.
+
+| trigger | behaviour |
+|---|---|
+| the app opening | a cycle at boot |
+| a change | a cycle 3 s after the LAST change — a burst is one push |
+| the `online` event | a cycle now, and the failure backoff starts again from one minute |
+| foreground | a cycle now; the heartbeat is re-armed |
+| background, and the page being put away | one cycle now (the push with `keepalive`, bodies under 60 KB), then NOTHING is armed |
+| the heartbeat | 60 s while something is unsent · while failing 1, 2, 4, 8, 15 minutes and it stays at 15 (jitter ±25 %, never past the cap) · 5 minutes idle, to receive the other device's work |
+| «مزامنة الآن» | a cycle now; resets the backoff |
+| sign-out, sync switched off | nothing armed |
+
+**Single flight.** Never two cycles at once. A request mid-cycle marks it dirty: exactly one follow-up runs, and
+everyone who asked is answered by it.
+
+**NOT COVERED, by the platform: nothing syncs while the app is closed.** A change made on another device arrives
+when this one is next opened or brought forward. A push larger than the keepalive limit made as the app is put
+away waits for the next open.
+
+### 3. Honest status
+«متزامن» means: nothing unsent, no error, online. The count is in memory and starts at zero on every load, so the
+status is `unknown` — and shows nothing — until the op log has been counted; a failure inside its two-minute
+quiet window is `unknown` or unsent, never synced. Unsent work is said in a fancier's words with since-when
+(`pendingSince`); **no count of operations appears anywhere in the app** — it read as a count of birds and misled
+for three weeks.
+
+| where | wording (RULED 2026-11-13) |
+|---|---|
+| the row above a list, unsent | «تغييراتك محفوظة على هذا الجهاز ولم تُرسل بعد · منذ {d}» |
+| the row, offline | «دون اتصال — تغييراتك محفوظة وستُرسل عند عودة الاتصال» |
+| the row, failure | «تعذّر الإرسال — راجع الأدوات» |
+| the row, session | «انتهت الجلسة — سجّل الدخول لإرسال تغييراتك» |
+| the tools row, unsent | «لم تُرسل بعد» |
+| the tools row, synced | «متزامن» with «آخر مزامنة ناجحة {d}» beneath it (one row, two lines: the value column is too narrow for both) |
+| the sync screen | the row's words; the number is gone |
+
+**PROPOSED, not yet ruled** (written because the behaviour was ruled and needed words): the unsent warning on the
+destructive questions («تنبيه: على هذا الجهاز تغييرات لم تُرسل بعد إلى أجهزتك الأخرى.» · for the clear «…لم تُرسل بعد، وستضيع
+بالمسح.»); the form's question («تغيّر هذا السجل على جهاز آخر» · «عُدّل هذا السجل على جهاز آخر بعد أن فتحته هنا. إن حفظت الآن
+حلّت بياناتك مكان ذلك التعديل.» · «أعد التحميل», beside the existing «حفظ رغم التحذير»); and RF-15's twelve replace and
+restore strings (`confirm.replace.*`, `restore.confirm.*` in `src/i18n.ext.js`).
+
+**The form.** The bird form edits a copy taken when it opened. If the record's `updatedAt` is no longer what it was
+— a pull landed underneath — saving asks first: save anyway, or reload what is there now. No merge UI. **Only the
+bird form.** The health sheet, the race-result sheet, the pair sheets and the loft rows in الأدوات save without this
+check; each is a short-lived sheet, but the class is the same and they are NOT covered — for a ruling.
+
+### 4. The three situations
+- **Offline for days:** ops accumulate once each; the row says unsent since when; retries settle at four an hour. On
+  reconnect: pull first, so the other device's newer edits win per record and the local losers are superseded,
+  never pushed (they stay in the log); then push.
+- **Back online mid-edit:** an open form holds a draft, not an op, so a cycle does not touch it; if the cycle
+  replaced the record underneath, the save asks (above).
+- **Two devices with unsent work:** each pushes its own; the server trigger decides per record by operation time,
+  then by device id; the loser re-pulls the winner and its pending op is superseded. Two records for one physical
+  bird go to the duplicate finder, as before.
+
+### Standing with it
+Route A (DF-3): the one Supabase project is production and there is NO separate development environment; accepted
+at zero users. Photos have no server copy (DF-4).
+
+### Proof
+`tests/e2e/screens/sync_auto.py`, 51 checks, real timers driven with the page clock, the typography scan run on
+every new string where it is drawn; `tests/sync/loop_flag.py` (contract rewritten); `screens/replace_sync.py` (23).
+Mutants: L1 (law), O1 C1 F1 B1 B2 G1 S1 (coordinator, in RF-20), and for this commit:
+
+```
+H1 the status does not wait for the count after a load
+   ✗ [invariant · H1 fails here] IT SURVIVES A RELOAD: from the first frame after boot the tools row never displays «متزامن» while a change is unsent  (['متزامن', 'لم تُرسل بعد', 'جارٍ…', 'لم تُرسل بعد'], {'state': 'pending', 'pendingInLog': 1})
+H2 the status is not recounted when a change is made
+   ✗ [invariant · H2 fails here] THE MOMENT A CHANGE IS MADE the status is «unsent», never «synced»  {'state': 'synced', 'pendingInLog': 1}
+H3 the destructive questions are told nothing is unsent
+   ✗ [confirm · H3 fails here] REPLACE warns … · RESTORE warns · THE EXAMPLE REMOVAL warns · THE CLEAR warns that the unsent changes will be LOST   (47 passed, 4 failed)
+W1 the form does not notice the record changed underneath it
+   ✗ [form · W1 fails here] THE RECORD CHANGED ON ANOTHER DEVICE WHILE THE FORM WAS OPEN: saving asks first   (47 passed, 4 failed)
+```
+
+**Assertions changed deliberately, never relaxed:** `sync_ui.py` (the two card checks made real, the pending wording,
+the failure wording, the backoff curve and cap, "no pending count"), `account_collision.py` (the two unsent edits are
+made inside the debounce), `screens/tools.py` (five checks that read the number now assert the state and the absence
+of the number). Three spec strings the port no longer renders are in `guards/strings.ruled.json` with this ruling.
+
+**Acceptance is on two real devices** (airplane mode, add a bird, unsent before and after a reload; airplane mode
+off, press nothing, the bird on the other device within two minutes; an edit back the other way). Until then this
+entry describes what was built, not what is accepted.
+
+## TF-11 — a reload invariant that could not fail: mutant H1 survived its own check
+
+**Where:** `tests/e2e/screens/sync_auto.py`, first version of «IT SURVIVES A RELOAD» (2026-11-13).
+
+**What:** the check reloaded the page AFTER a refused cycle had run. A refused cycle leaves `lastSyncError` on
+record, and `syncStatus()` answers from that branch before it ever reaches the "has the op log been counted" test —
+so the mutant that removes that test (H1) changed nothing the check could see: `49 passed, 0 failed`. The assertion
+read as proof of the invariant and exercised a different line.
+
+**Found by** running the mutant, which is the only reason it was found. **Fixed:** the reload now happens with a
+change that no cycle has yet attempted, so there is no failure on record and the first frame drawn after boot is
+the test; an observer installed before the app's scripts records every text the tools row ever holds. H1 now fails
+there, quoted in RF-19. Two mutants (C1, W1) also ended in a traceback after their failed checks on the first run;
+the steps after them were made non-raising and both were re-run to a clean summary.
+
+**The lesson is the standing one:** an invariant check is not written until its mutant has been seen to fail AT it.

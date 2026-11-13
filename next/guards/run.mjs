@@ -365,7 +365,9 @@ const guards = {
        + '2026-11-13, RF-19/RF-20): single flight with one follow-up instead of a busy refusal; triggers for a '
        + 'debounced change, the background and pagehide (keepalive push) beside online and foreground; the '
        + 'heartbeat is 60 s while unsent, 1-2-4-8-15 minutes capped while failing, 5 minutes idle, and nothing '
-       + 'while hidden or signed out. Vanilla keeps its 2-60 s curve and flat 60 s heartbeat.'],
+       + 'while hidden or signed out. Vanilla keeps its 2-60 s curve and flat 60 s heartbeat. HONEST STATUS '
+       + '(RULED 2026-11-13, RF-19): syncStatus() answers unknown until the op log is counted after a load and '
+       + 'never synced inside an error window; pendingSince; unsentChanges() for the destructive questions.'],
     ]);
     const FILES = [
       'src/db.js', 'src/db/storage.js', 'src/db/oplog.js', 'src/db/records.js',

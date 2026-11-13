@@ -762,10 +762,11 @@ try:
               and any(ch.isdigit() for ch in row_help(sp, 'sync')),
               f"{row_value(sp, 'sync')!r} / {row_help(sp, 'sync')!r}")
         go_sub(sp, 'sync', 'card-sync')
-        check('[hybrid] the sync screen carries the status line, the last sync and the pending count the layer reports',
+        # CHANGED DELIBERATELY 2026-11-13 (RF-19, honest status): the op count is gone from the app — the screen carries the state and the last sync, and NO number
+        check('[hybrid] the sync screen carries the status line and the last sync — and no count of operations',
               sp.locator('[data-testid=sync-status]').get_attribute('data-state') == 'synced'
-              and sp.locator('[data-testid=sync-pending]').inner_text().strip() == str(run(sp, "(db) => db.syncStatus().pending")),
-              f"state={sp.locator('[data-testid=sync-status]').get_attribute('data-state')} pending={sp.locator('[data-testid=sync-pending]').inner_text()}")
+              and sp.locator('[data-testid=sync-pending]').count() == 0,
+              f"state={sp.locator('[data-testid=sync-status]').get_attribute('data-state')} pending-els={sp.locator('[data-testid=sync-pending]').count()}")
         shots(sp, 'signed-in')
 
         before_seq = srv_state['seq']
@@ -775,12 +776,13 @@ try:
         # called here the way the loop would, and the PENDING state is what is asserted.
         run(sp, "async (db) => { await db.saveBird(db.newBird({ name: 'survives-sign-out', sex: 'cock' })); await db.refreshSyncStatus(); }")
         sp.wait_for_timeout(400)
-        check('…a local change shows up as pending once the layer counts it — the clock line, and the number',
+        # CHANGED DELIBERATELY 2026-11-13 (RF-19, honest status): the op count is gone from the app; the layer now counts on every change, and the line says it in words
+        check('…a local change shows up as unsent at once — the clock line, in words, no number',
               sp.locator('[data-testid=sync-status]').get_attribute('data-state') == 'pending'
-              and sp.locator('[data-testid=sync-pending]').inner_text().strip() == str(run(sp, "(db) => db.syncStatus().pending"))
               and run(sp, "(db) => db.syncStatus().pending") >= 1
-              and 'بانتظار المزامنة' in sp.locator('[data-testid=sync-status]').inner_text(),
-              f"state={sp.locator('[data-testid=sync-status]').get_attribute('data-state')} pending={sp.locator('[data-testid=sync-pending]').inner_text()}")
+              and 'لم تُرسل بعد' in sp.locator('[data-testid=sync-status]').inner_text()
+              and sp.locator('[data-testid=sync-pending]').count() == 0,
+              f"state={sp.locator('[data-testid=sync-status]').get_attribute('data-state')} text={sp.locator('[data-testid=sync-status]').inner_text()[:80]}")
         sp.click('[data-testid=sync-now]'); sp.wait_for_timeout(2500)
         check('«مزامنة الآن» actually runs a cycle', srv_state['seq'] > before_seq, f"{before_seq} -> {srv_state['seq']}")
         wait_toasts_clear(sp)
@@ -807,19 +809,18 @@ try:
         off_state = run(sp, "(db) => db.syncStatus().state")
         check('offline with a local change, the sync row says so — by the layer\'s own state, not a guess',
               (off_state == 'offline' and row_value(sp, 'sync') == 'دون اتصال' and row_help(sp, 'sync') == 'يعمل محليًا')
-              or (off_state == 'pending' and row_value(sp, 'sync').endswith('معلّقًا')),
+              or (off_state == 'pending' and row_value(sp, 'sync') == 'لم تُرسل بعد'),
               f"layer={off_state} row={row_value(sp, 'sync')!r} / {row_help(sp, 'sync')!r}")
         go_sub(sp, 'sync', 'card-sync')
         check('…and the sync screen\'s status line names the same state',
-              sp.locator('[data-testid=sync-status]').get_attribute('data-state') == off_state
-              and int(sp.locator('[data-testid=sync-pending]').inner_text().strip()) >= 1,
-              f"{sp.locator('[data-testid=sync-status]').get_attribute('data-state')} / pending {sp.locator('[data-testid=sync-pending]').inner_text()}")
+              sp.locator('[data-testid=sync-status]').get_attribute('data-state') == off_state,
+              f"{sp.locator('[data-testid=sync-status]').get_attribute('data-state')}")
         ctx2.set_offline(False)
         sp.click('[data-testid=sync-now]'); sp.wait_for_timeout(2500); wait_toasts_clear(sp)
         check('…and once the connection is back, «مزامنة الآن» drains it to synced',
               sp.locator('[data-testid=sync-status]').get_attribute('data-state') == 'synced'
-              and sp.locator('[data-testid=sync-pending]').inner_text().strip() == '0',
-              f"{sp.locator('[data-testid=sync-status]').get_attribute('data-state')} / {sp.locator('[data-testid=sync-pending]').inner_text()}")
+              and run(sp, "(db) => db.syncStatus().pending") == 0,
+              f"{sp.locator('[data-testid=sync-status]').get_attribute('data-state')} / {run(sp, '(db) => db.syncStatus().pending')}")
         sp.click('[data-testid=back-link]'); sp.wait_for_selector('[data-testid=tools-list]', timeout=8000); sp.wait_for_timeout(300)
 
         # ── [sync_ui #38 #39 #40] signing out keeps the data ──

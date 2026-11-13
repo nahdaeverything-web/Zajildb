@@ -166,8 +166,9 @@ with sync_playwright() as p:
     check('pending ops are counted', (st['pending'] or 0) >= 2, str(st['pending']))
     page.wait_for_timeout(400)
     if st['state'] == 'pending':
-        check('pending is shown with its count',
-              'بانتظار المزامنة' in (row_text(page) or ''), repr(row_text(page)))
+        # CHANGED DELIBERATELY 2026-11-13 (RF-19, honest status): the op count is gone from the app
+        check('pending is shown in words — «لم تُرسل بعد» — with no count',
+              'لم تُرسل بعد' in (row_text(page) or '') and 'بانتظار المزامنة' not in (row_text(page) or ''), repr(row_text(page)))
         check('...and is not styled as a warning', row_state(page) != 'error', row_state(page))
     else:
         check('pending is shown with its count', True, '(a cycle drained it first)')
@@ -217,8 +218,9 @@ with sync_playwright() as p:
           row_state(page) == 'error'
           and page.eval_on_selector('[data-testid=sync-row-link]', 'n => n.getAttribute("href")') in ('/tools', '/tools/'),
           f'{row_state(page)} / {page.query_selector("[data-testid=sync-row-link]") is not None}')
-    check('...using wording that avoids blame and jargon',
-          'تعذّرت المزامنة' in (row_text(page) or ''), repr(row_text(page)))
+    # CHANGED DELIBERATELY 2026-11-13 (RF-19): the ruled wording says what failed and where to look
+    check('...using wording that avoids blame and jargon — «تعذّر الإرسال — راجع الأدوات»',
+          'تعذّر الإرسال — راجع الأدوات' in (row_text(page) or ''), repr(row_text(page)))
 
     # ── 7. a dead session interrupts IMMEDIATELY — it needs a password ──
     clear_toasts(page)
@@ -294,7 +296,8 @@ with sync_playwright() as p:
     page.goto(ROOT + 'tools/sync/', wait_until='load'); page.wait_for_timeout(1800)
     body = page.inner_text('body')
     check('...the last sync time', 'آخر مزامنة' in body)
-    check('...the pending count', 'بانتظار المزامنة' in body)
+    # CHANGED DELIBERATELY 2026-11-13 (RF-19, honest status): the op count is gone from the app
+    check('...and NO pending count', 'بانتظار المزامنة' not in body)
     check('...a «مزامنة الآن» button', 'مزامنة الآن' in body)
     check('...and a sync-off toggle', 'إيقاف المزامنة' in body or 'تشغيل المزامنة' in body)
     check('...with the last error shown IN FULL, status code and all',

@@ -36,8 +36,8 @@ function BridgeDemo() {
 export default function HarnessView() {
   const [status, setStatus] = useState('booting');
   // The sync loop is NOT started here any more (`?sync=1` is gone, 2026-11-13): the coordinator in the root layout
-  // starts it at boot on every route, this one included — src/components/SyncCoordinator.tsx. The suites that drive
-  // signIn/pushOnce/syncOnce one leg at a time switch it off with the harness-only global (harness/HarnessGlobals.tsx).
+  // starts it at boot on every route, this one included — src/components/SyncCoordinator.tsx. A suite CAN switch it off
+  // with the harness-only global (harness/HarnessGlobals.tsx); as of this date none needs to, and only the two that test the switch do.
   useEffect(() => {
     window.__zajilReady = initDB().then(() => { setStatus('ready'); }, (e: unknown) => setStatus('failed: ' + String(e)));
   }, []);

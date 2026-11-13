@@ -6,7 +6,7 @@ import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds } from '@/src/db/react';
 import { t, statusLabel } from '@/src/i18n.ext.js';
 import { parseRing, RING_TYPES } from '@/src/engine/rings.js';
-import { Loading, toast, confirmDialog, downscaleImage, primaryRing, birdLabelText, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
+import { Loading, toast, confirmDialog, choiceDialog, downscaleImage, primaryRing, birdLabelText, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
 import s from './form.module.css';
 
 // Add / edit bird — design/approved/add-edit-bird-v2.html, behaviour from
@@ -200,6 +200,7 @@ export default function BirdForm() {
   // so there is no render-time value to compute it from. `seeded` states the once-ness
   // instead of depending on the very state this sets, which made the effect run twice.
   const seeded = useRef(false);
+  const loadedAt = useRef<string | null>(null);   // the record's updatedAt when this form took its copy (RF-19)
   useEffect(() => {
     if (!booted || seeded.current) return;
     const existing = editId ? getBird(editId) : null;
@@ -211,6 +212,7 @@ export default function BirdForm() {
       if (qd && getBird(qd)) d.damId = qd;
     }
     seeded.current = true;
+    loadedAt.current = existing ? ((existing as { updatedAt?: string }).updatedAt || null) : null;
     // The source is an external system and `seeded` makes this run exactly once per mount,
     // so this is a one-time synchronisation rather than the cascade the rule is about.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -285,6 +287,26 @@ export default function BirdForm() {
     } finally { setBusy(false); }
   }
   async function submit(andNew: boolean) {
+    // RF-19 (RULED 2026-11-13): THE RECORD CHANGED UNDERNEATH THIS FORM. The form edits a copy taken when it opened. With
+    // sync now automatic, a pull can replace the record while the form is open, and saving the copy would overwrite the
+    // other device's edit without a word — per-record last-write-wins doing exactly what it says, and the fancier never
+    // knowing there was anything to lose. So it asks: save anyway, or reload what is there now. No merge.
+    if (editId) {
+      const now = db.getBird(editId) as (Bird & { updatedAt?: string }) | null;
+      if (!now || (now.updatedAt || null) !== loadedAt.current) {
+        const choice = await choiceDialog({ title: t('form.changed.title'), body: t('form.changed.body'), cancelLabel: t('act.cancel'),
+          altLabel: t('form.changed.reload'), altKind: 'primary', confirmLabel: t('act.saveAnyway'), confirmKind: 'danger' });
+        if (choice === 'alt') {
+          if (!now) { router.replace('/birds'); return; }
+          const d = JSON.parse(JSON.stringify(now)) as Bird;
+          setDraft(d); setRings(d.rings && d.rings.length ? d.rings.map((r) => ({ ...r })) : [{}]); setErrs({});
+          loadedAt.current = now.updatedAt || null;
+          return;
+        }
+        if (choice !== 'confirm') return;
+        loadedAt.current = now ? (now.updatedAt || null) : null;   // answered: not asked again for the same change
+      }
+    }
     const bird = collect();
     const { errors, warnings } = db.checkBird(bird) as { errors: Problem[]; warnings: Problem[] };
     const fe: typeof errs = {};

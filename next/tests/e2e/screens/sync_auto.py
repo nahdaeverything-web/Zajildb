@@ -5,12 +5,16 @@
   § THE COORDINATOR — one owner for every trigger: the app opening, a change (debounced 3 s), online, foreground,
     background, the heartbeat, the button. Single flight. 60 s while unsent or failing, backing off to a 15-minute cap
     that the online event resets; 5 minutes idle; nothing while backgrounded or signed out.
+  § HONEST STATUS — «متزامن» only when nothing is unsent, no error, online; unknown until the op log is counted after a
+    load; unsent work in a fancier's words, no count; the destructive questions warn; every new string typography-scanned.
+  § THE FORM — a record that changed underneath an open form asks before saving: save anyway, or reload. No merge.
 
 One stub project whose behaviour the suite switches (accept · refuse 403 · unreachable), modelling the real table (owner
 rows, one server_seq, the §4 trigger). Harness build, the net armed. Every shape is CONSTRUCTED.
 
     python3 tests/e2e/screens/sync_auto.py
 """
+import datetime
 import json
 import os
 import re
@@ -24,6 +28,7 @@ sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve                      # noqa: E402
 sys.path.insert(0, os.path.join(HERE, '..'))
 from _net import Net                          # noqa: E402  THE NET: armed beneath the stub, asserted at the end
+from _typography import SCAN                  # noqa: E402
 NET = Net()
 PAGES = []
 
@@ -100,6 +105,33 @@ def settle(pg, seconds=10):
 def set_visibility(pg, value):
     pg.evaluate("(v) => { Object.defineProperty(document, 'visibilityState', { value: v, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); }", value)
 def birds(pg): return run(pg, "(db) => [...db.state.birds.values()].map(b => b.name).sort()")
+
+UNSENT = 'تغييراتك محفوظة على هذا الجهاز ولم تُرسل بعد'
+STATUS = """async (db) => { const S = Object.fromEntries((await db.idbGetAll('settings')).map(r => [r.key, r.value])); const ops = await db.idbGetAll('oplog');
+  return { state: db.syncStatus().state, pendingInLog: ops.filter(o => o.seq > (S.lastAckedSeq || 0) && !o.superseded).length }; }"""
+# installed before any app script: every text the tools sync row's value ever holds, in order
+SEEN = """window.__seen = []; new MutationObserver(() => { const el = document.querySelector('[data-row=sync] [data-testid=row-value]'); if (!el) return;
+  const v = el.textContent; if (window.__seen[window.__seen.length - 1] !== v) window.__seen.push(v); }).observe(document, { subtree: true, childList: true, characterData: true });"""
+def open_row(pg, row):
+    r = pg.locator(f'[data-row={row}]')
+    if r.get_attribute('open') is None: r.locator('summary').click(); pg.wait_for_timeout(300)
+def tools_row(pg, ROOT, goto=True):
+    if goto: pg.goto(ROOT + 'tools/', wait_until='load'); pg.wait_for_selector('[data-testid=tools-list]', timeout=15000); pg.wait_for_timeout(1200); settle(pg)
+    r = pg.locator('[data-row=sync]'); return r.locator('[data-testid=row-value]').inner_text().strip(), r.locator('[data-testid=row-help]').inner_text().strip()
+def row_text(pg, ROOT):
+    pg.goto(ROOT + 'birds/', wait_until='load'); pg.wait_for_selector('[data-testid=count-line]', timeout=15000); pg.wait_for_timeout(1200); settle(pg)
+    return pg.locator('[data-testid=sync-row]').inner_text().strip() if pg.locator('[data-testid=sync-row]').count() else ''
+FILE1 = {'format': 'zajil-export', 'version': 1, 'exportedAt': '2026-11-01T00:00:00.000Z', 'tombstones': [], 'pairs': [], 'raceResults': [], 'healthEvents': [], 'media': [], 'lofts': [],
+         'birds': [{'id': 'status-file-1', 'name': 'من-ملف', 'sex': 'cock', 'rings': [], 'status': 'stock', 'loftId': None, 'notes': [], 'updatedAt': '2026-11-01T00:00:00.000Z', 'createdAt': '2026-11-01T00:00:00.000Z'}]}
+def replace_question(pg, ROOT, confirm=False):
+    """the replace-import's question, read and (by default) cancelled; '' if none appeared"""
+    f = dict(FILE1, lofts=run(pg, "(db) => [...db.state.lofts.values()]"))                 # the device's own lofts stay, so the question is about birds only
+    pg.goto(ROOT + 'tools/import/', wait_until='load'); pg.wait_for_selector('[data-testid=import-mode]', timeout=15000); pg.click('[data-testid=import-mode] [data-value=replace]')
+    pg.set_input_files('[data-testid=file-input]', files=[{'name': 'f.json', 'mimeType': 'application/json', 'buffer': json.dumps(f).encode()}]); pg.click('[data-testid=import-file]')
+    try: pg.wait_for_selector('[data-testid=dialog]', timeout=8000)
+    except PWTimeout: return ''
+    text = pg.locator('[data-testid=dialog]').inner_text().replace('\n', ' '); pg.click('[data-testid=dialog-confirm]' if confirm else '[data-testid=dialog-cancel]'); pg.wait_for_timeout(2500 if confirm else 400)
+    return text
 
 srvp, H = serve(); ROOT = H.replace('test-harness/', '')
 try:
@@ -198,6 +230,110 @@ try:
         set_visibility(A, 'visible'); back = wait_until(A, lambda: run(A, "(db) => [...db.state.birds.values()].some(v => v.colour === 'عُدّل على ب')"), 8)
         check('[two devices] an edit on B is on A when A is brought forward', back, run(A, "(db) => [...db.state.birds.values()].map(v => [v.name, v.colour])"))
         ca.close(); cb.close()
+
+        # ═══ § HONEST STATUS — «متزامن» means synced; unsent work is said in words, never as a count; it survives a reload ═══
+        srv = Server(); ctx5 = NET.arm(check=check, ctx=b.new_context(viewport={'width': 430, 'height': 900}))
+        ctx5.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};" + SEEN); ctx5.route(f'{STUB}/**', make_handler(srv))
+        hs = ctx5.new_page(); hs.errs = []; hs.on('pageerror', lambda e: hs.errs.append(str(e))); PAGES.append(hs)
+        hs.goto(H, wait_until='load'); hs.wait_for_function('window.__zajilReady'); run(hs, "async (db) => { await db.signIn('a@zajil.test', 'pw'); await db.Lofts.save({ ...db.currentLoft(), name: 'لوفت الحالة' }); await db.syncNow(); }"); settle(hs)
+        v, h = tools_row(hs, ROOT)
+        check('[status] synced: the tools row says «متزامن» with the last successful sync, and the list row is silent', v == 'متزامن' and 'آخر مزامنة ناجحة' in h and row_text(hs, ROOT) == '', (v, h))
+        text = replace_question(hs, ROOT)
+        check('[confirm] with nothing unsent, a destructive question carries no unsent warning', text != '' and 'لم تُرسل بعد' not in text, text[:200])
+
+        # RELOAD WITH A CHANGE THAT NO CYCLE HAS YET ATTEMPTED — so there is no failure on record for the status to answer
+        # from, and the FIRST thing drawn after boot is the test. (TF-11: with a refused cycle already recorded this check
+        # could not fail — mutant H1 survived it.) Everything the tools row ever displays is recorded by an observer installed
+        # before the app's own scripts.
+        srv.mode = 'refuse'; run(hs, "async (db) => { await db.saveBird(db.newBird({ name: 'قبل-إعادة-التحميل', sex: 'hen' })); }")
+        hs.goto(ROOT + 'tools/', wait_until='load'); hs.wait_for_selector('[data-testid=tools-list]'); hs.wait_for_timeout(2500); settle(hs)
+        seen0 = hs.evaluate("() => window.__seen"); sr = run(hs, STATUS)
+        check('[invariant · H1 fails here] IT SURVIVES A RELOAD: from the first frame after boot the tools row never displays «متزامن» while a change is unsent', 'متزامن' not in seen0 and sr['pendingInLog'] >= 1 and len(seen0) >= 1, (seen0, sr))
+
+        hs.goto(ROOT + 'birds/', wait_until='load'); hs.wait_for_selector('[data-testid=count-line]'); settle(hs)
+        run(hs, "async (db) => { await db.saveBird(db.newBird({ name: 'غير-مرسل', sex: 'cock' })); }")
+        s0 = run(hs, STATUS)
+        check('[invariant] with unsent changes on the device the status is «unsent»', s0['pendingInLog'] >= 2 and s0['state'] == 'pending', s0)
+        hs.wait_for_timeout(600); row = hs.locator('[data-testid=sync-row]').inner_text().strip() if hs.locator('[data-testid=sync-row]').count() else ''
+        check('[status] the row says it in a fancier\'s words, with since-when', UNSENT in row and 'منذ' in row, row)
+        check('[status] …and carries NO count of operations', not re.search(r'[0-9٠-٩]+\s*(تغيير|معلّق)', row) and 'بانتظار المزامنة' not in row, row)
+        hs.wait_for_timeout(4500); settle(hs); s1 = run(hs, STATUS)                           # the debounced cycle ran and was refused
+        check('[invariant] after a refused cycle: still unsent, never synced', s1['pendingInLog'] >= 1 and s1['state'] == 'pending', s1)
+
+        # RELOAD — everything the tools row ever displays is recorded by an observer installed before the app's own scripts
+        hs.goto(ROOT + 'tools/', wait_until='load'); hs.wait_for_selector('[data-testid=tools-list]'); hs.wait_for_timeout(2500); settle(hs)
+        seen = hs.evaluate("() => window.__seen"); v, h = tools_row(hs, ROOT, goto=False); s2 = run(hs, STATUS)
+        check('[invariant] …and again after a refused cycle and another reload', 'متزامن' not in seen and s2['pendingInLog'] >= 1, (seen, s2))
+        check('[status] …and settles on «لم تُرسل بعد»', v == 'لم تُرسل بعد', (v, seen))
+        check('[status] the list row says unsent after the reload too', UNSENT in row_text(hs, ROOT), row_text(hs, ROOT))
+        hs.goto(ROOT + 'tools/sync/', wait_until='load'); hs.wait_for_selector('[data-testid=sync-detail]'); hs.wait_for_timeout(800); body = hs.locator('[data-testid=card-sync]').inner_text().replace('\n', ' ')
+        check('[status] the sync screen says the same words and shows no number: the op count is gone from the app', UNSENT in body and hs.locator('[data-testid=sync-pending]').count() == 0 and not re.search(r'بانتظار المزامنة\s*:?\s*[0-9٠-٩]', body), body[:200])
+        typo = hs.evaluate(SCAN)
+
+        # THE DESTRUCTIVE QUESTIONS say so when this device holds unsent changes: replace · restore · the example removal · the clear
+        text = replace_question(hs, ROOT, confirm=True)                                       # confirmed: it also leaves the snapshot the restore needs
+        check('[confirm · H3 fails here] REPLACE warns that changes on this device are unsent', 'لم تُرسل بعد إلى أجهزتك الأخرى' in text, text[:300])
+        hs.goto(ROOT + 'tools/restore/', wait_until='load'); hs.wait_for_selector('[data-testid=snap-list]'); hs.click('[data-testid=snap-row] [data-testid=snap-restore]'); hs.wait_for_selector('[data-testid=dialog]')
+        text = hs.locator('[data-testid=dialog]').inner_text().replace('\n', ' '); typo += hs.evaluate(SCAN); hs.click('[data-testid=dialog-cancel]')
+        check('[confirm · H3 fails here] RESTORE warns', 'لم تُرسل بعد إلى أجهزتك الأخرى' in text, text[:300])
+        hs.goto(ROOT + 'tools/', wait_until='load'); hs.wait_for_selector('[data-testid=tools-list]'); hs.wait_for_timeout(600); open_row(hs, 'teaching'); hs.click('[data-testid=load-large]'); hs.wait_for_timeout(4000)
+        hs.goto(ROOT + 'tools/', wait_until='load'); hs.wait_for_selector('[data-row=example-remove]'); open_row(hs, 'example-remove'); hs.click('[data-testid=example-remove]'); hs.wait_for_selector('[data-testid=dialog]')
+        text = hs.locator('[data-testid=dialog]').inner_text().replace('\n', ' '); hs.click('[data-testid=dialog-cancel]')
+        check('[confirm · H3 fails here] THE EXAMPLE REMOVAL warns', 'لم تُرسل بعد إلى أجهزتك الأخرى' in text, text[-200:])
+
+        # OFFLINE is its own calm words, and still never «synced»
+        srv.mode = 'down'; run(hs, SYNC); settle(hs); s3 = run(hs, STATUS); row = row_text(hs, ROOT)
+        check('[status] unreachable: «دون اتصال — تغييراتك محفوظة وستُرسل عند عودة الاتصال», and not synced', s3['state'] == 'offline' and row.endswith('دون اتصال — تغييراتك محفوظة وستُرسل عند عودة الاتصال'), (s3, row))
+        typo += hs.evaluate(SCAN)
+
+        # THE CLEAR: signed out, another account signs in — the second question says the unsent changes will be lost
+        srv.mode = 'ok'
+        hs.goto(ROOT + 'tools/', wait_until='load'); hs.wait_for_selector('[data-testid=tools-list]'); hs.wait_for_timeout(600)
+        run(hs, "async (db) => { await db.saveBird(db.newBird({ name: 'قبل-الخروج', sex: 'hen' })); }"); open_row(hs, 'account'); hs.click('[data-testid=sign-out]'); hs.wait_for_selector('[data-testid=dialog]'); hs.click('[data-testid=dialog-confirm]')
+        hs.wait_for_selector('[data-testid=signin-form]', timeout=10000); hs.fill('[data-testid=f-email]', 'b@zajil.test'); hs.fill('[data-testid=f-password]', 'pw'); hs.click('[data-testid=signin-submit]')
+        hs.wait_for_selector('[data-testid=dialog]', timeout=10000); hs.click('[data-testid=dialog-confirm]'); hs.wait_for_timeout(500); hs.wait_for_selector('[data-testid=dialog]')
+        text = hs.locator('[data-testid=dialog]').inner_text().replace('\n', ' '); typo += hs.evaluate(SCAN); hs.click('[data-testid=dialog-cancel]'); hs.wait_for_timeout(400)
+        if hs.locator('[data-testid=dialog]').count(): hs.click('[data-testid=dialog-cancel]')
+        check('[confirm · H3 fails here] THE CLEAR warns that the unsent changes will be LOST', 'لم تُرسل بعد، وستضيع بالمسح' in text, text[:300])
+        check('[typography] every new string, where it is drawn — the row, the tools row, the sync screen, the questions — is in a face that has Arabic, and unspaced', not typo, [(x['why'], x['text']) for x in typo][:3])
+        ctx5.close()
+
+        # back to synced, on a fresh device: the words go away
+        srv = Server(); c6, ok = device(b, H, srv); run(ok, "async (db) => { await db.saveBird(db.newBird({ name: 'يُرسل', sex: 'cock' })); await db.syncNow(); }"); settle(ok); s4 = run(ok, STATUS); v, h = tools_row(ok, ROOT)
+        check('[status] once everything is sent: nothing pending in the log, state synced, «متزامن», the list row silent', s4 == {'state': 'synced', 'pendingInLog': 0} and v == 'متزامن' and row_text(ok, ROOT) == '', (s4, v))
+
+        # on a device that IS synced: the moment a change is made, before the debounce and before any cycle, the status says unsent
+        run(ok, "async (db) => { await db.saveBird(db.newBird({ name: 'لحظة', sex: 'hen' })); }"); s5 = run(ok, STATUS)
+        check('[invariant · H2 fails here] THE MOMENT A CHANGE IS MADE the status is «unsent», never «synced»', s5 == {'state': 'pending', 'pendingInLog': 1}, s5)
+        ok.wait_for_timeout(4500); settle(ok)
+
+        # ═══ § THE FORM — a record that changed underneath an open form ═══
+        bid = run(ok, "async (db) => { const x = await db.saveBird(db.newBird({ name: 'نموذج', sex: 'cock' })); await db.syncNow(); return x.id; }"); settle(ok)
+        def remote_edit(name):
+            """another device's edit, landed on the server now; then this device pulls it while its form is open"""
+            rec = run(ok, "(db, id) => db.getBird(id)", bid); at = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.') + '%03dZ' % 0
+            srv.upsert('user-A', {'store': 'birds', 'record_id': bid, 'data': dict(rec, name=name, updatedAt=at, deviceId='00000000-0000-4000-8000-00000000000b'), 'deleted': False, 'updated_at': at, 'device_id': '00000000-0000-4000-8000-00000000000b', 'op_seq': 1})
+            run(ok, SYNC); settle(ok)
+        def open_form():
+            ok.goto(ROOT + 'bird/edit/?id=' + bid, wait_until='load'); ok.wait_for_selector('[data-testid=f-name]'); ok.wait_for_timeout(500)
+        open_form(); ok.fill('[data-testid=f-name]', 'بلا-تعارض'); ok.click('[data-testid=save-btn]'); ok.wait_for_timeout(1500)
+        check('[form] nothing changed underneath: the save goes through with no question', ok.locator('[data-testid=dialog]').count() == 0 and run(ok, "(db, id) => db.getBird(id).name", bid) == 'بلا-تعارض', run(ok, "(db, id) => db.getBird(id).name", bid))
+        run(ok, SYNC); settle(ok); open_form(); ok.wait_for_timeout(1100); remote_edit('عُدّل-على-جهاز-آخر')
+        ok.fill('[data-testid=f-name]', 'محلي'); ok.click('[data-testid=save-btn]'); ok.wait_for_timeout(800)
+        asked = ok.locator('[data-testid=dialog]').count() == 1; text = ok.locator('[data-testid=dialog]').inner_text().replace('\n', ' ') if asked else ''; typo2 = ok.evaluate(SCAN) if asked else []
+        check('[form · W1 fails here] THE RECORD CHANGED ON ANOTHER DEVICE WHILE THE FORM WAS OPEN: saving asks first', asked and 'تغيّر هذا السجل على جهاز آخر' in text and 'حفظ رغم التحذير' in text and 'أعد التحميل' in text, text[:260])
+        check('[form] …and until answered nothing is overwritten', run(ok, "(db, id) => db.getBird(id).name", bid) == 'عُدّل-على-جهاز-آخر', run(ok, "(db, id) => db.getBird(id).name", bid))
+        if asked: ok.click('[data-testid=dialog-alt]'); ok.wait_for_timeout(600)
+        fname = lambda: ok.input_value('[data-testid=f-name]') if ok.locator('[data-testid=f-name]').count() else '(the form is gone)'   # non-raising: a form that saved and left fails the checks, not the suite
+        check('[form] «أعد التحميل» puts the other device\'s version in the form, and still nothing was overwritten', fname() == 'عُدّل-على-جهاز-آخر' and ok.locator('[data-testid=dialog]').count() == 0, fname())
+        if not ok.locator('[data-testid=f-name]').count(): open_form()
+        ok.wait_for_timeout(1100); remote_edit('تعديل-ثانٍ'); ok.fill('[data-testid=f-name]', 'محلي-يُحفظ'); ok.click('[data-testid=save-btn]'); ok.wait_for_timeout(800)
+        asked2 = ok.locator('[data-testid=dialog]').count() == 1
+        if ok.locator('[data-testid=dialog]').count(): ok.click('[data-testid=dialog-confirm]')
+        ok.wait_for_timeout(1500)
+        check('[form] «حفظ رغم التحذير» saves the form\'s version — asked, answered, done', asked2 and run(ok, "(db, id) => db.getBird(id).name", bid) == 'محلي-يُحفظ', run(ok, "(db, id) => db.getBird(id).name", bid))
+        check('[typography] the form\'s question is drawn in a face that has Arabic', not typo2, [(x['why'], x['text']) for x in typo2][:3])
+        c6.close()
 
         check(f'zero page errors across {len(PAGES)} devices', not any(p.errs for p in PAGES), [e[:160] for p in PAGES for e in p.errs][:3])
         NET.assert_empty(check)

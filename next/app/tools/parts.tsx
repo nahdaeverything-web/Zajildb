@@ -23,7 +23,7 @@ import s from './tools.module.css';
 export type Loft = { id: string; name?: string; location?: string; breederName?: string; phone?: string; website?: string; logoMediaId?: string | null };
 export type Bird = { id: string; name?: string; rings?: Array<{ raw?: string }>; sireId?: string | null; damId?: string | null };
 export type Backup = { id: string; payload?: { birds?: unknown[] } };
-export type SyncStatus = { pending: number; state: string; error?: { key: string; status?: number | null; at?: string } | null };
+export type SyncStatus = { pending: number; pendingSince?: string | null; state: string; error?: { key: string; status?: number | null; at?: string } | null };
 export type Anomaly = { store?: string; recordId?: string; reason?: string; at?: string };
 export const Lofts = db.Lofts as { save: (l: Loft) => Promise<Loft> };
 
@@ -129,10 +129,12 @@ export function syncRowCopy(settings: Record<string, unknown>, cfg: { configured
   if (settings.syncEnabled === false || status.state === 'off') return { value: t('tools.sync.stopped'), help: t('sync.off') };
   if (status.state === 'error' && status.error) return { value: t('tools.sync.errorShort'), help: t(status.error.key), kind: 'gold' };
   if (anomalies.length) return { value: t('tools.sync.rejectedShort', { n: fmtNum(anomalies.length) }), help: t('tools.sync.helpRejected'), kind: 'gold' };
-  if (status.state === 'pending') return { value: t('tools.sync.pendingShort', { n: fmtNum(status.pending) }), help: t('tools.sync.helpPending'), kind: 'gold' };
+  if (status.state === 'pending') return { value: t('tools.sync.pendingShort'), help: t('tools.sync.helpPending'), kind: 'gold' };
   if (status.state === 'syncing') return { value: t('tools.sync.syncingShort'), help: t('tools.sync.helpSyncing'), kind: 'brand' };
   if (status.state === 'offline') return { value: t('tools.sync.offlineShort'), help: t('tools.sync.helpOffline') };
-  return { value: t('sync.synced'), help: `${t('sync.lastSync')} ${settings.lastSyncAt ? fmtDate(settings.lastSyncAt as string, { withTime: true }) : t('sync.never')}`, kind: 'brand' };
+  // HONEST STATUS (RF-19): 'unknown' — the op log not yet counted after a load, or a failure still inside its quiet window — claims nothing
+  if (status.state === 'unknown') return { value: '', help: `${t('sync.lastSync')} ${settings.lastSyncAt ? fmtDate(settings.lastSyncAt as string, { withTime: true }) : t('sync.never')}` };
+  return { value: t('sync.synced'), help: settings.lastSyncAt ? t('tools.sync.syncedSince', { d: fmtDate(settings.lastSyncAt as string, { withTime: true }) }) : `${t('sync.lastSync')} ${t('sync.never')}`, kind: 'brand' };
 }
 
 type Line = { icon: IconName; title: string; text?: string; code?: string; gold?: boolean; testid?: string };
@@ -150,7 +152,8 @@ export function SyncDetail({ settings }: { settings: Record<string, unknown> }) 
         // the spec's hint is written for the session case; it is wrong advice for a network or server failure
         text: status.error.key === 'sync.err.session' ? t('tools.sync.errorHint') : undefined,
         code: [status.error.status ? `HTTP ${status.error.status}` : '', status.error.at ? fmtDate(status.error.at, { withTime: true }) : ''].filter(Boolean).join(' · ') || undefined }
-    : status.state === 'pending' ? { icon: 'clock', title: `${t('sync.pendingN')}: ${fmtNum(status.pending)}`, text: t('tools.sync.st.pendingText') }
+    : status.state === 'pending' ? { icon: 'clock', title: status.pendingSince ? t('sync.pendingSince', { d: fmtDate(status.pendingSince, { withTime: true }) }) : t('sync.pending'), text: t('tools.sync.st.pendingText') }
+    : status.state === 'unknown' ? { icon: 'clock', title: `${t('sync.lastSync')}: ${settings.lastSyncAt ? fmtDate(settings.lastSyncAt as string, { withTime: true }) : t('sync.never')}` }
     : status.state === 'syncing' ? { icon: 'sync', title: t('sync.syncing'), text: t('tools.sync.st.syncingText') }
     : status.state === 'offline' ? { icon: 'offline', title: t('sync.offline'), text: t('tools.sync.st.offlineText') }
     : status.state === 'off' || !enabled ? { icon: 'off', title: t('sync.off') }
@@ -161,7 +164,6 @@ export function SyncDetail({ settings }: { settings: Record<string, unknown> }) 
       {anomalies.length > 0 && <StatusLine icon="list" gold title={t('sync.anomalies', { n: fmtNum(anomalies.length) })} text={t('tools.sync.rejectedText')} />}
       <div className={s.kv}>
         <div className={s.kvRow}><span className={s.kvK}>{t('sync.lastSync')}</span><span className={s.kvV}>{settings.lastSyncAt ? fmtDate(settings.lastSyncAt as string, { withTime: true }) : t('sync.never')}</span></div>
-        <div className={s.kvRow}><span className={s.kvK}>{t('sync.pendingN')}</span><span className={`${s.kvV} ${s.big} ${s.num} ${status.pending ? '' : s.zero}`} data-testid="sync-pending">{fmtNum(status.pending)}</span></div>
       </div>
       {anomalies.length > 0 && (
         <ul className={s.list} data-testid="sync-anomalies">
@@ -266,7 +268,7 @@ export function ImportDetail() {
       if (mode === 'replace' && payload && payload.format === 'zajil-export') {
         const p = db.replacePreview(payload) as ReplacePreview;
         const body = [p.removed ? t('confirm.replace.removes', { birds: fmtNum(p.removedBirds), others: fmtNum(p.removedOthers) }) : t('confirm.replace.removesNone'),
-          travels() ? t('confirm.replace.devices') : '', t('confirm.replace.continue')].filter(Boolean).join(' ');
+          travels() ? t('confirm.replace.devices') : '', await unsentNote(), t('confirm.replace.continue')].filter(Boolean).join(' ');
         const ok = await confirmDialog({ title: t('confirm.replace.title'), body, cancelLabel: t('act.cancel'), confirmLabel: t('act.replace'), confirmKind: 'danger' });
         if (!ok) return;
       }
@@ -303,6 +305,8 @@ type ReplacePreview = { removed: number; removedBirds: number; removedOthers: nu
 /** Does a change on this device reach the person's other devices? Only with a configured build and a session. */
 const travels = () => (db.syncConfig() as { configured: boolean }).configured && (db.authState() as { signedIn: boolean }).signedIn;
 const RETURNING_SHOWN = 5;
+/** RF-19: every destructive question says so when this device holds changes that have not been sent. */
+const unsentNote = async () => ((await db.unsentChanges()) as number) > 0 ? t('confirm.unsent') : '';
 
 /** Restore an automatic snapshot — the spec's list, one «استرجاع» per snapshot; asks first; photos survive. */
 export function RestoreDetail({ snapshots }: { snapshots: Backup[] }) {
@@ -312,7 +316,7 @@ export function RestoreDetail({ snapshots }: { snapshots: Backup[] }) {
     // a pre-import snapshot's id is `pre-import-<ISO>`; the question shows the moment, not the key
     const body = [t('restore.confirm.lead', { d: fmtDate(b.id.replace(/^pre-import-/, ''), { withTime: true }) }),
       p.removed ? t('restore.confirm.removes', { n: fmtNum(p.removed) }) : '',
-      travels() ? t('restore.confirm.devices') : '',
+      travels() ? t('restore.confirm.devices') : '', await unsentNote(),
       p.returning.length ? t('restore.confirm.returns', { n: fmtNum(p.returning.length) }) : t('restore.confirm.returnsNone')].filter(Boolean).join(' ');
     const items = p.returning.slice(0, RETURNING_SHOWN).map((x) => ({ field: x.name || x.ring || '—', text: x.name ? x.ring : '' }));
     if (p.returning.length > RETURNING_SHOWN) items.push({ field: t('restore.confirm.more', { n: fmtNum(p.returning.length - RETURNING_SHOWN) }), text: '' });
@@ -404,7 +408,8 @@ export function ExampleRemoveRow() {
     if (busy || !p) return;
     const body = t('example.remove.body', { birds: fmtNum(p.birds), pairs: fmtNum(p.pairs), races: fmtNum(p.races), health: fmtNum(p.health), lofts })
       + (p.kept ? ' ' + t('example.remove.kept', { k: fmtNum(p.kept) }) : '')
-      + (p.own ? ' ' + t('example.remove.own', { m: fmtNum(p.own) }) : '');
+      + (p.own ? ' ' + t('example.remove.own', { m: fmtNum(p.own) }) : '')
+      + ((await db.unsentChanges()) as number > 0 ? ' ' + t('confirm.unsent') : '');
     const ok = await confirmDialog({ title: t('example.remove.title'), body, cancelLabel: t('act.cancel'), confirmLabel: t('example.remove.go'), confirmKind: 'danger' });
     if (!ok) return;
     setBusy(true);

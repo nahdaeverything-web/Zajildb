@@ -33,6 +33,19 @@ export const EXT = {
   'confirm.replace.removesNone': { ar: 'لن يُحذف شيء: كل ما في السجلّ موجود في الملف.', en: 'Nothing will be deleted: everything in the records is in the file.' },
   'confirm.replace.devices':  { ar: 'يسري هذا على كل أجهزتك: ما يُحذف هنا يُحذف منها عند المزامنة.', en: 'This applies to all your devices: what is deleted here is deleted from them at the next sync.' },
   'confirm.replace.continue': { ar: 'متابعة؟', en: 'Continue?' },
+  // ── HONEST STATUS (RULED 2026-11-13, RF-19). These five REPLACE vanilla's wording for the port; the dictionary in i18n.js is
+  //    byte-identical to vanilla's and is not edited. Unsent work is said in a fancier's words, never as a count of operations. ──
+  'sync.pending':             { ar: 'تغييراتك محفوظة على هذا الجهاز ولم تُرسل بعد', en: 'Your changes are saved on this device and not sent yet' },
+  'sync.pendingSince':        { ar: 'تغييراتك محفوظة على هذا الجهاز ولم تُرسل بعد · منذ {d}', en: 'Your changes are saved on this device and not sent yet · since {d}' },
+  'sync.offline':             { ar: 'دون اتصال — تغييراتك محفوظة وستُرسل عند عودة الاتصال', en: 'Offline — your changes are saved and will be sent when the connection returns' },
+  'sync.error':               { ar: 'تعذّر الإرسال — راجع الأدوات', en: 'Could not send — see Tools' },
+  'sync.err.session':         { ar: 'انتهت الجلسة — سجّل الدخول لإرسال تغييراتك', en: 'Session expired — sign in to send your changes' },
+  'tools.sync.syncedSince':   { ar: 'آخر مزامنة ناجحة {d}', en: 'Last successful sync {d}' },
+  'confirm.unsent':           { ar: 'تنبيه: على هذا الجهاز تغييرات لم تُرسل بعد إلى أجهزتك الأخرى.', en: 'Note: this device holds changes that have not been sent to your other devices yet.' },
+  'confirm.unsent.clear':     { ar: 'تنبيه: على هذا الجهاز تغييرات لم تُرسل بعد، وستضيع بالمسح.', en: 'Note: this device holds changes that have not been sent yet, and clearing will lose them.' },
+  'form.changed.title':       { ar: 'تغيّر هذا السجل على جهاز آخر', en: 'This record changed on another device' },
+  'form.changed.body':        { ar: 'عُدّل هذا السجل على جهاز آخر بعد أن فتحته هنا. إن حفظت الآن حلّت بياناتك مكان ذلك التعديل.', en: 'This record was edited on another device after you opened it here. If you save now, your version replaces that edit.' },
+  'form.changed.reload':      { ar: 'أعد التحميل', en: 'Reload' },
   'restore.confirm.lead':     { ar: 'سيُستبدل السجلّ بمحتوى النسخة المحفوظة بتاريخ {d}. الصور والوثائق تبقى كما هي.', en: 'Records will be replaced with the snapshot from {d}. Photos and documents are kept as they are.' },
   'restore.confirm.removes':  { ar: 'يُحذف {n} سجلًا أُضيف بعد النسخة.', en: '{n} records added since the snapshot will be deleted.' },
   'restore.confirm.returns':  { ar: 'يعود {n} طيرًا غير موجود الآن:', en: '{n} birds that are not here now come back:' },
@@ -386,7 +399,7 @@ export const EXT = {
   'tools.sync.notSetUpShort': { ar: 'غير مهيأة', en: 'Not configured' },
   'tools.sync.offlineShort':  { ar: 'دون اتصال', en: 'Offline' },
   'tools.sync.syncingShort':  { ar: 'جارٍ…', en: 'Syncing…' },
-  'tools.sync.pendingShort':  { ar: '{n} معلّقًا', en: '{n} pending' },
+  'tools.sync.pendingShort':  { ar: 'لم تُرسل بعد', en: 'Not sent yet' },   // RULED 2026-11-13: no op count anywhere — it means nothing to a fancier
   'tools.sync.errorShort':    { ar: 'خطأ أخير', en: 'Last error' },
   'tools.sync.rejectedShort': { ar: '{n} مرفوضة', en: '{n} rejected' },
   'tools.sync.st.synced':     { ar: 'تمت المزامنة', en: 'Synced' },
