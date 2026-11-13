@@ -305,9 +305,12 @@ const guards = {
       ['src/db/io.js',
        'exportAllBlob(): the export is assembled as a Blob instead of one JSON string, because '
        + 'past ~180 photos V8 threw `Invalid string length` and the failure was SILENT. '
-       + "Vanilla's copy is a separate decision — main is the live deployment."],
+       + "Vanilla's copy is a separate decision — main is the live deployment. "
+       + 'RF-15 (RULED 2026-11-13): a replace-import, and so a restore, tombstones and logs a deletion for every '
+       + 'record it drops (replacePreview() states the counts first), so the replacement travels instead of '
+       + 'being undone by the next pull. Port-only; vanilla is not changed.'],
       ['src/db.js',
-       'the facade must re-export exportAllBlob (because src/db/io.js is divergent), '
+       'the facade must re-export exportAllBlob and replacePreview (because src/db/io.js is divergent), '
        + 'ensureCurrentLoft (RF-14) and the example-data module src/example-data.js '
        + '(RULED 2026-10-14, port-only).'],
       ['src/db/storage.js',

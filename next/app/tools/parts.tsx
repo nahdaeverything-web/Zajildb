@@ -254,17 +254,23 @@ export function ImportDetail() {
   const fileIn = useRef<HTMLInputElement>(null);
   async function importFile() {
     if (!file) return;
-    if (mode === 'replace') {
-      const ok = await confirmDialog({ title: t('confirm.replace.title'), body: t('confirm.replace.body'), cancelLabel: t('act.cancel'), confirmLabel: t('act.replace'), confirmKind: 'danger' });
-      if (!ok) return;
-    }
     // THE SIZE GUARD: past V8's cap File.text() resolves with "" and JSON.parse blames an empty file (tools-v1 port)
     if (file.size > MAX_IMPORT_BYTES) {
       toast(t('backup.importTooLarge', { size: fmtNum(Math.ceil(file.size / 1048576)), limit: fmtNum(Math.floor(MAX_IMPORT_BYTES / 1048576)) }), { timeout: 12000, kind: 'error' });
       return;
     }
     try {
-      const counts = await db.importAll(JSON.parse(await file.text()), mode) as { birds: number; pairs: number; raceResults: number };
+      const payload = JSON.parse(await file.text());
+      // RF-15: the file is read BEFORE the question, because the question now states what the replace removes. A payload
+      // that is not an export is not asked about at all — importAll refuses it below and the toast says why.
+      if (mode === 'replace' && payload && payload.format === 'zajil-export') {
+        const p = db.replacePreview(payload) as ReplacePreview;
+        const body = [p.removed ? t('confirm.replace.removes', { birds: fmtNum(p.removedBirds), others: fmtNum(p.removedOthers) }) : t('confirm.replace.removesNone'),
+          travels() ? t('confirm.replace.devices') : '', t('confirm.replace.continue')].filter(Boolean).join(' ');
+        const ok = await confirmDialog({ title: t('confirm.replace.title'), body, cancelLabel: t('act.cancel'), confirmLabel: t('act.replace'), confirmKind: 'danger' });
+        if (!ok) return;
+      }
+      const counts = await db.importAll(payload, mode) as { birds: number; pairs: number; raceResults: number };
       toast(t('backup.imported', { birds: fmtNum(counts.birds), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) }), { timeout: 7000, kind: 'info' });
       setFile(null);
     } catch (e) {
@@ -293,10 +299,24 @@ export function ImportDetail() {
 
 const birdsCount = (n: number) => t('stats.countLine', { n: fmtNum(n), d: '' }).split('·')[0].trim();
 
+type ReplacePreview = { removed: number; removedBirds: number; removedOthers: number; returning: Array<{ id: string; name: string; ring: string }> };
+/** Does a change on this device reach the person's other devices? Only with a configured build and a session. */
+const travels = () => (db.syncConfig() as { configured: boolean }).configured && (db.authState() as { signedIn: boolean }).signedIn;
+const RETURNING_SHOWN = 5;
+
 /** Restore an automatic snapshot — the spec's list, one «استرجاع» per snapshot; asks first; photos survive. */
 export function RestoreDetail({ snapshots }: { snapshots: Backup[] }) {
   async function restore(b: Backup) {
-    const ok = await confirmDialog({ title: t('backup.restoreAuto'), body: t('backup.confirmSnapshot', { d: fmtDate(b.id, { withTime: true }) }), cancelLabel: t('act.cancel'), confirmLabel: t('act.replace'), confirmKind: 'danger' });
+    // RF-15: a restore is a replace, and it travels — the question names what it brings back and says so
+    const p = db.replacePreview(b.payload) as ReplacePreview;
+    // a pre-import snapshot's id is `pre-import-<ISO>`; the question shows the moment, not the key
+    const body = [t('restore.confirm.lead', { d: fmtDate(b.id.replace(/^pre-import-/, ''), { withTime: true }) }),
+      p.removed ? t('restore.confirm.removes', { n: fmtNum(p.removed) }) : '',
+      travels() ? t('restore.confirm.devices') : '',
+      p.returning.length ? t('restore.confirm.returns', { n: fmtNum(p.returning.length) }) : t('restore.confirm.returnsNone')].filter(Boolean).join(' ');
+    const items = p.returning.slice(0, RETURNING_SHOWN).map((x) => ({ field: x.name || x.ring || '—', text: x.name ? x.ring : '' }));
+    if (p.returning.length > RETURNING_SHOWN) items.push({ field: t('restore.confirm.more', { n: fmtNum(p.returning.length - RETURNING_SHOWN) }), text: '' });
+    const ok = await confirmDialog({ title: t('backup.restoreAuto'), body, list: items.length ? { kind: 'warns', items } : undefined, cancelLabel: t('act.cancel'), confirmLabel: t('act.replace'), confirmKind: 'danger' });
     if (!ok) return;
     const counts = await db.importAll(b.payload, 'replace') as { birds: number; pairs: number; raceResults: number };
     toast(t('backup.imported', { birds: fmtNum(counts.birds), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) }), { timeout: 7000, kind: 'info' });

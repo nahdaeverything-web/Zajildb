@@ -10,7 +10,7 @@
 import {
   emitChange, getBird, idbClear, idbDelete, idbGet, idbGetAll, idbPut, nowISO, setSetting, state,
 } from './storage.js';
-import { diffFields, logOp } from './oplog.js';
+import { clearTombstone, diffFields, getTombstone, logOp, writeTombstone } from './oplog.js';
 import { mediaForBird, isPristineLoft, dropPristineLoft } from './records.js';
 
 // ------------------------------------------------------------- export/import
@@ -148,13 +148,49 @@ export async function exportAllBlob({ onProgress } = {}) {
   return new Blob(parts, { type: 'application/json' });
 }
 
+/** The five mirrored stores a replace clears, as [store, mirror]. Media is handled beside them. */
+const REPLACED = [['lofts', 'lofts'], ['birds', 'birds'], ['pairs', 'pairs'],
+                  ['raceResults', 'raceResults'], ['healthEvents', 'healthEvents']];
+
+/**
+ * The records a replace of `payload` would DROP: everything here that the payload does not carry.
+ * PORT ONLY (RF-15, RULED 2026-11-13). An untouched default loft is not data and never travelled,
+ * so it is dropped without a trace, as dropPristineLoft() drops it.
+ */
+function droppedByReplace(payload) {
+  const out = [];
+  for (const [storeName, mapName] of REPLACED) {
+    const incoming = new Set((payload[storeName] || []).map((r) => r && r.id));
+    for (const rec of state[mapName].values()) {
+      if (incoming.has(rec.id)) continue;
+      if (storeName === 'lofts' && isPristineLoft(rec)) continue;
+      out.push([storeName, rec]);
+    }
+  }
+  return out;
+}
+
+/**
+ * What a replace of this payload would do, for the confirmation to say BEFORE anything is touched
+ * (RF-15): how many records it removes, and which birds it brings back that are not here now.
+ * A replace travels — every dropped record is tombstoned and pushed as a deletion, every record
+ * in the payload is pushed as a write — so the dialog has to state both, with the counts.
+ */
+export function replacePreview(payload) {
+  const dropped = droppedByReplace(payload || {});
+  const birds = dropped.filter(([s]) => s === 'birds').length;
+  const returning = ((payload && payload.birds) || []).filter((b) => b && !state.birds.has(b.id));
+  return { removedBirds: birds, removedOthers: dropped.length - birds, removed: dropped.length,
+           returning: returning.map((b) => ({ id: b.id, name: b.name || '', ring: ((b.rings || [])[0] || {}).raw || '' })) };
+}
+
 /**
  * Import an export payload. mode 'merge' keeps newer records by updatedAt;
  * mode 'replace' wipes first. Returns counts.
  */
 export async function importAll(payload, mode = 'merge') {
   if (!payload || payload.format !== 'zajil-export') throw new Error('bad-format');
-  const counts = { birds: 0, pairs: 0, raceResults: 0, healthEvents: 0, lofts: 0, media: 0, skipped: 0 };
+  const counts = { birds: 0, pairs: 0, raceResults: 0, healthEvents: 0, lofts: 0, media: 0, skipped: 0, removed: 0 };
 
   // ── decode and validate EVERYTHING before touching the database ──
   // A replace-import used to clear all six stores and only then decode the
@@ -215,6 +251,33 @@ export async function importAll(payload, mode = 'merge') {
   // huge), so wiping the media store on restore would destroy every photo and
   // scanned pedigree the payload cannot put back. Keep media in that case.
   const carriesMedia = payload.kind !== 'auto-backup';
+
+  // ── RF-15 (RULED 2026-11-13): A REPLACE TOMBSTONES EVERY RECORD IT DROPS ──
+  //
+  // Until this, a replace cleared the stores and left no trace of what it removed. Measured on the
+  // deployed build: the next pull brought the whole pre-import set back — a device's own pushed rows
+  // sit above its cursor — and any record another device touched afterwards returned for good; a
+  // restore did the same. So the replacement now TRAVELS: every dropped record gets a tombstone and
+  // a delete op, exactly as if the fancier had deleted it, and every device converges on the file.
+  //
+  // ORDER, and why. The tombstones are written FIRST, before the stores are cleared: a pull that
+  // runs while the import is in flight then meets them and skips the old rows (applySyncPut). The
+  // delete ops are logged LAST, after every record of the payload is in: an import that fails half
+  // way must not leave deletions queued for records that are still here, so on a failure the
+  // tombstones written here are taken back and nothing was logged. Between the two, a pull can
+  // still slip a dropped record back in; the sweep at the end removes it again.
+  const dropped = mode === 'replace' ? droppedByReplace(payload) : [];
+  if (mode === 'replace' && carriesMedia) {
+    const incoming = new Set(decodedMedia.map((m) => m.id));
+    for (const m of await idbGetAll('media')) if (!incoming.has(m.id)) dropped.push(['media', m]);
+  }
+  const droppedAt = nowISO();
+  const priorTombstones = new Map();
+  for (const [storeName, rec] of dropped) {
+    priorTombstones.set(`${storeName}:${rec.id}`, await getTombstone(storeName, rec.id));
+    await writeTombstone(storeName, rec.id, null, droppedAt);
+  }
+  try {
   if (mode === 'replace') {
     // ONLY the data stores are cleared. oplog, tombstones, settings and
     // backups are never touched: the op log is this device's own history,
@@ -246,6 +309,9 @@ export async function importAll(payload, mode = 'merge') {
     if (state[mapName]) state[mapName].set(rec.id, rec);
     await logOp({ origin: 'import', store: storeName, op: 'put', recordId: rec.id,
                   record: rec, changed: diffFields(existing || null, rec) });
+    // a record the fancier has just put back is not deleted: the corollary applySyncPut and
+    // restoreBird already follow — a winning record clears its tombstone (RF-15)
+    if (mode === 'replace') await clearTombstone(storeName, rec.id);
     counts[storeName]++;
   };
   for (const l of payload.lofts || []) await put('lofts', 'lofts', l);
@@ -258,7 +324,27 @@ export async function importAll(payload, mode = 'merge') {
     if (mode === 'merge' && existing) { counts.skipped++; continue; }
     await idbPut('media', m);
     await logOp({ origin: 'import', store: 'media', op: 'put', recordId: m.id, record: m });
+    if (mode === 'replace') await clearTombstone('media', m.id);
     counts.media++;
+  }
+  } catch (err) {
+    // nothing was logged for the dropped records yet; take their tombstones back so a failed
+    // replace leaves no deletion standing against a record that is still on the device
+    for (const [storeName, rec] of dropped) {
+      const prior = priorTombstones.get(`${storeName}:${rec.id}`);
+      if (prior) await idbPut('tombstones', prior); else await clearTombstone(storeName, rec.id);
+    }
+    throw err;
+  }
+  // the payload is in. Now the deletions become real: logged, so they are pushed, and each
+  // tombstone carries the seq of its own op as every local deletion does.
+  for (const [storeName, rec] of dropped) {
+    await idbDelete(storeName, rec.id);                      // slipped back in by a pull mid-import: dropped all the same
+    if (state[storeName]) state[storeName].delete(rec.id);
+    const seq = await logOp({ origin: 'import', store: storeName, op: 'delete', recordId: rec.id,
+                              record: rec, at: droppedAt });
+    await writeTombstone(storeName, rec.id, seq, droppedAt);
+    counts.removed++;
   }
   // An export from another device carries its own loft ids, so the stored
   // currentLoftId can end up pointing at a loft that no longer exists — which

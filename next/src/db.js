@@ -127,6 +127,7 @@ export {
   exportableSettings,
   importAll,
   listBackups,
+  replacePreview,
 } from './db/io.js';
 
 export {

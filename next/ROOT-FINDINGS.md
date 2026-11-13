@@ -1928,6 +1928,52 @@ decide whether the imported records are new puts (they are logged as such today)
 
 ---
 
+### FIXED IN THE PORT 2026-11-13 (RULED) — a replace tombstones every record it drops; NOT in vanilla
+
+Re-measured first on the deployed build (`823dd68`), two devices, one stub project, a pull fired DURING each
+operation and again after (constructed shape):
+
+```
+REPLACE-IMPORT (payload: 1 bird): before {"birds": 39, "tombstones": 0} → after one more pull {"birds": 39} · tombstones written for the 38 dropped: 0
+RESTORE of a snapshot older than a deletion made on the other device: the deleted bird is back on BOTH devices, the other device's tombstones 6 → 0
+```
+
+The whole pre-import set came back, not only what another device had touched: a device's own pushed rows sit
+above its cursor until its next pull. **The rule now:** `importAll(payload, 'replace')` — and a restore is that —
+writes a tombstone and logs a delete op for every record the payload does not carry, exactly as if the fancier
+had deleted it, so the replacement TRAVELS and every device converges on the file. Tombstones are written first
+(a pull in flight meets them), the delete ops last, after the payload is in (a failed import queues no deletion,
+and takes its tombstones back); a record the payload carries clears its tombstone. An untouched default loft
+is dropped without a trace, as `dropPristineLoft()` drops it. No lock around the operation, and no cursor
+change (a landed push advancing the pull cursor was proposed and NOT approved: a row from another device could
+sit between the old cursor and the pushed rows).
+
+**The confirmations say what happens** (`replacePreview()`): the replace states the birds and other records it
+removes and, on a signed-in device, that it applies on all the person's devices; the restore states what it
+removes, names the birds it brings back (five by name, the rest counted) and that both happen on the other
+devices. The file is now read BEFORE the question.
+
+**Proof — `tests/e2e/screens/replace_sync.py`, 23 checks**, both operations with a pull during and after: nothing
+dropped comes back, the second device converges to the import and then to the snapshot, the server agrees, a
+replace that throws half way leaves no tombstone and no delete op. Mutants, each failing at a named check:
+
+```
+M1 the replace drops records without a trace (the shipped behaviour) — 12 passed, 11 failed, first:
+   ✗ [replace] the device holds the file and nothing else, with a pull fired DURING the import  {'names': ['الملك', 'من-الملف'], 'birdsInStore': 4, …}
+   ✗ [replace · M1 fails here] after ANOTHER pull NOTHING dropped comes back — the three the other device had edited included  ['الملك', 'من-الملف']
+M2 tombstones written, the deletions never logged — 17 passed, 6 failed:
+   ✗ [replace · M2 fails here] THE SECOND DEVICE CONVERGES TO THE IMPORT: the file's bird, the file's loft, nothing else  {'names': ['Anka', 'Julius', …
+M3 a failed replace does not take its tombstones back — 22 passed, 1 failed:
+   ✗ [failure · M3 fails here] a replace that throws mid-way leaves NO tombstone and NO delete op for records it did not finish replacing  ('DataCloneError', 0, 4, 0, 0)
+```
+
+**Declared, not fixed here:** a replace whose file carries NO loft still leaves the importing device with no
+loft until its next boot (measured 2026-10-31; unchanged). A second device that received two lofts at its first
+sync keeps its own untouched default loft beside them (R4 refuses to guess). The restore list still shows a
+pre-import snapshot by its raw key. A replace that fails after the stores are cleared still leaves them
+cleared, with the pre-import snapshot as the way back (unchanged). Photos of a dropped bird stay in the media
+store when the snapshot carries no media (unchanged).
+
 ## RF-16 — no screen removes a loft: a fancier who loads the teaching loft has no way out
 
 **In BOTH trees. Not one person's problem: the first thing a pilot fancier is invited to do is
