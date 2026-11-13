@@ -4,7 +4,6 @@ declare global {
     __zajilDb: typeof db;
     __zajilEngine: Record<string, unknown>;
     __zajilReady: Promise<void>;
-    __zajilSyncLoop: (() => void) | null;
   }
 }
 export {};

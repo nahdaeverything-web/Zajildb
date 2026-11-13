@@ -2415,6 +2415,25 @@ RELOAD: sync row absent · syncStatus() = synced, pending 0 · ops pending in th
 **Status:** RULED 2026-11-13 — fixed by the change set recorded as RF-19 (the re-enqueue law, automatic sync,
 honest status), after RF-15.
 
+**Item 1 FIXED 2026-11-13 — automatic sync (the design is RF-19).** One coordinator, started at boot by
+`src/components/SyncCoordinator.tsx`, owns every trigger; `screens/sync_auto.py` § coordinator (19 checks) and the
+rewritten `tests/sync/loop_flag.py`. Measured BEFORE the build, coordinator on in every suite and the test-only
+switch used nowhere: three assertions in two suites changed, all three because their precondition was the defect —
+`sync_ui.py` wrote an error into settings by hand and the app's opening cycle correctly cleared it (2), and
+`account_collision.py` relied on two edits staying unsent across a page load (1). Both now build the condition for
+real. `push.py`, `pull.py`, `convergence.py`, `auth.py`, `gate.py`, `sign_in.py`, `tools.py`, `example_remove.py`:
+unchanged and green. Seven mutants, each failing at its named check:
+
+```
+O1 the app opening runs no cycle        ✗ [open · O1 fails here] the app opening runs a cycle with no press — a pull within 8 s of boot  []
+C1 the debounce runs no cycle           ✗ [change · C1 fails here] the burst is ONE push of the three birds, with no press  ([], ['قبل'])
+F1 no single flight                     ✗ [single flight · F1 fails here] four requests at once make TWO cycles — …  (4, [True, True, True, True])
+B1 jitter allowed past the cap          ✗ [backoff · B1 fails here] THE CAP IS A CAP: 400 delays drawn at the top of the curve, none above 15 minutes  {'min': 675695, 'max': 1120037, 'cap': 900000}
+B2 online does not reset the backoff    ✗ [backoff · B2 fails here] THE ONLINE EVENT RESETS IT: …  {'failures': 8, 'nextBaseMs': 900000, …}
+G1 the heartbeat armed in background    ✗ [background · G1 fails here] AN HOUR IN THE BACKGROUND: no timer armed and not one request  ({'timerArmed': True, …}, [('GET', 'user-A', 1)])
+S1 sign-out leaves the timer armed      ✗ [sign-out · S1 fails here] the loop stops with the session: a timer was armed, and none is after sign-out
+```
+
 **Item 3 FIXED 2026-11-13 — the re-enqueue law.** `syncOnce()` enqueues once and records `firstEnqueueSeq`; the
 collision CLEAR removes it with the data. `screens/sync_auto.py` § law: 13 records, every push refused, nothing
 to pull, five cycles — op counts `[26, 26, 26, 26, 26]`; when the server accepts, 13 rows land and nothing is

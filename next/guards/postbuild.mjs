@@ -173,6 +173,10 @@ if (!harness && existsSync('out')) {
   const hit = [...walk('out')].filter((f) => /\.js$/.test(f) && readFileSync(f, 'utf8').includes('__zajil' + 'Db'));
   if (hit.length) { console.log('✗ no-harness-globals-in-build  ' + hit.length + ' chunk(s) mention __zajilDb in a NORMAL build'); for (const h of hit) console.log('    ' + h); process.exit(1); }
   console.log('✓ no-harness-globals-in-build  (normal build)');
+  // …and the coordinator's test-only switch must be UNREACHABLE in production (RULED 2026-11-13): no chunk may carry its name
+  const sw = [...walk('out')].filter((f) => /\.js$/.test(f) && readFileSync(f, 'utf8').includes('__ZAJIL_TEST_NO_' + 'AUTOSYNC'));
+  if (sw.length) { console.log('✗ no-autosync-switch-in-build  ' + sw.length + ' chunk(s) carry the test-only autosync switch in a NORMAL build'); for (const h of sw) console.log('    ' + h); process.exit(1); }
+  console.log('✓ no-autosync-switch-in-build  (normal build)');
 }
 if (!harness && present) { console.log('✗ no-harness-output  out/test-harness exists in a NORMAL build'); process.exit(1); }
 if (harness && !present)  { console.log('✗ harness-output-expected  build:harness produced no out/test-harness.html'); process.exit(1); }

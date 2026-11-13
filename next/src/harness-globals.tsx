@@ -4,3 +4,6 @@
 // stub in its finally. The postbuild guard fails a normal build whose chunks
 // mention __zajilDb, so a leak cannot ship quietly. Do not edit by hand.
 export default function HarnessGlobals() { return null; }
+// The coordinator's test-only switch (src/components/SyncCoordinator.tsx). In the shipped build it is this constant:
+// nothing on a real device can turn automatic sync off by this route.
+export const autoSyncDisabled = () => false;

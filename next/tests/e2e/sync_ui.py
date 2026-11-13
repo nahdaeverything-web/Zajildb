@@ -276,6 +276,10 @@ with sync_playwright() as p:
     # Establish this section's own precondition rather than inheriting whatever the
     # previous one happened to leave behind: the card must show an error WHEN THERE
     # IS ONE, which is the actual claim.
+    # CHANGED DELIBERATELY 2026-11-13 (RF-19): the app now syncs when it opens, so an error that exists only as a
+    # hand-written setting is cleared by the first successful cycle — correctly. The precondition is made REAL instead:
+    # the server is refusing (as in section 8) for as long as the card is being read, and accepts again before the button.
+    srv['mode'] = '4xx'
     run(page, """async (db) => {
         await db.setSetting('lastSyncError', { key: 'sync.err.rejected', status: 400,
             at: new Date().toISOString(),
@@ -297,6 +301,7 @@ with sync_playwright() as p:
           'آخر خطأ' in body and '400' in body,
           body[body.find('آخر خطأ'):][:120].replace('\n', ' ') if 'آخر خطأ' in body else 'no error line')
 
+    srv['mode'] = 'ok'
     # the manual button really runs a cycle
     before = run(page, "(db) => db.state.settings.lastSyncAt")
     page.click('[data-testid=sync-now]')
@@ -324,17 +329,19 @@ with sync_playwright() as p:
         }
         return { seen, curve: db.BACKOFF_MS, window: db.SOFT_FAIL_WINDOW_MS };
     }""")
-    check('the backoff curve is 2, 4, 8, 16, 32, 60 seconds (§11)',
-          bo['curve'] == [2000, 4000, 8000, 16000, 32000, 60000], str(bo['curve']))
+    # RULED 2026-11-13 (RF-19): the port's curve is 1, 2, 4, 8, 15 minutes — vanilla's 2 … 60 s retried a device with no signal
+    # sixty times an hour. Changed deliberately, with the cap; the root suite still asserts vanilla's curve against vanilla.
+    check('the backoff curve is 1, 2, 4, 8, 15 minutes, capped (RF-19)',
+          bo['curve'] == [60000, 120000, 240000, 480000, 900000], str(bo['curve']))
     check('the silent window is about two minutes', bo['window'] == 120000, str(bo['window']))
     check('every delay is jittered by ±25 %, so devices do not retry in lockstep',
           all(r['min'] < r['max'] for r in bo['seen']), str(bo['seen'][:2]))
     check('...within the ±25 % band, never outside it',
-          all(r['min'] >= bo['curve'][min(r['attempt'], 5)] * 0.74 and
-              r['max'] <= bo['curve'][min(r['attempt'], 5)] * 1.26 for r in bo['seen']),
+          all(r['min'] >= bo['curve'][min(r['attempt'], 4)] * 0.74 and
+              r['max'] <= bo['curve'][min(r['attempt'], 4)] * 1.26 for r in bo['seen']),
           str(bo['seen']))
-    check('...and it caps at 60 s, so a long outage reconnects within a minute',
-          bo['seen'][-1]['max'] <= 60000 * 1.26, str(bo['seen'][-1]))
+    check('...and the cap is a cap: at the top of the curve no jittered delay exceeds 15 minutes',
+          bo['seen'][-1]['max'] <= 900000, str(bo['seen'][-1]))
 
     # ── 11. an unconfigured build shows nothing and still works ──
     unc = run(page, """async (db) => {

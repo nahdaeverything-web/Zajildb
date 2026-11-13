@@ -19,3 +19,7 @@ if (typeof window !== 'undefined') {
   window.__zajilEngine = { coi, fci, integrity, pedigree, relationship, rings, validate, velocity };
 }
 export default function HarnessGlobals() { return null; }
+// TEST-ONLY, harness builds only: a suite that drives push and pull one leg at a time sets this global in an init script so
+// the coordinator does not run cycles of its own in between. The shipped stub answers `false` unconditionally, and the
+// postbuild guard fails a normal build whose chunks mention the name.
+export const autoSyncDisabled = () => typeof globalThis !== 'undefined' && (globalThis as { __ZAJIL_TEST_NO_AUTOSYNC?: boolean }).__ZAJIL_TEST_NO_AUTOSYNC === true;

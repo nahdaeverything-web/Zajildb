@@ -300,6 +300,38 @@ const guards = {
     return bad;
   },
 
+  // RULED 2026-11-13 (RF-19): ONE coordinator owns every reason a sync cycle runs. It lives in src/db/sync.js and is
+  // started once, by src/components/SyncCoordinator.tsx. The only other doors are the two that ask it for a cycle NOW —
+  // the sign-in flow and the «مزامنة الآن» button — and the on/off switch; all three go through its single flight.
+  // Anything else calling a cycle, or a leg of one, is a second owner: it fails the build. Pinned by count, so a moved
+  // or duplicated call is seen too.
+  'sync-single-owner'() {
+    const NAMES = ['startSyncLoop', 'runSyncCycle', 'syncNow', 'syncOnce', 'pushAll', 'pullAll', 'pushOnce', 'pullOnce', 'setSyncEnabled'];
+    const ALLOWED = new Map([
+      ['src/components/SyncCoordinator.tsx', { startSyncLoop: 1 }],
+      ['app/sign-in/view.tsx', { syncNow: 1 }],
+      ['app/tools/parts.tsx', { syncNow: 1, setSyncEnabled: 1 }],
+    ]);
+    const bad = []; const seen = new Map();
+    for (const f of files('.js', '.mjs', '.ts', '.tsx')) {
+      const rel_ = rel(f);
+      if (!/^(src|app)\//.test(rel_) || rel_ === 'src/db/sync.js') continue;
+      const code = codeLines(f).join('\n');
+      for (const name of NAMES) {
+        const n = (code.match(new RegExp('\\b' + name + '\\s*\\(', 'g')) || []).length;
+        if (!n) continue;
+        seen.set(rel_ + ' ' + name, n);
+        const allowed = (ALLOWED.get(rel_) || {})[name];
+        if (allowed === undefined) bad.push(`${rel_} calls ${name}() — only the coordinator starts a sync cycle (src/db/sync.js, src/components/SyncCoordinator.tsx)`);
+        else if (n !== allowed) bad.push(`${rel_} calls ${name}() ${n}× — ${allowed} ruled`);
+      }
+    }
+    for (const [rel_, names] of ALLOWED) for (const [name, n] of Object.entries(names)) {
+      if ((seen.get(rel_ + ' ' + name) || 0) !== n) bad.push(`${rel_}: ${seen.get(rel_ + ' ' + name) || 0} call(s) of ${name}(), ${n} pinned — re-rule the list`);
+    }
+    return bad;
+  },
+
   'data-layer-identity'() {
     const DIVERGENT = new Map([
       ['src/db/io.js',
@@ -329,7 +361,11 @@ const guards = {
        + 'clearLocalData() is the one explicit way to change it. RULED 2026-10-05 as a '
        + 'port-only fix. Vanilla has the same defect and is NOT changed — main is the live '
        + 'deployment. THE RE-ENQUEUE LAW (RULED 2026-11-13, RF-20): the first-login enqueue runs once '
-       + '(firstEnqueueSeq) instead of on every cycle until lastSyncAt exists.'],
+       + '(firstEnqueueSeq) instead of on every cycle until lastSyncAt exists. THE COORDINATOR (RULED '
+       + '2026-11-13, RF-19/RF-20): single flight with one follow-up instead of a busy refusal; triggers for a '
+       + 'debounced change, the background and pagehide (keepalive push) beside online and foreground; the '
+       + 'heartbeat is 60 s while unsent, 1-2-4-8-15 minutes capped while failing, 5 minutes idle, and nothing '
+       + 'while hidden or signed out. Vanilla keeps its 2-60 s curve and flat 60 s heartbeat.'],
     ]);
     const FILES = [
       'src/db.js', 'src/db/storage.js', 'src/db/oplog.js', 'src/db/records.js',

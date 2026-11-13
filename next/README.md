@@ -8,6 +8,10 @@ until a cutover ruling.
 
 ## Rules that are enforced, not remembered
 
+- **`sync-single-owner`** (prebuild, 2026-11-13): one coordinator owns every reason a sync cycle runs. Outside
+  `src/db/sync.js` the only calls allowed are `startSyncLoop()` in `src/components/SyncCoordinator.tsx`, `syncNow()`
+  in the sign-in flow and on the «مزامنة الآن» button, and `setSyncEnabled()` on the toggle — pinned by count. And
+  **`no-autosync-switch-in-build`** (postbuild): the coordinator's test-only switch exists in harness builds only.
 - `npm run build` runs `guards/run.mjs` first (`prebuild`). Palette, no root
   imports, `<html lang="ar" dir="rtl">`, no gradients / blurred shadows, no
   dynamic route segments; since 4A also `ui-imports` (views, components and

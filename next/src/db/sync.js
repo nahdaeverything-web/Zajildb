@@ -26,7 +26,7 @@
 
 import {
   state, setSetting, idbGet, idbGetAll, idbDelete, idbClear, initDB, nowISO, allBirds, emitChange,
-  currentLoft,
+  currentLoft, onChange,
 } from './storage.js';
 import { findDuplicateRings } from '../engine/rings.js';
 import { toISO } from '../dates.js';
@@ -327,6 +327,7 @@ export async function signIn(email, password, { replaceLocalData = false } = {})
  */
 export async function signOut() {
   await clearSession();
+  plan();                      // no session: the coordinator has nothing to wait for
   return authState();
 }
 
@@ -464,12 +465,16 @@ export function collapseOps(ops) {
   return [...byRecord.values()];
 }
 
+let leaving = false;                 // set by the coordinator while the page is hidden or being put away
+const KEEPALIVE_MAX = 60000;
+
 /** POST rows, classifying the outcome the same way the token endpoint does. */
 async function sendRows(rows, { allowRefresh = true } = {}) {
   const { url, configured } = syncConfig();
   if (!configured) return { kind: 'config', landed: 0, status: null, body: null };
 
   let res;
+  const body = JSON.stringify(rows);
   try {
     res = await fetch(`${url}/rest/v1/sync_records`, {
       method: 'POST',
@@ -478,7 +483,11 @@ async function sendRows(rows, { allowRefresh = true } = {}) {
         'Content-Type': 'application/json',
         Prefer: 'resolution=merge-duplicates,return=representation',
       },
-      body: JSON.stringify(rows),
+      body,
+      // the app is going to the background or being put away: a small batch is allowed to
+      // outlive the page (browsers cap keepalive bodies at 64 KB; a larger one waits for the
+      // next open rather than being refused outright)
+      ...(leaving && body.length <= KEEPALIVE_MAX ? { keepalive: true } : {}),
     });
   } catch (err) {
     return { kind: 'network', landed: 0, status: null, body: String((err && err.message) || err) };
@@ -1100,9 +1109,12 @@ export async function takeSyncDuplicateNotice() {
 // case, a calm state for the loft with no signal, and an interruption reserved
 // for the two things a fancier can actually do something about.
 
-/** Exponential with jitter (§11). Capped at 60 s so a device that has been
- *  offline for hours reconnects within a minute of the network returning. */
-export const BACKOFF_MS = [2000, 4000, 8000, 16000, 32000, 60000];
+/** While failing: a minute, then doubling, CAPPED at a quarter of an hour (RULED 2026-11-13).
+ *  Vanilla's curve (2 s … 60 s) retried a device with no signal sixty times an hour for as long
+ *  as it stayed open; this one makes four attempts in the first quarter of an hour and four an
+ *  hour after that, and the online event puts it back to one minute at once. */
+export const BACKOFF_MS = [60000, 120000, 240000, 480000, 900000];
+export const BACKOFF_CAP_MS = 900000;
 
 /** How long a non-network failure stays silent before it is worth showing.
  *  Most resolve themselves, and a warning that clears itself teaches people to
@@ -1110,11 +1122,11 @@ export const BACKOFF_MS = [2000, 4000, 8000, 16000, 32000, 60000];
 export const SOFT_FAIL_WINDOW_MS = 120000;
 
 /** Jitter is ±25 %: several devices coming back on the same wifi should not
- *  retry in lockstep. */
+ *  retry in lockstep. The cap is a cap: jitter never carries a delay past it. */
 export function backoffDelay(attempt) {
   const base = BACKOFF_MS[Math.min(Math.max(attempt, 0), BACKOFF_MS.length - 1)];
   const spread = base * 0.25;
-  return Math.round(base - spread + Math.random() * 2 * spread);
+  return Math.min(BACKOFF_CAP_MS, Math.round(base - spread + Math.random() * 2 * spread));
 }
 
 let phase = 'idle';          // 'idle' | 'syncing'
@@ -1192,11 +1204,43 @@ function interruptFor(status) {
   return key;
 }
 
+let flight = null;           // the cycle in progress, if any
+let queued = null;           // AT MOST ONE follow-up: { manual, promise, resolve }
+
+/**
+ * Ask for a cycle. SINGLE FLIGHT: there is never more than one cycle running.
+ *
+ * A request that arrives mid-cycle does not start a second one and is not turned away either
+ * (until 2026-11-13 it got `{ reason: 'busy' }` and the caller's change waited for somebody
+ * else to ask again). It marks the cycle DIRTY: exactly one follow-up runs when the current one
+ * ends, however many asked, and every one of them is answered by that follow-up — so whoever
+ * awaits this has always had a cycle that STARTED after they asked.
+ */
+export function runSyncCycle({ manual = false } = {}) {
+  if (flight) {
+    if (!queued) { let resolve; const promise = new Promise((r) => { resolve = r; }); queued = { manual, promise, resolve }; }
+    else if (manual) queued.manual = true;
+    return queued.promise;
+  }
+  flight = fly(manual);
+  return flight;
+}
+
+async function fly(manual) {
+  let result;
+  try { result = await cycle({ manual }); }
+  catch (err) { result = { ok: false, reason: 'network', thrown: String((err && err.message) || err) }; }
+  flight = null;
+  const next = queued; queued = null;
+  if (next) { flight = fly(next.manual); flight.then(next.resolve); }
+  else plan();
+  return result;
+}
+
 /** Run one full cycle and fold the outcome into the status. Never throws. */
-export async function runSyncCycle({ manual = false } = {}) {
+async function cycle({ manual = false } = {}) {
   if (!syncConfig().configured || !isSignedIn()) return { ok: false, reason: 'hidden' };
   if (state.settings.syncEnabled === false && !manual) return { ok: false, reason: 'off' };
-  if (phase === 'syncing') return { ok: false, reason: 'busy' };
 
   phase = 'syncing';
   emitChange({ type: 'sync-status' });
@@ -1246,43 +1290,110 @@ export async function syncNow() {
 export async function setSyncEnabled(on) {
   await setSetting('syncEnabled', Boolean(on));
   await refreshSyncStatus();
-  if (on) scheduleNext(0);
-  else if (timer) { clearTimeout(timer); timer = null; }
+  if (on) runSyncCycle();
+  else plan();                 // off: whatever was scheduled is withdrawn
 }
 
-function scheduleNext(delay) {
-  if (timer) clearTimeout(timer);
-  timer = setTimeout(async () => {
-    timer = null;
-    await runSyncCycle();
-    scheduleNext(attempt ? backoffDelay(attempt - 1) : HEARTBEAT_MS);
-  }, delay);
-}
+// ─────────────────────── THE COORDINATOR (RULED 2026-11-13, RF-19) ───────────────────────
+// ONE owner for every reason a cycle runs: the app opening, a change (debounced), the network
+// coming back, the app returning to the foreground, the app going to the background, the
+// heartbeat, and the «مزامنة الآن» button. Until this the port had no caller for the loop at
+// all — sync ran at sign-in and on the button, and a fancier who did not press it had a loft
+// that existed on one device only (RF-20). The `sync-single-owner` guard fails the build if
+// anything outside this file starts a cycle by another route.
 
-/** While work is queued, check back on a slow heartbeat (§11). Never a poll
- *  for its own sake: it costs battery and proves nothing that attempting the
- *  actual sync would not. */
-const HEARTBEAT_MS = 60000;
+/** A change is sent this long after the LAST change, so a burst of edits is one push. */
+export const CHANGE_DEBOUNCE_MS = 3000;
+/** While work is unsent: look again every minute (§11). */
+export const HEARTBEAT_MS = 60000;
+/** Nothing unsent and nothing failing: this is only to RECEIVE the other device's work. */
+export const IDLE_MS = 300000;
+
+let loopOn = false;          // startSyncLoop() has run and has not been stopped
+let stopLoop = null;
+let debounce = null;
+let nextDelay = null;        // what the armed timer is waiting, jitter included — null when none is armed
+let nextBase = null;         // the same before jitter: 60 s · the backoff step · 5 min
+
+const hiddenNow = () => typeof document !== 'undefined' && document.visibilityState === 'hidden';
+const canSync = () => syncConfig().configured && isSignedIn() && state.settings.syncEnabled !== false;
 
 /**
- * Start the background loop.
+ * Decide when the next cycle runs, after every cycle and whenever the conditions change.
  *
- * Three reconnect signals, cheapest first (§11): the `online` event, which is
- * instant when it fires but lies often enough that it cannot be the only one;
- * a slow heartbeat; and `visibilitychange` to visible, because the phone
- * coming out of a pocket is the single most likely moment for a fancier to
- * have walked back into signal.
+ * NOTHING IS ARMED when there is nothing to wait for: the loop not started, no session (this
+ * is what stops it on sign-out — until 2026-11-13 the chain kept firing every minute into an
+ * early return), sync switched off, or THE APP IN THE BACKGROUND: returning to the foreground
+ * is itself a trigger, and a phone polling from a pocket every five minutes is battery spent
+ * on nothing.
+ *
+ * Otherwise: FAILING backs off from one minute to the cap (a phone at a loft with no signal for
+ * four hours must not retry 240 times) and the online event resets it; UNSENT work looks again
+ * in a minute; idle, five minutes.
+ */
+function plan() {
+  if (timer) { clearTimeout(timer); timer = null; }
+  nextDelay = null; nextBase = null;
+  if (!loopOn || !canSync() || hiddenNow()) return;
+  if (attempt) {
+    nextBase = BACKOFF_MS[Math.min(attempt - 1, BACKOFF_MS.length - 1)];
+    nextDelay = backoffDelay(attempt - 1);
+  } else {
+    nextBase = pendingCount > 0 ? HEARTBEAT_MS : IDLE_MS;
+    nextDelay = nextBase;
+  }
+  timer = setTimeout(() => { timer = null; runSyncCycle(); }, nextDelay);
+}
+
+/** What the coordinator is doing, for الأدوات and for the suites. Read-only. */
+export function syncLoopState() {
+  return { on: loopOn, inFlight: Boolean(flight), queued: Boolean(queued), failures: attempt,
+           timerArmed: Boolean(timer), nextDelayMs: nextDelay, nextBaseMs: nextBase,
+           debouncing: Boolean(debounce) };
+}
+
+/**
+ * Start the coordinator. Called ONCE, at boot, by src/components/SyncCoordinator.tsx.
+ *
+ * Reconnect signals, cheapest first (§11): the `online` event, which is instant when it fires
+ * but lies often enough that it cannot be the only one; the heartbeat; and `visibilitychange`
+ * to visible, because the phone coming out of a pocket is the single most likely moment for a
+ * fancier to have walked back into signal. Going to the background, and the page being put
+ * away, get one last cycle with `keepalive` on the push so a small batch survives the page.
+ *
+ * NOT COVERED, by the platform: nothing runs while the app is closed. A change made on another
+ * device arrives the next time this one is opened or brought forward.
  */
 export function startSyncLoop() {
   if (typeof window === 'undefined') return () => {};
-  const wake = () => { if (state.settings.syncEnabled !== false) scheduleNext(0); };
-  const onVisible = () => { if (document.visibilityState === 'visible') wake(); };
-  window.addEventListener('online', wake);
-  document.addEventListener('visibilitychange', onVisible);
-  scheduleNext(0);
-  return () => {
-    window.removeEventListener('online', wake);
-    document.removeEventListener('visibilitychange', onVisible);
-    if (timer) { clearTimeout(timer); timer = null; }
+  if (stopLoop) stopLoop();                                  // never two sets of listeners
+  loopOn = true;
+  const onOnline = () => { attempt = 0; runSyncCycle(); };  // the backoff starts again from one minute
+  const onVisibility = () => {
+    if (document.visibilityState === 'visible') { leaving = false; runSyncCycle(); return; }
+    leaving = true;
+    plan();                                                  // hidden: the timer is withdrawn
+    if (canSync()) runSyncCycle();
   };
+  const onPageHide = () => { leaving = true; if (canSync()) runSyncCycle(); };
+  const offChange = onChange((ev) => {
+    // a pulled record and the status events are not the fancier's work; everything else is
+    if (!ev || String(ev.type || '').startsWith('sync')) return;
+    if (debounce) clearTimeout(debounce);
+    debounce = setTimeout(() => { debounce = null; runSyncCycle(); }, CHANGE_DEBOUNCE_MS);
+  });
+  window.addEventListener('online', onOnline);
+  window.addEventListener('pagehide', onPageHide);
+  document.addEventListener('visibilitychange', onVisibility);
+  runSyncCycle();                                            // the app opening
+  stopLoop = () => {
+    loopOn = false; stopLoop = null;
+    window.removeEventListener('online', onOnline);
+    window.removeEventListener('pagehide', onPageHide);
+    document.removeEventListener('visibilitychange', onVisibility);
+    offChange();
+    if (debounce) { clearTimeout(debounce); debounce = null; }
+    plan();
+  };
+  return stopLoop;
 }

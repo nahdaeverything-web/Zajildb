@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import * as db from '@/src/db.js';
 import { initDB } from '@/src/components/boot';
 import * as coi from '@/src/engine/coi.js';
@@ -36,21 +35,12 @@ function BridgeDemo() {
 
 export default function HarnessView() {
   const [status, setStatus] = useState('booting');
-  // ?sync=1 — boot parity only. Vanilla boot() runs initDB() then, later,
-  // startSyncLoop() (js/app.js:241, :252). The harness does the same ONLY when
-  // asked, so Phase 4/5 can prove the loop boots in the port. Default off; the
-  // Phase 2/3 suites never need it — they drive signIn/pushOnce/syncOnce
-  // directly. With the shipped empty config the loop is inert either way.
-  const syncFlag = useSearchParams().get('sync') === '1';
+  // The sync loop is NOT started here any more (`?sync=1` is gone, 2026-11-13): the coordinator in the root layout
+  // starts it at boot on every route, this one included — src/components/SyncCoordinator.tsx. The suites that drive
+  // signIn/pushOnce/syncOnce one leg at a time switch it off with the harness-only global (harness/HarnessGlobals.tsx).
   useEffect(() => {
-    let stop: (() => void) | null = null;
-    window.__zajilSyncLoop = null;
-    window.__zajilReady = initDB().then(() => {
-      setStatus('ready');
-      if (syncFlag) { stop = db.startSyncLoop(); window.__zajilSyncLoop = stop; }
-    }, (e: unknown) => setStatus('failed: ' + String(e)));
-    return () => { if (stop) stop(); window.__zajilSyncLoop = null; };
-  }, [syncFlag]);
+    window.__zajilReady = initDB().then(() => { setStatus('ready'); }, (e: unknown) => setStatus('failed: ' + String(e)));
+  }, []);
   return (
     <section style={{ padding: 24 }} dir="ltr">
       <h1>test-harness</h1>

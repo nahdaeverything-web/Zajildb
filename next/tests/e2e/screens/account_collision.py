@@ -197,8 +197,11 @@ try:
               c['owner'] == 'user-A' and c['hint'] == 'a•••@zajil.test', f"{c['owner']} / {c['hint']}")
 
         # two more birds that never reach the server, then A signs out
+        # CHANGED DELIBERATELY 2026-11-13 (RF-19): the app now sends a change three seconds after it is made, and syncs when
+        # it opens — so the two birds are made on الأدوات itself and A signs out INSIDE the debounce, which is the one way
+        # left for an edit to be on a signed-out device unsent. (Made before the navigation, they were pushed at boot.)
+        pg.goto(ROOT + 'tools/', wait_until='load'); pg.wait_for_selector('[data-testid=sign-out]', timeout=10000); pg.wait_for_timeout(1500)
         birds(pg, ['أ-4 غير مرفوع', 'أ-5 غير مرفوع'])
-        pg.goto(ROOT + 'tools/', wait_until='load'); pg.wait_for_selector('[data-testid=sign-out]', timeout=10000)
         pg.click('[data-testid=sign-out]'); pg.wait_for_selector('[data-testid=dialog]'); pg.click('[data-testid=dialog-confirm]')
         pg.wait_for_selector('[data-testid=gate]', state='attached', timeout=10000); pg.wait_for_timeout(400)   # the gate: there is data and no session
         before = census(pg); a0, b0 = srv.digest('A'), srv.digest('B')

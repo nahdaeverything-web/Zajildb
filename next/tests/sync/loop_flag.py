@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""3.2 — startSyncLoop() runs only with ?sync=1. Both states proved."""
+"""The coordinator's boot contract (REWRITTEN 2026-11-13, RF-19 — it used to assert the OPPOSITE: "startSyncLoop() runs
+only with ?sync=1").
+
+  · by default the loop IS started at boot, on every route, by src/components/SyncCoordinator.tsx;
+  · with the shipped empty config it is inert — sync hidden, nothing armed, nothing sent;
+  · it can be stopped, and stopping it leaves nothing armed;
+  · the harness-only test switch keeps it from starting (the postbuild guard proves a NORMAL build cannot carry it).
+"""
 import sys, os
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from _serve import serve
@@ -10,19 +17,22 @@ srv, BASE = serve()
 try:
     with sync_playwright() as p:
         b = p.chromium.launch()
-        for url, want in ((BASE, False), (BASE + '?sync=1', True)):
-            pg = b.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
-            pg.goto(url, wait_until='load'); pg.wait_for_timeout(1500)
-            pg.evaluate("async () => { await window.__zajilReady; }")
-            r = pg.evaluate("async () => ({ loop: typeof window.__zajilSyncLoop, state: (await window.__zajilDb).syncStatus().state, status: document.getElementById('harness-status').textContent })")
-            label = '?sync=1' if want else 'default'
+        for label, init, want in (('default', '', True), ('test-only switch', 'globalThis.__ZAJIL_TEST_NO_AUTOSYNC = true;', False)):
+            ctx = b.new_context(); reqs = []
+            if init: ctx.add_init_script(init)
+            pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+            pg.on('request', lambda r: reqs.append(r.url) if ('/rest/v1/' in r.url or '/auth/v1/' in r.url) else None)
+            pg.goto(BASE, wait_until='load'); pg.wait_for_timeout(1500)
+            pg.evaluate("async () => { await window.__zajilReady; }"); pg.wait_for_timeout(800)
+            r = pg.evaluate("async () => { const db = await window.__zajilDb; return { loop: db.syncLoopState(), state: db.syncStatus().state, status: document.getElementById('harness-status').textContent }; }")
             check(f"{label}: initDB reached ready", r['status'] == 'ready', r['status'])
-            check(f"{label}: loop {'STARTED (stop fn on window)' if want else 'NOT started (null)'}", (r['loop'] == 'function') == want, f"typeof __zajilSyncLoop = {r['loop']}")
-            check(f"{label}: empty config → state 'hidden' (loop inert)", r['state'] == 'hidden', r['state'])
+            check(f"{label}: the loop is {'STARTED at boot by the coordinator' if want else 'NOT started'}", r['loop']['on'] == want, str(r['loop']))
+            check(f"{label}: empty config → state 'hidden', and INERT — no timer armed, no cycle in flight, no request sent", r['state'] == 'hidden' and not r['loop']['timerArmed'] and not r['loop']['inFlight'] and not reqs, f"{r['state']} {r['loop']} {reqs[:2]}")
             if want:
-                check("?sync=1: stop() returns cleanly", pg.evaluate("() => { try { window.__zajilSyncLoop(); return true; } catch (e) { return String(e); } }") is True)
+                st = pg.evaluate("async () => { const db = await window.__zajilDb; const stop = db.startSyncLoop(); const on = db.syncLoopState().on; stop(); return { on, after: db.syncLoopState() }; }")
+                check("default: the loop can be stopped, and stopped it leaves nothing armed", st['on'] is True and st['after']['on'] is False and not st['after']['timerArmed'], str(st))
             check(f"{label}: zero page errors", not errs, str(errs))
-            pg.close()
+            ctx.close()
         b.close()
 finally: srv.terminate()
 print(f"\n{passed} passed, {failed} failed"); sys.exit(1 if failed else 0)
