@@ -65,8 +65,11 @@ the client write boundary. The server enforces *ownership and ordering only*.
 ### Migration SQL
 
 **This block is the COMPLETE CURRENT SCHEMA, not a starting point plus a patch
-trail.** The production project is created fresh at pre-pilot and must receive
-the final form in one run. Two corrections found during implementation — the
+trail.** Any project created fresh must receive the final form in one run.
+*(Corrected 2026-11-13: this used to say the production project is created fresh at
+pre-pilot. RULED otherwise — Route A, ROOT-FINDINGS DF-3: the existing project is
+upgraded in place and IS production; a fresh project needs a client-side
+project-switch path first. The block below already describes the live project.)* Two corrections found during implementation — the
 sequence usage grant (Phase 3) and the last-write-wins guard inside the trigger
 (Phase 5) — are folded in below, in place. The amendment sections that follow
 record *why* they exist; they are history, not further steps to run.
