@@ -328,7 +328,8 @@ const guards = {
        + 'that named by the session, failing that by the op log (RULED 2026-10-07), and '
        + 'clearLocalData() is the one explicit way to change it. RULED 2026-10-05 as a '
        + 'port-only fix. Vanilla has the same defect and is NOT changed — main is the live '
-       + 'deployment.'],
+       + 'deployment. THE RE-ENQUEUE LAW (RULED 2026-11-13, RF-20): the first-login enqueue runs once '
+       + '(firstEnqueueSeq) instead of on every cycle until lastSyncAt exists.'],
     ]);
     const FILES = [
       'src/db.js', 'src/db/storage.js', 'src/db/oplog.js', 'src/db/records.js',

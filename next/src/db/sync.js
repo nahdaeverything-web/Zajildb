@@ -1049,7 +1049,21 @@ export async function syncOnce() {
   if (!hasEverSynced()) {
     // First login. Local records reach the server before anything overwrites
     // them, carrying each record's own time so freshness still decides.
-    const enqueued = await enqueueFirstSyncOps();
+    //
+    // THE RE-ENQUEUE LAW (RULED 2026-11-13, RF-20): THE ENQUEUE RUNS ONCE. This branch is taken on
+    // every cycle until `lastSyncAt` exists, and `lastSyncAt` is written only by a landed push, a
+    // non-empty pull or a wholly successful cycle — so a device whose push was refused and whose
+    // account had nothing to pull came back here every time and re-logged EVERY record as new work.
+    // Measured on the deployed build: 13 records, 26 → 39 → 52 → 65 ops, one per record per cycle.
+    // The ops of the first enqueue are still in the log, unacked, and push carries them whenever
+    // the server takes them; nothing is gained by logging them again. `firstEnqueueSeq` is a
+    // setting about this account's data, so clearLocalData() removes it with everything else and
+    // the next account's first login enqueues afresh.
+    let enqueued = 0;
+    if (typeof state.settings.firstEnqueueSeq !== 'number') {
+      enqueued = await enqueueFirstSyncOps();
+      await setSetting('firstEnqueueSeq', state.settings.opSeq || 0);
+    }
     const push = await pushAll();
     const pull = await pullAll();
     // AFTER the pull, never before: the decision depends on what arrived.

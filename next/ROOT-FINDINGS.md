@@ -2413,7 +2413,16 @@ RELOAD: sync row absent · syncStatus() = synced, pending 0 · ops pending in th
 4. **No destructive confirmation mentions unsent changes**, and "first sync done" is only `lastSyncAt` existing.
 
 **Status:** RULED 2026-11-13 — fixed by the change set recorded as RF-19 (the re-enqueue law, automatic sync,
-honest status), after RF-15. With RF-3: the missing loop is also why the free project went quiet in October.
+honest status), after RF-15.
+
+**Item 3 FIXED 2026-11-13 — the re-enqueue law.** `syncOnce()` enqueues once and records `firstEnqueueSeq`; the
+collision CLEAR removes it with the data. `screens/sync_auto.py` § law: 13 records, every push refused, nothing
+to pull, five cycles — op counts `[26, 26, 26, 26, 26]`; when the server accepts, 13 rows land and nothing is
+pending. The mutant that does not record the mark fails at its assertion:
+
+```
+✗ [law · L1 fails here] FOUR MORE FAILED CYCLES LEAVE THE OP COUNT FLAT  [26, 39, 52, 65, 78]
+``` With RF-3: the missing loop is also why the free project went quiet in October.
 
 ## RF-21 — `autoBackup()` has no caller: the restore screen promises a snapshot every 12 hours and none is ever taken
 
