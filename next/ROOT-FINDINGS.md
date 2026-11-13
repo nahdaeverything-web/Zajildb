@@ -117,6 +117,24 @@ checklist) and does not pause. For the dev project: either keep it warm
 (any authenticated request inside the window) or expect to unpause it before
 a live run. Worth one line in the live suites' header comments.
 
+### Addendum 2026-11-13 — the pause was largely a CONSEQUENCE of the missing auto-sync
+
+Supabase pauses a free project on low DATABASE activity. The port never started the background sync loop
+(`startSyncLoop()` has no caller; RF-19), so even while Samir used the app daily it made almost no requests:
+sync ran only at sign-in and on the button. No auto-sync → no requests → the project pauses → the one manual
+press he makes fails → he stops using the app → fewer requests still. RF-3 and the loop gap are ONE causal
+chain, not two findings. The October "three-week sync failure" was this chain, not the sync code: a real round
+trip on the live project was confirmed on 2026-11-13 once the project was awake.
+
+So the fix is the change set of RF-19 — automatic sync keeps the project awake while the app is in real use (the
+suites do not: every one is stub-backed by rule). The chain describes October, when the app was in daily use; the FIRST pause, 2026-09-11 above, came with no
+usage at all (last live traffic about 4 September), so it was not caused by the loop gap. A project nobody opens for a week can still pause; that case stops being the thing that silently kills a
+loft. **Pro does NOT fix sync and must not be recorded as doing so**: it is justified by no pausing and by backups
+(the free tier has none; Pro has daily backups with 7-day retention), both independent of anything in the
+client and both mattering once another person's data is on the project — a pre-pilot item (DF-3), off the
+critical path. The RF-3 handling text above ("production runs on Pro and does not pause") stands as a fact about Pro,
+not as the reason for it.
+
 ---
 
 ## RF-4 — a bird share fails outright when an ancestor's photo is on another device
@@ -2030,9 +2048,13 @@ its own datasets (a fixed, small set of keys) and offer to retire it.
 Recorded 2026-10-12 from the same SELECT: `spike-a@zajil.test` (69 rows) and
 `spike-b@zajil.test` (34 rows) from the September sync spike remain in `public.sync_records`
 on the DEV project. Out of scope for the 2026-10-12 clean-up and NOT to be touched by it. The
-production project is created fresh at pre-pilot (SYNC-DESIGN §1), so nothing carries over by
-itself; the dev project is to be cleared of spike rows before it is used for anything a person
+dev project is to be cleared of spike rows before it is used for anything a person
 relies on. Owner of that step: Samir, dashboard, on his ruling.
+
+**Corrected 2026-11-13 (Route A, DF-3):** this entry used to say the production project is created
+fresh at pre-pilot, so nothing would carry over. It is not: the existing project is upgraded in place and
+IS production, so the spike accounts are deleted outright — the two auth users and their 103 rows — with
+the SQL prepared on 2026-11-13 (before/after counts inside one transaction). A pre-pilot action, Samir's.
 
 ---
 
@@ -2257,3 +2279,123 @@ read-only measurement to run (the DevTools snippets) rather than infer.
 dated correction block; the rule here and in the working memory. PROPOSED, not built (for a ruling): a prebuild
 guard that scans `tests/e2e/**/*.py` step headers and `check()` labels, and this file's entry heads, for a
 person's name without a `[from-export: <file>]` tag.
+
+## DF-3 — the dev project IS the production project (Route A, RULED 2026-11-13; a PRE-PILOT item, not a prerequisite)
+
+**Recorded 2026-11-13, re-ordered the same day.** Sync works: a real round trip on the live project (a bird
+pushed from one device appeared on the other; an updated pair travelled). The three-week "sync failure" of
+October was RF-3's pause, and the pause was largely a consequence of the port's missing auto-sync (RF-3
+addendum, RF-19) — so THE FIX IS THE CHANGE SET OF RF-19, which needs no plan change and no Pro; real use with
+automatic sync keeps the free project awake. Leaving the free tier is a pre-pilot item beside the custom domain, the
+password rotation and the spike clean-up, and it is justified by two things, NO PAUSING and BACKUPS: a paid
+project is never paused, and the free tier has no backups where Pro has daily backups with 7-day retention.
+Both matter once another person's data is on the project; neither is a repair of the client. "Pro fixes sync" is false and is not to enter this record. The question that remained was
+HOW to leave the free tier when the time comes: upgrade this project in place (Route A) or create a fresh
+production project (Route B).
+
+### The measurement that decided it
+
+A device that has synced with one project and is then re-pointed at another hits the account collision at
+sign-in, because the same email gets a DIFFERENT user id on every project — and nothing in `settings` records
+which project the owner, the cursor and the acks belong to. Measured on the deployed build (`823dd68`), two
+stub projects, THE NET armed (`scratchpad/project_switch_probe.py`, constructed shape):
+
+```
+P1 on project ONE after sign-in: owner user-A · lastAckedSeq 7 · syncCursor 4 · oplog 7 · birds 3
+P2 sign-in on project TWO with the same email → DIALOG: هذا الجهاز يحمل بيانات حساب آخر … لن تُدمج تلك البيانات مع حسابك ولن تُرفع إليه. صدّرها أولًا … أو امسحها من هذا الجهاز وادخل بحسابك
+P3 if the refusal were bypassed: the first pull would ask TWO for server_seq > 4 (TWO numbers its rows from 1);
+   the push would send only ops with seq > 7 — of 7 ops, 0 — the 3 birds already acked on ONE would never reach TWO
+```
+
+So a new project is a CLIENT-CODE problem, not a config problem. Route B needs a project-switch path first:
+a recorded project host beside the cursors; on mismatch, cursor and ack reset, a re-enqueue as on a first
+login, and a ONCE-ONLY adoption prompt whose owner rule — what the device does with the owner record of the
+previous project — is NOT ruled. Building that to move onto an identical empty server buys hygiene at the price
+of new risk.
+
+### RULED: Route A — upgrade the existing project to Pro, in place, when the pre-pilot list is worked
+
+Pro projects have daily backups and are never paused (supabase.com/pricing and the project-pausing guide,
+read 2026-11-13) — those two are the reasons. Keys: none change. Rebuild: none.
+Devices: untouched; the real data stays where it is. Nothing in the change set waits on this.
+
+**What this leaves, accepted:** there is NO separate development environment. The one project is production.
+Accepted while there are ZERO users other than Samir. **The project-switch path (owner rule, cursor reset, the
+once-only adoption prompt) is the prerequisite for ever splitting development from production**, and the owner
+rule stays unruled until that day. Route B is shelved, not cancelled.
+
+**Three conditions, all before any fancier touches the project:**
+
+| condition | status |
+|---|---|
+| SEC-1: rotate the test account's password — it was exposed in a transcript and the project is production now | prepared, not run: `scratchpad/rotate_test_password.py` (signs in as the account, changes its own password through the auth endpoint, rewrites the deploy env, prints nothing secret); or the dashboard. Samir's call which |
+| DF-2: delete the spike accounts outright — `spike-a@zajil.test`, `spike-b@zajil.test`, the auth users and their rows (69 + 34 = 103 on 2026-10-12) | SQL with before/after counts in `scratchpad/delete_spike_accounts.sql`; Samir runs it in the dashboard and pastes the output here |
+| this record | this entry |
+
+### Route B, for the day it is taken — the estimate, measured against the tree 2026-11-13
+
+| item | finding |
+|---|---|
+| schema, trigger, RLS, grants | exist only as prose in `docs/SYNC-DESIGN.md` §1 with two amendments (opaque `record_id`, the sequence grant); no `.sql` file in either tree. Extract one migration file, run the verification query, then the live push and pull suites — introspection cannot prove a write |
+| auth | public signups off (SPIKE §4f); accounts through the admin endpoint with the secret key, server side only; a new test account |
+| keys | `ZAJIL_SUPABASE_URL`, `ZAJIL_SUPABASE_PUBLISHABLE_KEY`, `ZAJIL_TEST_EMAIL`, `ZAJIL_TEST_PASSWORD` in the deploy env; the live suites read `ZAJIL_LIVE_*` names through a wrapper that must be rewritten |
+| what rebuilds | nothing in source names the project; `public/sync-config.js` is empty in the tree and written at stage time; one release through the pipeline; `live_deployment.py` reads the host from the served config and follows |
+| code assuming the ref | none — eight files mention the host family: prose, test examples, comments. THE NET's family regex and the postbuild guard's needle assume `*.supabase.co`; a custom domain (CUTOVER §e.2) widens both in the same commit |
+| device state assuming the project | `dataOwnerId`, `authUserId`, `syncCursor`, `lastAckedSeq`, `lastSyncAt`, `syncAnomalies` — none labelled with a project: the project-switch path above |
+| the data | re-pushed by the devices through that path, or copied by SQL with the owner remapped; deletions older than the op-log tail are not re-sent |
+| rollout | returning devices keep the old host until the new worker installs — the old project stays up until every device has updated |
+
+## RF-20 — the port never started the sync loop, and three things followed from it (the 2026-10-05 audit, unrecorded until now)
+
+**Where:** `startSyncLoop()` (`src/db/sync.js:1262`) has no caller in `app/` or `src/`; its only caller is the
+test harness under `?sync=1` (`harness/view.tsx:50`). Vanilla calls it at boot (`js/app.js:252`). Read from the
+code 2026-10-05, measured on the deployed build 2026-11-01/02 (stub-backed, constructed shapes):
+
+```
+A makes a bird, nobody presses anything, 70 s → POSTs from A: 0 · after a reload, 70 s → 0
+sync toggled off→on → a bird pushes within 70 s with no press; after a reload → 0 again
+vanilla, same stub, signed in: a pull GET within 8 s of boot
+13 records, push refused, pull empty: pending 26 → 39 → 52 → 65, one op per record per press
+RELOAD: sync row absent · syncStatus() = synced, pending 0 · ops pending in the log: 52
+```
+
+1. **Sync runs only at sign-in, on «مزامنة الآن», and in a timer chain the toggle starts that dies on reload.**
+2. **The pending count is right only after a cycle** — module state, 0 after every reload, so the app shows
+   «متزامن» over unsent work.
+3. **`enqueueFirstSyncOps()` re-logs every record on every cycle while `lastSyncAt` is unset** (push refused and
+   an empty pull): the counter grows by one op per record per press.
+4. **No destructive confirmation mentions unsent changes**, and "first sync done" is only `lastSyncAt` existing.
+
+**Status:** RULED 2026-11-13 — fixed by the change set recorded as RF-19 (the re-enqueue law, automatic sync,
+honest status), after RF-15. With RF-3: the missing loop is also why the free project went quiet in October.
+
+## RF-21 — `autoBackup()` has no caller: the restore screen promises a snapshot every 12 hours and none is ever taken
+
+**Where:** `src/db/io.js:362` defines it; nothing in `app/` or `src/` calls it. Vanilla calls it at boot when due
+and every 12 hours (`js/app.js:254-262`). The port shows «نسخ تلقائي داخلي كل 12 ساعة (آخر 7 نسخ)»
+(`app/tools/view.tsx:103`, `parts.tsx:318`). Read from the code 2026-10-30; on the real device the restore row
+reads «0 متاحة». The only snapshot the port writes is the `pre-import-…` one a replace-import takes.
+
+**Status:** RULED 2026-11-01 a DEFECT, ranked highest of its class — a data-safety feature that silently does
+nothing. Not built. Ordered after the sync change set is accepted: wire it, assert a snapshot exists after the
+interval, mutation-prove the assertion.
+
+## RF-22 — the example-data removal decides membership by loft and id shape, so a teaching bird filed elsewhere survives and keeps its ancestors
+
+**Where:** `src/example-data.js` `examplePresence()`: `example` = birds filed in a present dataset loft whose id
+is not a v4 uuid; the keep walk starts from every bird NOT in that set. Measured 2026-10-31 on the deployed
+build, stub-backed, constructed shape: two teaching birds pulled with a loftId outside the four dataset-loft ids
+became walk starts, kept 9 ancestors, and survived the removal as ordinary birds; the dialog said «لأن طيورًا من
+لوفتك تنحدر منها», which was false there.
+
+**Status:** RULED 2026-11-01 a DEFECT. Membership must be the shipped datasets' own ids, a fixed known set —
+not the loft a record sits in, and NOT "non-v4" (a pre-1.4.0 or hand-edited record of a fancier must never fall
+into the example set). Mutation-prove both directions. The dialog must NAME the birds that cause a keep, up to
+a sensible limit. Not built; ordered after acceptance, with the A-set.
+
+## DF-4 — photos have no server copy (an open PRODUCT decision, Samir's)
+
+Media metadata syncs; blobs do not (SYNC-DESIGN §7). Measured 2026-11-13, deployed build, stub-backed: a
+4032×3024 photo is 792 KB on the device that took it after the app's downscale, 400 bytes on the server (no
+blob), and a second device receives the row with no bytes and shows a placeholder. A lost or cleared device
+loses its photos unless an export was taken. Not a defect against the design; a decision to make before a pilot.
