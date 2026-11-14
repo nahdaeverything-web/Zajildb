@@ -2526,16 +2526,18 @@ for three weeks.
 | the tools row, synced | «متزامن» with «آخر مزامنة ناجحة {d}» beneath it (one row, two lines: the value column is too narrow for both) |
 | the sync screen | the row's words; the number is gone |
 
-**PROPOSED, not yet ruled** (written because the behaviour was ruled and needed words): the unsent warning on the
+**RULED 2026-11-14: these ship as written; corrections come as ONE follow-up** (they were written because the
+behaviour was ruled and needed words). They are FIFTEEN: I reported "seventeen" and "RF-15's twelve" at the STOP, a
+miscount — RF-15's strings are ten. The fifteen: the unsent warning on the
 destructive questions («تنبيه: على هذا الجهاز تغييرات لم تُرسل بعد إلى أجهزتك الأخرى.» · for the clear «…لم تُرسل بعد، وستضيع
 بالمسح.»); the form's question («تغيّر هذا السجل على جهاز آخر» · «عُدّل هذا السجل على جهاز آخر بعد أن فتحته هنا. إن حفظت الآن
-حلّت بياناتك مكان ذلك التعديل.» · «أعد التحميل», beside the existing «حفظ رغم التحذير»); and RF-15's twelve replace and
+حلّت بياناتك مكان ذلك التعديل.» · «أعد التحميل», beside the existing «حفظ رغم التحذير»); and RF-15's ten replace and
 restore strings (`confirm.replace.*`, `restore.confirm.*` in `src/i18n.ext.js`).
 
 **The form.** The bird form edits a copy taken when it opened. If the record's `updatedAt` is no longer what it was
 — a pull landed underneath — saving asks first: save anyway, or reload what is there now. No merge UI. **Only the
 bird form.** The health sheet, the race-result sheet, the pair sheets and the loft rows in الأدوات save without this
-check; each is a short-lived sheet, but the class is the same and they are NOT covered — for a ruling.
+check; each is a short-lived sheet, but the class is the same and they are NOT covered (a known gap, below).
 
 ### 4. The three situations
 - **Offline for days:** ops accumulate once each; the row says unsent since when; retries settle at four an hour. On
@@ -2546,6 +2548,48 @@ check; each is a short-lived sheet, but the class is the same and they are NOT c
 - **Two devices with unsent work:** each pushes its own; the server trigger decides per record by operation time,
   then by device id; the loser re-pulls the winner and its pending op is superseded. Two records for one physical
   bird go to the duplicate finder, as before.
+
+### Known gaps — RULED 2026-11-14: recorded, NOT fixed in the first deploy of this change set
+- **Only the bird form warns about a record changed underneath it.** The health sheet, the race-result sheet, the
+  pair sheets and the loft rows save without the check. When it is extended, the pair sheets come first.
+- **A replace-import whose file carries no loft leaves the device without one until the next boot** (RF-15).
+- **The restore list shows a pre-import snapshot by its raw key** (`pre-import-…`); only the question strips it.
+- **The failure row repeats a word:** «تعذّر الإرسال — راجع الأدوات» sits beside the existing «الأدوات» link. RULED: it
+  becomes «تعذّر الإرسال»; that change goes in the same follow-up as the string corrections, not before.
+- RULED the same day: the tools synced row on two lines is approved; the three ledger entries are approved.
+
+### The upgrade path — measured 2026-11-14 before the deploy; (b) did NOT pass as stated, and the deploy was held
+Nothing in the gate boots this build over data written by the build before it. Measured stub-backed, THE NET armed
+(0): a device state built with the LIVE build (`gh-pages 823dd68`, a fresh clone), then the staged release of
+`16f9474` served at the same origin and booted over the same IndexedDB, the service worker left to update as it does
+on a device. IndexedDB read raw from a blank page outside the app's scope, before and after. Constructed shapes
+(12 birds and a named loft). Script and output are outside the tree: `~/zajil-work/upgrade/upgrade_path.py`,
+`~/zajil-gate-logs/upgrade-path-run3.log`.
+
+| state built on the live build | op count before → after the first boot and first cycle | pushed | records changed | tools row, every distinct text from the first frame |
+|---|---|---|---|---|
+| a. synced (marker absent) | 26 → 26 | nothing; one pull | 0 | «» · «متزامن» · «جارٍ…» · «متزامن» |
+| a2. inflated by three refused cycles, then synced | 78 → 78 | nothing; one pull | 0 | the same |
+| b. inflated, never synced (26, 39, 52, 65) | **65 → 78**, pending 65 → 0 | 1 POST, 13 rows, 13 records | 0 | «» · «دون اتصال» · «جارٍ…» · «متزامن» |
+| c1. never signed in | 13 → 13 | no request in 75 s | 0 | the sign-in gate; no status |
+| c2. synced, then signed out | 26 → 26 | no request in 75 s | 0 | the sign-in gate; no status |
+
+**(b) is the finding.** A device that never synced on the old build carries no `firstEnqueueSeq`, so the new build's
+first cycle runs the first-login enqueue ONE more time — thirteen more ops, one per record — writes the marker, and
+then drains everything in one push. It never happens again, no record changes, and the server ends with one row per
+record exactly as the device holds it. But the stated pass was "drains without multiplying", the check written
+before the measurement was "the count after equals the count before", and 65 → 78 fails it. Not patched: reported
+for a ruling. The fix, if ordered, is small: on a device that has never synced, an op log that already holds pending
+ops is the first enqueue — write the marker without enqueueing again.
+
+Two of my own checks in that run were wrong, not the build: one demanded that the list-screen row never appear in
+(a), and it shows «جارٍ المزامنة…» for the length of the boot cycle; one demanded «لم تُرسل بعد» before «متزامن» in (b),
+and the device shows the approved «دون اتصال» wording instead, because the old build's refused cycles left a network
+error on record. In neither does «متزامن» appear while anything is unsent.
+
+`syncLoopState()` and `hasEverSynced()` do not exist in a production build (tree-shaken), so "starts no loop" in (c)
+is proved by the absence of any request over 75 s with ops pending (the heartbeat would be 60 s), not by reading a
+timer.
 
 ### Standing with it
 Route A (DF-3): the one Supabase project is production and there is NO separate development environment; accepted
@@ -2592,3 +2636,26 @@ there, quoted in RF-19. Two mutants (C1, W1) also ended in a traceback after the
 the steps after them were made non-raising and both were re-run to a clean summary.
 
 **The lesson is the standing one:** an invariant check is not written until its mutant has been seen to fail AT it.
+
+## TF-12 — one page error in `screens/example_remove.py`, once, not reproduced, source unknown (2026-11-14)
+
+A full gate on a documentation-only change (`~/zajil-gate-logs/gate-05c-docs-upgrade.log`) failed one check:
+
+```
+[FAIL] screens/example_remove.py            47/48    80s
+         ✗ zero page errors across 10 devices  ["Cannot read properties of undefined (reading 'name')"]
+```
+
+The same suite passed in the gate run twenty-eight minutes earlier on the same `next/` bytes, in each of the four
+change-set gates, and in eight consecutive isolated runs made straight afterwards with the stack and the page address
+captured (`er-flake-run1..8.log`: 48 passed, 0 failed, no page error, every time). So: seen once, under the load of a
+full gate, never alone. The suite records only the message, so there is no stack, no device and no screen for the
+one occurrence.
+
+**What is not known, and is not claimed:** whether it is the app or the suite, and whether the change set introduced
+it. It did not appear before the coordinator existed, but four gates with the coordinator also passed; one sighting
+decides nothing. A render reading `.name` on a record that a removal or a pull has just taken away is the obvious
+candidate, and it is a guess.
+
+**Not fixed, nothing relaxed.** Proposed, for a ruling: every stub-backed suite's `pageerror` hook records the stack
+and the page address, not only the message, so the next sighting names its source.
