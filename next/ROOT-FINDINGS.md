@@ -2702,6 +2702,34 @@ of the number). Three spec strings the port no longer renders are in `guards/str
 off, press nothing, the bird on the other device within two minutes; an edit back the other way). Until then this
 entry describes what was built, not what is accepted.
 
+### ACCEPTED 2026-11-15 on Samir's two real devices — `gh-pages 84d838c`
+As reported by Samir, on the phone and the PC, the live build:
+- **Phone → PC with no press:** a bird's status change arrived.
+- **PC → phone with no press:** a pair's hatched eggs arrived.
+- **Offline:** a bird added in airplane mode showed the offline wording, then pushed on reconnect with no press and
+  appeared on the PC.
+
+**NOT observed on a real device: a reload while offline** (the second half of acceptance step 1 — «Reload: still
+unsent, never «متزامن»»). That step is covered only by the suites (`screens/sync_auto.py`, and the deploy
+verification's offline boot), stub-backed. It stays named as a gap until it is seen on a device.
+
+### The follow-up set — deployed 2026-11-16 and re-verified from the live origin
+RULED 2026-11-15: three items as one deploy after acceptance — TF-12's fix (`a6c8a1c`), the failure row
+(`eab265d`), the no-loft replace (`1cfb924`); each on its own green full gate (`gate-09`, `-10`, `-11`:
+2191 / 2191 / 2195 passed, 0 failed, control 548/548, no page-error record). The corrections to the fifteen strings
+were not in (RULED: do not wait).
+
+| item | value |
+|---|---|
+| live | `gh-pages 6a44f7a`, built from `1cfb924` |
+| rollback target | `84d838c` (before it: `823dd68`) |
+| staged | 159 files, scan clean, `BUILT_FOR /zajilv2/`, `VERSION zajil-v2.0.0-dev.1` |
+| rehearsal on the Pages stand-in | 44 passed, 0 failed (`deploy2-04-rehearsal.log`) |
+| bytes | 158 files fetched from the origin and compared by sha256, 0 differ (`deploy2-05-live-bytes.log`) |
+| live verification | 44 passed, 0 failed; nothing reached the real project (`deploy2-06-live-verify.log`) |
+
+Not done, not ordered: the mirror's `main` (`01117e2`).
+
 ## TF-11 — a reload invariant that could not fail: mutant H1 survived its own check
 
 **Where:** `tests/e2e/screens/sync_auto.py`, first version of «IT SURVIVES A RELOAD» (2026-11-13).
