@@ -2556,6 +2556,9 @@ check; each is a short-lived sheet, but the class is the same and they are NOT c
 - **The restore list shows a pre-import snapshot by its raw key** (`pre-import-…`); only the question strips it.
 - **The failure row repeats a word:** «تعذّر الإرسال — راجع الأدوات» sits beside the existing «الأدوات» link. RULED: it
   becomes «تعذّر الإرسال»; that change goes in the same follow-up as the string corrections, not before.
+  DONE 2026-11-15 in the follow-up set: `sync.error` is «تعذّر الإرسال» / "Could not send" (the English RULED the
+  same day); the `sync_ui` check was changed deliberately and now also asserts «راجع» is absent. The corrections to
+  the fifteen strings were not in when this shipped (RULED: do not wait) and remain one follow-up.
 - RULED the same day: the tools synced row on two lines is approved; the three ledger entries are approved.
 
 ### The upgrade path — measured 2026-11-14 before the deploy; (b) did NOT pass as stated, and the deploy was held

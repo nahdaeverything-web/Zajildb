@@ -38,7 +38,7 @@ export const EXT = {
   'sync.pending':             { ar: 'تغييراتك محفوظة على هذا الجهاز ولم تُرسل بعد', en: 'Your changes are saved on this device and not sent yet' },
   'sync.pendingSince':        { ar: 'تغييراتك محفوظة على هذا الجهاز ولم تُرسل بعد · منذ {d}', en: 'Your changes are saved on this device and not sent yet · since {d}' },
   'sync.offline':             { ar: 'دون اتصال — تغييراتك محفوظة وستُرسل عند عودة الاتصال', en: 'Offline — your changes are saved and will be sent when the connection returns' },
-  'sync.error':               { ar: 'تعذّر الإرسال — راجع الأدوات', en: 'Could not send — see Tools' },
+  'sync.error':               { ar: 'تعذّر الإرسال', en: 'Could not send' },
   'sync.err.session':         { ar: 'انتهت الجلسة — سجّل الدخول لإرسال تغييراتك', en: 'Session expired — sign in to send your changes' },
   'tools.sync.syncedSince':   { ar: 'آخر مزامنة ناجحة {d}', en: 'Last successful sync {d}' },
   'confirm.unsent':           { ar: 'تنبيه: على هذا الجهاز تغييرات لم تُرسل بعد إلى أجهزتك الأخرى.', en: 'Note: this device holds changes that have not been sent to your other devices yet.' },

@@ -220,8 +220,9 @@ with sync_playwright() as p:
           and page.eval_on_selector('[data-testid=sync-row-link]', 'n => n.getAttribute("href")') in ('/tools', '/tools/'),
           f'{row_state(page)} / {page.query_selector("[data-testid=sync-row-link]") is not None}')
     # CHANGED DELIBERATELY 2026-11-13 (RF-19): the ruled wording says what failed and where to look
-    check('...using wording that avoids blame and jargon — «تعذّر الإرسال — راجع الأدوات»',
-          'تعذّر الإرسال — راجع الأدوات' in (row_text(page) or ''), repr(row_text(page)))
+    # CHANGED DELIBERATELY 2026-11-15 (RULED): «راجع الأدوات» repeated the «الأدوات» link beside it — the row says only what failed
+    check('...using wording that avoids blame and jargon — «تعذّر الإرسال», and «راجع الأدوات» is gone (the link beside it says where)',
+          'تعذّر الإرسال' in (row_text(page) or '') and 'راجع' not in (row_text(page) or ''), repr(row_text(page)))
 
     # ── 7. a dead session interrupts IMMEDIATELY — it needs a password ──
     clear_toasts(page)
