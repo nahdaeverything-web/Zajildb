@@ -4,6 +4,7 @@ record_factory, ownership, data_loss, example_data (as they apply) plus the
 states add-edit-bird-v2 designs and the shared-states validation dialogs.
 Binds to data-testid only. Seeds through the layer on the harness route, then
 exercises the real screen. Provisions its own server (R6)."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import os, re, sys
 from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -35,7 +36,7 @@ try:
         ctx = b.new_context(viewport={'width': 430, 'height': 900})
         h = boot(ctx); wipe(h)
         h.evaluate("async () => { const db = await window.__zajilDb; await db.importAll(await (await fetch(new URL('example-loft-large.json', document.querySelector('link[rel=manifest]').href))).json(), 'merge'); }")
-        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e, _p=pg: errs.append(perr(e, _p)))
 
         # ── the empty form (spec: new) ──
         pg.goto(NEW, wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]', timeout=6000)

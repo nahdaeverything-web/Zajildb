@@ -39,6 +39,7 @@ A FAILURE HERE IS THE POINT. This suite is written to find out whether a loft ca
 to demonstrate that it can. Assertions name what they measure and report the measured value.
 
 Provisions its own servers (R6). Binds to data-testid only."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import json
 import os
 import socket
@@ -184,7 +185,7 @@ try:
 
         # ── ORIGIN A: build the loft ───────────────────────────────────────────────────
         ctx_a = br.new_context(accept_downloads=True)
-        a = ctx_a.new_page(); errs = []; a.on('pageerror', lambda e: errs.append(str(e)))
+        a = ctx_a.new_page(); errs = []; a.on('pageerror', lambda e, _p=a: errs.append(perr(e, _p)))
         a.goto(ORIGIN_A + 'test-harness/', wait_until='load'); a.wait_for_timeout(800)
         a.evaluate("async () => { await window.__zajilReady; }")
         seeded = a.evaluate(SEED, 6)
@@ -203,7 +204,7 @@ try:
               f'{len(tombs_before)} tombstone(s)')
 
         # ── the export, through the UI ─────────────────────────────────────────────────
-        ta = ctx_a.new_page(); ta.on('pageerror', lambda e: errs.append(str(e)))
+        ta = ctx_a.new_page(); ta.on('pageerror', lambda e, _p=ta: errs.append(perr(e, _p)))
         ta.goto(ORIGIN_A + 'tools/', wait_until='load'); ta.wait_for_timeout(1200)
         t0 = time.time()
         with ta.expect_download(timeout=120000) as dl:
@@ -222,7 +223,7 @@ try:
 
         # ── ORIGIN B: a database that has NEVER existed ────────────────────────────────
         ctx_b = br.new_context(accept_downloads=True)
-        b = ctx_b.new_page(); b.on('pageerror', lambda e: errs.append(str(e)))
+        b = ctx_b.new_page(); b.on('pageerror', lambda e, _p=b: errs.append(perr(e, _p)))
         # A page that does NOT boot the app: the server's own 404 is same-origin and loads no
         # script. Probing after tools/ would be worthless — initDB() creates the database
         # on load, so the answer could only ever be True.
@@ -271,7 +272,7 @@ try:
         # The port's io.js is authorised to diverge. The FORMAT is not — the cutover depends
         # on a file crossing between the two apps in either direction.
         ctx_v = br.new_context(accept_downloads=True)
-        v = ctx_v.new_page(); v.on('pageerror', lambda e: errs.append(str(e)))
+        v = ctx_v.new_page(); v.on('pageerror', lambda e, _p=v: errs.append(perr(e, _p)))
         v.goto(ORIGIN_V + 'index.html#/tools', wait_until='load'); v.wait_for_timeout(2500)
         v_imported = v.evaluate("""async (text) => {
             const db = await import('./js/db.js');
@@ -286,7 +287,7 @@ try:
 
         v_payload = v.evaluate("async () => { const db = await import('./js/db.js'); return await db.exportAll(); }")
         ctx_c = br.new_context(accept_downloads=True)
-        c = ctx_c.new_page(); c.on('pageerror', lambda e: errs.append(str(e)))
+        c = ctx_c.new_page(); c.on('pageerror', lambda e, _p=c: errs.append(perr(e, _p)))
         c.goto(ORIGIN_B + 'tools/', wait_until='load'); c.wait_for_timeout(1800)
         c_imported = c.evaluate("""async (pl) => {
             const db = await window.__zajilDb;

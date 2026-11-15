@@ -17,6 +17,7 @@
 # it did nothing is worse than one that fails: it reports safety it never
 # checked. (Learned the hard way in the storage spike, where an empty bucket
 # denied everyone and four meaningless assertions came back green.)
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import json, os, sys
 from playwright.sync_api import sync_playwright
 
@@ -61,7 +62,7 @@ print(f'  live project: {URL[:28]}…  key {redact(KEY)}  account {EMAIL}')
 
 with sync_playwright() as p:
     br = p.chromium.launch(); page = br.new_page(); page.set_default_timeout(30000)
-    errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
+    errs = []; page.on('pageerror', lambda e, _p=page: errs.append(perr(e, _p)))
     page.add_init_script('globalThis.ZAJIL_SYNC_CONFIG = ' +
                          json.dumps({'url': URL, 'publishableKey': KEY}) + ';')
     page.goto(HARNESS, wait_until='load'); page.wait_for_timeout(600)

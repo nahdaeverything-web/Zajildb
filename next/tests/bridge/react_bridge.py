@@ -2,6 +2,7 @@
 """2.4 proof: a write through the data layer (window.__zajilDb.saveBird) makes a
 React component re-render — no reload, no polling, via the bridge's
 subscription to the layer's existing onChange. Provisions its own server."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import subprocess, socket, sys, time, os
 from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__)); OUT = os.path.abspath(os.path.join(HERE, '..', '..', 'out'))
@@ -14,7 +15,7 @@ def check(name, ok, detail=''):
     passed += ok; failed += (not ok); print(f"  {'✓' if ok else '✗'} {name}{('  ' + detail) if detail else ''}")
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(); pg = b.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+        b = p.chromium.launch(); pg = b.new_page(); errs = []; pg.on('pageerror', lambda e, _p=pg: errs.append(perr(e, _p)))
         pg.goto(f'http://127.0.0.1:{port}/test-harness/', wait_until='load'); pg.wait_for_timeout(1500)
         pg.evaluate("async () => { const db = await window.__zajilDb; await window.__zajilReady; window.__marker = 'same-document'; }")
         c0 = pg.inner_text('#bridge-count'); l0 = pg.inner_text('#bridge-last')

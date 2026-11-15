@@ -2707,3 +2707,52 @@ candidate, and it is a guess.
 
 **Not fixed, nothing relaxed.** Proposed, for a ruling: every stub-backed suite's `pageerror` hook records the stack
 and the page address, not only the message, so the next sighting names its source.
+
+### TF-12 — the hook, three full runs, and a second sighting with its stack (2026-11-15)
+
+**The hook (test-only).** `tests/e2e/_pageerr.py` — every `pageerror` hook in the stub-backed suites (59 hooks, 45
+files) now records the message, the page address, the device (context, page, viewport), the step (the last ✓/✗ line
+printed before it), the seconds into the script and the stack; prints it the moment it happens; and appends it to
+`$ZAJIL_PAGEERR_LOG` when that is set. No check was changed, added or relaxed: the suites still fail on any page error.
+
+**Three full runs with it** (`~/zajil-gate-logs/gate-07-tf12-run{1,2,3}.log`):
+
+```
+run 1 exit 1 ·   2184 passed, 1 failed across 33 steps, 1 skipped  ·  27.4 min · page-error records: 1
+run 2 exit 0 ·   2185 passed, 0 failed across 33 steps, 1 skipped  ·  27.4 min · page-error records: 0
+run 3 exit 0 ·   2185 passed, 0 failed across 33 steps, 1 skipped  ·  27.4 min · page-error records: 0
+```
+
+**The sighting, verbatim** (`~/zajil-gate-logs/tf12-pageerrors-run1.log`):
+
+```
+2026-11-15T09:40:33 Cannot read properties of undefined (reading 'name') | at http://127.0.0.1:46499/tools/ | device: context 1, page 1 · viewport 430x900 | step: after «✓ [shape · invariant] …and the row is still there with its count» | 76.8 s into example_remove.py | stack: TypeError: Cannot read properties of undefined (reading 'name') ⏎     at http://127.0.0.1:46499/_next/static/chunks/3sl7h4ze97y3g.js:1:15334 ⏎     at Array.map (<anonymous>) ⏎     at Module.eo (http://127.0.0.1:46499/_next/static/chunks/3sl7h4ze97y3g.js:1:15301)
+```
+
+**The stack points into the app.** Offsets 15301 / 15334 of that chunk are, in the build the run used, the last
+statement of `examplePresence()` — `src/example-data.js:81`:
+
+```js
+lofts: present.map((id) => ({ id, name: state.lofts.get(id).name || '',
+```
+
+`present` is filtered by `state.lofts.has(id)` at the top of the function (line 58); between that and line 81 the
+function awaits `idbGetAll('media')` (line 77). A loft that was there at line 58 and is gone by line 81 gives exactly
+this error. The caller is the removal row on الأدوات (`app/tools/parts.tsx:400`), which recomputes on every layer
+change — so a recompute started while `removeExampleData()` is deleting the teaching lofts can straddle the deletion.
+The step fits: the sighting is in the last scenario of the suite, on the removal that follows the «row is still there»
+check. That the recompute and the removal interleaved in this run is READ from the code and the step, not observed —
+the hook records the stack, not the interleaving.
+
+**What it does to the fancier — not measured.** The rejected promise is not handled, so that one recompute sets
+nothing; the next layer change recomputes again. In both sightings every other check of the suite passed, including
+«the row detached». Whether a real device can be left showing the removal row for lofts that no longer exist has not
+been tested.
+
+**Whether the change set introduced it: UNKNOWN.** The two lines involved date from `df6a42a` and were not touched by
+the change set. Against that, in the gate logs kept: 0 sightings in the 2 baseline runs and the 2 runs before the
+coordinator (`gate-00`, `-00-b`, `-01`, `-02`); 2 sightings in the 9 runs since the coordinator (`gate-03` … `gate-07-run3`);
+0 in 8 isolated runs. Four runs without it prove nothing about a fault seen 2 times in 9, and the coordinator does add
+layer-change events around a removal. Neither reading is established.
+
+**STOPPED — not fixed, nothing relaxed.** Reported for a ruling before any change to `src/`.

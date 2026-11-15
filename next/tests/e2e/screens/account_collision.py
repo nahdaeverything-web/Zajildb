@@ -25,6 +25,7 @@ under the wrong session land in the wrong loft, the second is why one account's 
 meaningless for another's rows. "Unchanged" below is a digest of an account's rows, not a count.
 
 Binds to data-testid only. Provisions its own server (R6)."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import hashlib
 import json
 import os
@@ -132,7 +133,7 @@ def device(b, downloads=False):
     ctx = NET.arm(check=check, ctx=b.new_context(viewport={'width': 430, 'height': 900}, accept_downloads=downloads))
     ctx.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};")
     ctx.route(f'{STUB}/**', handler)
-    pg = ctx.new_page(); pg.errs = []; pg.on('pageerror', lambda e: pg.errs.append(str(e)))
+    pg = ctx.new_page(); pg.errs = []; pg.on('pageerror', lambda e, _p=pg: pg.errs.append(perr(e, _p)))
     # the harness page, not a screen: with no session, every screen is the sign-in gate now
     pg.goto(HARNESS, wait_until='load'); pg.wait_for_timeout(600); pg.evaluate("async () => { await window.__zajilReady; }")
     return ctx, pg

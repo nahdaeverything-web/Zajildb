@@ -16,6 +16,7 @@ of IndexedDB and decoding it. Asserting on the picked File would prove nothing: 
 what survives into the database.
 
 Binds to data-testid only. Provisions its own server (R6)."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import os
 import sys
 
@@ -81,7 +82,7 @@ try:
         b = p.chromium.launch()
         ctx = b.new_context()
         errs = []
-        pg = ctx.new_page(); pg.on('pageerror', lambda e: errs.append(str(e)))
+        pg = ctx.new_page(); pg.on('pageerror', lambda e, _p=pg: errs.append(perr(e, _p)))
         pg.goto(HARNESS, wait_until='load'); pg.wait_for_timeout(800)
         pg.evaluate("async () => { await window.__zajilReady; }")
         pg.evaluate("async () => { const db = await window.__zajilDb; for (const x of db.allBirds()) await db.deleteBird(x.id); }")
@@ -91,7 +92,7 @@ try:
               f"{big['w']}x{big['h']}, {big['bytes'] / 1e6:.2f} MB")
 
         # picked through the REAL form, exactly as a fancier would
-        form = ctx.new_page(); form.on('pageerror', lambda e: errs.append(str(e)))
+        form = ctx.new_page(); form.on('pageerror', lambda e, _p=form: errs.append(perr(e, _p)))
         form.goto(f'{ROOT}bird/new/', wait_until='load'); form.wait_for_timeout(1200)
         raw = pg.evaluate("(d) => { const b = atob(d.split(',')[1]); const u = new Uint8Array(b.length);"
                           " for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return [...u]; }", big['dataURL'])
@@ -129,7 +130,7 @@ try:
                      dataURL: await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); }) }; }""")
         raw2 = pg.evaluate("(d) => { const b = atob(d.split(',')[1]); const u = new Uint8Array(b.length);"
                            " for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return [...u]; }", small['dataURL'])
-        form2 = ctx.new_page(); form2.on('pageerror', lambda e: errs.append(str(e)))
+        form2 = ctx.new_page(); form2.on('pageerror', lambda e, _p=form2: errs.append(perr(e, _p)))
         form2.goto(f'{ROOT}bird/new/', wait_until='load'); form2.wait_for_timeout(1200)
         form2.set_input_files('input[type=file][accept="image/*"]',
                               files=[{'name': 'small.jpg', 'mimeType': 'image/jpeg', 'buffer': bytes(raw2)}])

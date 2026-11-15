@@ -1,3 +1,4 @@
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import os
 from playwright.sync_api import sync_playwright
 
@@ -15,7 +16,7 @@ def check(n,c,e=''):
     else: fail+=1; print(f'  ✗ {n} {e}')
 with sync_playwright() as p:
     br=p.chromium.launch(); page=br.new_page(viewport={'width':1280,'height':900})
-    errs=[]; page.on('pageerror', lambda e: errs.append(str(e)))
+    errs=[]; page.on('pageerror', lambda e, _p=page: errs.append(perr(e, _p)))
     page.goto(os.environ.get('ZAJIL_URL','http://127.0.0.1:8123/'),wait_until='networkidle'); page.wait_for_timeout(800)
     page.evaluate("""async()=>{const db=await window.__zajilDb;
         await db.importAll(await (await fetch(new URL('example-loft-large.json', document.querySelector('link[rel=manifest]').href))).json(),'merge');}""")

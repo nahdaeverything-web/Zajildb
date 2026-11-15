@@ -3,6 +3,7 @@
 teaching_loft, example_data (as they apply) plus the states pedigree-tree-v1
 designs. Binds to data-testid only. Seeds through the layer on the harness
 route, then exercises the real screen. Provisions its own server (R6)."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import os, sys
 from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -40,7 +41,7 @@ try:
             const common = [...seen.values()].filter(n => n > 1).length; const commonSlots = [...seen.values()].filter(n => n > 1).reduce((a, n) => a + n, 0);
             const b = db.getBird(id); const br = e.coi.coiBreakdown(db.getBird, b.sireId, b.damId, 10);
             return { filled: loss.filled, total: loss.total, complete, common, commonSlots, rows: br.contributions.length }; }""", barq)
-        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e, _p=pg: errs.append(perr(e, _p)))
         pg.goto(f'{ROOT}pedigree/?id={barq}', wait_until='load'); pg.wait_for_selector('[data-testid=chart]', timeout=6000)
 
         # ── head ──

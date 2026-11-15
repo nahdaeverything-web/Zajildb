@@ -16,6 +16,7 @@
 #     the root's four-file spot check, and it is asserted against the real export.
 #
 # Provisions its own server (R6): the root suite assumes a hand-started one on 8123.
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import os
 import re
 import sys
@@ -57,7 +58,7 @@ try:
         br = p.chromium.launch()
         ctx = br.new_context()
         page = ctx.new_page(); page.set_default_timeout(25000)
-        errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
+        errs = []; page.on('pageerror', lambda e, _p=page: errs.append(perr(e, _p)))
         # a service worker needs a secure context; 127.0.0.1 counts as one
         page.goto(ROOT + 'birds/', wait_until='load'); page.wait_for_timeout(2500)
         page.evaluate("() => navigator.serviceWorker.ready")

@@ -4,6 +4,7 @@ this screen is canonical and is NEVER a launch wall. Intent list: auth_live's
 signed-out/credential assertions re-authored against the real screen (the live ones
 stay opt-in and are listed in the 4D report). Binds to data-testid only. Provisions
 its own server (R6)."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import os, sys
 from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -33,7 +34,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch()
         ctx = NET.arm(check=check, ctx=b.new_context(viewport={'width': 430, 'height': 900}))
-        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e, _p=pg: errs.append(perr(e, _p)))
 
         # ── NOT CONFIGURED (the shipped build has no project — sync-config.js is empty by design) ──
         pg.goto(SIGNIN, wait_until='load'); pg.wait_for_selector('[data-testid=signin-form]', timeout=6000)
@@ -73,7 +74,7 @@ try:
         shot(pg, path=f'{FID}/state-cfg-430.png', full_page=True)
 
         # ── CREDENTIALS REJECTED (a configured project that answers 400) ──
-        cfg = ctx.new_page(); errs2 = []; cfg.on('pageerror', lambda e: errs2.append(str(e)))
+        cfg = ctx.new_page(); errs2 = []; cfg.on('pageerror', lambda e, _p=cfg: errs2.append(perr(e, _p)))
         cfg.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};")
         cfg.route(f'{STUB}/**', lambda route: route.fulfill(status=400, content_type='application/json', body='{"error":"invalid_grant","error_description":"Invalid login credentials"}'))
         cfg.goto(SIGNIN, wait_until='load'); cfg.wait_for_selector('[data-testid=signin-form]')

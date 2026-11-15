@@ -16,6 +16,7 @@
 #
 # The two things this suite is really guarding are both about NOT breaking someone else:
 # the sibling-cache seed, and the fact that a failed install leaves no cache at all.
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import os
 import sys
 import uuid as _uuid
@@ -55,7 +56,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch(); ctx = NET.arm(check=check, ctx=b.new_context()); page = ctx.new_page()
         page.set_default_timeout(30000)
-        errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
+        errs = []; page.on('pageerror', lambda e, _p=page: errs.append(perr(e, _p)))
 
         # seed a SIBLING project's cache on the same origin, as github.io would have
         page.goto(ROOT + 'birds/', wait_until='load'); page.wait_for_timeout(500)
@@ -132,7 +133,7 @@ try:
 
         opt = NET.arm(check=check, ctx=b.new_context())
         opt.route('**/stats.txt', lambda route: route.fulfill(status=404, body=''))
-        op = opt.new_page(); operrs = []; op.on('pageerror', lambda e: operrs.append(str(e)))
+        op = opt.new_page(); operrs = []; op.on('pageerror', lambda e, _p=op: operrs.append(perr(e, _p)))
         op.goto(ROOT + 'birds/', wait_until='load'); op.wait_for_timeout(4000)
         n_opt = cache_entries(op)
         opt.set_offline(True)

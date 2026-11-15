@@ -5,6 +5,7 @@ error), the two departures design/README.md rules deliberate (an edit path, visi
 errors) and ruling 4's derived next-vaccination block. Binds to data-testid only.
 Seeds through the layer on the harness route, then exercises the real screen.
 Provisions its own server (R6)."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import os, sys
 from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -46,7 +47,7 @@ try:
         b = p.chromium.launch()
         ctx = b.new_context(viewport={'width': 430, 'height': 900})
         h = boot(ctx); wipe(h)
-        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e, _p=pg: errs.append(perr(e, _p)))
 
         # ── EMPTY (spec data-v="empty") ──
         pg.goto(HEALTH, wait_until='load'); pg.wait_for_selector('[data-testid=count-line]', timeout=6000)

@@ -29,6 +29,7 @@ once a stale COPY of the repo made by hand, and the suite passed against a week-
 for eight days without saying so. Here the root holds a symlink to the snapshot, so it is
 the tree that was built, by construction.
 """
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import functools
 import http.server
 import os
@@ -100,7 +101,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch(); ctx = b.new_context(viewport={'width': 430, 'height': 900}); page = ctx.new_page()
         page.set_default_timeout(30000)
-        errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
+        errs = []; page.on('pageerror', lambda e, _p=page: errs.append(perr(e, _p)))
         # Recorded ONLY while online. Departure 2 of the worker answers an offline miss with
         # a synthetic 504 — the port's own behaviour, not a host failure — and the root
         # suite is safe from that only by accident of assertion order. This says the window

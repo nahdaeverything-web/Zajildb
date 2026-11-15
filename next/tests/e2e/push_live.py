@@ -16,6 +16,7 @@
 # Rows written here STAY in the project: clients hold no DELETE grant, which is
 # deliberate (a tombstone cannot be lost by any client bug). Test rows are
 # therefore given a recognisable id prefix rather than cleaned up.
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import json, os, sys
 from playwright.sync_api import sync_playwright
 
@@ -58,7 +59,7 @@ print(f'  live project: {URL[:28]}…  account {EMAIL}')
 
 with sync_playwright() as p:
     br = p.chromium.launch(); page = br.new_page(); page.set_default_timeout(45000)
-    errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
+    errs = []; page.on('pageerror', lambda e, _p=page: errs.append(perr(e, _p)))
     page.add_init_script('globalThis.ZAJIL_SYNC_CONFIG = ' +
                          json.dumps({'url': URL, 'publishableKey': KEY}) + ';')
     page.goto(BASE, wait_until='load'); page.wait_for_timeout(2000)

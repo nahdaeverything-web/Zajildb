@@ -5,6 +5,7 @@ loft-home-v1 designs. Binds to data-testid only. Seeds through the layer on the
 harness route, then exercises the real screen. Provisions its own server (R6).
 
 Root assertion → new test mapping is in the docstring of each check."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import os, sys, json, time
 from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -38,7 +39,7 @@ try:
 
         # ── EMPTY STATE (spec data-v="empty") ──
         h = boot(ctx); wipe(h)
-        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e, _p=pg: errs.append(perr(e, _p)))
         pg.goto(BIRDS, wait_until='load'); pg.wait_for_selector('[data-testid=empty-state]', timeout=5000)
         check('[example_data#1 / teaching_loft#1 → spec: ONE button] empty state offers the example loader', pg.locator('[data-testid=empty-example]').count() == 1)
         check('empty state: «أضف أول طائر» primary + spec body', pg.locator('[data-testid=empty-cta]').inner_text() == 'أضف أول طائر' and 'شجرة نسب' in pg.locator('[data-testid=empty-state]').inner_text())

@@ -7,6 +7,7 @@ only with ?sync=1").
   · it can be stopped, and stopping it leaves nothing armed;
   · the harness-only test switch keeps it from starting (the postbuild guard proves a NORMAL build cannot carry it).
 """
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import sys, os
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from _serve import serve
@@ -20,7 +21,7 @@ try:
         for label, init, want in (('default', '', True), ('test-only switch', 'globalThis.__ZAJIL_TEST_NO_AUTOSYNC = true;', False)):
             ctx = b.new_context(); reqs = []
             if init: ctx.add_init_script(init)
-            pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+            pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e, _p=pg: errs.append(perr(e, _p)))
             pg.on('request', lambda r: reqs.append(r.url) if ('/rest/v1/' in r.url or '/auth/v1/' in r.url) else None)
             pg.goto(BASE, wait_until='load'); pg.wait_for_timeout(1500)
             pg.evaluate("async () => { await window.__zajilReady; }"); pg.wait_for_timeout(800)

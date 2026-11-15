@@ -10,6 +10,7 @@ cert.js:44, and the spec's «مستقلة عن لغة التطبيق»), the @pa
 follows the format, and the print rules leave the sheet unscaled.
 
 Binds to data-testid only. Provisions its own server (R6)."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import base64
 import os
 import sys
@@ -87,7 +88,7 @@ try:
             return deep[0]; }""")
         CERT = f'{ROOT}cert/?id={target["id"]}'
 
-        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e, _p=pg: errs.append(perr(e, _p)))
         pg.goto(CERT, wait_until='load'); pg.wait_for_selector('[data-testid=sheet]', timeout=10000)
 
         # ── the screen's own shape ──

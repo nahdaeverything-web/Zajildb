@@ -12,6 +12,7 @@ CONSTRUCTED.
 
     python3 tests/e2e/screens/replace_sync.py
 """
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import json
 import os
 import re
@@ -69,7 +70,7 @@ def device(b, H, email='r@zajil.test', configured=True):
     ctx = NET.arm(check=check, ctx=b.new_context(viewport={'width': 430, 'height': 900}))
     if configured:
         ctx.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};"); ctx.route(f'{STUB}/**', handler)
-    pg = ctx.new_page(); pg.errs = []; pg.on('pageerror', lambda e: pg.errs.append(str(e))); PAGES.append(pg)
+    pg = ctx.new_page(); pg.errs = []; pg.on('pageerror', lambda e, _p=pg: pg.errs.append(perr(e, _p))); PAGES.append(pg)
     pg.goto(H, wait_until='load'); pg.wait_for_function('window.__zajilReady')
     if configured: run(pg, "async (db, e) => { await db.signIn(e, 'pw'); }", email)
     return ctx, pg

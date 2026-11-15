@@ -28,6 +28,7 @@ the former and the fixed one the latter. Proven both ways by reverting the claus
 
 Each assertion names the site it covers. Binds to data-testid only. Provisions its own
 server (R6)."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import os, sys
 from playwright.sync_api import sync_playwright
 
@@ -117,7 +118,7 @@ try:
                 [sel, pattern])
 
         # ── the register, at 1400: the desktop table on its default `year` sort ──
-        pg = ctx.new_page(); pg.on('pageerror', lambda e: errs.append(str(e)))
+        pg = ctx.new_page(); pg.on('pageerror', lambda e, _p=pg: errs.append(perr(e, _p)))
         pg.goto(f'{ROOT}birds/', wait_until='load')
         pg.wait_for_function("document.querySelectorAll('[data-testid=table-row]').length === 4", timeout=8000)
         pg.evaluate(SEED, ['birds', live, loft])   # added LIVE — db.state keeps insertion order
@@ -143,7 +144,7 @@ try:
               got_phone == want, f'{got_phone} (in-memory order would be {inmem})')
 
         # ── the race log: eight races on one date ──
-        rp = ctx.new_page(); rp.on('pageerror', lambda e: errs.append(str(e)))
+        rp = ctx.new_page(); rp.on('pageerror', lambda e, _p=rp: errs.append(perr(e, _p)))
         rp.goto(f'{ROOT}races/?season=all', wait_until='load')
         rp.wait_for_function("document.querySelectorAll('[data-testid=race-row]').length >= 4", timeout=8000)
         rp.evaluate(SEED, ['races', live, loft])
@@ -156,7 +157,7 @@ try:
               got_r[:8] == want, f'{got_r[:8]} (in-memory order would be {inmem})')
 
         # ── the health log: eight events on one date ──
-        hp = ctx.new_page(); hp.on('pageerror', lambda e: errs.append(str(e)))
+        hp = ctx.new_page(); hp.on('pageerror', lambda e, _p=hp: errs.append(perr(e, _p)))
         hp.goto(f'{ROOT}health/', wait_until='load')
         hp.wait_for_function("document.querySelectorAll('[data-testid=ev-row]').length >= 4", timeout=8000)
         hp.evaluate(SEED, ['health', live, loft])

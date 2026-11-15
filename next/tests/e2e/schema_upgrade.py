@@ -1,3 +1,4 @@
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import os
 from playwright.sync_api import sync_playwright
 BASE = os.environ.get('ZAJIL_URL', 'http://127.0.0.1:8123/')
@@ -9,7 +10,7 @@ def check(n, c, e=''):
 
 with sync_playwright() as p:
     br = p.chromium.launch(); ctx = br.new_context(); page = ctx.new_page()
-    errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
+    errs = []; page.on('pageerror', lambda e, _p=page: errs.append(perr(e, _p)))
 
     # ── build a REAL v1.7 database from scratch: version 1, v1.7 store list ──
     # a same-origin page that does NOT boot the app — otherwise initDB()

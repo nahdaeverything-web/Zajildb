@@ -21,6 +21,7 @@ by /sign-in, so what the signed-out account row must offer is the explanation li
 «تسجيل الدخول» button that navigates there.
 
 Binds to data-testid only. Provisions its own server (R6)."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import base64
 import io
 import json
@@ -132,7 +133,7 @@ try:
 
         # ══ A. THE SHIPPED BUILD — no project configured ══════════════════════
         ctx = NET.arm(check=check, ctx=b.new_context(viewport={'width': 430, 'height': 900}))
-        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+        pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e, _p=pg: errs.append(perr(e, _p)))
         pg.goto(TOOLS, wait_until='load'); pg.wait_for_selector('[data-testid=tools-list]', timeout=8000)
 
         # ── the spec's own shape: six sections, each a grouped list of rows ──
@@ -730,7 +731,7 @@ try:
         ctx2 = NET.arm(check=check, ctx=b.new_context(viewport={'width': 430, 'height': 900}))
         ctx2.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};")
         ctx2.route(f'{STUB}/**', handler)
-        sp = ctx2.new_page(); errs2 = []; sp.on('pageerror', lambda e: errs2.append(str(e)))
+        sp = ctx2.new_page(); errs2 = []; sp.on('pageerror', lambda e, _p=sp: errs2.append(perr(e, _p)))
         sp.goto(TOOLS, wait_until='load'); sp.wait_for_selector('[data-testid=signin-screen][data-gate]', timeout=8000); sp.wait_for_timeout(400)
 
         # ── THE GATE (RULED 2026-10-07) — with no session, الأدوات is the sign-in screen, like every route ──

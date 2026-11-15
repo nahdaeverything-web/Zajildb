@@ -14,6 +14,7 @@ rows, one server_seq, the §4 trigger). Harness build, the net armed. Every shap
 
     python3 tests/e2e/screens/sync_auto.py
 """
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import datetime
 import json
 import os
@@ -82,7 +83,7 @@ SHAPE13 = """async (db) => { await db.Lofts.save({ ...db.currentLoft(), name: '�
 def device(b, H, srv, email='a@zajil.test', sign_in=True, extra_init=''):
     ctx = NET.arm(check=check, ctx=b.new_context(viewport={'width': 430, 'height': 900}))
     ctx.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};" + extra_init); ctx.route(f'{STUB}/**', make_handler(srv))
-    pg = ctx.new_page(); pg.errs = []; pg.on('pageerror', lambda e: pg.errs.append(str(e))); PAGES.append(pg)
+    pg = ctx.new_page(); pg.errs = []; pg.on('pageerror', lambda e, _p=pg: pg.errs.append(perr(e, _p))); PAGES.append(pg)
     pg.goto(H, wait_until='load'); pg.wait_for_function('window.__zajilReady')
     if sign_in: run(pg, "async (db, e) => { await db.signIn(e, 'pw'); }", email)
     return ctx, pg
@@ -196,7 +197,7 @@ try:
         # REAL TIMERS, driven: the idle heartbeat fires; the background stops it; the foreground restarts it
         srv = Server(); ctx3 = NET.arm(check=check, ctx=b.new_context(viewport={'width': 430, 'height': 900}))
         ctx3.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};"); ctx3.route(f'{STUB}/**', make_handler(srv))
-        tp = ctx3.new_page(); tp.errs = []; tp.on('pageerror', lambda e: tp.errs.append(str(e))); PAGES.append(tp); tp.clock.install()
+        tp = ctx3.new_page(); tp.errs = []; tp.on('pageerror', lambda e, _p=tp: tp.errs.append(perr(e, _p))); PAGES.append(tp); tp.clock.install()
         tp.goto(H, wait_until='load'); tp.wait_for_function('window.__zajilReady'); run(tp, "async (db) => { await db.signIn('a@zajil.test', 'pw'); await db.syncNow(); }"); settle(tp)
         mark = len(srv.log); tp.clock.fast_forward(299000); tp.wait_for_timeout(600); quiet = len(srv.calls('GET', mark))
         tp.clock.fast_forward(2000); wait_until(tp, lambda: srv.calls('GET', mark), 5); settle(tp)
@@ -234,7 +235,7 @@ try:
         # ═══ § HONEST STATUS — «متزامن» means synced; unsent work is said in words, never as a count; it survives a reload ═══
         srv = Server(); ctx5 = NET.arm(check=check, ctx=b.new_context(viewport={'width': 430, 'height': 900}))
         ctx5.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};" + SEEN); ctx5.route(f'{STUB}/**', make_handler(srv))
-        hs = ctx5.new_page(); hs.errs = []; hs.on('pageerror', lambda e: hs.errs.append(str(e))); PAGES.append(hs)
+        hs = ctx5.new_page(); hs.errs = []; hs.on('pageerror', lambda e, _p=hs: hs.errs.append(perr(e, _p))); PAGES.append(hs)
         hs.goto(H, wait_until='load'); hs.wait_for_function('window.__zajilReady'); run(hs, "async (db) => { await db.signIn('a@zajil.test', 'pw'); await db.Lofts.save({ ...db.currentLoft(), name: 'لوفت الحالة' }); await db.syncNow(); }"); settle(hs)
         v, h = tools_row(hs, ROOT)
         check('[status] synced: the tools row says «متزامن» with the last successful sync, and the list row is silent', v == 'متزامن' and 'آخر مزامنة ناجحة' in h and row_text(hs, ROOT) == '', (v, h))

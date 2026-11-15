@@ -41,6 +41,7 @@ AND TWO THINGS THE ORIGINAL DID NOT ASK, both of which are the whole point of th
     extensionless deep routes, which is also §g's "walk more than the root path".
 
 Provisions nothing: the origin under test is the deployment."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import json
 import os
 import re
@@ -154,7 +155,7 @@ with sync_playwright() as p:
     page = ctx.new_page()
     page.set_default_timeout(60000)
     errs, bad = [], []
-    page.on('pageerror', lambda e: errs.append(str(e)))
+    page.on('pageerror', lambda e, _p=page: errs.append(perr(e, _p)))
     page.on('response', lambda r: bad.append(f'{r.status} {r.url}') if r.status >= 400 else None)
 
     # 'load', never 'networkidle': a page controlled by a service worker never goes idle

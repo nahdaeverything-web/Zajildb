@@ -8,6 +8,7 @@
 # as the real server expresses it.
 #
 # tests/e2e/push_live.py runs the same handshake against the real project.
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import json, os
 from playwright.sync_api import sync_playwright
 from _net import Net                           # THE NET (RULED 2026-10-08): armed beneath the stub, asserted at the end
@@ -104,7 +105,7 @@ RESET = """async (db, a) => {
 
 with sync_playwright() as p:
     br = p.chromium.launch(); page = br.new_page(); page.set_default_timeout(60000); NET.arm(check=check, ctx=page.context)
-    errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
+    errs = []; page.on('pageerror', lambda e, _p=page: errs.append(perr(e, _p)))
     page.add_init_script(
         f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB_URL}', publishableKey: '{STUB_KEY}' }};")
     page.route(f'{STUB_URL}/**', handler)

@@ -9,6 +9,7 @@
 # is stateful and models the real one: an upsert keyed on (store, record_id),
 # a server_seq assigned per write, and §4's last-write-wins enforced where it
 # CAN be authoritative.
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import json, os, re
 from playwright.sync_api import sync_playwright
 from _net import Net                           # THE NET (RULED 2026-10-08): armed beneath the stub, asserted at the end
@@ -103,7 +104,7 @@ with sync_playwright() as p:
             f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB_URL}', publishableKey: '{STUB_KEY}' }};")
         ctx.route(f'{STUB_URL}/**', handler)
         pg = ctx.new_page(); pg.set_default_timeout(60000)
-        pg.on('pageerror', lambda e: errs.append(f'{label}: {e}'))
+        pg.on('pageerror', lambda e, _p=pg, _l=label: errs.append(perr(e, _p, _l)))
         pg.goto(BASE, wait_until='load'); pg.wait_for_timeout(1800)
         return pg
 

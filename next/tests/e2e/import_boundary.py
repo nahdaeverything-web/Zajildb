@@ -22,6 +22,7 @@ fixture would drift the moment anything changes what a photo weighs — which th
 work just did.
 
 Binds to data-testid only. Provisions its own servers (R6)."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import os
 import socket
 import subprocess
@@ -95,7 +96,7 @@ try:
         # ── 2. the guard refuses, and says something true ──────────────────────────────
         ctx = br.new_context(accept_downloads=True)
         g = ctx.new_page(); g.set_default_timeout(900000)
-        gerr = []; g.on('pageerror', lambda e: gerr.append(str(e)))
+        gerr = []; g.on('pageerror', lambda e, _p=g: gerr.append(perr(e, _p)))
         g.goto(ORIGIN + 'tools/import/', wait_until='load'); g.wait_for_timeout(2000)
         for _ in range(30):
             if g.locator('[data-testid=toast]').count() == 0:
@@ -157,7 +158,7 @@ try:
 
             ctx_b = br.new_context(accept_downloads=True)
             b2 = ctx_b.new_page(); b2.set_default_timeout(1800000)
-            berr = []; b2.on('pageerror', lambda e: berr.append(str(e)))
+            berr = []; b2.on('pageerror', lambda e, _p=b2: berr.append(perr(e, _p)))
             b2.goto(ORIGIN_B + 'tools/import/', wait_until='load'); b2.wait_for_timeout(2000)
             for _ in range(30):
                 if b2.locator('[data-testid=toast]').count() == 0:

@@ -3,6 +3,7 @@
 Screenshots every section at 430 / 900 / 1400 into next/fidelity/shared-states/
 and asserts each designed state is reachable and behaves as the spec says.
 Provisions its own server (R6). Binds to data-testid only, never to styling classes."""
+import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import os, sys, time
 from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -21,7 +22,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch()
         for w in (430, 900, 1400):
-            pg = b.new_page(viewport={'width': w, 'height': 900}); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+            pg = b.new_page(viewport={'width': w, 'height': 900}); errs = []; pg.on('pageerror', lambda e, _p=pg: errs.append(perr(e, _p)))
             pg.goto(GAL, wait_until='load'); pg.wait_for_timeout(800)
             check(f'{w}: gallery renders, dir=rtl', pg.evaluate("document.documentElement.dir") == 'rtl')
             for sec in SECTIONS:
