@@ -2553,6 +2553,7 @@ check; each is a short-lived sheet, but the class is the same and they are NOT c
 - **Only the bird form warns about a record changed underneath it.** The health sheet, the race-result sheet, the
   pair sheets and the loft rows save without the check. When it is extended, the pair sheets come first.
 - **A replace-import whose file carries no loft leaves the device without one until the next boot** (RF-15).
+  MEASURED and FIXED 2026-11-15 in the follow-up set — see «The no-loft replace» below.
 - **The restore list shows a pre-import snapshot by its raw key** (`pre-import-…`); only the question strips it.
 - **The failure row repeats a word:** «تعذّر الإرسال — راجع الأدوات» sits beside the existing «الأدوات» link. RULED: it
   becomes «تعذّر الإرسال»; that change goes in the same follow-up as the string corrections, not before.
@@ -2560,6 +2561,36 @@ check; each is a short-lived sheet, but the class is the same and they are NOT c
   same day); the `sync_ui` check was changed deliberately and now also asserts «راجع» is absent. The corrections to
   the fifteen strings were not in when this shipped (RULED: do not wait) and remain one follow-up.
 - RULED the same day: the tools synced row on two lines is approved; the three ledger entries are approved.
+
+### The no-loft replace — measured, ruled and fixed (2026-11-15)
+A restore is `importAll(snapshot, 'replace')`, so it shares this. The probe, on the unfixed build
+(`~/zajil-work/tf12/noloft_probe.py`, log `~/zajil-gate-logs/followup-noloft-probe.log`):
+
+```
+after the replace: {"lofts": [], "current": null, "currentLoft": null, "storedCurrent": null, "birds": [], "loftTombstones": 0}
+a bird saved now: {"saved": true, "loftId": null, …}
+after a reload (boot): {"lofts": [["7d6f5216", "(unnamed)"]], "current": "7d6f5216-…", "currentLoft": "a loft", "storedCurrent": "7d6f5216-…", "birds": [["probe", null]], "loftTombstones": 0}
+```
+
+Worse than «until the next boot»: a bird saved in between is filed under no loft and STAYS so after the boot makes
+a loft. **RULED 2026-11-15, built as ruled:** `importAll()` ends with `ensureCurrentLoft()` when no loft is left —
+the loft the next boot would have made, made at once. Four checks in `tests/e2e/screens/replace_sync.py`; the
+mutant (the line removed) on its own harness build:
+
+```
+  ✗ [no loft · M-noloft fails here] after a replace whose file has no loft the device HAS one, at once: one loft, current, stored  {'lofts': [], 'inStore': [], 'current': None, 'real': False, 'stored': None, 'birds': []}
+  ✓ [no loft] …and it is not the loft the replace dropped
+  ✗ [no loft · M-noloft fails here] a bird saved straight afterwards is filed under that loft, not under none  [['بعد-الاستبدال', None]]
+  ✗ [no loft] the next boot makes no second loft: the same one, the bird still in it
+24 passed, 3 failed
+```
+
+The second of those checks passed under the mutant on its first writing (`None == None`); it was tightened to
+require a real loft id and the mutant was run again. That is the output above.
+
+**OPEN against RF-14, for a later ruling — NOT touched:** the lines just above (`src/db/io.js`), when SEVERAL lofts
+remain after an import and the current one is not among them, make the first loft current. RF-14's rule for that
+case (`ensureCurrentLoft()`) is to refuse the guess and create a fresh loft. The two disagree.
 
 ### The upgrade path — measured 2026-11-14 before the deploy; (b) did NOT pass as stated, and the deploy was held
 Nothing in the gate boots this build over data written by the build before it. Measured stub-backed, THE NET armed

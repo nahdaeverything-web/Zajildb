@@ -170,6 +170,20 @@ try:
         check('[unconfigured] the replace ran', census(U)['names'] == ['من-الملف'], census(U)['names'])
         cu.close()
 
+        # ═══ RF-15 gap (RULED 2026-11-15): a replace whose file carries NO loft — a restore runs the same importAll() ═══
+        LOFTS = """async (db) => { const st = {}; for (const r of await db.idbGetAll('settings')) st[r.key] = r.value;
+          return { lofts: [...db.state.lofts.keys()], inStore: (await db.idbGetAll('lofts')).map(l => l.id), current: db.state.currentLoftId, real: !!db.currentLoft(), stored: st.currentLoftId || null,
+            birds: [...db.state.birds.values()].map(b => [b.name, b.loftId || null]) }; }"""
+        cn, N = device(b, H, 'n@zajil.test'); n0 = run(N, LOFTS)
+        run(N, "async (db) => { const exp = await db.exportAll(); await db.importAll({ ...exp, lofts: [], birds: [], pairs: [], raceResults: [], healthEvents: [], media: [] }, 'replace'); }"); n1 = run(N, LOFTS)
+        check('[no loft · M-noloft fails here] after a replace whose file has no loft the device HAS one, at once: one loft, current, stored', len(n1['lofts']) == 1 and n1['real'] and n1['current'] == n1['lofts'][0] == n1['stored'] and n1['inStore'] == n1['lofts'], n1)
+        check('[no loft] …and it is not the loft the replace dropped', n1['lofts'] != n0['lofts'], (n0['lofts'], n1['lofts']))
+        run(N, "async (db) => { await db.saveBird(db.newBird({ name: 'بعد-الاستبدال', sex: 'cock' })); }"); n2 = run(N, LOFTS)
+        check('[no loft · M-noloft fails here] a bird saved straight afterwards is filed under that loft, not under none', bool(n1['current']) and n2['birds'] == [['بعد-الاستبدال', n1['current']]] and n2['birds'][0][1] in n2['lofts'], n2['birds'])
+        N.goto(H, wait_until='load'); N.wait_for_function('window.__zajilReady'); n3 = run(N, LOFTS)
+        check('[no loft] the next boot makes no second loft: the same one, the bird still in it', n3['lofts'] == n1['lofts'] and n3['current'] == n1['current'] and n3['birds'] == n2['birds'], n3)
+        cn.close()
+
         check(f'zero page errors across {len(PAGES)} devices', not any(p.errs for p in PAGES), [e[:160] for p in PAGES for e in p.errs][:3])
         NET.assert_empty(check)
         b.close()

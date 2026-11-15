@@ -8,7 +8,7 @@
 // Import from `js/db.js`, never from here directly — the facade is the API.
 
 import {
-  emitChange, getBird, idbClear, idbDelete, idbGet, idbGetAll, idbPut, nowISO, setSetting, state,
+  emitChange, ensureCurrentLoft, getBird, idbClear, idbDelete, idbGet, idbGetAll, idbPut, nowISO, setSetting, state,
 } from './storage.js';
 import { clearTombstone, diffFields, getTombstone, logOp, writeTombstone } from './oplog.js';
 import { mediaForBird, isPristineLoft, dropPristineLoft } from './records.js';
@@ -400,6 +400,10 @@ export async function importAll(payload, mode = 'merge') {
     state.currentLoftId = state.lofts.size ? [...state.lofts.keys()][0] : null;
     await setSetting('currentLoftId', state.currentLoftId);
   }
+  // RF-15 gap (RULED 2026-11-15): a replace or a restore whose payload carries no loft left the device with none
+  // until the next boot, and a bird saved in between was filed under no loft for good. The loft the next boot would
+  // have created is created now. Only the no-loft case: the several-lofts branch above is open against RF-14.
+  if (!state.lofts.size) await ensureCurrentLoft();
   emitChange({ type: 'import' });
   return counts;
 }
