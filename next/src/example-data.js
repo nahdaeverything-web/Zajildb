@@ -75,10 +75,14 @@ export async function examplePresence() {
     }
   }
   const media = (await idbGetAll('media')).filter((m) => example.has(m.birdId) && !keep.has(m.birdId));
+  // TF-12 (RULED 2026-11-15): the read above is an await, and a removal or a pulled tombstone can take a loft away
+  // across it — `state.lofts.get(id).name` then threw. Re-checked here; with no loft left there is no example data.
+  const still = present.filter((id) => state.lofts.has(id));
+  if (!still.length) return null;
   const own = birds.own.length + pairs.own.length + races.own.length + health.own.length;
   return {
-    ids: present,
-    lofts: present.map((id) => ({ id, name: state.lofts.get(id).name || '',
+    ids: still,
+    lofts: still.map((id) => ({ id, name: state.lofts.get(id).name || '',
       birds: birds.ex.filter((b) => b.loftId === id).length, pairs: pairs.ex.filter((r) => r.loftId === id).length,
       races: races.ex.filter((r) => r.loftId === id).length, health: health.ex.filter((r) => r.loftId === id).length })),
     birds: birds.ex.length - keep.size, pairs: pairs.ex.length, races: races.ex.length, health: health.ex.length, media: media.length,

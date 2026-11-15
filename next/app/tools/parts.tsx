@@ -396,8 +396,10 @@ export function ExampleRemoveRow() {
   // recomputed on EVERY layer change (loading, removing, a pulled tombstone): useZajilStore's selector hands back the
   // same mutated state object, so it cannot be an effect dependency — the layer's own change feed is subscribed instead
   useEffect(() => {
-    let live = true;
-    const recompute = () => { (db.examplePresence() as Promise<Presence | null>).then((x) => { if (live) setP(x); }); };
+    let live = true; let latest = 0;
+    // TF-12 (RULED 2026-11-15): a recompute that finishes after a newer one STARTED is dropped — it was put back over
+    // the newer answer (measured: 38 → 37 → 38 for two seconds after one deletion)
+    const recompute = () => { const mine = ++latest; (db.examplePresence() as Promise<Presence | null>).then((x) => { if (live && mine === latest) setP(x); }); };
     recompute();
     const off = db.onChange(recompute) as (() => void) | undefined;
     return () => { live = false; if (typeof off === 'function') off(); };

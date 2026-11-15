@@ -244,6 +244,43 @@ try:
         cl.close()
 
         # TF-9 (2026-10-30): until this date the check iterated over an EMPTY list and could not fail
+        # ═══ TF-12 (RULED 2026-11-15): the removal row's recompute, held at examplePresence()'s media read ═══
+        # The hold: IDBObjectStore.getAll on `media` hands back a stand-in request whose success is delivered only on
+        # release. deleteBird()'s own media read goes through an INDEX and is not held.
+        HOLD = """() => { if (window.__hold) return; const H = window.__hold = { n: 0, held: [], release() { const h = this.held; this.held = []; h.forEach(f => f()); } };
+          const orig = IDBObjectStore.prototype.getAll;
+          IDBObjectStore.prototype.getAll = function (...a) { const real = orig.apply(this, a); if (this.name !== 'media' || H.n <= 0) return real;
+            H.n--; const fake = { result: undefined, error: null, onsuccess: null, onerror: null };
+            real.onsuccess = () => { fake.result = real.result; H.held.push(() => fake.onsuccess && fake.onsuccess({ target: fake })); };
+            real.onerror = () => { fake.error = real.error; fake.onerror && fake.onerror({ target: fake }); }; return fake; }; }"""
+        ROWV = "() => { const r = document.querySelector('[data-row=example-remove] [data-testid=row-value]'); return r ? r.textContent : null; }"
+        def held_device(email):
+            c_, d_ = device(b, H, email); run(d_, "async (db) => { const big = await (await fetch('/example-loft-large.json')).json(); await db.importAll(big, 'merge'); }")
+            tools(d_, ROOT); d_.wait_for_selector('[data-row=example-remove]', timeout=15000); d_.wait_for_timeout(6000)     # past the boot cycle and the after-change cycle
+            d_.evaluate(HOLD); d_.evaluate("() => { window.__hold.n = 1; }"); run(d_, "async (db) => { db.emitChange({ type: 'probe' }); }")
+            try: d_.wait_for_function("() => window.__hold.held.length === 1", timeout=5000)
+            except PWTimeout: pass
+            return c_, d_, d_.evaluate("() => window.__hold.held.length")
+        ch, dh, held = held_device('h@zajil.test')
+        check('[TF-12 · setup] the row shows the 38 and ONE recompute of it is held at the media read, the loft still there', digits(dh.evaluate(ROWV) or '') == '38' and held == 1, (dh.evaluate(ROWV), held))
+        rem = run(dh, "async (db) => { const r = await db.removeExampleData(); return r && r.birds; }"); dh.wait_for_timeout(1200)
+        check('[TF-12] the removal ran with that recompute still held, and the row is gone', rem == 38 and dh.evaluate(ROWV) is None, (rem, dh.evaluate(ROWV)))
+        dh.evaluate("() => window.__hold.release()"); dh.wait_for_timeout(1200)
+        check('[TF-12 · M-recheck fails here] released AFTER its loft was removed, the held recompute raises no page error', not dh.errs, [e[:200] for e in dh.errs][:1])
+        check('[TF-12] …and the row stays gone', dh.evaluate(ROWV) is None, dh.evaluate(ROWV))
+        ch.close()
+        co, do, held = held_device('o@zajil.test')
+        do.evaluate("""() => { const W = window.__seen = []; const read = () => { const r = document.querySelector('[data-row=example-remove] [data-testid=row-value]'); const x = r ? r.textContent : '(no row)';
+            if (!W.length || W[W.length - 1] !== x) W.push(x); }; read(); new MutationObserver(read).observe(document.body, { subtree: true, childList: true, characterData: true }); }""")
+        run(do, """async (db) => { const V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i; const all = [...db.state.birds.values()];
+            const leaf = all.find(b => !V4.test(b.id) && !all.some(c => c.sireId === b.id || c.damId === b.id)); await db.deleteBird(leaf.id); }"""); do.wait_for_timeout(800)
+        mid = digits(do.evaluate(ROWV) or '')
+        do.evaluate("() => window.__hold.release()"); do.wait_for_timeout(500); late = digits(do.evaluate(ROWV) or ''); do.wait_for_timeout(4500)
+        seen = [digits(x) for x in do.evaluate("() => window.__seen")]
+        check('[TF-12 · setup] one recompute held, one example bird deleted: the row went from 38 to 37', held == 1 and mid == '37', (held, mid))
+        check('[TF-12 · M-order fails here] the held recompute, released late with the OLD count, is dropped — the row never shows 38 again', late == '37' and seen == ['38', '37'], (late, seen))
+        co.close()
+
         check(f'zero page errors across {len(PAGES)} devices', not any(p.errs for p in PAGES), [e[:160] for p in PAGES for e in p.errs][:3])
         NET.assert_empty(check)
         b.close()

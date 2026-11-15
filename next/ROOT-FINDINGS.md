@@ -2756,3 +2756,63 @@ coordinator (`gate-00`, `-00-b`, `-01`, `-02`); 2 sightings in the 9 runs since 
 layer-change events around a removal. Neither reading is established.
 
 **STOPPED — not fixed, nothing relaxed.** Reported for a ruling before any change to `src/`.
+
+### TF-12 — measured, ruled and fixed (2026-11-15, the follow-up set)
+
+**RULED: HOLD until `84d838c` was accepted; accepted the same day on Samir's two devices.**
+
+**The probe, on the unfixed build** (`~/zajil-work/tf12/stale_row_probe.py`, log
+`~/zajil-gate-logs/tf12-stale-row-probe.log`; stub-backed, the net armed). One recompute of the removal row is held
+at `examplePresence()`'s media read — `IDBObjectStore.getAll` on `media` hands back a stand-in request whose success
+is delivered on release — and something is removed while it waits.
+
+*A. Held across the whole removal.* The question was whether a device can be left showing the row for lofts that
+are gone. On the unfixed build: no.
+
+```
+before: {"value": "38", "lofts": "الألوفت التجريبية: «لوفت إربد التعليمي»"}
+removal ran: {'birds': 38, 'kept': 0} · truth {"lofts": [""], "birds": 0, "presence": null}
+row AFTER the removal, held recompute NOT yet released: null · page errors so far: 0
+row AFTER the held recompute is released: null
+page errors: 1
+row after a reload: null
+```
+
+The page error is TF-12's, same message, same two stack offsets: the cause is reproduced on demand. The row stays
+gone only BECAUSE the late recompute throws before it can set anything.
+
+*A2. Held across the deletion of one example bird.* A late recompute overwrites a newer one:
+
+```
+held recompute released at 844 ms · row 400 ms later: {"value": "38", …} · truth {… "birds": 37 …}
+row 6 s later, nothing pressed: {"value": "37", …}
+every value shown [ms since the observer started, value]: [[0, "38"], [40, "37"], [845, "38"], [3037, "37"]]
+```
+
+The old count stood for about 2.2 s, until the after-change sync cycle caused another recompute.
+
+**Why skip-only was not built.** Skipping the missing loft and returning the rest would make the late recompute
+return a result — no lofts, counts taken before the await — and the row would set it: the page error traded for
+the stale row. Read from the code, not measured.
+
+**RULED 2026-11-15, built as ruled.**
+- `examplePresence()` (`src/example-data.js`) re-checks the lofts after the await and returns null when none is left.
+- The row (`app/tools/parts.tsx`) drops a recompute that finishes after a newer one started.
+
+**Tests** (`tests/e2e/screens/example_remove.py`, six checks, the same hold), and the two mutants, each on its own
+harness build (`~/zajil-gate-logs/followup-mutants.log`):
+
+```
+═══ THE FIX
+suite[fix-example_remove] exit 0 · 54 passed, 0 failed
+═══ MUTANT M-recheck          (the re-check and the null return removed)
+suite[M-recheck] exit 1 · 52 passed, 2 failed
+  ✗ [TF-12 · M-recheck fails here] released AFTER its loft was removed, the held recompute raises no page error  ["Cannot read properties of undefined (reading 'name') | at http://127.0.0.1:34087/tools/ | …
+  ✗ zero page errors across 12 devices
+═══ MUTANT M-order            (the row sets whatever finishes last)
+suite[M-order] exit 1 · 53 passed, 1 failed
+  ✗ [TF-12 · M-order fails here] the held recompute, released late with the OLD count, is dropped — the row never shows 38 again  ('38', ['38', '37', '38', '37'])
+```
+
+**Still unknown, and still not claimed:** whether the sync change set introduced the sightings. The fix removes the
+fault; it does not answer that.
