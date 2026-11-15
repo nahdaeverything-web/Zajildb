@@ -396,12 +396,20 @@ with sync_playwright() as p:
         page.click('[data-testid=example-remove]'); page.wait_for_selector('[data-testid=dialog]', timeout=10000)
         dtext = page.locator('[data-testid=dialog]').inner_text().replace('\n', ' ')
         check('[EXAMPLE] the dialog names the real count before anything is touched', re.sub(r'[٠-٩]', lambda m: str('٠١٢٣٤٥٦٧٨٩'.index(m.group())), dtext).find('38') >= 0 and 'لوفت إربد التعليمي' in dtext, dtext[:160])
+        before_posts = _seq['n']   # counted from BEFORE the removal: since RF-19 the coordinator sends it, nobody presses
         page.click('[data-testid=dialog-confirm]'); page.wait_for_selector('[data-row=example-remove]', state='detached', timeout=120000); page.wait_for_timeout(1500)
         page.goto(URL + 'birds/', wait_until='load'); page.wait_for_timeout(2000)
         check('[EXAMPLE] one action removed it: the register is empty again and the row is gone', page.locator('[data-testid=bird-row]').count() == 0)
-        before_posts = _seq['n']
-        page.goto(URL + 'tools/sync/', wait_until='load'); page.wait_for_selector('[data-testid=card-sync]', timeout=30000); page.click('[data-testid=sync-now]'); page.wait_for_timeout(6000)
-        check('[EXAMPLE] «مزامنة الآن» pushed the tombstones to the (stubbed) project — the removal syncs', _seq['n'] - before_posts >= 68, f'{_seq["n"] - before_posts} rows pushed')
+        # CHANGED DELIBERATELY 2026-11-15 (RF-19): this used to press «مزامنة الآن» and count the rows that press pushed. With the
+        # coordinator the removal is sent 3 s after it happens, so the press found nothing left (measured in rehearsal: 0 rows).
+        # The assertion is now the stronger one: the tombstones reach the (stubbed) project WITH NO PRESS — bounded wait, no raise.
+        for _ in range(40):
+            if _seq['n'] - before_posts >= 68: break
+            page.wait_for_timeout(500)
+        check('[EXAMPLE] the removal syncs with NO press: its tombstones reached the (stubbed) project within 20 s', _seq['n'] - before_posts >= 68, f'{_seq["n"] - before_posts} rows pushed')
+        sent = _seq['n']
+        page.goto(URL + 'tools/sync/', wait_until='load'); page.wait_for_selector('[data-testid=card-sync]', timeout=30000); page.click('[data-testid=sync-now]'); page.wait_for_timeout(4000)
+        check('[EXAMPLE] «مزامنة الآن» afterwards has nothing left to push — the removal is not sent twice', _seq['n'] - sent == 0, f'{_seq["n"] - sent} rows pushed by the press')
     check('zero page errors', not errs, '; '.join(errs[:2]))
     NET.assert_empty(check)
     br.close()

@@ -2587,6 +2587,54 @@ Two of my own checks in that run were wrong, not the build: one demanded that th
 and the device shows the approved «دون اتصال» wording instead, because the old build's refused cycles left a network
 error on record. In neither does «متزامن» appear while anything is unsent.
 
+### RULED 2026-11-14 (evening): (b) is ACCEPTED as it stands — a known ONE-TIME upgrade behaviour; no fifth commit
+A device that never synced on the old build runs the first-login enqueue once more on its first cycle under the new
+build, drains in one push, and never repeats; no record changes. No real device is in that state: both of Samir's are
+in (a), which passed. The (b) output, verbatim:
+
+```
+  [b] live build: op count after sign-in and after each further refused cycle [26, 39, 52, 65] · server rows 0
+  [b] LIVE build, worker: holds · BEFORE: {"by origin": {"user": 65}, "firstEnqueueSeq": "(absent)", "lastAckedSeq": "(absent)", "lastSyncAt": "(absent)", "opSeq": 65, "ops in the log": 65, "pending (seq > lastAckedSeq)": 65, "records": {"birds": 12, "healthEvents": 0, "lofts": 1, "media": 0, "pairs": 0, "raceResults": 0, "tombstones": 0}, "syncCursor": "(absent)"}
+  ✓ [b] the service worker took the new build with no app page open  holds
+  ✓ [b] the worker update alone touched nothing in IndexedDB
+  ✓ [b] this boot runs the NEW build  NEW
+  [b] AFTER the first boot and first cycle of the new build (3 s on the tools screen): {"by origin": {"user": 78}, "firstEnqueueSeq": 78, "lastAckedSeq": 78, "lastSyncAt": "2026-11-14T05:57:00.032Z", "opSeq": 78, "ops in the log": 78, "pending (seq > lastAckedSeq)": 0, "records": {"birds": 12, "healthEvents": 0, "lofts": 1, "media": 0, "pairs": 0, "raceResults": 0, "tombstones": 0}, "syncCursor": 13}
+  [b] op count 65 → 78 · pending 65 → 0 · firstEnqueueSeq (absent) → 78
+  [b] requests during it: [["POST", 13], ["GET", 0, 13]]
+  [b] pushed: 1 POST(s), 13 row(s), 13 distinct record(s) · by store {"birds": 12, "lofts": 1}
+  [b] records changed on the device (every store but the op log, settings, backups; byte comparison): 0 
+  [b] status shown from the first frame — tools row value, every distinct text in order: ["", "دون اتصال", "جارٍ…", "متزامن"] · the row as it stands: "المزامنةآخر مزامنة ناجحة 14 تشرين الثاني 2026، 08:57 ص (4 جمادى الآخرة 1448 هـ)متزامن"
+  [b] the list-screen status row over the same time: ["(no row)", "offline: ⚡دون اتصال — تغييراتك محفوظة وستُرسل عند عودة الاتصال", "syncing: ⟳جارٍ المزامنة…", "(no row)"] · sign-in gate shown: False
+  [b] the layer says: {"everSynced": true, "loop": "not in a production build (test-only export, tree-shaken)", "status": {"email": "a@zajil.test", "error": null, "lastSyncAt": "2026-11-14T05:57:00.032Z", "pending": 0, "pendingSince": null, "state": "synced"}, "unsent": {}}
+  ✓ [b] the state is the ordered one: never synced, every op pending, the log inflated  (65, 65)
+  ✗ [b] WITHOUT MULTIPLYING: the op count after the first boot and first cycle equals the count before  (65, 78)
+  ✓ [b] DRAINS: nothing is pending after the first cycle  0
+  ✓ [b] the server holds the 13 records, one row each  (13, 13, 13)
+  ✓ [b] every pushed row carries the record exactly as the device holds it  (13, 13)
+  ✓ [b] NO RECORD CHANGED on the device  []
+  ✓ [b] the status starts as not-synced and ends «متزامن»  ['', 'دون اتصال', 'جارٍ…', 'متزامن']
+  ✗ [b] «لم تُرسل بعد» is shown before «متزامن» ever is  ['', 'دون اتصال', 'جارٍ…', 'متزامن']
+  ✗ [b] WITHOUT MULTIPLYING: the op count after the first boot and first cycle equals the count before
+  ✗ [b] «لم تُرسل بعد» is shown before «متزامن» ever is
+```
+
+**The check marked ✗ stays as written.** `WITHOUT MULTIPLYING: the op count after … equals the count before  (65, 78)`
+was written before the measurement and is stricter than the ruling; it is not relaxed after the fact. It fails
+because of the accepted one-time enqueue and for no other reason. The other ✗, `«لم تُرسل بعد» is shown before
+«متزامن» ever is`, was my wrong expectation (above).
+
+### Deployed 2026-11-15 and re-verified from the live origin
+`gh-pages 84d838c` on the mirror, built from `16f9474` (the staged release the upgrade path was measured on).
+**Rollback target: `823dd68`.** Staged bytes verified before and on the clone; 158 files fetched from the origin and
+compared by sha256, 0 differ; `live_deployment.py` against the live origin: **44 passed, 0 failed**, THE NET 0.
+
+**A seventh request-counting assertion, found by the rehearsal and changed deliberately.** `live_deployment.py` is not
+in the gate (it needs an origin), so the suite-impact measurement never ran it. Its last step pressed «مزامنة الآن»
+after the example removal and counted the rows THAT PRESS pushed; with the coordinator the removal is sent three
+seconds after it happens, and the press found nothing (`0 rows pushed`, rehearsal log `deploy-04-rehearsal.log`).
+It now asserts the stronger thing — the tombstones reach the stubbed project with NO press, and the press afterwards
+pushes nothing twice. Not relaxed: the count (≥ 68) is the same, taken from before the removal.
+
 `syncLoopState()` and `hasEverSynced()` do not exist in a production build (tree-shaken), so "starts no loop" in (c)
 is proved by the absence of any request over 75 s with ops pending (the heartbeat would be 60 s), not by reading a
 timer.
