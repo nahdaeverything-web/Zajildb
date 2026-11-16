@@ -401,7 +401,7 @@ export async function destructive(work: () => Promise<void>, failed: (reason: st
  */
 type Presence = { ids: string[]; lofts: Array<{ id: string; name: string; birds: number; pairs: number; races: number; health: number }>;
   birds: number; pairs: number; races: number; health: number; media: number; kept: number; own: number; ownBirds: number; current: boolean;
-  elsewhere: number; because: Array<{ id: string; name: string; ring: string }> };
+  elsewhere: number; outside: number; because: Array<{ id: string; name: string; ring: string }> };
 export function ExampleRemoveRow() {
   const [p, setP] = useState<Presence | null>(null);
   const [busy, setBusy] = useState(false);
@@ -426,7 +426,7 @@ export function ExampleRemoveRow() {
     const names = p.because.slice(0, shown).map((x) => x.name || x.ring || '—').join('، ')
       + (p.because.length > shown ? ' ' + t('restore.confirm.more', { n: fmtNum(p.because.length - shown) }) : '');
     const counts = { birds: fmtNum(p.birds), pairs: fmtNum(p.pairs), races: fmtNum(p.races), health: fmtNum(p.health) };
-    const body = (p.lofts.length ? t('example.remove.body', { ...counts, lofts }) : t('example.remove.bodyNoLoft', counts))
+    const body = (p.lofts.length && !p.outside ? t('example.remove.body', { ...counts, lofts }) : t('example.remove.bodyNoLoft', counts))
       + (p.kept ? ' ' + t('example.remove.kept', { k: fmtNum(p.kept) }) + (p.because.length ? ' ' + t('example.remove.because', { names }) : '') : '')
       + (p.own ? ' ' + t('example.remove.own', { m: fmtNum(p.own) }) : '')
       + ((await db.unsentChanges()) as number > 0 ? ' ' + t('confirm.unsent') : '');

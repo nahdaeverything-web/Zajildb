@@ -106,6 +106,7 @@ export async function examplePresence() {
   // across it — `state.lofts.get(id).name` then threw. Re-checked here; a loft that went is simply not listed.
   const still = present.filter((id) => state.lofts.has(id));
   if (present.length && !still.length) return null;
+  const STILL = new Set(still);
   const own = birds.own.length + pairs.own.length + races.own.length + health.own.length;
   return {
     ids: still,
@@ -113,6 +114,9 @@ export async function examplePresence() {
       birds: birds.ex.filter((b) => b.loftId === id).length, pairs: pairs.ex.filter((r) => r.loftId === id).length,
       races: races.ex.filter((r) => r.loftId === id).length, health: health.ex.filter((r) => r.loftId === id).length })),
     elsewhere: birds.ex.filter((b) => !SET.has(b.loftId)).length,          // example birds filed outside the dataset lofts
+    // RULED 2026-11-17 (H3 decision 4): example records of ANY kind filed outside the lofts the question names. While
+    // there is one, the question names no loft at all — naming one would claim a place that is not the whole truth.
+    outside: [birds, pairs, races, health].reduce((n, k) => n + k.ex.filter((r) => !STILL.has(r.loftId)).length, 0),
     birds: birds.ex.length - keep.size, pairs: pairs.ex.length, races: races.ex.length, health: health.ex.length, media: media.length,
     kept: keep.size, keep, because, own, ownBirds: birds.own.length,
     current: SET.has(state.currentLoftId),

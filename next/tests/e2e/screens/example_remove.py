@@ -252,10 +252,13 @@ try:
             const kids = new Set(); for (const x of db.state.birds.values()) { kids.add(x.sireId); kids.add(x.damId); }
             const x = [...db.state.birds.values()].find(y => y.sireId && y.damId && !kids.has(y.id));        // a teaching bird with both parents and no offspring
             await db.idbPut('birds', { ...x, loftId: mine.id }); db.state.birds.set(x.id, { ...x, loftId: mine.id });   // as a pull from another device leaves it
-            const p = await db.examplePresence(); return { mine: mine.id, moved: x.name, movedId: x.id, birds: p.birds, kept: p.kept, elsewhere: p.elsewhere, because: p.because.length, own: p.own }; }""")
+            const p = await db.examplePresence(); return { mine: mine.id, moved: x.name, movedId: x.id, birds: p.birds, kept: p.kept, elsewhere: p.elsewhere, outside: p.outside, loftName: p.lofts[0].name, because: p.because.length, own: p.own }; }""")
         check('[H3 · M-loft fails here] a teaching bird filed in the fancier\'s own loft IS example data: 38 to delete, none kept, 1 counted outside the teaching loft, and it causes no keep',
               one['birds'] == 38 and one['kept'] == 0 and one['elsewhere'] == 1 and one['because'] == 0 and one['own'] == 0, one)
         text, toast, gone = ui_remove(h0, ROOT); s = run(h0, STATE)
+        # H3 DECISION 4 (RULED 2026-11-17): with ANY example record filed outside the named dataset lofts, the question uses the no-loft wording
+        check('[H3 · decision 4 · M-outside fails here] one example record is filed outside the named loft, so the question names NO loft: «…من البيانات التجريبية.», not «من «loft»، ثم اللوفت التجريبي نفسه»',
+              one['outside'] == 1 and bool(one['loftName']) and 'سجلًا صحيًا من البيانات التجريبية. لا يُمسّ أي طير من طيورك.' in text and one['loftName'] not in text and 'ثم اللوفت التجريبي نفسه' not in text, (one['outside'], one['loftName'], text[:220]))
         check('[H3 · M-loft fails here] …the removal deletes it with the rest: no bird left, no reference bird made, the own loft untouched', gone and s['birds'] == 0 and s['external'] == [] and s['lofts'] == {one['mine']: 'لوفتي'} and 'كمراجع' not in text, (s['birds'], s['external'], text[:160]))
         ch.close()
 
