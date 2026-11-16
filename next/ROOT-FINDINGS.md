@@ -2695,6 +2695,147 @@ restore cannot come back by any means the app has. Two shapes:
   the question** — and, whichever is ruled, the two defects that are independent of it: both questions count photos
   (3), and a replace never deletes the photo of a bird that STAYS merely because the file carries no media (4).
 
+#### The dropped bird's photos — RULED 2026-11-16 (P1–P3), as built
+
+The ruling differs from the proposal above: **a restore is an undo, and must not destroy the only copy.**
+
+| | ruled | built |
+|---|---|---|
+| P1 | a restore keeps photos, as before; a returning bird gets its photos back; string 5 says what is true; no orphan cleanup now | `droppedMediaByReplace()` returns nothing for a snapshot payload; `restore.confirm.lead` reworded (proposed) |
+| P2 | a replace-import deletes a photo ONLY when its bird is dropped | the media store is no longer cleared; the photos of the birds the replace drops (and that the file does not itself carry) are tombstoned and deleted with the other dropped records; every other photo is left alone |
+| P3 | both questions count the photos that will be lost and say they cannot be recovered; «لن يُحذف شيء» only when that includes photos | `replaceMediaLoss()` feeds the replace question (`confirm.replace.photos`, proposed). A restore loses none by P1, so its question counts none and says they stay |
+
+Read literally and to be confirmed: a photo ALREADY orphaned by an earlier restore is not deleted by a later
+replace-import (its bird is not dropped by that replace; it was gone already). Under P2 a replace can no longer
+produce "nothing removed, photos lost", so the guard on «لن يُحذف شيء» cannot be exercised by a constructed case.
+
+**OPEN ITEM — hidden orphan storage.** A photo whose bird a restore dropped stays in the media store, drawn nowhere,
+carried by nothing (a full export of such a device was measured to include it). Nothing removes it. Not built, by ruling.
+
+**Measured first, as ordered — the second device** (`~/zajil-work/photos/second_device_probe.py`; harness build, stub
+backend, the net armed). A second device holds the media ROWS and no bytes:
+
+```
+BEFORE (f27338f)
+  ONE, after adding two birds with a photo each and syncing: {"birds": ["جديد", "قديم"], "media": [["on-new.png", "جديد", "NO BLOB"], ["on-old.png", "قديم", "NO BLOB"]], "mediaTombstones": 0, "mediaDeleteOps": 0}
+  ONE, with the bytes put back by the probe (the sync cycle removed them: see the blob probe): {"birds": ["جديد", "قديم"], "media": [["on-new.png", "جديد", "3 B"], ["on-old.png", "قديم", "2 B"]], "mediaTombstones": 0, "mediaDeleteOps": 0}
+  TWO, after its first pull: {"birds": ["جديد", "قديم"], "media": [["on-new.png", "جديد", "NO BLOB"], ["on-old.png", "قديم", "NO BLOB"]], "mediaTombstones": 0, "mediaDeleteOps": 0}
+
+═══ 1. what does TWO export?
+  layer exportAll():      {"ok": false, "error": "Failed to execute 'readAsDataURL' on 'FileReader': parameter 1 is not of type 'Blob'."}
+  layer exportAllBlob():  {"ok": false, "error": "Failed to execute 'readAsDataURL' on 'FileReader': parameter 1 is not of type 'Blob'."}
+  the screen «تصدير الكل» on TWO: NO FILE was downloaded · TimeoutError
+  toasts on TWO: [] · console errors: ["export failed TypeError: Failed to execute 'readAsDataURL' on 'FileReader': parameter 1 is not of type 'Blob'.\n    at http://127.0.0.1:45761/_next/static/chunks/1iusteik7xahz.js:1:16820\n    at new Pro"] · page errors: []
+
+═══ 2. the nearest file TWO could hand over: its records with NO media (media: []) — replace-imported on ONE
+  the file: birds 2 · media rows 0 · kind None
+  ONE, what the question is given (replacePreview): {"removedBirds": 0, "removedOthers": 0, "removed": 0}
+  ONE, after the replace: {"birds": ["جديد", "قديم"], "media": [], "mediaTombstones": 2, "mediaDeleteOps": 2}
+
+═══ 3. a hand-made file with media ROWS that carry no dataURL (what a blobless export would look like) — replace-imported on a fresh ONE
+  a device holding both photos WITH blobs: {"birds": ["جديد", "قديم"], "media": [["on-new.png", "جديد", "2 B"], ["on-old.png", "قديم", "2 B"]], "mediaTombstones": 0, "mediaDeleteOps": 0}
+  importAll(replace): {"ok": true, "counts": {"birds": 2, "pairs": 0, "raceResults": 0, "healthEvents": 0, "lofts": 1, "media": 2, "skipped": 0, "removed": 0}}
+  after: {"birds": ["جديد", "قديم"], "media": [["on-new.png", "جديد", "335 B"], ["on-old.png", "قديم", "335 B"]], "mediaTombstones": 0, "mediaDeleteOps": 0}
+  page errors: [] [] []
+  ✓ [NET] every request to the backend host family was answered by a stub — nothing reached the real project  
+
+UNDER P2
+═══ 2. the nearest file TWO could hand over: its records with NO media (media: []) — replace-imported on ONE
+  the file: birds 2 · media rows 0 · kind None
+  ONE, what the question is given (replacePreview): {"removedBirds": 0, "removedOthers": 0, "removed": 0}
+  ONE, after the replace: {"birds": ["جديد", "قديم"], "media": [["on-new.png", "جديد", "3 B"], ["on-old.png", "قديم", "2 B"]], "mediaTombstones": 0, "mediaDeleteOps": 0}
+```
+
+So: **a second device cannot export at all** — the layer throws on the first media row with no bytes and the screen
+says «تعذّر التصدير. جرّب مرة أخرى.» (RF-4, here measured for the FULL export, not only a share). It therefore cannot
+produce a media-less file by itself; the nearest thing, its records with `media: []`, deleted both photos on the first
+device before P2 and deletes none under it.
+
+**Suite** `tests/e2e/screens/photos_replace.py`, 19 checks. **Mutants** (one harness build each, `~/zajil-work/photos/mutants.sh`):
+
+```
+═══ MUTANT M-p2
+  mutated: src/db/io.js
+build exit 0
+suite exit 1 · 14 passed, 5 failed
+  ✗ [P2 · M-p2 fails here] a replace from a both-birds, no-media file: BOTH photos are still on the device, with their bytes  {'birds': ['جديد', 'قديم'], 'media': [], 'mediaTombstones': 2, 'mediaDeleteOps': 2}
+  ✗ [P2 · M-p2 fails here] …no photo was tombstoned and no deletion of one is queued for the other devices  {'birds': ['جديد', 'قديم'], 'media': [], 'mediaTombstones': 2, 'mediaDeleteOps': 2}
+  ✗ [P2 · M-cascade fails here] the dropped bird's two photos are deleted with it, each tombstoned and queued as a deletion  {'birds': ['قديم'], 'media': [], 'mediaTombstones': 3, 'mediaDeleteOps': 3}
+  ✗ [P2 · M-p2 fails here] …and the photo of the bird that STAYS is kept, bytes and all, though the file carried no media  {'birds': ['قديم'], 'media': [], 'mediaTombstones': 3, 'mediaDeleteOps': 3}
+  ✗ [P3] the question told the truth: restoring the pre-import snapshot returns «جديد» WITHOUT its photos  {'birds': ['جديد', 'قديم'], 'media': [], 'mediaTombstones': 3, 'mediaDeleteOps': 3}
+
+═══ MUTANT M-p1
+  mutated: src/db/io.js
+build exit 0
+suite exit 1 · 17 passed, 2 failed
+  ✗ [P1 · M-p1 fails here] a restore to a point before «جديد»: the bird goes, and NO photo is deleted — its photo stays on the device, with its bytes  {'birds': ['قديم'], 'media': [['on-old.png', 'قديم', 2]], 'mediaTombstones': 1, 'mediaDeleteOps': 1}
+  ✗ [P1 · M-p1 fails here] undoing the restore: «جديد» returns and its photo is ITS photo again, with its bytes  ({'birds': ['جديد', 'قديم'], 'media': [['on-old.png', 'قديم', 2]], 'mediaTombstones': 1, 'mediaDeleteOps': 1}, [])
+
+═══ MUTANT M-cascade
+  mutated: src/db/io.js
+build exit 0
+suite exit 1 · 14 passed, 5 failed
+  ✗ [P3 · M-count fails here] the question counts the photos that go with the dropped bird — 2 — and says they cannot be recovered  استبدال السجلّ؟  سيُحذف من السجلّ 1 طيرًا و0 سجلًا آخر غير موجودة في الملف، ويحلّ محتوى الملف مكانها. متابعة؟  إلغاء استبدال
+  ✗ [P2 · M-cascade fails here] the dropped bird's two photos are deleted with it, each tombstoned and queued as a deletion  {'birds': ['قديم'], 'media': [['on-new-2.png', '(bird gone)', 4], ['on-new.png', '(bird gone)', 3], ['on-old.png', 'قديم', 2]], 'mediaTombstones': 0, 'mediaDeleteOps': 0}
+  ✗ [P2 · M-p2 fails here] …and the photo of the bird that STAYS is kept, bytes and all, though the file carried no media  {'birds': ['قديم'], 'media': [['on-new-2.png', '(bird gone)', 4], ['on-new.png', '(bird gone)', 3], ['on-old.png', 'قديم', 2]], 'mediaTombstones': 0, 'mediaDeleteOps': 0}
+  ✗ [P3] the question told the truth: restoring the pre-import snapshot returns «جديد» WITHOUT its photos  {'birds': ['جديد', 'قديم'], 'media': [['on-new-2.png', 'جديد', 4], ['on-new.png', 'جديد', 3], ['on-old.png', 'قديم', 2]], 'mediaTombstones': 0, 'mediaDeleteOps': 0}
+  ✗ [P2] a replace from a file WITH media: the dropped bird's photo goes (counted as 1 in the question), the file's photo is here with its bytes  ('استبدال السجلّ؟  سيُحذف من السجلّ 1 طيرًا و0 سجلًا آخر غير موجودة في الملف، ويحلّ محتوى الملف مكانها. متابعة؟  إلغاء استبدال', {'birds': ['قديم'], 'media': [['on-new.p
+
+═══ MUTANT M-count
+  mutated: app/tools/parts.tsx
+build exit 0
+suite exit 1 · 17 passed, 2 failed
+  ✗ [P3 · M-count fails here] the question counts the photos that go with the dropped bird — 2 — and says they cannot be recovered  استبدال السجلّ؟  سيُحذف من السجلّ 1 طيرًا و0 سجلًا آخر غير موجودة في الملف، ويحلّ محتوى الملف مكانها. متابعة؟  إلغاء استبدال
+  ✗ [P2] a replace from a file WITH media: the dropped bird's photo goes (counted as 1 in the question), the file's photo is here with its bytes  ('استبدال السجلّ؟  سيُحذف من السجلّ 1 طيرًا و0 سجلًا آخر غير موجودة في الملف، ويحلّ محتوى الملف مكانها. متابعة؟  إلغاء استبدال', {'birds': ['قديم'], 'media': [['on-old.p
+
+═══ restored
+ M app/tools/parts.tsx
+ M src/db.js
+ M src/db/io.js
+ M src/i18n.ext.js
+?? tests/e2e/screens/photos_replace.py
+build exit 0
+suite exit 0 · 19 passed, 0 failed
+```
+
+## RF-23 — a sync cycle removes the bytes of every photo from the device that took it (MEASURED 2026-11-16, NOT FIXED — awaiting a ruling)
+
+**Found while measuring the second device for P2.** The "first device" in that probe had no bytes either.
+
+```
+  after adding the photo, before any sync: {"media": [["photo.png", "3 B"]], "cursor": 0}
+  after «مزامنة الآن» #1: {"media": [["photo.png", "NO BLOB"]], "cursor": 3} · requests: [["POST", [["birds", 1], ["media", 2], ["lofts", 3]]], ["GET", 0, [["birds", 1], ["media", 2], ["lofts", 3]]]]
+  after «مزامنة الآن» #2: {"media": [["photo.png", "NO BLOB"]], "cursor": 3} · requests: [["GET", 3, []]]
+  after «مزامنة الآن» #3: {"media": [["photo.png", "NO BLOB"]], "cursor": 3} · requests: [["GET", 3, []]]
+  page errors: []
+  ✓ [NET] every request to the backend host family was answered by a stub — nothing reached the real project  
+```
+
+**Why.** A device's own pushed rows sit above its cursor (RF-15), so the pull in the same cycle returns the media row
+it has just pushed — metadata only, as designed (§7). `applySyncPut()` writes a pulled record VERBATIM
+(`src/db/records.js:394`, `await idbPut(store, body)`), so the stored record, blob included, is replaced by the row
+without one. The same line is in vanilla (`js/db/records.js:393`).
+
+**What it means.** With automatic sync (RF-19, deployed) a photo taken on a signed-in device loses its bytes
+within seconds: a cycle runs 3 s after the change. The row remains, the profile draws a placeholder, the full export
+then fails (RF-4). Photos have no server copy (DF-4), so the bytes are gone. P1–P3 protect a copy that the sync cycle
+has, on a signed-in device, already removed. Measured against a stub that models the table; the real project was not
+contacted. Not checked: whether Samir's devices hold any photo that still has its bytes.
+
+**Proposed fix, not built:** in `applySyncPut`, for `media`, keep the bytes the device already holds —
+`const have = await idbGet('media', id); if (have && have.blob && !body.blob) body = { ...body, blob: have.blob };` —
+with a check that a photo survives three cycles with its bytes and a mutant that removes the line. It cannot bring back
+bytes already lost.
+
+## RF-24 — an import stores a media row that has no `dataURL` as a "photo" made of whatever the address `undefined` returns (MEASURED 2026-11-16, NOT FIXED)
+
+Section 3 of the probe above: a hand-made file whose media rows carry no `dataURL` was replace-imported onto a device
+holding both photos with their bytes. `dataURLToBlob(undefined)` is `fetch(undefined)`, which fetches the relative
+address «undefined»; the response (335 bytes of the server's not-found page here) passes the `blob.size` check and
+OVERWRITES the real photo. No export the app makes today has this shape (a blobless export fails outright, RF-4), so
+it is reachable only by a hand-made or future file. The RF-4 fix-at-source (admit a null `dataURL`, keep the bytes
+already here) covers it. Not built.
+
 ## RF-22 — the example-data removal decides membership by loft and id shape, so a teaching bird filed elsewhere survives and keeps its ancestors
 
 **Where:** `src/example-data.js` `examplePresence()`: `example` = birds filed in a present dataset loft whose id

@@ -30,6 +30,8 @@ export const EXT = {
   'confirm.replace.body':     { ar: 'سيُستبدل السجلّ بالكامل. متابعة؟', en: 'The records will be replaced entirely. Continue?' },
   // RF-15 (RULED 2026-11-13): a replace travels, so the confirmation states what it removes, what a restore brings back, and that both apply on every device
   'confirm.replace.removes':  { ar: 'سيُحذف من السجلّ {birds} طيرًا و{others} سجلًا آخر غير موجودة في الملف، ويحلّ محتوى الملف مكانها.', en: '{birds} birds and {others} other records that are not in the file will be deleted, and the file takes their place.' },
+  // P3 (RULED 2026-11-16) — PROPOSED wording: the question counts the photos and documents a replace deletes with the dropped birds
+  'confirm.replace.photos':   { ar: 'عدد الصور والوثائق التي ستُحذف مع هذه الطيور: {n}. لا يمكن استرجاعها بعد الحذف.', en: 'Photos and documents that will be deleted with these birds: {n}. They cannot be recovered once deleted.' },
   'confirm.replace.removesNone': { ar: 'لن يُحذف شيء: كل ما في السجلّ موجود في الملف.', en: 'Nothing will be deleted: everything in the records is in the file.' },
   'confirm.replace.devices':  { ar: 'يسري هذا على كل أجهزتك: ما يُحذف هنا يُحذف منها عند المزامنة.', en: 'This applies to all your devices: what is deleted here is deleted from them at the next sync.' },
   'confirm.replace.continue': { ar: 'متابعة؟', en: 'Continue?' },
@@ -46,7 +48,7 @@ export const EXT = {
   'form.changed.title':       { ar: 'تغيّر هذا السجل على جهاز آخر', en: 'This record changed on another device' },
   'form.changed.body':        { ar: 'عُدّل هذا السجل على جهاز آخر بعد أن فتحته هنا. إن حفظت الآن حلّت بياناتك مكان ذلك التعديل.', en: 'This record was edited on another device after you opened it here. If you save now, your version replaces that edit.' },
   'form.changed.reload':      { ar: 'أعد التحميل', en: 'Reload' },
-  'restore.confirm.lead':     { ar: 'سيُستبدل السجلّ بمحتوى النسخة المحفوظة بتاريخ {d}. الصور والوثائق تبقى كما هي.', en: 'Records will be replaced with the snapshot from {d}. Photos and documents are kept as they are.' },
+  'restore.confirm.lead':     { ar: 'سيُستبدل السجلّ بمحتوى النسخة المحفوظة بتاريخ {d}. الصور والوثائق تبقى على هذا الجهاز، وصور الطير المحذوف تعود إليه إن عاد.', en: 'Records will be replaced with the snapshot from {d}. Photos and documents stay on this device, and a removed bird\'s photos return to it if the bird comes back.' },
   'restore.confirm.removes':  { ar: 'يُحذف {n} سجلًا أُضيف بعد النسخة.', en: '{n} records added since the snapshot will be deleted.' },
   'restore.confirm.returns':  { ar: 'يعود {n} طيرًا غير موجود الآن:', en: '{n} birds that are not here now come back:' },
   'restore.confirm.returnsNone': { ar: 'لا يعود طير غير موجود الآن.', en: 'No bird that is missing now comes back.' },

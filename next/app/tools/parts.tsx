@@ -267,7 +267,11 @@ export function ImportDetail() {
       // that is not an export is not asked about at all — importAll refuses it below and the toast says why.
       if (mode === 'replace' && payload && payload.format === 'zajil-export') {
         const p = db.replacePreview(payload) as ReplacePreview;
-        const body = [p.removed ? t('confirm.replace.removes', { birds: fmtNum(p.removedBirds), others: fmtNum(p.removedOthers) }) : t('confirm.replace.removesNone'),
+        // P3 (RULED 2026-11-16): the question counts the photos that go with the dropped birds and says they cannot be
+        // recovered; «لن يُحذف شيء» is said only when that is true of photos too
+        const photos = await db.replaceMediaLoss(payload) as number;
+        const body = [p.removed ? t('confirm.replace.removes', { birds: fmtNum(p.removedBirds), others: fmtNum(p.removedOthers) }) : (photos ? '' : t('confirm.replace.removesNone')),
+          photos ? t('confirm.replace.photos', { n: fmtNum(photos) }) : '',
           travels() ? t('confirm.replace.devices') : '', await unsentNote(), t('confirm.replace.continue')].filter(Boolean).join(' ');
         const ok = await confirmDialog({ title: t('confirm.replace.title'), body, cancelLabel: t('act.cancel'), confirmLabel: t('act.replace'), confirmKind: 'danger' });
         if (!ok) return;

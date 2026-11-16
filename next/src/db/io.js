@@ -185,6 +185,26 @@ export function replacePreview(payload) {
 }
 
 /**
+ * The media a replace of `payload` DELETES (RULED 2026-11-16, P2): the photos and documents of a bird the replace
+ * drops, unless the file itself carries them. A photo on a bird that STAYS is never deleted — a file that carries no
+ * media says nothing about the media here. A restore of a snapshot deletes none: a snapshot carries no media, photos
+ * have no server copy, and a restore is an undo (P1) — a dropped bird's photos stay on the device and are its photos
+ * again if the bird returns.
+ */
+async function droppedMediaByReplace(payload) {
+  if (!payload || payload.kind === 'auto-backup') return [];
+  const birdsDropped = new Set(droppedByReplace(payload).filter(([s]) => s === 'birds').map(([, b]) => b.id));
+  if (!birdsDropped.size) return [];
+  const incoming = new Set((payload.media || []).map((m) => m && m.id));
+  return (await idbGetAll('media')).filter((m) => birdsDropped.has(m.birdId) && !incoming.has(m.id));
+}
+
+/** How many photos and documents a replace of `payload` would delete, for the question to state (P3). They cannot be recovered. */
+export async function replaceMediaLoss(payload) {
+  return (await droppedMediaByReplace(payload || {})).length;
+}
+
+/**
  * Import an export payload. mode 'merge' keeps newer records by updatedAt;
  * mode 'replace' wipes first. Returns counts.
  */
@@ -248,10 +268,6 @@ export async function importAll(payload, mode = 'merge') {
       await pruneBackups();
     } catch { /* a snapshot is a safety net, not a reason to block the import */ }
   }
-  // Automatic snapshots deliberately carry no media (blobs would make them
-  // huge), so wiping the media store on restore would destroy every photo and
-  // scanned pedigree the payload cannot put back. Keep media in that case.
-  const carriesMedia = payload.kind !== 'auto-backup';
 
   // ── RF-15 (RULED 2026-11-13): A REPLACE TOMBSTONES EVERY RECORD IT DROPS ──
   //
@@ -268,10 +284,10 @@ export async function importAll(payload, mode = 'merge') {
   // tombstones written here are taken back and nothing was logged. Between the two, a pull can
   // still slip a dropped record back in; the sweep at the end removes it again.
   const dropped = mode === 'replace' ? droppedByReplace(payload) : [];
-  if (mode === 'replace' && carriesMedia) {
-    const incoming = new Set(decodedMedia.map((m) => m.id));
-    for (const m of await idbGetAll('media')) if (!incoming.has(m.id)) dropped.push(['media', m]);
-  }
+  // P2 (RULED 2026-11-16): a photo is dropped ONLY with its bird. Until this, every media row the file did not carry
+  // was deleted — so a file with no media deleted every photo on the device, on birds that stayed, while the question
+  // said nothing would be deleted. Photos have no server copy; that was the only copy.
+  if (mode === 'replace') for (const m of await droppedMediaByReplace(payload)) dropped.push(['media', m]);
   const droppedAt = nowISO();
   const priorTombstones = new Map();
   for (const [storeName, rec] of dropped) {
@@ -290,9 +306,9 @@ export async function importAll(payload, mode = 'merge') {
     // before, so a future sync layer must treat a replace as a new starting
     // point rather than replaying history across it. That reconciliation is a
     // v1.9 concern; nothing here depends on it yet.
-    const stores = ['birds', 'pairs', 'raceResults', 'healthEvents', 'lofts'];
-    if (carriesMedia) stores.push('media');
-    for (const s of stores) await idbClear(s);
+    // The media store is NOT cleared (P2): the photos of the dropped birds are deleted one by one below, with the
+    // other dropped records, and every other photo stays where it is.
+    for (const s of ['birds', 'pairs', 'raceResults', 'healthEvents', 'lofts']) await idbClear(s);
     state.birds.clear(); state.pairs.clear(); state.raceResults.clear();
     state.healthEvents.clear(); state.lofts.clear();
   }
