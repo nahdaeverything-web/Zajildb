@@ -2798,6 +2798,21 @@ build exit 0
 suite exit 0 · 19 passed, 0 failed
 ```
 
+#### The photo set — deployed 2026-11-16
+
+| item | value |
+|---|---|
+| commit | `b255cc4`, full gate `gate-16-photos.log`: 2252 passed, 0 failed, control 548/548, no page-error record |
+| live | `gh-pages c77f6ed`, built from `b255cc4` |
+| rollback target | `787a40c` |
+| staged | 159 files, scan clean; rehearsal on the local stand-in 44 passed, 0 failed |
+| live bytes | 158 files fetched and compared by sha256, 0 differ |
+| live verification | `live_deployment.py` 44 passed, 0 failed; nothing reached the real project |
+| logs | `~/zajil-gate-logs/deploy4-01..06-*.log` |
+
+NOT yet accepted on Samir's two real devices. The live verification does not exercise a replace-import or a restore
+with photos; it proves the bytes served are the bytes of the gated commit. The mirror's `main` was not updated (not ordered this time).
+
 ## RF-23 — a sync cycle removes the bytes of every photo from the device that took it (MEASURED 2026-11-16, NOT FIXED — awaiting a ruling)
 
 **Found while measuring the second device for P2.** The "first device" in that probe had no bytes either.
