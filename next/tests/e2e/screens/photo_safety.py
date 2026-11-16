@@ -171,7 +171,7 @@ try:
             with G2.expect_download(timeout=10000) as dl: G2.click('[data-testid=export-all]')
             got = json.loads(open(dl.value.path(), encoding='utf-8').read())
         except PWTimeout: pass
-        G2.wait_for_timeout(600); said = digits(' '.join(G2.locator('[data-testid=toast]').all_inner_texts())); typo = [x for x in G2.evaluate(SCAN) if x['testid'] != 'about-version' and x['text'] != 'غير معروف']   # the version in the mono face: its own finding, fixed in its own commit
+        G2.wait_for_timeout(600); said = digits(' '.join(G2.locator('[data-testid=toast]').all_inner_texts())); typo = G2.evaluate(SCAN)
         check('[RF-4 · M-rf4 fails here] «تصدير الكل» on the second device downloads a file: 2 birds, the one photo', bool(got) and len(got['birds']) == 2 and [m['name'] for m in got['media']] == ['kid.png'], said)
         check('[RF-4 · wording] …and says «عدد الصور والوثائق غير الموجودة على هذا الجهاز، وهي لذلك ليست في الملف: 2.»', 'عدد الصور والوثائق غير الموجودة على هذا الجهاز، وهي لذلك ليست في الملف: 2.' in said and 'تعذّر' not in said, said)
         check('[typography] that message is drawn in a face that has Arabic', bool(said) and not typo, [(x['why'], x['face'], x['text']) for x in typo][:3])

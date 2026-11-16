@@ -108,6 +108,19 @@ try:
             check(f'/{route}: no Arabic in a face that cannot draw it, and none letter-spaced',
                   not hits, detail)
         check('across every route, zero', total == 0, f'{total} element(s)')
+
+        # THE VERSION ROW WITH NO VERSION (RULED 2026-11-17). With no service worker to answer, the row says «غير معروف»
+        # — and it said it in the mono face, which cannot draw Arabic (seen 2026-11-16 by the example-removal suite; the
+        # walk above passes الأدوات only when a worker answers in time). The walk now visits that state by name.
+        ctx2 = b.new_context(viewport={'width': 390, 'height': 844}); p2 = ctx2.new_page()
+        p2.add_init_script("Object.defineProperty(navigator, 'serviceWorker', { get: () => undefined });")
+        p2.goto(ROOT + 'tools/', wait_until='load'); p2.wait_for_selector('[data-testid=about-version]'); p2.wait_for_timeout(1500)
+        p2.evaluate("async () => { try { await document.fonts.ready; } catch (e) {} }")
+        shown = p2.locator('[data-testid=about-version]').inner_text().strip(); hits = p2.evaluate(SCAN)
+        check('/tools with no service worker: the version row says «غير معروف»', shown == 'غير معروف', shown)
+        check('[M-mono fails here] …and no Arabic on that screen is in a face that cannot draw it',
+              not hits, '; '.join(f"{h['why'].strip()} face={h['face']} «{h['text'][:26]}»" for h in hits[:3]))
+        ctx2.close()
         b.close()
 finally:
     srv.terminate()

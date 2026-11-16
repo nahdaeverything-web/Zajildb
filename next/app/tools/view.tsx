@@ -173,7 +173,8 @@ export default function ToolsView() {
           <Row id="dev" icon="dev" testid="card-dev" label={t('dev.cardTitle')} help={t('dev.cardSub')} value={(open) => (open ? '' : t('tools.dev.collapsed'))}>
             <DevDetail />
           </Row>
-          <Row id="version" icon="version" label={t('about.versionLabel')} value={<span data-testid="about-version">{version || t('about.unknown')}</span>} valueKind="data">
+          <Row id="version" icon="version" label={t('about.versionLabel')} value={<span data-testid="about-version">{version || t('about.unknown')}</span>} valueKind={version ? 'data' : undefined}>
+            {/* RULED 2026-11-17: the mono face is for the version number; «غير معروف» is Arabic and that face cannot draw it */}
             <p className={s.detailText}>{t('about.hint')}</p>
             <p className={s.detailNote}>{t('tools.about.note')}</p>
           </Row>
