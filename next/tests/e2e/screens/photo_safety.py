@@ -118,7 +118,7 @@ try:
         # ═══ RF-24 — an import never writes a media row without bytes, and never fetches one ═══
         c3, D = device(b, H, None); run(D, ADD, 'قديم', 'on-old.png', 'xx'); run(D, ADD, 'جديد', 'on-new.png', 'yyy')
         full = run(D, "async (db) => await db.exportAll()")
-        fetched = []; D.on('request', lambda r: fetched.append(r.url) if not r.url.startswith(('data:', 'blob:')) and '/_next/' not in r.url else None)   # the app's own lazy chunks are not the subject
+        fetched = []; D.on('request', lambda r: fetched.append(r.url) if not r.url.startswith(('data:', 'blob:')) and '/_next/' not in r.url and '_rsc=' not in r.url else None)   # the app's own lazy chunks and its route prefetches (…__PAGE__.txt?_rsc=…, fired by links on screen, timing-dependent: gate-21 caught them) are not the subject
         bare = json.loads(json.dumps(full)); kinds = [None, 'undefined']
         for m, k in zip(bare['media'], kinds):
             if k is None: m.pop('dataURL', None)
