@@ -2634,6 +2634,21 @@ screen still takes its due snapshot at that boot — it is that account's own da
 (c) An existing device holding more than three pre-import snapshots is brought down to three at its next snapshot of
 either kind.
 
+#### RF-21 — deployed 2026-11-16
+
+| item | value |
+|---|---|
+| commit | `9039e8a`, full gate `gate-14-autobackup-ruled.log`: 2233 passed, 0 failed, control 548/548, no page-error record |
+| live | `gh-pages 787a40c`, built from `9039e8a` |
+| rollback target | `6a44f7a` |
+| staged | 159 files, scan clean; rehearsal on the local stand-in 44 passed, 0 failed |
+| live bytes | 158 files fetched and compared by sha256, 0 differ |
+| live verification | `live_deployment.py` 44 passed, 0 failed; nothing reached the real project |
+| logs | `~/zajil-gate-logs/deploy3-01..06-*.log` |
+
+NOT yet accepted on Samir's two real devices. The live verification does not exercise the snapshot caller itself; what
+it proves is that the bytes served are the bytes of the gated commit.
+
 #### The dropped bird's photos — measured for RESTORE and for REPLACE-IMPORT (PROPOSAL ONLY, nothing built)
 
 `~/zajil-work/b2/orphan_probe.py`, log `~/zajil-gate-logs/b2-orphan-probe.log`. Two birds, «قديم» with on-old.png and
