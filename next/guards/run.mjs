@@ -363,7 +363,9 @@ const guards = {
        + "Vanilla's copy is a separate decision — main is the live deployment. "
        + 'RF-15 (RULED 2026-11-13): a replace-import, and so a restore, tombstones and logs a deletion for every '
        + 'record it drops (replacePreview() states the counts first), so the replacement travels instead of '
-       + 'being undone by the next pull. Port-only; vanilla is not changed.'],
+       + 'being undone by the next pull. Port-only; vanilla is not changed. THE PHOTO SET (RULED 2026-11-16): a '
+       + 'replace deletes a photo only with its bird, and an import rejects a media row that carries no bytes '
+       + '(carriesBytes) instead of fetching its address.'],
       ['src/db.js',
        'the facade must re-export exportAllBlob and replacePreview (because src/db/io.js is divergent), '
        + 'ensureCurrentLoft (RF-14) and the example-data module src/example-data.js '
@@ -375,7 +377,9 @@ const guards = {
        + 'is NOT changed — main is the live deployment.'],
       ['src/db/records.js',
        'RF-14 (RULED 2026-10-14): the generic remove() and applySyncDelete() call ensureCurrentLoft() '
-       + 'after a loft goes, locally or by a pulled tombstone. Port-only, as storage.js.'],
+       + 'after a loft goes, locally or by a pulled tombstone. Port-only, as storage.js. RF-23 (RULED 2026-11-16): '
+       + 'withHeldBytes() — applySyncPut() keeps the bytes a media record already holds instead of replacing the '
+       + 'record with the pulled, bytes-less row. Vanilla has the same defect and is NOT changed.'],
       ['src/db/sync.js',
        'the account collision (RF-13): signIn() compares the incoming user with the owner of '
        + 'the data on the device and stops before storing a session that is not the same '

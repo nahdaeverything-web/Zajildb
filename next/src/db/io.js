@@ -24,6 +24,13 @@ function blobToDataURL(blob) {
   });
 }
 
+/**
+ * RF-24 (RULED 2026-11-16): does this media row of a file carry bytes? Only a `data:` URL does. Anything else — no
+ * dataURL at all, or an address — used to be handed to fetch(), which fetched the address and stored whatever came
+ * back as the photo: a hand-made row with no dataURL replaced a real photo with 335 bytes of a not-found page.
+ */
+export const carriesBytes = (m) => !!m && typeof m.dataURL === 'string' && m.dataURL.startsWith('data:');
+
 export async function dataURLToBlob(dataURL) {
   const res = await fetch(dataURL);
   return res.blob();
@@ -56,11 +63,23 @@ export function exportableSettings(settings) {
     .filter(([key]) => !SENSITIVE_SETTING_PREFIXES.some((prefix) => key.startsWith(prefix))));
 }
 
+/**
+ * RF-4 (RULED 2026-11-16): the media an export can carry — the rows whose bytes are ON THIS DEVICE. A row pulled from
+ * another device is metadata only (§7); reading it threw and failed the whole export, so a second device could not
+ * export or share at all. Such rows are left out — a file must never carry a media row without bytes (RF-24 rejects
+ * one, and vanilla would fetch its address) — and `onMissing(n)` is told how many, so the screen can say it.
+ */
+function exportable(rows, onMissing) {
+  const here = rows.filter((m) => m && m.blob);
+  if (onMissing) onMissing(rows.length - here.length);
+  return here;
+}
+
 /** Full export: everything, media as data URLs. Round-trip tested. */
-export async function exportAll({ includeMedia = true } = {}) {
+export async function exportAll({ includeMedia = true, onMissing } = {}) {
   const mediaOut = [];
   if (includeMedia) {
-    for (const m of await idbGetAll('media')) {
+    for (const m of exportable(await idbGetAll('media'), onMissing)) {
       mediaOut.push({ ...m, blob: undefined, dataURL: await blobToDataURL(m.blob) });
     }
   }
@@ -110,11 +129,11 @@ export async function exportAll({ includeMedia = true } = {}) {
  * asserted in both directions by tests/e2e/migration.py, because a vanilla app must still
  * be able to read what the port writes.
  *
- * @param {{ onProgress?: (done: number, total: number) => void }} [opts]
+ * @param {{ onProgress?: (done: number, total: number) => void, onMissing?: (n: number) => void }} [opts]
  * @returns {Promise<Blob>}
  */
-export async function exportAllBlob({ onProgress } = {}) {
-  const media = await idbGetAll('media');
+export async function exportAllBlob({ onProgress, onMissing } = {}) {
+  const media = exportable(await idbGetAll('media'), onMissing);
   const total = media.length;
   const parts = [];            // Blobs and strings, in order
   let pending = [];            // strings not yet folded into a Blob
@@ -195,7 +214,7 @@ async function droppedMediaByReplace(payload) {
   if (!payload || payload.kind === 'auto-backup') return [];
   const birdsDropped = new Set(droppedByReplace(payload).filter(([s]) => s === 'birds').map(([, b]) => b.id));
   if (!birdsDropped.size) return [];
-  const incoming = new Set((payload.media || []).map((m) => m && m.id));
+  const incoming = new Set((payload.media || []).filter(carriesBytes).map((m) => m.id));   // a row the import rejects (RF-24) carries nothing
   return (await idbGetAll('media')).filter((m) => birdsDropped.has(m.birdId) && !incoming.has(m.id));
 }
 
@@ -210,7 +229,7 @@ export async function replaceMediaLoss(payload) {
  */
 export async function importAll(payload, mode = 'merge') {
   if (!payload || payload.format !== 'zajil-export') throw new Error('bad-format');
-  const counts = { birds: 0, pairs: 0, raceResults: 0, healthEvents: 0, lofts: 0, media: 0, skipped: 0, removed: 0 };
+  const counts = { birds: 0, pairs: 0, raceResults: 0, healthEvents: 0, lofts: 0, media: 0, skipped: 0, removed: 0, mediaRejected: 0 };
 
   // ── decode and validate EVERYTHING before touching the database ──
   // A replace-import used to clear all six stores and only then decode the
@@ -228,6 +247,9 @@ export async function importAll(payload, mode = 'merge') {
   const decodedMedia = [];
   for (const m of payload.media || []) {
     if (!m || typeof m.id !== 'string') throw new Error('bad-format: a media entry has no id');
+    // RF-24: a row with no bytes is REJECTED — never fetched, never written, so it can neither replace a photo that
+    // has its bytes nor become a "photo" made of an error page. Counted, and the import says so.
+    if (!carriesBytes(m)) { counts.mediaRejected++; continue; }
     let blob;
     try {
       blob = await dataURLToBlob(m.dataURL);
@@ -429,8 +451,11 @@ export async function importAll(payload, mode = 'merge') {
  * Share one bird: the bird + full ancestor closure (+ optionally its race
  * results, health log, and media). Same format as exportAll, so any Zajil
  * user can import it — no account needed on either side.
+ *
+ * @param {string} birdId
+ * @param {{ includeRaces?: boolean, includeHealth?: boolean, includeMedia?: boolean, onMissing?: (n: number) => void }} [opts]
  */
-export async function exportBirdWithAncestry(birdId, { includeRaces = true, includeHealth = false, includeMedia = true } = {}) {
+export async function exportBirdWithAncestry(birdId, { includeRaces = true, includeHealth = false, includeMedia = true, onMissing } = {}) {
   const ids = new Set();
   const stack = [birdId];
   while (stack.length) {
@@ -443,10 +468,10 @@ export async function exportBirdWithAncestry(birdId, { includeRaces = true, incl
   const birds = [...ids].map((id) => getBird(id)).filter(Boolean);
   const mediaOut = [];
   if (includeMedia) {
-    for (const id of ids) {
-      for (const m of await mediaForBird(id)) {
-        mediaOut.push({ ...m, blob: undefined, dataURL: await blobToDataURL(m.blob) });
-      }
+    const rows = [];
+    for (const id of ids) rows.push(...await mediaForBird(id));
+    for (const m of exportable(rows, onMissing)) {
+      mediaOut.push({ ...m, blob: undefined, dataURL: await blobToDataURL(m.blob) });
     }
   }
   return {

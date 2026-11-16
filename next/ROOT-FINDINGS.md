@@ -2842,6 +2842,16 @@ contacted. Not checked: whether Samir's devices hold any photo that still has it
 with a check that a photo survives three cycles with its bytes and a mutant that removes the line. It cannot bring back
 bytes already lost.
 
+### RF-23 fixed 2026-11-16 (RULED) — the first commit of the photo-safety set
+
+**The invariant of the set: a media record that holds bytes is never replaced by one that does not.**
+`withHeldBytes()` in `src/db/records.js`; `applySyncPut()` passes a pulled media row through it, so the record written
+carries the bytes the device already holds. Port-only; vanilla keeps the defect. It cannot bring back bytes already lost.
+`tests/e2e/screens/photo_safety.py`: the bytes survive «مزامنة الآن» (one cycle, and three), survive the coordinator's
+own cycles with no press (the coordinator pulls before it pushes, so the row returns on the NEXT automatic cycle; the
+suite brings one with a second change), and survive a newer row for the same photo pushed by a device with no bytes
+(the name changes, the bytes stay). Mutant M-rf23 (the line removed): 5 passed, 4 failed, each at its named check.
+
 ## RF-24 — an import stores a media row that has no `dataURL` as a "photo" made of whatever the address `undefined` returns (MEASURED 2026-11-16, NOT FIXED)
 
 Section 3 of the probe above: a hand-made file whose media rows carry no `dataURL` was replace-imported onto a device
@@ -2850,6 +2860,33 @@ address «undefined»; the response (335 bytes of the server's not-found page he
 OVERWRITES the real photo. No export the app makes today has this shape (a blobless export fails outright, RF-4), so
 it is reachable only by a hand-made or future file. The RF-4 fix-at-source (admit a null `dataURL`, keep the bytes
 already here) covers it. Not built.
+
+### RF-24 fixed 2026-11-16 (RULED) — the second commit of the photo-safety set
+
+`carriesBytes()` in `src/db/io.js`: only a `data:` URL is bytes. `importAll()` REJECTS any other media row — no
+dataURL, the text «undefined», a file name, an address: it is never fetched and never written, so it can neither
+replace a photo that has its bytes nor become a "photo" made of an error page. Rejected rows are counted
+(`counts.mediaRejected`) and the import screen says how many (`backup.mediaRejected`, PROPOSED). A `data:` URL that
+fails to decode still fails the WHOLE import before anything is touched, as before. A row a replace rejects is not
+"carried" by the file: a dropped bird's photo listed that way goes with its bird and is counted in the question (P2/P3).
+Read literally and to be confirmed: a rejected row is not stored as a bytes-less placeholder either.
+Mutant M-rf24 (the rejection removed): 14 passed, 4 failed. Its first draft died on a traceback (the unguarded
+`importAll` threw); the steps were made non-raising and it was rerun — first log kept as `ps-M-rf24-first-draft-TRACEBACK.log`.
+
+**SEEN, not ruled:** a merge-import skips a media row the device already has, even when the device's row has no
+bytes and the file's has them. So a second device cannot receive photos by importing the first device's export in
+merge mode (a replace does bring them). Pinned as a `[seen · not ruled]` check in `photo_safety.py`.
+
+### RF-4 fixed for the port 2026-11-16 (RULED) — the third commit of the photo-safety set
+
+`exportable()` in `src/db/io.js`: `exportAll()`, `exportAllBlob()` and `exportBirdWithAncestry()` carry the media
+whose bytes are on this device and leave out the rows that have none; `onMissing(n)` reports how many. The four
+screens that export or share (الأدوات «تصدير الكل», the profile's and the certificate's «مشاركة», the pedigree's)
+add `backup.mediaNotHere` (PROPOSED) to the success message when n > 0.
+Decided, to be confirmed: the bytes-less rows are LEFT OUT of the file, not carried as metadata. RF-4's old
+fix-at-source carried them with a null dataURL; but RF-24 now rejects such a row on import, and vanilla — which must
+still read what the port writes — would fetch its address. Vanilla itself is unchanged and still cannot export there.
+Mutant M-rf4 (the filter removed): 19 passed, 8 failed. Its first draft ended on a traceback from a step of mine that was timing-dependent (it assumed the first device never pulls the second one's row); the step was replaced and the mutant rerun.
 
 ## RF-22 — the example-data removal decides membership by loft and id shape, so a teaching bird filed elsewhere survives and keeps its ancestors
 

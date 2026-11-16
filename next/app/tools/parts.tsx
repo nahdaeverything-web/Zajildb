@@ -229,10 +229,12 @@ export function ExportDetail({ settings }: { settings: Record<string, unknown> }
     if (busy) return;                                  // a second click must not start a second pass
     setBusy(true); setProgress(null);
     try {
-      const blob = await db.exportAllBlob({ onProgress: (done: number, total: number) => setProgress({ done, total }) });
+      // RF-4: the file carries the photos whose bytes are on this device; the toast says how many are not, and so are not in it
+      let missing = 0;
+      const blob = await db.exportAllBlob({ onProgress: (done: number, total: number) => setProgress({ done, total }), onMissing: (n: number) => { missing = n; } });
       downloadBlob(blob, `zajil-export-${todayISO()}.json`);
       await saveSetting('lastExport', new Date().toISOString());
-      toast(t('toast.exported'), { kind: 'success' });
+      toast(t('toast.exported') + (missing ? ' ' + t('backup.mediaNotHere', { n: fmtNum(missing) }) : ''), { kind: 'success', timeout: missing ? 7000 : undefined });
     } catch (e) {
       toast(t('toast.exportFailed'), { kind: 'error' });   // a failure that says nothing is the defect this replaced
       console.error('export failed', e);
@@ -276,8 +278,10 @@ export function ImportDetail() {
         const ok = await confirmDialog({ title: t('confirm.replace.title'), body, cancelLabel: t('act.cancel'), confirmLabel: t('act.replace'), confirmKind: 'danger' });
         if (!ok) return;
       }
-      const counts = await db.importAll(payload, mode) as { birds: number; pairs: number; raceResults: number };
-      toast(t('backup.imported', { birds: fmtNum(counts.birds), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) }), { timeout: 7000, kind: 'info' });
+      const counts = await db.importAll(payload, mode) as { birds: number; pairs: number; raceResults: number; mediaRejected: number };
+      // RF-24: media rows the file carried without bytes were rejected — the import says how many
+      toast(t('backup.imported', { birds: fmtNum(counts.birds), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) })
+        + (counts.mediaRejected ? ' ' + t('backup.mediaRejected', { n: fmtNum(counts.mediaRejected) }) : ''), { timeout: counts.mediaRejected ? 12000 : 7000, kind: 'info' });
       setFile(null);
     } catch (e) {
       toast(t('backup.importFailed', { why: (e as Error)?.message || '' }), { timeout: 12000, kind: 'error' });
