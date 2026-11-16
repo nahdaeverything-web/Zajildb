@@ -82,7 +82,7 @@ export {
 } from './db/storage.js';
 
 // the example data the loaders put in, and the one action that takes it out (RULED 2026-10-14; port-only, src/example-data.js)
-export { EXAMPLE_KEYS, ID_NAMESPACE, exampleLoftIds, examplePresence, removeExampleData, uuid5 } from './example-data.js';
+export { BECAUSE_SHOWN, EXAMPLE_KEYS, ID_NAMESPACE, exampleIds, exampleLoftIds, examplePresence, removeExampleData, uuid5 } from './example-data.js';
 
 export {
   diffFields,

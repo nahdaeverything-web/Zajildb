@@ -396,7 +396,8 @@ export async function destructive(work: () => Promise<void>, failed: (reason: st
  * references and says so. NOT general loft management (README). A deviation from the frozen tools-v2 spec, recorded.
  */
 type Presence = { ids: string[]; lofts: Array<{ id: string; name: string; birds: number; pairs: number; races: number; health: number }>;
-  birds: number; pairs: number; races: number; health: number; media: number; kept: number; own: number; ownBirds: number; current: boolean };
+  birds: number; pairs: number; races: number; health: number; media: number; kept: number; own: number; ownBirds: number; current: boolean;
+  elsewhere: number; because: Array<{ id: string; name: string; ring: string }> };
 export function ExampleRemoveRow() {
   const [p, setP] = useState<Presence | null>(null);
   const [busy, setBusy] = useState(false);
@@ -415,8 +416,14 @@ export function ExampleRemoveRow() {
   const lofts = p.lofts.map((l) => `«${l.name || t('loft.unnamed')}»`).join('، ');
   async function remove() {
     if (busy || !p) return;
-    const body = t('example.remove.body', { birds: fmtNum(p.birds), pairs: fmtNum(p.pairs), races: fmtNum(p.races), health: fmtNum(p.health), lofts })
-      + (p.kept ? ' ' + t('example.remove.kept', { k: fmtNum(p.kept) }) : '')
+    // RF-22 (RULED 2026-11-01): the question NAMES the birds that cause a keep — the fancier's birds with an example
+    // parent — up to BECAUSE_SHOWN, then «و{n} غيرها». With no dataset loft left on the device it names no loft.
+    const shown = db.BECAUSE_SHOWN as number;
+    const names = p.because.slice(0, shown).map((x) => x.name || x.ring || '—').join('، ')
+      + (p.because.length > shown ? ' ' + t('restore.confirm.more', { n: fmtNum(p.because.length - shown) }) : '');
+    const counts = { birds: fmtNum(p.birds), pairs: fmtNum(p.pairs), races: fmtNum(p.races), health: fmtNum(p.health) };
+    const body = (p.lofts.length ? t('example.remove.body', { ...counts, lofts }) : t('example.remove.bodyNoLoft', counts))
+      + (p.kept ? ' ' + t('example.remove.kept', { k: fmtNum(p.kept) }) + (p.because.length ? ' ' + t('example.remove.because', { names }) : '') : '')
       + (p.own ? ' ' + t('example.remove.own', { m: fmtNum(p.own) }) : '')
       + ((await db.unsentChanges()) as number > 0 ? ' ' + t('confirm.unsent') : '');
     const ok = await confirmDialog({ title: t('example.remove.title'), body, cancelLabel: t('act.cancel'), confirmLabel: t('example.remove.go'), confirmKind: 'danger' });
@@ -432,10 +439,10 @@ export function ExampleRemoveRow() {
   return (
     <Row id="example-remove" icon="teaching" label={t('example.remove.label')} help={t('example.remove.help', { n: fmtNum(p.birds + p.kept) })} value={fmtNum(p.birds + p.kept)} valueKind="gold">
       <div className={s.ds} data-testid="example-remove-detail">
-        <p className={s.detailNote} data-testid="example-remove-lofts">{t('example.remove.lofts', { lofts })}</p>
+        {p.lofts.length > 0 && <p className={s.detailNote} data-testid="example-remove-lofts">{t('example.remove.lofts', { lofts })}</p>}
         <button type="button" disabled={busy} onClick={remove} data-testid="example-remove" aria-busy={busy}>
           <span className={s.t}>{busy ? t('example.remove.busy') : t('example.remove.button')}</span>
-          <span className={s.n}>{p.lofts.map((l) => fmtNum(l.birds)).join(' + ')}</span>
+          <span className={s.n}>{[...p.lofts.map((l) => l.birds), ...(p.elsewhere ? [p.elsewhere] : [])].map((n) => fmtNum(n)).join(' + ')}</span>
         </button>
       </div>
     </Row>

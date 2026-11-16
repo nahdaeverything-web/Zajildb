@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve                      # noqa: E402
 sys.path.insert(0, os.path.join(HERE, '..'))
 from _net import Net                          # noqa: E402  THE NET (RULED 2026-10-08): armed beneath the stub, asserted at the end
+from _typography import SCAN                  # noqa: E402
 NET = Net()
 PAGES = []                                    # every device page; the final check reads THEIR error lists (TF-9)
 
@@ -231,6 +232,68 @@ try:
         check('[shape] the own record inside the teaching loft was re-filed to the own loft, which is current', all(l == shape['mine'] for _, l in after['ownLofts']) and after['current'] == shape['mine'] and s2['lofts'] == {shape['mine']: 'Hummar'}, (after['ownLofts'], s2['lofts']))
         check('[shape] both teaching lofts gone, tombstoned, the toast reports 47 and 29', s2['tombstones'] >= 47 + 10 + 34 + 14 + 2 and '47' in digits(toast) and '29' in digits(toast), (s2['tombstones'], digits(toast)[:120]))
         cs_.close()
+
+        # ═══ RF-22 / H3 (RULED 2026-11-01, built 2026-11-16): membership is THE SHIPPED DATASETS' OWN IDS — not the loft, not the id's shape ═══
+        ch, h0 = device(b, H, 'h@zajil.test')
+        sets = run(h0, "async (db) => { const s = await db.exampleIds(); return Object.fromEntries(Object.entries(s).map(([k, v]) => [k, [...v]])); }")
+        import uuid as _uuid
+        NS = _uuid.UUID('7f3c9a54-2b18-4d6e-9c05-1a2b3c4d5e6f'); UU = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+        PUB = os.path.join(HERE, '..', '..', '..', 'public'); files = [json.load(open(os.path.join(PUB, f), encoding='utf-8')) for f in ('example-loft-large.json', 'sample-data.json')]
+        STORES = ['lofts', 'birds', 'pairs', 'raceResults', 'healthEvents']
+        shipped_now = {st: sorted(r['id'] for f in files for r in f.get(st, [])) for st in STORES}
+        check('[H3 · the set] the uuid half of the membership set is EXACTLY the ids the two shipped files carry, store by store — none missing, none extra',
+              all(sorted(i for i in sets[st] if UU.match(i)) == shipped_now[st] for st in STORES), {st: (len([i for i in sets[st] if UU.match(i)]), len(shipped_now[st])) for st in STORES})
+        check('[H3 · the set] …and the other half is the pre-1.9.1 keys those ids are derived from (Python uuid5 over the same namespace): 2 lofts, 58 birds, 9 pairs, 29 results, 13 health — twice each',
+              all(sorted(str(_uuid.uuid5(NS, k)) for k in sets[st] if not UU.match(k)) == shipped_now[st] for st in STORES) and {st: len(sets[st]) for st in STORES} == {'lofts': 4, 'birds': 116, 'pairs': 18, 'raceResults': 58, 'healthEvents': 26}, {st: len(sets[st]) for st in STORES})
+
+        # ── direction ONE: a teaching bird filed in ANOTHER loft is still example data (the old rule kept it, and its ancestors, as the fancier's) ──
+        one = run(h0, """async (db) => { await db.Lofts.save({ ...db.currentLoft(), name: 'لوفتي' }); const mine = db.currentLoft();
+            await db.importAll(await (await fetch('/example-loft-large.json')).json(), 'merge');
+            const kids = new Set(); for (const x of db.state.birds.values()) { kids.add(x.sireId); kids.add(x.damId); }
+            const x = [...db.state.birds.values()].find(y => y.sireId && y.damId && !kids.has(y.id));        // a teaching bird with both parents and no offspring
+            await db.idbPut('birds', { ...x, loftId: mine.id }); db.state.birds.set(x.id, { ...x, loftId: mine.id });   // as a pull from another device leaves it
+            const p = await db.examplePresence(); return { mine: mine.id, moved: x.name, movedId: x.id, birds: p.birds, kept: p.kept, elsewhere: p.elsewhere, because: p.because.length, own: p.own }; }""")
+        check('[H3 · M-loft fails here] a teaching bird filed in the fancier\'s own loft IS example data: 38 to delete, none kept, 1 counted outside the teaching loft, and it causes no keep',
+              one['birds'] == 38 and one['kept'] == 0 and one['elsewhere'] == 1 and one['because'] == 0 and one['own'] == 0, one)
+        text, toast, gone = ui_remove(h0, ROOT); s = run(h0, STATE)
+        check('[H3 · M-loft fails here] …the removal deletes it with the rest: no bird left, no reference bird made, the own loft untouched', gone and s['birds'] == 0 and s['external'] == [] and s['lofts'] == {one['mine']: 'لوفتي'} and 'كمراجع' not in text, (s['birds'], s['external'], text[:160]))
+        ch.close()
+
+        # ── direction TWO: a fancier's record whose id is NOT a v4 uuid, filed IN the teaching loft, is NOT example data (the old rule deleted it) ──
+        ci, h1 = device(b, H, 'i@zajil.test')
+        two = run(h1, """async (db) => { await db.importAll(await (await fetch('/example-loft-large.json')).json(), 'merge');
+            const loft = '8f268d1b-3dbe-57be-8d77-ede52297a2cd'; const sire = [...db.state.birds.values()].find(x => x.sex === 'cock' && x.sireId && x.damId);
+            const at = '2025-01-05T08:00:00.000Z';
+            await db.importAll({ format: 'zajil-export', version: 1, birds: [{ ...db.newBird({ name: 'قديم-العهد', sex: 'hen' }), id: 'bird-0007', loftId: loft, sireId: sire.id, createdAt: at, updatedAt: at }] }, 'merge');
+            for (let i = 1; i <= 6; i++) await db.saveBird(db.newBird({ name: 'سليل-' + i, sex: 'cock', loftId: loft, sireId: sire.id }));
+            const closure = new Set(); const stack = [sire.id]; while (stack.length) { const id = stack.pop(); if (!id || closure.has(id)) continue; const a = db.state.birds.get(id); if (!a) continue; closure.add(id); stack.push(a.sireId, a.damId); }
+            const p = await db.examplePresence(); const before = {}; for (const x of db.state.birds.values()) before[x.id] = JSON.parse(JSON.stringify(x));
+            return { sire: sire.id, closure: closure.size, birds: p.birds, kept: p.kept, own: p.own, because: p.because.map(x => x.name), keep: [...p.keep], before, shown: db.BECAUSE_SHOWN }; }""")
+        check('[H3 · M-nonv4 fails here] a record with a non-uuid id that the datasets never shipped is the fancier\'s OWN, though it sits in the teaching loft: 7 own records, and it is among the causes of the keep, which are listed by name',
+              two['own'] == 7 and two['kept'] == two['closure'] and two['birds'] == 38 - two['closure'] and two['because'] == [f'سليل-{i}' for i in range(1, 7)] + ['قديم-العهد'], {k: two[k] for k in ('own', 'kept', 'closure', 'birds', 'because')})
+        tools(h1, ROOT); open_row(h1, 'example-remove'); h1.click('[data-testid=example-remove]'); h1.wait_for_selector('[data-testid=dialog]', timeout=8000)
+        IN_DIALOG = SCAN.replace("document.body.querySelectorAll('*')", "document.querySelector('[data-testid=dialog]').querySelectorAll('*')"); assert IN_DIALOG != SCAN   # the question itself: الأدوات behind it draws «غير معروف» for the version in the mono face on a build with no service worker — seen 2026-11-16, reported, not this check's subject
+        q = digits(h1.locator('[data-testid=dialog]').inner_text().replace('\n', ' ')); typo = h1.evaluate(IN_DIALOG); h1.click('[data-testid=dialog-cancel]'); h1.wait_for_timeout(400)
+        check('[H3 · M-names fails here] the question NAMES the birds that cause the keep: «بسبب:» and the first five, by name', two['shown'] == 5 and 'بسبب: سليل-1، سليل-2، سليل-3، سليل-4، سليل-5' in q, q)
+        check('[H3 · M-names fails here] …and says «و2 غيرها» for the other two, without naming them', 'سليل-5 و2 غيرها.' in q and 'سليل-6' not in q and 'قديم-العهد' not in q, q)
+        check('[typography] the question with the names is drawn in a face that has Arabic', not typo, [(x['why'], x['face'], x['text']) for x in typo][:3])
+        text, toast, gone = ui_remove(h1, ROOT); s = run(h1, STATE)
+        after = run(h1, "async (db) => { const o = {}; for (const x of db.state.birds.values()) o[x.id] = JSON.parse(JSON.stringify(x)); return o; }")
+        check('[H3 · A-set · M-patch fails here] the removal ran to completion', gone and 'لم تُزل' not in toast, toast[:200])
+        mine = after.get('bird-0007')
+        check('[H3 · M-nonv4 fails here] the fancier\'s old-id bird SURVIVES the removal, re-filed to the loft that is current, its teaching sire still linked and now a reference',
+              bool(mine) and mine['loftId'] == s['current'] and mine['sireId'] == two['sire'] and after.get(two['sire'], {}).get('external') is True and after[two['sire']]['status'] == 'reference', mine)
+        check('[H3] the seven own birds and the kept closure remain, nothing else', s['birds'] == 7 + two['closure'] and sorted(k for k in after if k not in two['keep']) == sorted(['bird-0007'] + [k for k, v in two['before'].items() if v['name'].startswith('سليل-')]), s['birds'])
+        # THE A-SET: a removal re-save may alter only the reference flag (external, and the status that goes with it) and loftId
+        diffs = {}
+        for k, v in after.items():
+            ch_ = sorted(f for f in set(v) | set(two['before'][k]) if v.get(f) != two['before'][k].get(f) and f not in ('updatedAt', 'deviceId'))   # the two stamps every save writes: when, and from which device
+            if ch_: diffs[k] = ch_
+        check('[A-set · M-alter fails here] across the kept references and the re-filed birds, the removal altered ONLY external, status and loftId (and the two stamps every save writes, updatedAt and deviceId)',
+              len(after) == 7 + two['closure'] and all(set(d) <= {'external', 'status', 'loftId'} for d in diffs.values()) and len(diffs) == len(after), sorted({f for d in diffs.values() for f in d}))
+        check('[A-set] …the kept references are references in the current loft; the own birds changed their loft and nothing else', all(diffs.get(k) == ['loftId'] for k in after if k not in two['keep']) and all(after[k]['external'] is True and after[k]['status'] == 'reference' and after[k]['loftId'] == s['current'] for k in two['keep']), {k: diffs.get(k) for k in list(after)[:3]})
+        check('[H3] the row is gone though the kept references carry dataset ids: nothing of the example data is left to remove', row_present(h1, ROOT) == 0)
+        ci.close()
 
         # ═══ RF-14 AT BOOT: a device that dangled BEFORE this build (a loft removed by an older version, or by the console route) ═══
         cl, dl = device(b, H, 'e@zajil.test'); run(dl, "async (db) => { await db.Lofts.save({ ...db.currentLoft(), name: 'لوفتي' }); await db.setSetting('currentLoftId', 'ghost-loft-id'); }")

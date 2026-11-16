@@ -271,7 +271,7 @@ const guards = {
   // removal's INTERNAL moved into something shared — fails here. Errors are not affected by the flag at all.
   'allow-warnings-bounded'() {
     const ALLOWED = new Map([
-      ['src/example-data.js', 1],        // const INTERNAL = { allowWarnings: true } — the removal's reference flips and re-files
+      ['src/example-data.js', 1],        // const INTERNAL = Object.freeze({ allowWarnings: true }) — the removal's reference flips and re-files
       ['app/bird/form.tsx', 2],          // the save after the fancier confirmed the warnings dialog; the sibling-of save
       ['app/bird/view.tsx', 1],          // «اجعله مرجعًا»: a bird in pairs or races raises warnings none of which apply to a reference
       ['app/breeding/shared.tsx', 4],    // chick saves from the breeding screen (ringing, hatch date, parents)
@@ -296,7 +296,30 @@ const guards = {
     // every ruled site must still be exactly as pinned, including one that has lost its use (a stale list hides a move)
     for (const [rel_, n] of ALLOWED) if ((seen.get(rel_) || 0) !== n) bad.push(`${rel_}: ${seen.get(rel_) || 0} use(s) of allowWarnings, ${n} pinned — re-rule the list`);
     const ex = readFileSync(join(ROOT, 'src/example-data.js'), 'utf8');
-    if (!/const INTERNAL = \{ allowWarnings: true \};/.test(ex)) bad.push('src/example-data.js: the removal must set the flag exactly as `const INTERNAL = { allowWarnings: true };`, for its own re-saves');
+    // THE A-SET (RULED, built 2026-11-16): the option is FROZEN, and it has exactly ONE user — resave(), which refuses
+    // to alter anything but the reference flag and loftId. Counted over the code, comments masked: the definition and
+    // the one use. A third mention is the option travelling (a second save, an export, a spread).
+    if (!/const INTERNAL = Object\.freeze\(\{ allowWarnings: true \}\);/.test(ex)) bad.push('src/example-data.js: the removal must set the flag exactly as `const INTERNAL = Object.freeze({ allowWarnings: true });`, for its own re-saves');
+    const mentions = (maskComments(ex).match(/\bINTERNAL\b/g) || []).length;
+    if (mentions !== 2) bad.push(`src/example-data.js: INTERNAL is mentioned ${mentions}× in code — 2 ruled (its definition, and resave())`);
+    if (!/const RESAVE_MAY_ALTER = Object\.freeze\(\['external', 'status', 'loftId'\]\);/.test(ex)) bad.push("src/example-data.js: a removal re-save may alter only the reference flag and loftId — `const RESAVE_MAY_ALTER = Object.freeze(['external', 'status', 'loftId']);`");
+    return bad;
+  },
+
+  // THE A-SET (RULED, built 2026-11-16): `{ force: true }` makes classifySave skip errors AND warnings. Nothing in the
+  // app passes it — importAll and the sync apply write without classifySave at all — and nothing may start to: any
+  // `force:` with a value other than `false` under src/ or app/ fails here. Comments are masked, so the two doc
+  // comments that describe the option do not count. Blind spots, declared as for allow-warnings-bounded: a shorthand
+  // `{ force }`, a computed key, an assignment. The suites set it freely, to build shapes validation would refuse.
+  'force-never-passed'() {
+    const bad = [];
+    for (const f of files('.js', '.mjs', '.ts', '.tsx')) {
+      const rel_ = relative(ROOT, f);
+      if (!/^(src|app)\//.test(rel_)) continue;
+      const src = maskComments(readFileSync(f, 'utf8'));
+      const uses = (src.match(/\bforce\s*:/g) || []).length - (src.match(/\bforce\s*:\s*false\b/g) || []).length;
+      if (uses) bad.push(`${rel_} passes force (${uses}×) — no save in the app may skip validation`);
+    }
     return bad;
   },
 

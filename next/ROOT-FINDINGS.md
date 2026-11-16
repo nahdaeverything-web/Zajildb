@@ -2864,6 +2864,172 @@ not the loft a record sits in, and NOT "non-v4" (a pre-1.4.0 or hand-edited reco
 into the example set). Mutation-prove both directions. The dialog must NAME the birds that cause a keep, up to
 a sensible limit. Not built; ordered after acceptance, with the A-set.
 
+### Built 2026-11-16 — NOT deployed (ordered: build, do not deploy)
+
+**Membership.** `src/example-ids.js` lists the datasets' own ids as the generators' readable keys — 2 lofts, 58 birds,
+9 pairs, 29 results, 13 health records — read from both datasets at `823db27^` (identical at `3190aa8` and `a932606`;
+the two datasets share no id). `exampleIds()` holds each key and its uuid5: the pre-1.9.1 generation and the shipped
+one. The suite checks the uuid half against the two shipped files, store by store, none missing and none extra.
+`examplePresence()` and `removeExampleData()` ask that set and nothing else:
+
+- a dataset record is example data WHEREVER it is filed (direction one);
+- a record filed in a dataset loft whose id the datasets never shipped is the fancier's own, whatever its id looks like
+  — re-filed, never deleted, and a walk start (direction two).
+
+**What follows from it, decided in the build and to be confirmed:**
+1. Presence no longer requires a dataset loft on the device: example records left behind without one bring the row
+   back. With no loft the question cannot say «من {lofts}، ثم اللوفت التجريبي نفسه», so it has a second form
+   (`example.remove.bodyNoLoft`, PROPOSED).
+2. Kept references carry dataset ids, so they stay "example" for good. The row is absent while every example bird
+   left is one a bird of the fancier's descends from; if that bird is later deleted, the row returns and offers to
+   remove the references nobody descends from any more.
+3. A kept reference that was filed outside the dataset lofts stays in its loft; only those filed inside one are re-filed.
+4. When a dataset loft is present AND example birds are filed elsewhere, the question still says «من {lofts}»; the
+   count is right, the place is not the whole truth. The row's button shows the outside count as one more term.
+
+**The dialog names the cause.** `because` = every bird that is not example data and has an example bird as a parent,
+sorted by name. The question adds «بسبب: {names}.» after the kept sentence — up to five (`BECAUSE_SHOWN`), then
+«و{n} غيرها» (the existing `restore.confirm.more`). A bird with no name is named by its ring.
+
+**The A-set.**
+- *Re-saves may alter only the reference flag and loftId.* One function, `resave(id, patch)`, writes every bird the
+  removal does not delete: the record as it stands now plus the patch, and it throws on any patch key outside
+  `RESAVE_MAY_ALTER = ['external', 'status', 'loftId']` (`status` is the reference flag's second field). The generic
+  re-files go through the same key check. Measured across 10 surviving birds: only those three fields differ, plus the
+  two stamps every save writes (`updatedAt`, `deviceId` — a dataset record takes this device's id when re-saved).
+- *INTERNAL frozen*: `Object.freeze({ allowWarnings: true })`; the guard pins that literal, pins the allowed-fields
+  literal, and counts mentions of `INTERNAL` in code at exactly 2 (definition, `resave`).
+- *`{ force: true }` guarded, not removed*: new guard `force-never-passed` — no `force:` with a non-false value under
+  `src/` or `app/` (comments masked). Not removed because two suites pass it to build shapes validation refuses
+  (`screens/bird_profile.py:138`, `screens/health.py:165`). Blind spots as declared for `allow-warnings-bounded`.
+
+**Guard mutants** (`~/zajil-gate-logs/h3-guard-mutants.log`):
+
+```
+═══ G-freeze: INTERNAL not frozen
+✗ allow-warnings-bounded  (1)
+    src/example-data.js: the removal must set the flag exactly as `const INTERNAL = Object.freeze({ allowWarnings: true });`, for its own re-saves
+✓ force-never-passed
+✓ sync-single-owner
+--
+1 guard(s) FAILED
+═══ G-use: INTERNAL used by a second save
+✗ allow-warnings-bounded  (1)
+    src/example-data.js: INTERNAL is mentioned 3× in code — 2 ruled (its definition, and resave())
+✓ force-never-passed
+✓ sync-single-owner
+--
+1 guard(s) FAILED
+═══ G-alter: the allowed list widened
+✗ allow-warnings-bounded  (1)
+    src/example-data.js: a removal re-save may alter only the reference flag and loftId — `const RESAVE_MAY_ALTER = Object.freeze(['external', 'status', 'loftId']);`
+✓ force-never-passed
+✓ sync-single-owner
+--
+1 guard(s) FAILED
+═══ G-force: a save in the app passes force
+✗ force-never-passed  (1)
+    app/bird/view.tsx passes force (1×) — no save in the app may skip validation
+✓ sync-single-owner
+✓ data-layer-identity
+--
+1 guard(s) FAILED
+═══ restored
+all guards pass
+```
+
+**Suite** `screens/example_remove.py`: 68 checks (was 53). **Mutants**, one harness build each (`~/zajil-work/h3/mutants.sh`):
+
+```
+═══ MUTANT M-loft
+  mutated: src/example-data.js
+build exit 0
+suite exit 1 · 66 passed, 2 failed
+  ✗ [H3 · M-loft fails here] a teaching bird filed in the fancier's own loft IS example data: 38 to delete, none kept, 1 counted outside the teaching loft, and it causes no keep  {'mine': '6e4bfd4b-7fe6-4b7c-be69-21f00b411911', 'moved': 'فارس ٢٦', 'movedId': 'f1d1a304-faff-503a-97e1-5c50246139a9', 'birds': 9, 'kept': 28
+  ✗ [H3 · M-loft fails here] …the removal deletes it with the rest: no bird left, no reference bird made, the own loft untouched  (29, ['Anka', 'Julius', 'Kasper', 'Mieke', 'Remco', 'Witpen', 'الأمير', 'الشيخ', 'الفارس', 'الملك', 'برهان', 'خيال', 'دانة', 'ريما', 'زمرّدة', 'سدي
+
+═══ MUTANT M-nonv4
+  mutated: src/example-data.js
+build exit 0
+suite exit 1 · 63 passed, 5 failed
+  ✗ [H3 · M-nonv4 fails here] a record with a non-uuid id that the datasets never shipped is the fancier's OWN, though it sits in the teaching loft: 7 own records, and it is among the causes of the keep, which are listed by name  {'own': 6, 'kept': 3, 'closure': 3, 'birds': 36, 'because': ['سليل-1', 'سليل-2', 'سلي�
+  ✗ [H3 · M-names fails here] …and says «و2 غيرها» for the other two, without naming them  إزالة البيانات التجريبية؟  سيُحذف 36 طيرًا و5 زوجًا و17 نتيجة و7 سجلًا صحيًا من «لوفت إربد التعليمي»، ثم اللوفت التجريبي نفسه. �
+  ✗ [H3 · M-nonv4 fails here] the fancier's old-id bird SURVIVES the removal, re-filed to the loft that is current, its teaching sire still linked and now a reference  None
+  ✗ [H3] the seven own birds and the kept closure remain, nothing else  9
+  ✗ [A-set · M-alter fails here] across the kept references and the re-filed birds, the removal altered ONLY external, status and loftId (and the two stamps every save writes, updatedAt and deviceId)  ['external', 'loftId', 'status']
+
+═══ MUTANT M-names
+  mutated: app/tools/parts.tsx
+build exit 0
+suite exit 1 · 66 passed, 2 failed
+  ✗ [H3 · M-names fails here] the question NAMES the birds that cause the keep: «بسبب:» and the first five, by name  إزالة البيانات التجريبية؟  سيُحذف 35 طيرًا و5 زوجًا و17 نتيجة و7 سجلًا صحيًا من «لوفت إربد التعليمي»، ثم اللوفت الت
+  ✗ [H3 · M-names fails here] …and says «و2 غيرها» for the other two, without naming them  إزالة البيانات التجريبية؟  سيُحذف 35 طيرًا و5 زوجًا و17 نتيجة و7 سجلًا صحيًا من «لوفت إربد التعليمي»، ثم اللوفت التجريبي نفسه. �
+
+═══ MUTANT M-alter
+  mutated: src/example-data.js
+build exit 0
+suite exit 1 ·     at async <anonymous>:316:30
+
+═══ MUTANT M-patch
+  mutated: src/example-data.js
+build exit 0
+suite exit 1 · 52 passed, 16 failed
+  ✗ [own] the ruled outcome: the example sire and his ancestors stay, as reference birds, and the pedigree link is intact  {'mine': {'loft': '8f268d1b-3dbe-57be-8d77-ede52297a2cd', 'sireLinked': True}, 'up': [{'name': 'الفارس', 'external': False, 'status': 'breeder', 'loft': '8f268d1b-3dbe-57be-8d77-ede52297a2cd'}, {'nam
+  ✗ [own] nothing else of the example data remains: the fancier’s own two birds and the whole ancestor closure of the sire (both sides), nothing more  {'birds': 40, 'pairs': 5, 'races': 17, 'health': 7, 'closure': 3}
+  ✗ [own] the kept birds carry the external tag in the register  ['Anka', 'Julius', 'Kasper', 'Mieke', 'Remco', 'Witpen', 'طارق', 'نجلاء']
+  ✗ [own] the row is gone  1
+  ✗ [own · seen] loading the same teaching loft again on this device imports nothing — the tombstones win (follow-up, not ruled)  {'birds': 0, 'pairs': 0, 'raceResults': 0, 'healthEvents': 0, 'lofts': 0, 'media': 0, 'skipped': 68, 'removed': 0}
+  ✗ [shape · invariant] a removal that cannot proceed SAYS SO — a toast naming the reason, nothing changed  ('لم تُزل البيانات التجريبية — لم يتغيّر شيء. السبب: خطأ غير متوقع (example-removal: a re-save may not alter «notes»)', 78, 0, [])
+  ✗ [shape] the removal RAN TO COMPLETION — the row detached, no failure toast (R1 fails here: the flag not passed)  لم تُزل البيانات التجريبية — لم يتغيّر شيء. السبب: خطأ غير متوقع (example-removal: a re-save may not alter «notes»)
+  ✗ [shape] 47 deleted — 29 example birds remain, every one a reference bird  (76, False, 78)
+  ✗ [shape] the own record inside the teaching loft was re-filed to the own loft, which is current  ([['حمّار-2', '8f268d1b-3dbe-57be-8d77-ede52297a2cd'], ['حمّار-1', '123ab3c8-6505-44cd-a063-e31b6d31b50d']], {'123ab3c8-6505-44cd-a063-e31b6d31b50d': 'Hummar', '8f268d1b-3dbe-57be-8d77-ede52297a2cd': 'لوفت إربد
+  ✗ [shape] both teaching lofts gone, tombstoned, the toast reports 47 and 29  (0, 'لم تُزل البيانات التجريبية — لم يتغيّر شيء. السبب: خطأ غير متوقع (example-removal: a re-save may not alter «notes»)')
+  ✗ [H3 · A-set · M-patch fails here] the removal ran to completion  لم تُزل البيانات التجريبية — لم يتغيّر شيء. السبب: خطأ غير متوقع (example-removal: a re-save may not alter «notes»)
+  ✗ [H3 · M-nonv4 fails here] the fancier's old-id bird SURVIVES the removal, re-filed to the loft that is current, its teaching sire still linked and now a reference  {'id': 'bird-0007', 'rings': [], 'name': 'قديم-العهد', 'sex': 'hen', 'hatchDate': '', 'colour': '', 'strain': '', 'eyeSign': '', 'status': 'stock', 's
+  ✗ [H3] the seven own birds and the kept closure remain, nothing else  45
+  ✗ [A-set · M-alter fails here] across the kept references and the re-filed birds, the removal altered ONLY external, status and loftId (and the two stamps every save writes, updatedAt and deviceId)  []
+  ✗ [A-set] …the kept references are references in the current loft; the own birds changed their loft and nothing else  {'06ace477-3277-56a5-ae72-88ee440c2d02': None, '0b3cea81-446b-5207-8893-29310735fb20': None, '0c116294-faf4-52ae-a585-f18cac9d3f40': None}
+  ✗ [H3] the row is gone though the kept references carry dataset ids: nothing of the example data is left to remove  
+
+═══ restored
+ M app/tools/parts.tsx
+ M guards/run.mjs
+ M src/db.js
+ M src/example-data.js
+ M src/i18n.ext.js
+ M tests/e2e/screens/example_remove.py
+?? src/example-ids.js
+build exit 0
+suite exit 0 · 68 passed, 0 failed
+```
+
+M-alter's first draft changed the bird's NAME, and an earlier step of the suite that finds a bird by name died on a
+traceback before any A-set check — red for the wrong reason (kept as `h3-M-alter-first-draft-TRACEBACK.log`). Redrawn
+to change `colour`, and rerun:
+
+```
+═══ MUTANT M-alter
+  mutated: src/example-data.js
+build exit 0
+suite exit 1 · 66 passed, 2 failed
+  ✗ [A-set · M-alter fails here] across the kept references and the re-filed birds, the removal altered ONLY external, status and loftId (and the two stamps every save writes, updatedAt and deviceId)  ['colour', 'external', 'loftId', 'status']
+  ✗ [A-set] …the kept references are references in the current loft; the own birds changed their loft and nothing else  {'05211d34-65c4-4d66-bd48-895f861f8273': ['colour', 'loftId'], '0b3cea81-446b-5207-8893-29310735fb20': ['colour', 'loftId'], '20ab1172-8d79-4dc6-a610-f89d555b4a0f': ['colour', 'loftId']}
+
+═══ restored
+ M app/tools/parts.tsx
+ M guards/run.mjs
+ M src/db.js
+ M src/example-data.js
+ M src/i18n.ext.js
+ M tests/e2e/screens/example_remove.py
+?? src/example-ids.js
+build exit 0
+suite exit 0 · 68 passed, 0 failed
+```
+
+**Seen, not this item's subject:** on a build with no service worker الأدوات draws the version as «غير معروف»
+(`about.unknown`) in the mono face, which has no Arabic. The route walk of the typography suite does not meet it. Not fixed.
+
 ## DF-4 — photos have no server copy (an open PRODUCT decision, Samir's)
 
 Media metadata syncs; blobs do not (SYNC-DESIGN §7). Measured 2026-11-13, deployed build, stub-backed: a

@@ -5,7 +5,9 @@
 // offered was deleting birds one at a time, which is also what breaks pedigrees. This is NOT general
 // loft management: it is scoped to exactly what the loaders put in, identified by the datasets' own ids.
 //
-// THE IDS ARE DERIVED, NOT TYPED. tools/idmap.js makes every dataset id as RFC 4122 v5 — sha1 over
+// WHAT IS EXAMPLE DATA (RF-22): a record whose id is one the datasets shipped — src/example-ids.js, exampleIds() below.
+//
+// THE LOFT IDS ARE DERIVED, NOT TYPED. tools/idmap.js makes every dataset id as RFC 4122 v5 — sha1 over
 // ID_NAMESPACE and the readable key — and the pre-v1.9.1 datasets shipped the readable key itself as
 // the id. Both generations of both datasets exist on real devices (RF-17), so all four are named here,
 // computed from the two keys and the one namespace. A wrong derivation finds nothing to remove; it
@@ -13,6 +15,7 @@
 import {
   Health, Lofts, Pairs, Races, REFERENCE_STATUS, deleteBird, emitChange, idbGetAll, saveBird, state,
 } from './db.js';
+import { EXAMPLE_ID_KEYS } from './example-ids.js';
 
 /** The two dataset lofts, as tools/gen-example-large.js and the small example name them. */
 export const EXAMPLE_KEYS = ['loft-irbid-demo', 'loft-zarqa'];
@@ -39,32 +42,52 @@ export function exampleLoftIds() {
   return idsPromise;
 }
 
-/** The app mints every id as uuid v4 (storage.js uuid()); the datasets never did — v5 from tools/idmap.js, or the readable
- *  key before v1.9.1. So inside a dataset loft, a v4 id is a record the FANCIER made there (on a fresh device the teaching
- *  loft becomes current when loaded — RF-12 — so his first birds land in it), and it is his to keep. */
-const V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-export const isExampleId = (id) => !V4.test(String(id));
+let setsPromise = null;
+/**
+ * THE MEMBERSHIP SET (RF-22, RULED 2026-11-01): the shipped datasets' own ids, by store — every key of
+ * src/example-ids.js as it shipped before v1.9.1, and its uuid5 as it has shipped since. A record is example data when
+ * its id is in here and for no other reason. NOT the loft it is filed in: a teaching bird pulled or moved into another
+ * loft is still a teaching bird. NOT the shape of its id: a fancier's record that is not a v4 uuid (made before v1.4.0,
+ * or edited by hand) is his, wherever it is filed.
+ */
+export function exampleIds() {
+  if (!setsPromise) {
+    setsPromise = (async () => {
+      const out = {};
+      for (const [store, keys] of Object.entries(EXAMPLE_ID_KEYS)) out[store] = new Set([...keys, ...(await Promise.all(keys.map(uuid5)))]);
+      return out;
+    })();
+  }
+  return setsPromise;
+}
+
+/** How many of the birds that cause a keep the question names before it says «و{n} غيرها». */
+export const BECAUSE_SHOWN = 5;
 
 /**
- * What the example data on this device amounts to, or null when there is none.
+ * What the example data on this device amounts to, or null when there is nothing of it to remove.
  *
  * `keep` is the ruled exception: example birds that a bird of the fancier's own descends from. They are genuinely part
  * of that bird's pedigree now, so they are kept as reference birds rather than deleted — the whole ancestor chain of
  * them, so no kept bird loses a parent when the rest go (deleteBird clears the parent links of offspring).
- * `own` is everything with a v4 id filed under a dataset loft: the fancier's records, re-filed to the loft that is
- * current once the dataset lofts are gone (RF-14's recovery decides which), never deleted.
+ * `because` is the birds that cause it: every bird that is not example data and has an example bird as a parent.
+ * `own` is everything filed under a dataset loft that is NOT a dataset record: the fancier's records, re-filed to the
+ * loft that is current once the dataset lofts are gone (RF-14's recovery decides which), never deleted.
  */
 export async function examplePresence() {
+  const IDS = await exampleIds();
   const present = (await exampleLoftIds()).filter((id) => state.lofts.has(id));
-  if (!present.length) return null;
   const SET = new Set(present);
-  const inLofts = (map) => [...map.values()].filter((r) => SET.has(r.loftId));
-  const split = (rows) => ({ ex: rows.filter((r) => isExampleId(r.id)), own: rows.filter((r) => !isExampleId(r.id)) });
-  const birds = split(inLofts(state.birds)), pairs = split(inLofts(state.pairs)), races = split(inLofts(state.raceResults)), health = split(inLofts(state.healthEvents));
+  // example records are example records WHEREVER they are filed; the fancier's own are his even inside a dataset loft
+  const split = (map, store) => ({ ex: [...map.values()].filter((r) => IDS[store].has(r.id)),
+                                   own: [...map.values()].filter((r) => SET.has(r.loftId) && !IDS[store].has(r.id)) });
+  const birds = split(state.birds, 'birds'), pairs = split(state.pairs, 'pairs'), races = split(state.raceResults, 'raceResults'), health = split(state.healthEvents, 'healthEvents');
   const example = new Set(birds.ex.map((b) => b.id));
   const keep = new Set();                                  // example birds that are ancestors of the fancier's own birds
+  const because = [];                                      // the fancier's birds with an example parent: the cause of every keep
   for (const b of state.birds.values()) {
     if (example.has(b.id)) continue;                       // every bird that is not example data, wherever it is filed
+    if (example.has(b.sireId) || example.has(b.damId)) because.push({ id: b.id, name: b.name || '', ring: ((b.rings || [])[0] || {}).raw || '' });
     const stack = [b.sireId, b.damId];
     while (stack.length) {
       const id = stack.pop();
@@ -74,54 +97,68 @@ export async function examplePresence() {
       stack.push(a.sireId, a.damId);
     }
   }
+  // named in the question in an order the fancier can read, not in the order of their ids
+  because.sort((x, y) => (x.name || x.ring).localeCompare(y.name || y.ring, 'ar', { numeric: true }));
+  // nothing to remove: no dataset loft, and every example bird still here is one a bird of the fancier's descends from
+  if (!present.length && birds.ex.length === keep.size && !pairs.ex.length && !races.ex.length && !health.ex.length) return null;
   const media = (await idbGetAll('media')).filter((m) => example.has(m.birdId) && !keep.has(m.birdId));
   // TF-12 (RULED 2026-11-15): the read above is an await, and a removal or a pulled tombstone can take a loft away
-  // across it — `state.lofts.get(id).name` then threw. Re-checked here; with no loft left there is no example data.
+  // across it — `state.lofts.get(id).name` then threw. Re-checked here; a loft that went is simply not listed.
   const still = present.filter((id) => state.lofts.has(id));
-  if (!still.length) return null;
+  if (present.length && !still.length) return null;
   const own = birds.own.length + pairs.own.length + races.own.length + health.own.length;
   return {
     ids: still,
     lofts: still.map((id) => ({ id, name: state.lofts.get(id).name || '',
       birds: birds.ex.filter((b) => b.loftId === id).length, pairs: pairs.ex.filter((r) => r.loftId === id).length,
       races: races.ex.filter((r) => r.loftId === id).length, health: health.ex.filter((r) => r.loftId === id).length })),
+    elsewhere: birds.ex.filter((b) => !SET.has(b.loftId)).length,          // example birds filed outside the dataset lofts
     birds: birds.ex.length - keep.size, pairs: pairs.ex.length, races: races.ex.length, health: health.ex.length, media: media.length,
-    kept: keep.size, keep, own, ownBirds: birds.own.length,
+    kept: keep.size, keep, because, own, ownBirds: birds.own.length,
     current: SET.has(state.currentLoftId),
   };
 }
 
+// RULED 2026-10-30: the removal's internal re-saves pass allowWarnings — and ONLY these (guard `allow-warnings-bounded`).
+// The records already exist exactly as they are. The warning that blocked the removal on every real device (RF-18) was
+// val.dupRing: with both dataset generations present every kept ancestor has a twin wearing its ring — a twin this
+// same action deletes. Errors still block, unchanged.
+// THE A-SET (RULED, built 2026-11-16): the option is FROZEN, it has exactly one user — resave() below — and resave()
+// refuses to alter anything but the reference flag (`external` and the status that goes with it) and `loftId`.
+const INTERNAL = Object.freeze({ allowWarnings: true });
+const RESAVE_MAY_ALTER = Object.freeze(['external', 'status', 'loftId']);
+const mayAlter = (patch) => { for (const k of Object.keys(patch)) if (!RESAVE_MAY_ALTER.includes(k)) throw new Error(`example-removal: a re-save may not alter «${k}»`); };
+/** The removal's one way of writing a bird it does not delete: the record as it stands NOW, plus the patch, and nothing else. */
+async function resave(id, patch) {
+  mayAlter(patch);
+  return saveBird({ ...state.birds.get(id), ...patch }, INTERNAL);
+}
+
 /**
  * Remove it — through deleteBird(), the generic remove() and Lofts.remove(), never a raw write, so every deletion is
- * logged and tombstoned and syncs like one the fancier made by hand. Touches nothing outside the named lofts, and
- * inside them only dataset records: the fancier's own are re-filed, the kept ancestors become references.
+ * logged and tombstoned and syncs like one the fancier made by hand.
+ * Deletes only dataset records, by their ids: the fancier's own are re-filed, the kept ancestors become references.
  * Returns the counts, or null when there was nothing to remove.
  */
 export async function removeExampleData() {
   const p = await examplePresence();
   if (!p) return null;
+  const IDS = await exampleIds();
   const SET = new Set(p.ids);
-  // RULED 2026-10-30: these internal re-saves pass allowWarnings — and ONLY these (guard `allow-warnings-bounded`).
-  // The records already exist exactly as they are; the removal flips two fields or a loftId. The warning that
-  // blocked it on every real device (RF-18) was val.dupRing: with both dataset generations present every kept
-  // ancestor has a twin wearing its ring — a twin this same action deletes. Errors still block, unchanged.
-  const INTERNAL = { allowWarnings: true };
-  for (const id of p.keep) {                               // kept ancestors first, so nothing below can touch them
-    const b = state.birds.get(id);
-    await saveBird({ ...b, external: true, status: REFERENCE_STATUS }, INTERNAL);
-  }
+  for (const id of p.keep) await resave(id, { external: true, status: REFERENCE_STATUS });   // kept ancestors first, so nothing below can touch them
   let birds = 0;
   for (const b of [...state.birds.values()]) {
-    if (SET.has(b.loftId) && isExampleId(b.id) && !p.keep.has(b.id)) { await deleteBird(b.id); birds++; }
+    if (IDS.birds.has(b.id) && !p.keep.has(b.id)) { await deleteBird(b.id); birds++; }
   }
-  const sweep = async (map, api) => { let n = 0; for (const r of [...map.values()]) { if (SET.has(r.loftId) && isExampleId(r.id)) { await api.remove(r.id); n++; } } return n; };
-  const pairs = await sweep(state.pairs, Pairs), races = await sweep(state.raceResults, Races), health = await sweep(state.healthEvents, Health);
+  const sweep = async (map, api, store) => { let n = 0; for (const r of [...map.values()]) { if (IDS[store].has(r.id)) { await api.remove(r.id); n++; } } return n; };
+  const pairs = await sweep(state.pairs, Pairs, 'pairs'), races = await sweep(state.raceResults, Races, 'raceResults'), health = await sweep(state.healthEvents, Health, 'healthEvents');
   for (const id of p.ids) await Lofts.remove(id);          // RF-14: remove() re-points currentLoftId if it was one of these
-  // the fancier's own records, and the kept references, move to the loft that is current now
+  // the fancier's own records, and the kept references, that were filed in a dataset loft move to the loft that is
+  // current now; a kept reference filed anywhere else stays where it is
   const target = state.currentLoftId;
   let moved = 0;
-  const refile = async (map, api) => { for (const r of [...map.values()]) { if (SET.has(r.loftId)) { await api.save({ ...r, loftId: target }); moved++; } } };
-  for (const b of [...state.birds.values()]) { if (SET.has(b.loftId)) { await saveBird({ ...b, loftId: target }, INTERNAL); moved++; } }
+  const refile = async (map, api) => { for (const r of [...map.values()]) { if (SET.has(r.loftId)) { const patch = { loftId: target }; mayAlter(patch); await api.save({ ...r, ...patch }); moved++; } } };
+  for (const b of [...state.birds.values()]) { if (SET.has(b.loftId)) { await resave(b.id, { loftId: target }); moved++; } }
   await refile(state.pairs, Pairs); await refile(state.raceResults, Races); await refile(state.healthEvents, Health);
   emitChange({ type: 'import' });
   // what was removed in all — the presence counts; the sweep only catches what deleteBird's cascade did not reach

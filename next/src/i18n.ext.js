@@ -496,6 +496,9 @@ export const EXT = {
   'example.remove.title':     { ar: 'إزالة البيانات التجريبية؟', en: 'Remove the sample data?' },
   'example.remove.body':      { ar: 'سيُحذف {birds} طيرًا و{pairs} زوجًا و{races} نتيجة و{health} سجلًا صحيًا من {lofts}، ثم اللوفت التجريبي نفسه. لا يُمسّ أي طير من طيورك.', en: '{birds} birds, {pairs} pairs, {races} results and {health} health records will be deleted from {lofts}, then the sample loft itself. None of your own birds is touched.' },
   'example.remove.kept':      { ar: 'يبقى {k} طيرًا تجريبيًا كمراجع في النسب، لأن طيورًا من لوفتك تنحدر منها.', en: '{k} sample birds stay as pedigree references, because birds of yours descend from them.' },
+  // RF-22 (RULED 2026-11-01) — the birds that cause a keep, named («بسبب:» is the ruling's own word); and the question on a device where no dataset loft is left — PROPOSED
+  'example.remove.because':   { ar: 'بسبب: {names}.', en: 'Because of: {names}.' },
+  'example.remove.bodyNoLoft': { ar: 'سيُحذف {birds} طيرًا و{pairs} زوجًا و{races} نتيجة و{health} سجلًا صحيًا من البيانات التجريبية. لا يُمسّ أي طير من طيورك.', en: '{birds} birds, {pairs} pairs, {races} results and {health} health records of the sample data will be deleted. None of your own birds is touched.' },
   'example.remove.own':       { ar: 'لديك {m} من سجلاتك داخل اللوفت التجريبي؛ لا تُحذف، بل تُنقل إلى لوفتك.', en: '{m} records of your own are filed in the sample loft; they are not deleted but moved to your loft.' },
   'example.remove.go':        { ar: 'إزالة', en: 'Remove' },
   'example.remove.done':      { ar: 'أُزيلت البيانات التجريبية: {birds} طيرًا و{pairs} زوجًا و{races} نتيجة و{health} سجلًا صحيًا.', en: 'Sample data removed: {birds} birds, {pairs} pairs, {races} results, {health} health records.' },
