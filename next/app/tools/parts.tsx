@@ -146,6 +146,22 @@ export function SyncDetail({ settings }: { settings: Record<string, unknown> }) 
   const status = db.syncStatus() as SyncStatus;
   const anomalies = (db.listSyncAnomalies ? db.listSyncAnomalies() : []) as Anomaly[];
   const enabled = settings.syncEnabled !== false;
+  // «مزامنة الآن» (RULED 2026-11-17): a cycle does not throw — it RETURNS its failure — and the button said «تم الحفظ»
+  // whatever came back. A cycle that did not complete is now said, with the layer's own reason.
+  async function pressSync() {
+    setBusy(true);
+    try {
+      await destructive(async () => {
+        const r = await db.syncNow() as { ok?: boolean; reason?: string } | undefined;
+        if (r && r.ok === false) {
+          const err = (db.syncStatus() as SyncStatus).error;
+          toast(t('tools.failed.action', { what: t('sync.now'), reason: err ? t(err.key) : t('tools.failed.unknown', { what: r.reason || '' }) }), { kind: 'error', timeout: 12000 });
+        } else toast(t('toast.saved'), { kind: 'success' });
+      }, failedAction(t('sync.now')));
+    } finally { setBusy(false); }
+  }
+  // 2 the toggle
+  const toggle = () => destructive(async () => { await db.setSyncEnabled(!enabled); await db.refreshSyncStatus(); }, failedAction(t(enabled ? 'sync.toggleOff' : 'sync.toggleOn')));
   const line: Line = status.state === 'error' && status.error
     ? { icon: 'alert', gold: true, testid: 'sync-error',
         title: `${t('sync.lastError')}: ${t(status.error.key)}`,
@@ -171,8 +187,8 @@ export function SyncDetail({ settings }: { settings: Record<string, unknown> }) 
         </ul>
       )}
       <div className={s.actions}>
-        <button type="button" className={`${s.btn} ${s.primary}`} disabled={busy} onClick={async () => { setBusy(true); try { await db.syncNow(); toast(t('toast.saved'), { kind: 'success' }); } finally { setBusy(false); } }} data-testid="sync-now">{t('sync.now')}</button>
-        <button type="button" className={s.btn} onClick={async () => { await db.setSyncEnabled(!enabled); await db.refreshSyncStatus(); }} data-testid="sync-toggle">{enabled ? t('sync.toggleOff') : t('sync.toggleOn')}</button>
+        <button type="button" className={`${s.btn} ${s.primary}`} disabled={busy} onClick={pressSync} data-testid="sync-now">{t('sync.now')}</button>
+        <button type="button" className={s.btn} onClick={toggle} data-testid="sync-toggle">{enabled ? t('sync.toggleOff') : t('sync.toggleOn')}</button>
       </div>
     </div>
   );
@@ -193,7 +209,7 @@ export function DuplicatesDetail() {
   };
   async function del(b: Bird) {
     const ok = await confirmDialog({ title: t('confirm.deleteBird.title'), who: { label: b.name || primaryRing(b) }, cancelLabel: t('act.cancel'), confirmLabel: t('act.delete'), confirmKind: 'danger' });
-    if (ok) await db.deleteBird(b.id);
+    if (ok) await destructive(async () => { await db.deleteBird(b.id); }, failedAction(t('act.delete')));
   }
   if (groups.length === 0) return <StatusLine icon="check" testid="dup-clean" title={t('dup.noneShort')} text={t('tools.dup.scanned')} />;
   return (
@@ -330,8 +346,10 @@ export function RestoreDetail({ snapshots }: { snapshots: Backup[] }) {
     if (p.returning.length > RETURNING_SHOWN) items.push({ field: t('restore.confirm.more', { n: fmtNum(p.returning.length - RETURNING_SHOWN) }), text: '' });
     const ok = await confirmDialog({ title: t('backup.restoreAuto'), body, list: items.length ? { kind: 'warns', items } : undefined, cancelLabel: t('act.cancel'), confirmLabel: t('act.replace'), confirmKind: 'danger' });
     if (!ok) return;
-    const counts = await db.importAll(b.payload, 'replace') as { birds: number; pairs: number; raceResults: number };
-    toast(t('backup.imported', { birds: fmtNum(counts.birds), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) }), { timeout: 7000, kind: 'info' });
+    await destructive(async () => {
+      const counts = await db.importAll(b.payload, 'replace') as { birds: number; pairs: number; raceResults: number };
+      toast(t('backup.imported', { birds: fmtNum(counts.birds), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) }), { timeout: 7000, kind: 'info' });
+    }, failedAction(t('backup.restoreAuto')));
   }
   // RULED 2026-11-16: the list arrives newest first, and «آخر نسخة تلقائية» is the newest INTERVAL snapshot — a
   // snapshot taken before a replace or a restore is in the list at its moment, but it is not «تلقائية» in that line
@@ -362,8 +380,10 @@ export function ExamplesDetail() {
     setBusy(true);
     try {
       // asset(), not a relative URL: this screen is at `<base>/tools/` since trailingSlash was ruled (app/birds/view.tsx)
-      const counts = await db.importAll(await (await fetch(asset(file))).json(), 'merge') as { birds: number };
-      toast(t('bird.exampleLoaded', { n: counts.birds }), { timeout: 7000, kind: 'info' });
+      await destructive(async () => {
+        const counts = await db.importAll(await (await fetch(asset(file))).json(), 'merge') as { birds: number };
+        toast(t('bird.exampleLoaded', { n: counts.birds }), { timeout: 7000, kind: 'info' });
+      }, failedAction(t('example.title')));
     } finally { setBusy(false); }
   }
   return (
@@ -391,6 +411,13 @@ export async function destructive(work: () => Promise<void>, failed: (reason: st
     return false;
   }
 }
+
+/**
+ * THE ELEVEN (RULED 2026-11-17): every mutating handler in الأدوات that could fail without a word now runs through
+ * destructive() and names itself by the label of its own control. «لم يكتمل», not «لم يتغيّر شيء»: several of them
+ * are more than one write, and a failure after the first has changed something.
+ */
+export const failedAction = (what: string) => (reason: string) => t('tools.failed.action', { what, reason });
 
 /**
  * REMOVING THE EXAMPLE DATA (RULED 2026-10-14). Loaded in the row above, removed here — the symmetry is the point.
@@ -462,12 +489,14 @@ export function IntegrityDetail({ settings }: { settings: Record<string, unknown
   async function run() {
     setBusy(true);
     try {
-      const { checkIntegrity } = await import('@/src/engine/integrity.js');
-      // the checker reads only these maps (engine/integrity.js)
-      const found = checkIntegrity({ birds: st.birds, pairs: st.pairs, raceResults: st.raceResults, healthEvents: st.healthEvents, lofts: st.lofts } as never) as Array<{ key: string; params: Record<string, unknown> }>;
-      setProblems(found);
-      await saveSetting('integrityCheckedAt', new Date().toISOString());
-      await saveSetting('integrityProblems', found.length);
+      await destructive(async () => {
+        const { checkIntegrity } = await import('@/src/engine/integrity.js');
+        // the checker reads only these maps (engine/integrity.js)
+        const found = checkIntegrity({ birds: st.birds, pairs: st.pairs, raceResults: st.raceResults, healthEvents: st.healthEvents, lofts: st.lofts } as never) as Array<{ key: string; params: Record<string, unknown> }>;
+        setProblems(found);
+        await saveSetting('integrityCheckedAt', new Date().toISOString());
+        await saveSetting('integrityProblems', found.length);
+      }, failedAction(t('integrity.title')));
     } finally { setBusy(false); }
   }
   const at = settings.integrityCheckedAt as string | undefined;
@@ -487,7 +516,7 @@ export function IntegrityDetail({ settings }: { settings: Record<string, unknown
 /** The optional scanner. Off by default; the app is fully offline without it. Saves on blur (tools-v1) and on «حفظ» (the spec). */
 export function ScannerDetail({ settings }: { settings: Record<string, unknown> }) {
   const [url, setUrl] = useState((settings.scanServerUrl as string) || '');
-  const save = () => saveSetting('scanServerUrl', url.trim());
+  const save = () => destructive(async () => { await saveSetting('scanServerUrl', url.trim()); }, failedAction(t('scan.title')));
   return (
     <div>
       <div className={s.field}>
@@ -495,7 +524,7 @@ export function ScannerDetail({ settings }: { settings: Record<string, unknown> 
         <input id="vis" className={s.data} type="url" dir="ltr" placeholder="https://vision.example.org" value={url} onChange={(e) => setUrl(e.target.value)} onBlur={save} data-testid="scan-url" />
       </div>
       {!url.trim() && <StatusLine icon="off" testid="scan-off" title={t('tools.scan.offShort')} text={t('scan.notConfigured')} />}
-      <div className={s.actions}><button type="button" className={`${s.btn} ${s.primary}`} onClick={async () => { await save(); toast(t('toast.saved'), { kind: 'success' }); }} data-testid="scan-save">{t('act.save')}</button></div>
+      <div className={s.actions}><button type="button" className={`${s.btn} ${s.primary}`} onClick={async () => { if (await save()) toast(t('toast.saved'), { kind: 'success' }); }} data-testid="scan-save">{t('act.save')}</button></div>
     </div>
   );
 }

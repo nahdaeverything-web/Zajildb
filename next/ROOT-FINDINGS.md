@@ -3508,3 +3508,49 @@ still removed; and the row's own note «الألوفت التجريبية: …»
 **The version row (RULED 2026-11-17).** `valueKind` is `data` only when a version was reported. The typography
 walk opens الأدوات with no service worker: before the fix 16 passed, 1 failed
 (`h3d-typography-BEFORE-mono-fix.log`); after, 17 passed; M-mono fails at the named check.
+
+**H3 + A-set deploy.** `gh-pages 9bcbc0b`, built from `feat/react-port 772dc65` (gate-23: 2296 passed, 0 failed,
+control 548/548, 0 page-error records). Rollback target `f041810`. Live bytes: 158 files, 0 differ. Live
+verification: 44 passed, 0 failed, THE NET armed. Logs `deploy6-01…06-*.log`. Mirror `main` `1ecc09e` → `d1ff92c`.
+
+---
+
+## 2026-11-17 — the eleven uncaught mutating handlers in الأدوات (built, NOT deployed)
+
+Each of the eleven now runs through `destructive()` and names itself with one new string, `tools.failed.action`
+«لم يكتمل «{what}». السبب: {reason}» (PROPOSED), `{what}` being a label the app already had.
+
+| # | handler | `{what}` |
+|---|---|---|
+| 1 | `sync-now` | «مزامنة الآن» |
+| 2 | sync toggle | «إيقاف المزامنة» / «تشغيل المزامنة» |
+| 3 | duplicate copy `del` | «حذف» |
+| 4 | snapshot `restore` | «استرجاع نسخة تلقائية» |
+| 5 | example `load` | «تحميل بيانات تجريبية للتعلّم» |
+| 6 | integrity `run` | «فحص ترابط البيانات» |
+| 7 | scanner save, button and blur | «ماسح شهادات النسب الورقية» |
+| 8 | `signOut` | «تسجيل الخروج» |
+| 9 | loft `save` | «اللوفت» |
+| 10 | `pickLogo` | «اختيار شعار» |
+| 11 | `removeLogo` | «إزالة الشعار» |
+
+**«مزامنة الآن» was not an exception.** A cycle never throws; it returns `{ ok: false }`, and the button said
+«تم الحفظ» whatever came back. It now says the failure with the layer's own reason (`sync.err.*`).
+
+**`removeLogo`** stops when the delete fails: the logo stays set. Before, a failed delete left the row as it was only
+because the exception ended the handler.
+
+**Tests.** `tests/e2e/screens/tools_failures.py`, 40 checks. IndexedDB refuses every write while the fault is armed
+(the stub project answers 500 for the sync button); the real control is pressed; the check wants the error toast
+naming the control, no «تم الحفظ», and no page error. Eleven mutants, one build each, the catch removed at one
+handler (`~/zajil-gate-logs/h11-mutants.log`): every one fails at its named check, none on a traceback
+(M-h01 39/1; M-h07 36/4; the other nine 38/2 — the second failure is the typography check finding no toast).
+
+**RF-25 — seen, not ruled, not fixed.** `setSetting()` (`src/db/storage.js`) writes memory first and storage
+second. When the write fails the setting is changed in memory and unchanged in storage: measured on the sync
+toggle — the screen shows sync off, storage says on, and a reload puts it back. The toast now says the action did
+not complete; the screen still shows the unsaved value until the reload. The suite records it
+(`[seen · not ruled · RF-25]`).
+
+**Seen, not ruled, not fixed.** `set()` in `app/tools/view.tsx` — language, numerals, dates, COI depth, contrast —
+calls `saveSetting` without awaiting or catching it. It was not among the eleven listed.

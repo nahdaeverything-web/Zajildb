@@ -7,7 +7,7 @@ import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { findDuplicateRings } from '@/src/engine/rings.js';
 import { SyncRow, Loading, toast, confirmDialog, downscaleImage, saveSetting, initDB } from '@/src/components';
 import { useAppVersion } from '@/src/components/version';
-import { Section, Row, Seg, StatusLine, ExportDetail, ExamplesDetail, ExampleRemoveRow, IntegrityDetail, ScannerDetail, DevDetail, syncRowCopy, Lofts } from './parts';
+import { Section, Row, Seg, StatusLine, ExportDetail, ExamplesDetail, ExampleRemoveRow, IntegrityDetail, ScannerDetail, DevDetail, syncRowCopy, Lofts, destructive, failedAction } from './parts';
 import type { Loft, Bird, Backup, SyncStatus, Anomaly } from './parts';
 import s from './tools.module.css';
 
@@ -63,7 +63,7 @@ export default function ToolsView() {
   async function signOut() {
     const ok = await confirmDialog({ title: t('confirm.signOut.title'), body: t('sync.signOutKeepsData'), cancelLabel: t('act.cancel'), confirmLabel: t('sync.signOut'), confirmKind: 'ink' });
     // signOut() emits nothing (db/sync.js:199), so the row is told the way vanilla's card is — js/views/tools.js:221
-    if (ok) { await db.signOut(); await db.refreshSyncStatus(); }
+    if (ok) await destructive(async () => { await db.signOut(); await db.refreshSyncStatus(); }, failedAction(t('sync.signOut')));
   }
 
   return (
@@ -199,17 +199,25 @@ function LoftRows({ loft }: { loft: Loft | null }) {
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
   async function save(over: Partial<Loft> = {}) {
     if (!loft) return;
-    await Lofts.save({ ...loft, name: f.name.trim(), location: f.location.trim(), breederName: f.breederName.trim(), phone: f.phone.trim(), website: f.website.trim(), logoMediaId: logo, ...over });
-    toast(t('toast.saved'), { kind: 'success' });
+    const done = await destructive(async () => {
+      await Lofts.save({ ...loft, name: f.name.trim(), location: f.location.trim(), breederName: f.breederName.trim(), phone: f.phone.trim(), website: f.website.trim(), logoMediaId: logo, ...over });
+    }, failedAction(t('set.loft')));
+    if (done) toast(t('toast.saved'), { kind: 'success' });
   }
   async function pickLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file || !loft) return;
-    const m = await db.addMedia(loft.id, 'document', 'logo', file.name, await downscaleImage(file)) as { id: string };
-    setLogo(m.id); e.target.value = '';
+    const input = e.target;
+    await destructive(async () => {
+      const m = await db.addMedia(loft.id, 'document', 'logo', file.name, await downscaleImage(file)) as { id: string };
+      setLogo(m.id);
+    }, failedAction(t('tools.logo.pick')));
+    input.value = '';
   }
   async function removeLogo() {
     if (!logo) return;
-    await db.deleteMedia(logo);        // the bytes go with it — a pointer to nothing is what this prevents
+    const id = logo;
+    // the bytes go with it — a pointer to nothing is what this prevents. A failed delete stops here: the logo stays set.
+    if (!await destructive(async () => { await db.deleteMedia(id); }, failedAction(t('tools.logo.remove')))) return;
     setLogo(null);
     await save({ logoMediaId: null });
   }

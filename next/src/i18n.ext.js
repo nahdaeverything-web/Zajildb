@@ -510,6 +510,8 @@ export const EXT = {
   // THE INVARIANT (RULED 2026-10-30): a destructive action that changed nothing says so, and why
   'example.remove.failed':    { ar: 'لم تُزل البيانات التجريبية — لم يتغيّر شيء. السبب: {reason}', en: 'The sample data was not removed — nothing changed. Reason: {reason}' },
   'tools.failed.validation':  { ar: 'سجلّ لم يجتز التحقق ({what})', en: 'a record failed validation ({what})' },
+  // THE ELEVEN (RULED 2026-11-17) — PROPOSED wording: an action in الأدوات that did not complete, named by its own control's label
+  'tools.failed.action':      { ar: 'لم يكتمل «{what}». السبب: {reason}', en: '“{what}” did not complete. Reason: {reason}' },
   'tools.failed.unknown':     { ar: 'خطأ غير متوقع ({what})', en: 'an unexpected error ({what})' },
   'backup.snapshot':          { ar: 'النسخة', en: 'Snapshot' },
   'backup.noSnapshots':       { ar: 'لا نسخ تلقائية بعد', en: 'No automatic snapshots yet' },
