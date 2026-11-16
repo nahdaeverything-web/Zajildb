@@ -3474,3 +3474,37 @@ suite[M-order] exit 1 · 53 passed, 1 failed
 
 **Still unknown, and still not claimed:** whether the sync change set introduced the sightings. The fix removes the
 fault; it does not answer that.
+
+---
+
+## 2026-11-17 — the photo-safety set deployed; H3 decision 4 and the version row
+
+**Photo-safety deploy.** `gh-pages f041810`, built from branch `photo-safety` at `677f968` (RF-23 `c709262`,
+RF-24 `6c224d6`, RF-4 `551594b`, test correction `677f968`), without H3. Rollback target `c77f6ed`.
+Live bytes: 158 files compared by sha256, 0 differ. Live verification: 44 passed, 0 failed, THE NET armed.
+Logs `~/zajil-gate-logs/deploy5-01…06-*.log`. The mirror's `main` moved `0429668` → `1ecc09e` (fast-forward).
+
+**Gates on the set** (`~/zajil-gate-logs/ps-gates.log`):
+
+```
+gate-19 on c709262 exit 0 ·   2261 passed, 0 failed across 36 steps, 1 skipped
+gate-20 on 6c224d6 exit 0 ·   2270 passed, 0 failed across 36 steps, 1 skipped
+gate-21 on 551594b exit 1 ·   2278 passed, 1 failed across 36 steps, 1 skipped
+gate-22 on 677f968 exit 0 ·   2279 passed, 0 failed across 36 steps, 1 skipped
+```
+
+gate-21's one failure was the RF-24 check «NOTHING was fetched for them»: its listener counted Next's own route
+prefetches (`…__PAGE__.txt?_rsc=…`), which depend on timing. `677f968` narrows the listener; the product code is
+unchanged, and M-rf24, rerun against the narrowed check, still fails at it (`…/undefined`,
+`https://example.invalid/ghost.png`). `551594b` stays in history with a red gate. The three commits were made
+before their gates ran.
+
+**H3 decision 4 (RULED 2026-11-17).** `examplePresence()` returns `outside`: example records of any kind filed
+outside the dataset lofts it names. With one or more the question uses `example.remove.bodyNoLoft`. Mutant
+M-outside: 68 passed, 1 failed, at its named check (`~/zajil-gate-logs/h3d-mutants.log`).
+Seen, not ruled: in that case the question no longer says «ثم اللوفت التجريبي نفسه», though the dataset loft is
+still removed; and the row's own note «الألوفت التجريبية: …» still names the loft.
+
+**The version row (RULED 2026-11-17).** `valueKind` is `data` only when a version was reported. The typography
+walk opens الأدوات with no service worker: before the fix 16 passed, 1 failed
+(`h3d-typography-BEFORE-mono-fix.log`); after, 17 passed; M-mono fails at the named check.
