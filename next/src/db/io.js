@@ -63,11 +63,23 @@ export function exportableSettings(settings) {
     .filter(([key]) => !SENSITIVE_SETTING_PREFIXES.some((prefix) => key.startsWith(prefix))));
 }
 
+/**
+ * RF-4 (RULED 2026-11-16): the media an export can carry — the rows whose bytes are ON THIS DEVICE. A row pulled from
+ * another device is metadata only (§7); reading it threw and failed the whole export, so a second device could not
+ * export or share at all. Such rows are left out — a file must never carry a media row without bytes (RF-24 rejects
+ * one, and vanilla would fetch its address) — and `onMissing(n)` is told how many, so the screen can say it.
+ */
+function exportable(rows, onMissing) {
+  const here = rows.filter((m) => m && m.blob);
+  if (onMissing) onMissing(rows.length - here.length);
+  return here;
+}
+
 /** Full export: everything, media as data URLs. Round-trip tested. */
-export async function exportAll({ includeMedia = true } = {}) {
+export async function exportAll({ includeMedia = true, onMissing } = {}) {
   const mediaOut = [];
   if (includeMedia) {
-    for (const m of await idbGetAll('media')) {
+    for (const m of exportable(await idbGetAll('media'), onMissing)) {
       mediaOut.push({ ...m, blob: undefined, dataURL: await blobToDataURL(m.blob) });
     }
   }
@@ -117,11 +129,11 @@ export async function exportAll({ includeMedia = true } = {}) {
  * asserted in both directions by tests/e2e/migration.py, because a vanilla app must still
  * be able to read what the port writes.
  *
- * @param {{ onProgress?: (done: number, total: number) => void }} [opts]
+ * @param {{ onProgress?: (done: number, total: number) => void, onMissing?: (n: number) => void }} [opts]
  * @returns {Promise<Blob>}
  */
-export async function exportAllBlob({ onProgress } = {}) {
-  const media = await idbGetAll('media');
+export async function exportAllBlob({ onProgress, onMissing } = {}) {
+  const media = exportable(await idbGetAll('media'), onMissing);
   const total = media.length;
   const parts = [];            // Blobs and strings, in order
   let pending = [];            // strings not yet folded into a Blob
@@ -439,8 +451,11 @@ export async function importAll(payload, mode = 'merge') {
  * Share one bird: the bird + full ancestor closure (+ optionally its race
  * results, health log, and media). Same format as exportAll, so any Zajil
  * user can import it — no account needed on either side.
+ *
+ * @param {string} birdId
+ * @param {{ includeRaces?: boolean, includeHealth?: boolean, includeMedia?: boolean, onMissing?: (n: number) => void }} [opts]
  */
-export async function exportBirdWithAncestry(birdId, { includeRaces = true, includeHealth = false, includeMedia = true } = {}) {
+export async function exportBirdWithAncestry(birdId, { includeRaces = true, includeHealth = false, includeMedia = true, onMissing } = {}) {
   const ids = new Set();
   const stack = [birdId];
   while (stack.length) {
@@ -453,10 +468,10 @@ export async function exportBirdWithAncestry(birdId, { includeRaces = true, incl
   const birds = [...ids].map((id) => getBird(id)).filter(Boolean);
   const mediaOut = [];
   if (includeMedia) {
-    for (const id of ids) {
-      for (const m of await mediaForBird(id)) {
-        mediaOut.push({ ...m, blob: undefined, dataURL: await blobToDataURL(m.blob) });
-      }
+    const rows = [];
+    for (const id of ids) rows.push(...await mediaForBird(id));
+    for (const m of exportable(rows, onMissing)) {
+      mediaOut.push({ ...m, blob: undefined, dataURL: await blobToDataURL(m.blob) });
     }
   }
   return {

@@ -82,7 +82,8 @@ export default function PedigreeView() {
   const br = bird.sireId && bird.damId ? (coiBreakdown(getBird, bird.sireId, bird.damId, depth) as { coi: number; contributions: Contribution[]; truncated?: boolean }) : null;
   const loft = db.currentLoft() as { name?: string } | null;
   const rulerLabel = (g: number) => g === 0 ? t('ped.subject') : g === 1 ? t('ped.gen.parents') : g === 2 ? t('ped.gen.grand') : g === 3 ? t('ped.gen.great') : g === 4 ? t('ped.gen.fifth') : t('ped.gen.nth', { n: fmtNum(g + 1, { group: false }) });
-  const share = () => db.exportBirdWithAncestry(id, { includeRaces: true, includeMedia: true }).then((payload: unknown) => { downloadJSON(payload, `zajil-bird-${primaryRing(bird).replace(/[^\w-]+/g, '_') || id.slice(0, 8)}.json`); toast(t('toast.exported'), { kind: 'success' }); });
+  const share = () => { let missing = 0;   // RF-4 (RULED 2026-11-16)
+    return db.exportBirdWithAncestry(id, { includeRaces: true, includeMedia: true, onMissing: (n: number) => { missing = n; } }).then((payload: unknown) => { downloadJSON(payload, `zajil-bird-${primaryRing(bird).replace(/[^\w-]+/g, '_') || id.slice(0, 8)}.json`); toast(t('toast.exported') + (missing ? ' ' + t('backup.mediaNotHere', { n: fmtNum(missing) }) : ''), { kind: 'success', timeout: missing ? 7000 : undefined }); }); };
 
   // finder (pedigree.js:133) — the same candidate rules as the form's picker
   const rk = ringKey(q); const needle = q.trim().toLowerCase();

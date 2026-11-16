@@ -178,8 +178,9 @@ export default function BirdView() {
   function share() {
     // bird-detail.js:83 with its defaults (races and media included); the include options are not designed on this screen — raised
     setMenu(false);
-    db.exportBirdWithAncestry(id, { includeRaces: true, includeMedia: true }).then((payload: unknown) => {
-      downloadJSON(payload, `zajil-bird-${ring.replace(/[^\w-]+/g, '_') || id.slice(0, 8)}.json`); toast(t('toast.exported'), { kind: 'success' });
+    let missing = 0;   // RF-4 (RULED 2026-11-16): photos whose bytes are not on this device are not in the file, and the toast says how many
+    db.exportBirdWithAncestry(id, { includeRaces: true, includeMedia: true, onMissing: (n: number) => { missing = n; } }).then((payload: unknown) => {
+      downloadJSON(payload, `zajil-bird-${ring.replace(/[^\w-]+/g, '_') || id.slice(0, 8)}.json`); toast(t('toast.exported') + (missing ? ' ' + t('backup.mediaNotHere', { n: fmtNum(missing) }) : ''), { kind: 'success', timeout: missing ? 7000 : undefined });
       // db/io.js:237 rejects when an ancestor's photo metadata has no bytes on this device —
       // the ordinary state after a sync. Raised in the 4D report; a share that cannot be made
       // must say so rather than doing nothing.

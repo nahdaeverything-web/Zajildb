@@ -247,9 +247,11 @@ function Panel(p: ScreenProps & { slots: SlotMap; urls: Record<string, string> }
     // blobs do not). readAsDataURL(undefined) throws, so the whole share rejects. The fix
     // belongs in js/db/io.js, outside next/; until then a share that cannot be made says
     // so instead of doing nothing at all.
-    db.exportBirdWithAncestry(bird.id, { includeRaces: true, includeMedia: true }).then((payload: unknown) => {
+    // RF-4 (RULED 2026-11-16): the share now carries what this device has and says how many photos it does not
+    let missing = 0;
+    db.exportBirdWithAncestry(bird.id, { includeRaces: true, includeMedia: true, onMissing: (n: number) => { missing = n; } }).then((payload: unknown) => {
       downloadJSON(payload, `zajil-cert-${(primaryRing(bird) || bird.id.slice(0, 8)).replace(/[^\w-]+/g, '_')}.json`);
-      toast(t('toast.exported'), { kind: 'success' });
+      toast(t('toast.exported') + (missing ? ' ' + t('backup.mediaNotHere', { n: fmtNum(missing) }) : ''), { kind: 'success', timeout: missing ? 7000 : undefined });
     }).catch(() => toast(t('err.exportFailed'), { kind: 'error' }));
   }
 

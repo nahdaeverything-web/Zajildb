@@ -2877,6 +2877,17 @@ Mutant M-rf24 (the rejection removed): 14 passed, 4 failed. Its first draft died
 bytes and the file's has them. So a second device cannot receive photos by importing the first device's export in
 merge mode (a replace does bring them). Pinned as a `[seen · not ruled]` check in `photo_safety.py`.
 
+### RF-4 fixed for the port 2026-11-16 (RULED) — the third commit of the photo-safety set
+
+`exportable()` in `src/db/io.js`: `exportAll()`, `exportAllBlob()` and `exportBirdWithAncestry()` carry the media
+whose bytes are on this device and leave out the rows that have none; `onMissing(n)` reports how many. The four
+screens that export or share (الأدوات «تصدير الكل», the profile's and the certificate's «مشاركة», the pedigree's)
+add `backup.mediaNotHere` (PROPOSED) to the success message when n > 0.
+Decided, to be confirmed: the bytes-less rows are LEFT OUT of the file, not carried as metadata. RF-4's old
+fix-at-source carried them with a null dataURL; but RF-24 now rejects such a row on import, and vanilla — which must
+still read what the port writes — would fetch its address. Vanilla itself is unchanged and still cannot export there.
+Mutant M-rf4 (the filter removed): 19 passed, 8 failed. Its first draft ended on a traceback from a step of mine that was timing-dependent (it assumed the first device never pulls the second one's row); the step was replaced and the mutant rerun.
+
 ## RF-22 — the example-data removal decides membership by loft and id shape, so a teaching bird filed elsewhere survives and keeps its ancestors
 
 **Where:** `src/example-data.js` `examplePresence()`: `example` = birds filed in a present dataset loft whose id

@@ -8,6 +8,9 @@ Photos have no server copy (DF-4), so the bytes on a device are the only ones.
   RF-24  an import used to hand a media row with no dataURL to fetch(), and store what came back — a not-found page —
          over the real photo. Such a row is now rejected: never fetched, never written, counted, and said.
 
+  RF-4   a device holding media rows without bytes could not export or share at all: the export threw on the first
+         such row. It now carries the photos it has, and says how many it does not.
+
 Two devices on one stub project that models the table. Harness build, the net armed. All shapes are CONSTRUCTED.
 
     python3 tests/e2e/screens/photo_safety.py
@@ -146,6 +149,39 @@ try:
         c5, F = device(b, H, srv2); run(E, SYNC); run(F, SYNC); f0 = media(F); run(F, "async (db, f) => db.importAll(f, 'merge')", withbytes); f1 = media(F)
         check('[seen · not ruled] a second device holding the row without bytes, merge-importing the first device\'s export WITH the bytes: the row is skipped and the bytes do not arrive', f0 == [['p.png', 'NO BYTES']] and f1 == [['p.png', 'NO BYTES']], (f0, f1))
         c3.close(); c4.close(); c5.close()
+
+        # ═══ RF-4 — a device holding rows without bytes can still export, and says what is not in the file ═══
+        srv3 = Server(); c6, G1 = device(b, H, srv3); run(G1, ADD, 'أب', 'sire-1.png', 'aa'); run(G1, ADD, 'أب', 'sire-2.png', 'bbb'); run(G1, SYNC)
+        c7, G2 = device(b, H, srv3); run(G2, SYNC)
+        run(G2, """async (db) => { const sire = db.allBirds().find(x => x.name === 'أب'); await db.saveBird(db.newBird({ name: 'ابن', sex: 'cock', sireId: sire.id }));
+            const kid = db.allBirds().find(x => x.name === 'ابن'); await db.addMedia(kid.id, 'photo', 'body', 'kid.png', new Blob(['cccc'], { type: 'image/png' })); }""")
+        check('[RF-4] the second device holds two rows without bytes and one photo of its own', media(G2) == [['kid.png', 4], ['sire-1.png', 'NO BYTES'], ['sire-2.png', 'NO BYTES']], media(G2))
+        TRY = """async (db, which) => { let missing = null; const onMissing = (n) => { missing = n; }; try {
+            const kid = db.allBirds().find(x => x.name === 'ابن');
+            const r = which === 'blob' ? JSON.parse(await (await db.exportAllBlob({ onMissing })).text()) : which === 'share' ? await db.exportBirdWithAncestry(kid.id, { includeRaces: true, includeMedia: true, onMissing }) : await db.exportAll({ onMissing });
+            return { ok: true, birds: r.birds.length, media: r.media.map(m => [m.name, typeof m.dataURL === 'string' && m.dataURL.startsWith('data:')]).sort(), missing }; }
+          catch (e) { return { ok: false, error: String(e && e.message || e).slice(0, 120) }; } }"""
+        WANT = {'ok': True, 'birds': 2, 'media': [['kid.png', True]], 'missing': 2}
+        for which, label in (('all', 'exportAll()'), ('blob', 'exportAllBlob() — what «تصدير الكل» writes'), ('share', 'exportBirdWithAncestry() — what «مشاركة» writes')):
+            r = run(G2, TRY, which)
+            check(f'[RF-4 · M-rf4 fails here] {label}: it answers with a file that carries the one photo this device has, every row in it with its bytes, and reports 2 not here', r == WANT, r)
+        G2.goto(ROOT + 'tools/', wait_until='load'); G2.wait_for_selector('[data-testid=tools-list]', timeout=15000); G2.wait_for_timeout(800); G2.locator('[data-row=export] summary').click(); G2.wait_for_selector('[data-testid=export-all]', timeout=8000)
+        got = None
+        try:
+            with G2.expect_download(timeout=10000) as dl: G2.click('[data-testid=export-all]')
+            got = json.loads(open(dl.value.path(), encoding='utf-8').read())
+        except PWTimeout: pass
+        G2.wait_for_timeout(600); said = digits(' '.join(G2.locator('[data-testid=toast]').all_inner_texts())); typo = [x for x in G2.evaluate(SCAN) if x['testid'] != 'about-version' and x['text'] != 'غير معروف']   # the version in the mono face: its own finding, fixed in its own commit
+        check('[RF-4 · M-rf4 fails here] «تصدير الكل» on the second device downloads a file: 2 birds, the one photo', bool(got) and len(got['birds']) == 2 and [m['name'] for m in got['media']] == ['kid.png'], said)
+        check('[RF-4 · wording] …and says «عدد الصور والوثائق غير الموجودة على هذا الجهاز، وهي لذلك ليست في الملف: 2.»', 'عدد الصور والوثائق غير الموجودة على هذا الجهاز، وهي لذلك ليست في الملف: 2.' in said and 'تعذّر' not in said, said)
+        check('[typography] that message is drawn in a face that has Arabic', bool(said) and not typo, [(x['why'], x['face'], x['text']) for x in typo][:3])
+        # the file is a good file: a fresh device imports it with nothing rejected
+        c8, G3 = device(b, H, None)
+        r = run(G3, "async (db, f) => { try { return await db.importAll(f, 'merge'); } catch (e) { return { error: String(e.message) }; } }", got or {})
+        check('[RF-4 + RF-24] the file it wrote imports on a fresh device with no row rejected: it never carries a media row without bytes', r.get('birds') == 2 and r.get('media') == 1 and r.get('mediaRejected') == 0 and media(G3) == [['kid.png', 4]], r)
+        # a device with every photo's bytes reports none missing
+        r = run(G3, TRY.replace("const kid = db.allBirds().find(x => x.name === 'ابن');", "const kid = db.allBirds()[0];"), 'all'); check('[RF-4] a device that has the bytes of every photo it holds reports 0 not here', r.get('ok') and r.get('missing') == 0 and r.get('media') == [['kid.png', True]], r)
+        c6.close(); c7.close(); c8.close()
 
         check(f'zero page errors across {len(PAGES)} devices', not any(p.errs for p in PAGES), [e[:160] for p in PAGES for e in p.errs][:3])
         NET.assert_empty(check)

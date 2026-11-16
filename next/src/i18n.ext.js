@@ -34,6 +34,8 @@ export const EXT = {
   'confirm.replace.photos':   { ar: 'عدد الصور والوثائق التي ستُحذف مع هذه الطيور: {n}. لا يمكن استرجاعها بعد الحذف.', en: 'Photos and documents that will be deleted with these birds: {n}. They cannot be recovered once deleted.' },
   // RF-24 (RULED 2026-11-16) — PROPOSED wording: the import rejected media rows that carried no bytes
   'backup.mediaRejected':     { ar: 'عدد الصور والوثائق التي لم تُستورد لأن الملف لا يحمل محتواها: {n}.', en: 'Photos and documents not imported because the file does not carry their content: {n}.' },
+  // RF-4 (RULED 2026-11-16) — PROPOSED wording: an export or a share says how many photos are not on this device and so not in the file
+  'backup.mediaNotHere':      { ar: 'عدد الصور والوثائق غير الموجودة على هذا الجهاز، وهي لذلك ليست في الملف: {n}.', en: 'Photos and documents that are not on this device, and so are not in the file: {n}.' },
   'confirm.replace.removesNone': { ar: 'لن يُحذف شيء: كل ما في السجلّ موجود في الملف.', en: 'Nothing will be deleted: everything in the records is in the file.' },
   'confirm.replace.devices':  { ar: 'يسري هذا على كل أجهزتك: ما يُحذف هنا يُحذف منها عند المزامنة.', en: 'This applies to all your devices: what is deleted here is deleted from them at the next sync.' },
   'confirm.replace.continue': { ar: 'متابعة؟', en: 'Continue?' },

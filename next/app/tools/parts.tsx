@@ -229,10 +229,12 @@ export function ExportDetail({ settings }: { settings: Record<string, unknown> }
     if (busy) return;                                  // a second click must not start a second pass
     setBusy(true); setProgress(null);
     try {
-      const blob = await db.exportAllBlob({ onProgress: (done: number, total: number) => setProgress({ done, total }) });
+      // RF-4: the file carries the photos whose bytes are on this device; the toast says how many are not, and so are not in it
+      let missing = 0;
+      const blob = await db.exportAllBlob({ onProgress: (done: number, total: number) => setProgress({ done, total }), onMissing: (n: number) => { missing = n; } });
       downloadBlob(blob, `zajil-export-${todayISO()}.json`);
       await saveSetting('lastExport', new Date().toISOString());
-      toast(t('toast.exported'), { kind: 'success' });
+      toast(t('toast.exported') + (missing ? ' ' + t('backup.mediaNotHere', { n: fmtNum(missing) }) : ''), { kind: 'success', timeout: missing ? 7000 : undefined });
     } catch (e) {
       toast(t('toast.exportFailed'), { kind: 'error' });   // a failure that says nothing is the defect this replaced
       console.error('export failed', e);
