@@ -245,6 +245,7 @@ export async function importAll(payload, mode = 'merge') {
       const snapshot = await exportAll({ includeMedia: false });
       snapshot.kind = 'auto-backup';
       await idbPut('backups', { id: `pre-import-${nowISO()}`, payload: snapshot });
+      await pruneBackups();
     } catch { /* a snapshot is a safety net, not a reason to block the import */ }
   }
   // Automatic snapshots deliberately carry no media (blobs would make them
@@ -448,7 +449,28 @@ export async function exportBirdWithAncestry(birdId, { includeRaces = true, incl
 
 // --------------------------------------------------------------- auto backup
 
-const BACKUP_KEEP = 7;
+// RF-21 (RULED 2026-11-16). The numbers the restore screen states are these constants — the screen reads them from
+// here, and the caller (src/components/AutoBackup.tsx) reads the interval from here.
+//
+// TWO KINDS, TWO LIMITS, AND NEITHER EVER EVICTS THE OTHER. An interval snapshot's id is its moment; a snapshot taken
+// before a replace or a restore is `pre-import-<moment>`. Until this ruling both counted toward one limit of seven and
+// only the interval ones were ever removed: measured, seven replaces left no room, and every interval snapshot was
+// deleted in the call that wrote it. Now the seven newest interval snapshots are kept, and separately the three newest
+// pre-import ones.
+export const AUTO_BACKUP_HOURS = 12;
+export const BACKUP_KEEP = 7;
+export const PRE_IMPORT_KEEP = 3;
+const PRE_IMPORT = 'pre-import-';
+/** The moment a snapshot was taken, whichever kind it is — the one key the list and the limits order by. */
+export const backupMoment = (b) => String(b.id).replace(PRE_IMPORT, '');
+export const isPreImportBackup = (b) => String(b.id).startsWith(PRE_IMPORT);
+async function pruneBackups() {
+  const all = await idbGetAll('backups');
+  for (const [mine, keep] of [[(b) => !isPreImportBackup(b), BACKUP_KEEP], [isPreImportBackup, PRE_IMPORT_KEEP]]) {
+    const kind = all.filter(mine).sort((a, b) => (backupMoment(a) < backupMoment(b) ? 1 : -1));   // newest first
+    for (const victim of kind.slice(keep)) await idbDelete('backups', victim.id);
+  }
+}
 export async function autoBackup() {
   // Media can be huge; interval snapshots keep data only. Full exports include
   // media. Asking exportAll not to read the blobs at all avoids base64-encoding
@@ -457,14 +479,14 @@ export async function autoBackup() {
   payload.kind = 'auto-backup';
   const id = nowISO();
   await idbPut('backups', { id, payload });
-  const all = await idbGetAll('backups');
-  all.sort((a, b) => (a.id < b.id ? -1 : 1));
-  while (all.length > BACKUP_KEEP) {
-    const victim = all.shift();
-    await idbDelete('backups', victim.id);
-  }
+  await pruneBackups();
   await setSetting('lastAutoBackup', id);
+  // the tools row's count and the restore screen's list re-read on a layer change (RULED 2026-11-16)
+  emitChange({ type: 'backup' });
   return id;
 }
-export function listBackups() { return idbGetAll('backups'); }
+/** NEWEST FIRST, a pre-import snapshot placed by its moment among the interval ones (RULED 2026-11-16). */
+export async function listBackups() {
+  return (await idbGetAll('backups')).sort((a, b) => (backupMoment(a) < backupMoment(b) ? 1 : -1));
+}
 

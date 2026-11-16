@@ -325,21 +325,24 @@ export function RestoreDetail({ snapshots }: { snapshots: Backup[] }) {
     const counts = await db.importAll(b.payload, 'replace') as { birds: number; pairs: number; raceResults: number };
     toast(t('backup.imported', { birds: fmtNum(counts.birds), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) }), { timeout: 7000, kind: 'info' });
   }
+  // RULED 2026-11-16: the list arrives newest first, and «آخر نسخة تلقائية» is the newest INTERVAL snapshot — a
+  // snapshot taken before a replace or a restore is in the list at its moment, but it is not «تلقائية» in that line
+  const lastAuto = snapshots.find((b) => !db.isPreImportBackup(b));
   return (
     <div>
       {/* RULING 3 (tools-v2): «آخر نسخة تلقائية» is a fact about the fancier's own data — kept */}
-      <p className={s.detailText} data-testid="last-snapshot">{t('tools.restore.last', { d: snapshots[0] ? fmtDate(snapshots[0].id, { withTime: true }) : t('backup.noSnapshots') })}</p>
+      <p className={s.detailText} data-testid="last-snapshot">{t('tools.restore.last', { d: lastAuto ? fmtDate(lastAuto.id, { withTime: true }) : t('backup.noSnapshots') })}</p>
       {snapshots.length > 0 && (
         <div className={s.list} data-testid="snap-list">
           {snapshots.map((b) => (
             <div key={b.id} className={`${s.item} ${s.snap}`} data-testid="snap-row" data-id={b.id}>
-              <span><strong className={s.data}>{fmtDate(b.id, { withTime: true })}</strong><div className={s.meta}>{birdsCount((b.payload?.birds || []).length)}</div></span>
+              <span><strong>{fmtDate(db.backupMoment(b) as string, { withTime: true })}</strong><div className={s.meta}>{birdsCount((b.payload?.birds || []).length)}</div></span>
               <button type="button" className={s.btn} onClick={() => restore(b)} data-testid="snap-restore">{t('tools.restore.btn')}</button>
             </div>
           ))}
         </div>
       )}
-      <p className={s.detailNote}>{t('backup.auto', { h: fmtNum(12), n: fmtNum(7) })}</p>
+      <p className={s.detailNote}>{t('backup.auto', { h: fmtNum(db.AUTO_BACKUP_HOURS as number), n: fmtNum(db.BACKUP_KEEP as number), m: fmtNum(db.PRE_IMPORT_KEEP as number) })}</p>
     </div>
   );
 }

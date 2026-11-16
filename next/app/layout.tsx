@@ -7,6 +7,7 @@ import BackupBanner from '@/src/components/BackupBanner';
 import Gate from '@/src/components/Gate';
 import SyncNotices from '@/src/components/SyncNotices';
 import SyncCoordinator from '@/src/components/SyncCoordinator';
+import AutoBackup from '@/src/components/AutoBackup';
 import AppSettings from '@/src/components/AppSettings';
 import ServiceWorker from '@/src/components/ServiceWorker';
 import HarnessGlobals from '@/src/harness-globals';
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ShellHost />
         <SyncNotices />
         <SyncCoordinator />
+        <AutoBackup />
         <AppSettings />
         <ServiceWorker />
         <HarnessGlobals />

@@ -118,6 +118,11 @@ export {
 } from './db/records.js';
 
 export {
+  AUTO_BACKUP_HOURS,
+  BACKUP_KEEP,
+  PRE_IMPORT_KEEP,
+  backupMoment,
+  isPreImportBackup,
   SENSITIVE_SETTING_PREFIXES,
   autoBackup,
   dataURLToBlob,

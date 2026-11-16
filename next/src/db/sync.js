@@ -1405,8 +1405,9 @@ export function startSyncLoop() {
   };
   const onPageHide = () => { leaving = true; if (canSync()) runSyncCycle(); };
   const offChange = onChange((ev) => {
-    // a pulled record and the status events are not the fancier's work; everything else is
-    if (!ev || String(ev.type || '').startsWith('sync')) return;
+    // a pulled record and the status events are not the fancier's work; everything else is. An interval snapshot
+    // ('backup') is not either: it is this device's own safety net, nothing in it is sent, so it starts no cycle.
+    if (!ev || ev.type === 'backup' || String(ev.type || '').startsWith('sync')) return;
     refreshSyncStatus();                                     // the status knows about a change the moment it is made
     if (debounce) clearTimeout(debounce);
     debounce = setTimeout(() => { debounce = null; runSyncCycle(); }, CHANGE_DEBOUNCE_MS);

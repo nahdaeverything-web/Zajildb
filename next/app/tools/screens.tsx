@@ -72,8 +72,15 @@ export function ImportScreen() {
 export function RestoreScreen() {
   const booted = useBooted();
   const [snapshots, setSnapshots] = useState<Backup[] | null>(null);
-  // the snapshot list is read once, on arrival, as the tools-v1 card read it on mount
-  useEffect(() => { if (booted) db.listBackups().then((b: Backup[]) => setSnapshots(b)); }, [booted]);
+  // the snapshot list is re-read on every layer change (RULED 2026-11-16, with the tools row's count): read once on
+  // arrival it missed the snapshot that same boot takes, and the one a restore from this very screen takes
+  useEffect(() => {
+    if (!booted) return;
+    let live = true; let latest = 0;
+    const read = () => { const mine = ++latest; db.listBackups().then((b: Backup[]) => { if (live && mine === latest) setSnapshots(b); }); };
+    read(); const off = db.onChange(read) as () => void;
+    return () => { live = false; off(); };
+  }, [booted]);
   if (!booted || snapshots === null) return <section className={s.screen}><Loading /></section>;
   return (
     <SubScreen title={t('backup.restoreAuto')} help={t('tools.restore.help')} testid="card-restore">

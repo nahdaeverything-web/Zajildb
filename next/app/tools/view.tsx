@@ -32,9 +32,16 @@ export default function ToolsView() {
   const st = useZajilStore((x) => x);
   const birds = useZajilStore(selectBirds) as Bird[];
   const version = useAppVersion();
-  // the restore row's «{n} متاحة» — an async read, once, as the tools-v1 card read its snapshot list
+  // the restore row's «{n} متاحة» — re-read on every layer change (RULED 2026-11-16). Read once at boot it was one
+  // short of the snapshot that same boot takes: measured «0 متاحة» with one stored.
   const [snapN, setSnapN] = useState<number | null>(null);
-  useEffect(() => { if (booted) db.listBackups().then((b: Backup[]) => setSnapN(b.length)); }, [booted]);
+  useEffect(() => {
+    if (!booted) return;
+    let live = true; let latest = 0;
+    const read = () => { const mine = ++latest; db.listBackups().then((b: Backup[]) => { if (live && mine === latest) setSnapN(b.length); }); };
+    read(); const off = db.onChange(read) as () => void;
+    return () => { live = false; off(); };
+  }, [booted]);
   if (!booted) return <section className={s.screen}><Loading /></section>;
 
   const settings = st.settings as Record<string, unknown>;
@@ -100,7 +107,7 @@ export default function ToolsView() {
         </Section>
 
         {/* ═══ البيانات ═══ */}
-        <Section id="data" title={t('tools.sec.data')} foot={t('backup.auto', { h: fmtNum(12), n: fmtNum(7) })}>
+        <Section id="data" title={t('tools.sec.data')} foot={t('backup.auto', { h: fmtNum(db.AUTO_BACKUP_HOURS as number), n: fmtNum(db.BACKUP_KEEP as number), m: fmtNum(db.PRE_IMPORT_KEEP as number) })}>
           <Row id="export" icon="export" label={t('tools.row.export')} help={t('tools.export.help')} value={settings.lastExport ? fmtDate(settings.lastExport as string) : t('backup.never')}>
             <ExportDetail settings={settings} />
           </Row>

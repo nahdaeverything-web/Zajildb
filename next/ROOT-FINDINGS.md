@@ -2458,6 +2458,228 @@ reads «0 متاحة». The only snapshot the port writes is the `pre-import-…
 nothing. Not built. Ordered after the sync change set is accepted: wire it, assert a snapshot exists after the
 interval, mutation-prove the assertion.
 
+### RF-21 — BUILT 2026-11-16; first gate red, six rulings the same day, rebuilt (below)
+
+**The caller.** `src/components/AutoBackup.tsx`, mounted once in `app/layout.tsx` beside the sync coordinator.
+Vanilla's behaviour (`js/app.js:254-262`), unchanged: after the one shared boot a snapshot is taken if none was ever
+taken or the last is older than the interval; then one every interval while the page stays open; never for an empty
+register; a failure is swallowed. The interval and the number kept are now exported constants of the layer
+(`AUTO_BACKUP_HOURS = 12`, `BACKUP_KEEP = 7`, `src/db/io.js`) and the restore screen prints THOSE, not literals.
+
+**The suite.** `tests/e2e/screens/auto_backup.py`, 18 checks, harness build, the net armed. The interval is asserted
+with the browser's clock driven: 11 h 59 min after the boot there is one snapshot, 12 h 01 min after it there are
+two, stamped twelve hours apart.
+
+**The mutants**, each on its own harness build (`~/zajil-gate-logs/autobackup-mutants.log`, `autobackup-M-boot-2.log`):
+
+```
+═══ MUTANT M-interval         (the setInterval line removed)
+suite exit 1 · 16 passed, 2 failed
+  ✗ [interval · M-interval fails here] 12 h 01 min after the boot, the page still open: a second snapshot EXISTS  {'n': 1, 'ids': ['2026-11-15T21:21:19.494Z'], 'kinds': ['auto-backup'], 'birds': [1], 'last': '2026-11-15T21:21:19.494Z', 'hours': 12, 'keep': 7}
+  ✗ [interval] …stamped twelve hours after the first  ['2026-11-15T21:21:19.494Z']
+═══ MUTANT M-boot             (the due-at-boot line removed)
+suite exit 1 · 11 passed, 7 failed
+  ✗ [boot · M-boot fails here] a register with birds and no snapshot yet: the boot takes ONE, an automatic one, holding both birds  {'n': 0, 'ids': [], 'kinds': [], 'birds': [], 'last': None, 'hours': 12, 'keep': 7}
+  ✗ [boot · M-boot fails here] the last snapshot 13 hours old: the boot takes a new one  {'n': 0, 'ids': [], …, 'last': '2026-11-15T08:22:21.248Z', 'hours': 12, 'keep': 7}
+  (and five that depend on a first snapshot existing)
+═══ MUTANT M-empty            (the empty-register condition removed)
+suite exit 1 · 15 passed, 3 failed
+  ✗ [boot · empty] an empty register is not snapshotted  {'n': 1, …, 'birds': [0], …}
+  ✗ [interval · empty] the register emptied, another interval passes: no snapshot of nothing
+```
+
+M-boot's first run died on an `IndexError` in the «kept» check — red for the wrong reason (TF-9's lesson again). The
+check was made non-raising and the mutant run again; that second run is the one quoted.
+
+**Does the restore screen's wording match what happens? Measured** (`~/zajil-work/followup/backup_wording_probe.py`,
+log `~/zajil-gate-logs/autobackup-wording-probe.log`). The screen says «نسخ تلقائي داخلي كل 12 ساعة (آخر 7 نسخ)».
+
+1. **«كل 12 ساعة» — true only while the app is open or is opened.** A snapshot is taken at a boot when twelve hours
+   have passed, and every twelve hours on a page that stays open. A device that is not opened takes none; a device
+   whose register was empty at boot and filled later (a first sync) takes its first at the next boot or after twelve
+   hours open. This is vanilla's behaviour. Not changed.
+2. **«آخر 7 نسخ» — FALSE once a replace-import or a restore has run.** The seven are counted over the whole store,
+   and a `pre-import-…` snapshot sorts after every dated one, so it is never the one removed:
+   ```
+   P2. 3 replace-imports, then nine automatic snapshots:
+       after the nine:  7 stored — automatic 4, pre-import 3
+   P2. 7 replace-imports, then nine automatic snapshots:
+       after the nine:  7 stored — automatic 0, pre-import 7
+   ```
+   After seven replaces or restores every automatic snapshot is deleted in the call that wrote it, while
+   `lastAutoBackup` records that one was taken. Vanilla has the same code; it was unreachable in the port until now.
+3. **«آخر نسخة تلقائية: {d}» shows the OLDEST, and the list is oldest-first.** The screen reads the store in key
+   order and takes the first; vanilla sorts newest first (`js/views/tools.js:126`). A port defect, invisible while
+   there was never more than one snapshot:
+   ```
+   P1. three automatic snapshots, oldest → newest: ['…T21:20:24.734Z', '…T21:20:25.837Z', '…T21:20:26.940Z']
+       rows top → bottom (data-id): ['…T21:20:24.734Z', '…T21:20:25.837Z', '…T21:20:26.940Z']
+   ```
+   A `pre-import-…` snapshot always lists last, whatever its date.
+4. **The الأدوات row's «{n} متاحة» is read once, at boot** — it can be one short of the snapshot the same boot takes,
+   until the screen is opened again. Read from the code (`app/tools/view.tsx:37`), not measured.
+
+**NOT fixed — 2, 3 and 4 are reported for a ruling.** Proposed: (2) the seven apply to the dated snapshots only,
+and the pre-import ones get their own, separately ruled, limit; (3) newest first as vanilla, with a pre-import
+snapshot placed by its date; (4) the row re-reads on a layer change.
+
+**The full gate with the caller wired is NOT green — `gate-13-autobackup.log`: 2209 passed, 4 failed. NOT committed,
+NOT deployed; STOPPED for rulings.** Snapshots now exist where no suite had ever seen one. The three suites:
+
+```
+[FAIL] screens/account_collision.py         47/48
+  ✗ [CLOSED LIMIT] …C's edit stays local, and nothing on the device changed — not even an owner record  {"counts": [{"backups": 0, "birds": 3, …}, {"backups": 1, "birds": 3, …
+[FAIL] screens/sync_auto.py                 50/51
+  ✗ [typography] every new string, where it is drawn — … — is in a face that has Arabic, and unspaced  [('NO-ARABIC-COVERAGE ', '16 تشرين الثاني 2026، 01:10 ص (6 جمادى ا')]
+[FAIL] screens/tools.py                    136/138
+  ✗ [data_loss #5] PHOTOS SURVIVE the restore — a snapshot carries no media, so it must not wipe it  2 before, 0 after
+  ✗ …and the records came back with it  28 -> 21
+```
+
+- **`account_collision`** — a device stopped at the account collision boots, and the boot takes a snapshot: the
+  `backups` store goes 0 → 1 while the check says nothing on the device changed. Nothing else moved. Whether a
+  snapshot counts as «a change on the device» there is a ruling, not mine to make by editing the count.
+- **`sync_auto`** — a REAL defect in the restore list, exposed, not caused: a dated snapshot row prints its date in
+  `plexMono` (`<strong className={s.data}>`, `app/tools/parts.tsx`), a face with no Arabic. Reproduced alone, with
+  the face recorded. Until now the only row any suite saw was a `pre-import-…` one.
+- **`tools`** — the test presses the FIRST «استرجاع» expecting the snapshot it has just taken; the list is
+  oldest-first (wording gap 3 above) and the first is now a snapshot an earlier boot took, seven birds older. The
+  photo it then looks for is on a bird that restore dropped. Not a loss of a photo on a surviving bird — measured
+  separately (`~/zajil-gate-logs/autobackup-restore-media-probe.log`):
+  ```
+  before the restore: {"birds": ["جديد", "قديم"], "media": [["on-new.png", "جديد"], ["on-old.png", "قديم"]], "mediaTombstones": 0}
+  after restoring the snapshot taken before both photos and before «جديد»: {"birds": ["قديم"], "media": [["on-new.png", "(bird gone)"], ["on-old.png", "قديم"]], "mediaTombstones": 0}
+  ```
+  The photo on the bird that stayed survives. **The photo on the bird the restore dropped is left in the store,
+  pointing at a bird that is gone, with no tombstone** — an orphan. Against RF-15 («a replace and a restore
+  tombstone every record they drop»): open, reported, not investigated further.
+
+#### RF-21 — the six rulings of 2026-11-16, as built
+
+**A correction to the record above first.** It says «a device stopped at the account collision boots, and the boot
+takes a snapshot». The order was the other way round: the suite opens the sign-in screen, THAT boot took the snapshot,
+and the collision was met afterwards, on submit. There is no stored «stopped at the collision» state for a caller to
+read at boot. What a device stopped at a collision always is, is a configured build with no session — the sign-in
+gate (`src/components/Gate.tsx`). So ruling 1 is built on the gate's own two conditions.
+
+| ruling | built |
+|---|---|
+| 1. the caller skips a device stopped at the collision; the check keeps counting backups | `AutoBackup.tsx` takes nothing while the gate is shut (configured build, no session). The condition is read each time a snapshot is due. `account_collision.py` is untouched and passes 48/48. |
+| 2. the snapshot row's face | `<strong className={s.data}>` → `<strong>` in the restore list (`app/tools/parts.tsx`); the row also shows a pre-import snapshot's moment, not its key. |
+| 3. newest first, a pre-import snapshot by its date; «آخر نسخة تلقائية» the newest automatic | `listBackups()` sorts by the snapshot's moment, newest first (`backupMoment`); the line reads the first row that is not a pre-import one. `tools.py` is untouched and passes 138/138. |
+| 4. seven automatic, separately three pre-import, neither evicting the other | `pruneBackups()` (`src/db/io.js`), called by both writers: the seven newest interval snapshots, the three newest pre-import ones (`PRE_IMPORT_KEEP = 3`). |
+| 5. «{n} متاحة»: measure, then re-read on a layer change | measured below; the tools row and the restore list both re-read on every layer change; `autoBackup()` now raises one (`type: 'backup'`), which the sync coordinator ignores — a snapshot is not the fancier's work and starts no cycle. |
+| 6. the screen says what is true | `backup.auto` overridden in `src/i18n.ext.js`, with three numbers read from the layer's constants. PROPOSED wording, shipped flagged in the report, awaiting Samir's correction with the fifteen. |
+
+**The proposed string (the sixteenth), drawn under the restore list and under the «البيانات» section of الأدوات:**
+«تُؤخذ نسخة تلقائية على هذا الجهاز عند فتح التطبيق، أو وهو مفتوح، كلما مضت {h} ساعة على آخر نسخة. يُحتفظ بآخر {n}
+نسخ تلقائية، وبآخر {m} نسخ أُخذت قبل استيراد بالاستبدال أو قبل استرجاع.»
+
+**Ruling 5, measured before the fix** (`~/zajil-work/b2/available_probe.py`, logs `b2-available-probe-before.log`,
+`-after.log`):
+
+```
+before the boot: snapshots stored 0
+الأدوات, +0.3s: row says «0 متاحة» · stored 1
+الأدوات, +4.0s: row says «0 متاحة» · stored 1
+after a reload: row says «1 متاحة» · stored 1
+استرجاع opened 13 h after the last snapshot: rows listed 1 · stored 2
+```
+and after it: `«1 متاحة» · stored 1` at +0.3 s, `rows listed 2 · stored 2`. The restore LIST had the same one-short
+read as the row; it was fixed with it, the same way.
+
+**Ruling 1's question — does the collision CLEAR wipe the snapshots? YES, both kinds, measured.** `clearLocalData()`
+clears the `backups` store and removes `lastAutoBackup` (it is not a device setting). Asserted in the suite on a
+device holding two interval snapshots and one pre-import snapshot of account A:
+
+```
+  ✓ [CLEAR · setup] account A's device, signed out: two interval snapshots and one pre-import snapshot stored, «آخر نسخة» recorded
+  ✓ [gate] STOPPED at the collision: the snapshots store is exactly as it was — nothing taken, nothing removed
+  ✓ [CLEAR] account B chose CLEAR: NONE of A's snapshots is left on the device, of either kind, and «آخر نسخة» is gone with them
+  ✓ [CLEAR] …so under account B the restore screen offers nothing to restore
+```
+Ownership changes only through `clearLocalData()`, so there is no other path by which one account's snapshot is on a
+device under another account.
+
+**The suite: `tests/e2e/screens/auto_backup.py`, 38 checks. Nine mutants, each on its own harness build, each failing
+its named check** (`~/zajil-gate-logs/b2-mutants.log`; the suite is 38/0 again on the restored build):
+
+```
+═══ MUTANT M-gate      (the gate condition removed)                         36 passed, 2 failed
+  ✗ [gate · M-gate fails here] a configured build with NO session and two birds — the sign-in gate, where a collision stops a device: the boot takes no snapshot  {'n': 1, …
+  ✗ [gate · M-gate fails here] …nor does opening the sign-in screen itself  {'n': 1, …
+═══ MUTANT M-kinds     (one shared limit of seven, as before)               34 passed, 4 failed
+  ✗ [kinds · M-kinds fails here] seven replaces: the THREE newest pre-import snapshots are kept, and they are the last three taken  [seven pre-import ids]
+  ✗ [kinds · M-kinds fails here] THE RULED PROOF — seven replaces, then nine interval snapshots: 7 interval and 3 pre-import remain  {'auto': 0, 'pre': 7}
+═══ MUTANT M-order     (listBackups() unsorted)                             35 passed, 3 failed
+  ✗ [order · M-order fails here] the layer lists the snapshots NEWEST FIRST, each pre-import one at its own moment among the interval ones  ['2026-03-10T08:00:00.000Z', '2026-03-12T07:00:00.000Z', 'pre-import-2026-03-11T09:00:00.000Z', 'pre-import-2026-03-13T06:00:00.000Z']
+  ✗ [order · M-order fails here] …and the restore screen draws them in that order
+═══ MUTANT M-last      («آخر نسخة تلقائية» reads the first row)             37 passed, 1 failed
+  ✗ [last · M-last fails here] «آخر نسخة تلقائية» names the newest INTERVAL snapshot — the second row — though a pre-import one is newer  ('آخر نسخة تلقائية: pre-import-2026-03-13T06:00:00.000Z', …
+═══ MUTANT M-face      (the mono face back on the row)                      36 passed, 2 failed
+  ✗ [typography · M-face fails here] the four dated rows are drawn in a face that has Arabic  [('NO-ARABIC-COVERAGE ', 'plexMono', '13 آذار 2026، 09:00 ص (24 رمضان 1447 هـ)'), …
+═══ MUTANT M-count     (row and list read once)                             36 passed, 2 failed
+  ✗ [count · M-count fails here] الأدوات opened as the boot that takes the first snapshot: the row says «1 متاحة», as stored  ('0 متاحة', 1)
+  ✗ [count · M-count fails here] استرجاع opened as the boot that takes a second one: the list shows both  (1, 2)
+═══ MUTANT M-interval  (the setInterval line removed)                       36 passed, 2 failed
+  ✗ [interval · M-interval fails here] 12 h 01 min after the boot, the page still open: a second snapshot EXISTS  {'n': 1, 'ids': ['2026-11-16T06:39:07.648Z'], …
+═══ MUTANT M-boot      (the due-at-boot line removed)                       27 passed, 11 failed
+═══ MUTANT M-empty     (the empty-register condition removed)               29 passed, 9 failed
+```
+M-last, unmutated, also shows what the line printed for a pre-import first row before ruling 3: the raw key.
+
+**Left as it is, and said so.** (a) A device that signs in does not take a snapshot at that moment: its first is at
+the next boot or the next interval tick, as before. (b) A device signed in as one account that opens the sign-in
+screen still takes its due snapshot at that boot — it is that account's own data under that account's own session.
+(c) An existing device holding more than three pre-import snapshots is brought down to three at its next snapshot of
+either kind.
+
+#### The dropped bird's photos — measured for RESTORE and for REPLACE-IMPORT (PROPOSAL ONLY, nothing built)
+
+`~/zajil-work/b2/orphan_probe.py`, log `~/zajil-gate-logs/b2-orphan-probe.log`. Two birds, «قديم» with on-old.png and
+«جديد» with on-new.png; the point in time put back holds «قديم» only.
+
+```
+═══ R. RESTORE of an automatic snapshot taken when only «قديم» existed
+  what the question is given (replacePreview): {"removed": 1, "removedBirds": 1, "removedOthers": 0}
+  after the restore: {"birds": ["قديم"], "media": [["on-new.png", "(bird gone)", "3 B"], ["on-old.png", "قديم", "2 B"]], "mediaTombstones": 0, "birdTombstones": 1, "mediaDeleteOps": 0, "birdDeleteOps": 1}
+  a full export taken now carries media: ['on-new.png', 'on-old.png']
+  ROLLBACK — restoring the pre-import snapshot that restore took: {"birds": ["جديد", "قديم"], "media": [["on-new.png", "جديد", "3 B"], ["on-old.png", "قديم", "2 B"]], …}
+═══ I1. REPLACE-IMPORT of a full export (WITH media) taken when only «قديم» existed
+  what the question is given (replacePreview): {"removed": 1, "removedBirds": 1, "removedOthers": 0}
+  after the replace: {"birds": ["قديم"], "media": [["on-old.png", "قديم", "2 B"]], "mediaTombstones": 1, "birdTombstones": 1, "mediaDeleteOps": 1, "birdDeleteOps": 1}
+  ROLLBACK — restoring the pre-import snapshot that replace took: {"birds": ["جديد", "قديم"], "media": [["on-old.png", "قديم", "2 B"]], …}
+═══ I2. REPLACE-IMPORT of a file that holds BOTH birds and NO media (media: [])
+  what the question is given (replacePreview): {"removed": 0, "removedBirds": 0, "removedOthers": 0}
+  after the replace: {"birds": ["جديد", "قديم"], "media": [], "mediaTombstones": 2, "birdTombstones": 0, "mediaDeleteOps": 2, "birdDeleteOps": 0}
+  ROLLBACK — restoring the pre-import snapshot that replace took: {"birds": ["جديد", "قديم"], "media": [], …}
+═══ D. for comparison: deleting «جديد» by hand, then undoing it
+  after the delete: {"birds": ["قديم"], "media": [["on-old.png", "قديم", "2 B"]], "mediaTombstones": 1, …}
+  after the undo: {"birds": ["جديد", "قديم"], "media": [["on-new.png", "جديد", "3 B"], ["on-old.png", "قديم", "2 B"]], "mediaTombstones": 0, …}
+```
+
+1. **The two paths already differ.** A restore keeps every photo, orphaning those of a dropped bird; a replace-import
+   deletes every photo that is not in the file, with a tombstone and a delete op — the cascade, in effect, already.
+2. **The orphan is what makes a restore reversible today.** Rolling back with the pre-import snapshot returns «جديد»
+   WITH its photo. After a replace-import the same rollback returns «جديد» without it: the photo is gone for good.
+3. **Neither question counts photos.** `replacePreview()` counts the record stores only.
+4. **I2 — a replace from a file with no media deletes every photo on the device, on birds that stay, while the
+   question is given «0 removed» and says «لن يُحذف شيء».** The app's own export always carries media; whether an
+   export from a second device (which holds the media rows and no blobs) produces such a file is NOT measured.
+5. The orphan travels nowhere and is cleaned by nothing: no tombstone, no op; it is carried in every full export.
+
+**Proposed for a ruling.** Photos have no server copy and a snapshot carries no media, so a photo deleted by a
+restore cannot come back by any means the app has. Two shapes:
+- **(A) the cascade, as Samir leans.** A restore tombstones and deletes a dropped bird's photos, like a bird delete;
+  the question states how many photos will be lost; string 5 loses «الصور والوثائق تبقى كما هي». Cost: a restore
+  stops being reversible for photos — the rollback returns the bird bare — and the question must say that too.
+- **(B) keep, do not orphan forever.** A restore leaves a dropped bird's photos in place, as now; string 5 says they
+  are kept on this device and return if the bird does; the orphans are removed only when their bird can no longer
+  come back (no kept snapshot holds it). Cost: a rule to write and prove, and hidden storage until then.
+- **Recommended: (A) for consistency with replace-import and bird delete, with the count and the irreversibility in
+  the question** — and, whichever is ruled, the two defects that are independent of it: both questions count photos
+  (3), and a replace never deletes the photo of a bird that STAYS merely because the file carries no media (4).
+
 ## RF-22 — the example-data removal decides membership by loft and id shape, so a teaching bird filed elsewhere survives and keeps its ancestors
 
 **Where:** `src/example-data.js` `examplePresence()`: `example` = birds filed in a present dataset loft whose id

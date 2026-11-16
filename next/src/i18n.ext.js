@@ -504,6 +504,9 @@ export const EXT = {
   'tools.failed.unknown':     { ar: 'خطأ غير متوقع ({what})', en: 'an unexpected error ({what})' },
   'backup.snapshot':          { ar: 'النسخة', en: 'Snapshot' },
   'backup.noSnapshots':       { ar: 'لا نسخ تلقائية بعد', en: 'No automatic snapshots yet' },
+  // RF-21 (RULED 2026-11-16): the screen says what is true — when a snapshot is taken, and the two limits. Overrides
+  // vanilla's «نسخ تلقائي داخلي كل {h} ساعة (آخر {n} نسخ)». PROPOSED wording, shipped flagged, awaiting Samir's correction.
+  'backup.auto':              { ar: 'تُؤخذ نسخة تلقائية على هذا الجهاز عند فتح التطبيق، أو وهو مفتوح، كلما مضت {h} ساعة على آخر نسخة. يُحتفظ بآخر {n} نسخ تلقائية، وبآخر {m} نسخ أُخذت قبل استيراد بالاستبدال أو قبل استرجاع.', en: 'An automatic snapshot is taken on this device when the app is opened, or while it is open, once {h} hours have passed since the last one. The last {n} automatic snapshots are kept, and the last {m} taken before a replace-import or a restore.' },
   'backup.importModeLabel':   { ar: 'طريقة الاستيراد', en: 'Import mode' },
   'backup.file':              { ar: 'الملف', en: 'File' },
   'backup.chooseFile':        { ar: 'اختيار ملف', en: 'Choose a file' },
