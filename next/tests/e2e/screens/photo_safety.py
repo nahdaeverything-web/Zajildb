@@ -5,6 +5,9 @@ Photos have no server copy (DF-4), so the bytes on a device are the only ones.
   RF-23  a sync cycle used to remove the bytes of every photo from the device that took it: the device's own pushed
          media row came back in the pull, metadata only (§7), and was written over the stored record.
 
+  RF-24  an import used to hand a media row with no dataURL to fetch(), and store what came back — a not-found page —
+         over the real photo. Such a row is now rejected: never fetched, never written, counted, and said.
+
 Two devices on one stub project that models the table. Harness build, the net armed. All shapes are CONSTRUCTED.
 
     python3 tests/e2e/screens/photo_safety.py
@@ -108,6 +111,41 @@ try:
         run(ONE, SYNC); one = media(ONE)
         check('[RF-23 · M-rf23 fails here] a NEWER row for the same photo, written by a device that has no bytes, updates the metadata on ONE and leaves its bytes', one == [['auto.png', 5], ['renamed.png', 3]], one)
         c1.close(); c2.close()
+
+        # ═══ RF-24 — an import never writes a media row without bytes, and never fetches one ═══
+        c3, D = device(b, H, None); run(D, ADD, 'قديم', 'on-old.png', 'xx'); run(D, ADD, 'جديد', 'on-new.png', 'yyy')
+        full = run(D, "async (db) => await db.exportAll()")
+        fetched = []; D.on('request', lambda r: fetched.append(r.url) if not r.url.startswith(('data:', 'blob:')) and '/_next/' not in r.url else None)   # the app's own lazy chunks are not the subject
+        bare = json.loads(json.dumps(full)); kinds = [None, 'undefined']
+        for m, k in zip(bare['media'], kinds):
+            if k is None: m.pop('dataURL', None)
+            else: m['dataURL'] = k
+        bare['media'].append({'id': 'media-never-seen', 'birdId': bare['birds'][0]['id'], 'kind': 'photo', 'subtype': 'body', 'name': 'ghost.png', 'addedAt': '2026-01-01T00:00:00.000Z', 'dataURL': 'https://example.invalid/ghost.png'})
+        bare['media'].append({'id': 'media-never-seen-2', 'birdId': bare['birds'][0]['id'], 'kind': 'photo', 'subtype': 'body', 'name': 'ghost-2.png', 'addedAt': '2026-01-01T00:00:00.000Z', 'dataURL': 'ghost-2.png'})
+        for mode in ('merge', 'replace'):
+            fetched.clear(); counts = run(D, "async (db, f, mode) => { try { return await db.importAll(f, mode); } catch (e) { return { error: String(e.message).slice(0, 120) }; } }", bare, mode); got = media(D)   # non-raising: a mutant must fail a named check
+            check(f'[RF-24 · M-rf24 fails here] {mode}: a file whose media rows carry no bytes — no dataURL, the text «undefined», a file name, an address — leaves both photos with their bytes and stores nothing new',
+                  got == [['on-new.png', 3], ['on-old.png', 2]], got)
+            check(f'[RF-24 · M-rf24 fails here] {mode}: …all four rows are rejected and counted, and NOTHING was fetched for them', counts.get('mediaRejected') == 4 and counts.get('media') == 0 and not fetched, (counts, fetched[:3]))
+        counts = run(D, "async (db, f) => db.importAll(f, 'replace')", full)
+        check('[RF-24] a file whose rows DO carry bytes still imports them', counts['media'] == 2 and counts['mediaRejected'] == 0 and media(D) == [['on-new.png', 3], ['on-old.png', 2]], (counts, media(D)))
+        # through the screen: the import says how many it rejected
+        D.goto(ROOT + 'tools/import/', wait_until='load'); D.wait_for_selector('[data-testid=import-mode]', timeout=15000)
+        D.set_input_files('[data-testid=file-input]', files=[{'name': 'file.json', 'mimeType': 'application/json', 'buffer': json.dumps(bare).encode()}]); D.click('[data-testid=import-file]')
+        try: D.wait_for_selector('[data-testid=toast]', timeout=15000)
+        except PWTimeout: pass
+        said = digits(' '.join(D.locator('[data-testid=toast]').all_inner_texts())); typo = D.evaluate(SCAN)
+        check('[RF-24 · wording] the import says so: «عدد الصور والوثائق التي لم تُستورد لأن الملف لا يحمل محتواها: 4.»', 'عدد الصور والوثائق التي لم تُستورد لأن الملف لا يحمل محتواها: 4.' in said, said)
+        check('[typography] that message is drawn in a face that has Arabic', bool(said) and not typo, [(x['why'], x['face'], x['text']) for x in typo][:3])
+        # with the photo set's P2: a dropped bird's photo that the file lists WITHOUT bytes is not "carried" — it goes with its bird, and the question counts it
+        drop = json.loads(json.dumps(bare)); drop['birds'] = [x for x in drop['birds'] if x['name'] == 'قديم']; drop['media'] = [m for m in drop['media'] if m['name'] in ('on-new.png', 'on-old.png')]
+        lost = run(D, "async (db, f) => db.replaceMediaLoss(f)", drop); run(D, "async (db, f) => db.importAll(f, 'replace')", drop)
+        check('[RF-24 + P2] a replace that drops «جديد» and lists its photo without bytes: the photo is counted as lost (1) and goes with the bird; the staying bird\'s photo keeps its bytes', lost == 1 and media(D) == [['on-old.png', 2]], (lost, media(D)))
+        # SEEN, not ruled: a merge-import skips a media row the device already has — even when the device's row has no bytes and the file's has them
+        srv2 = Server(); c4, E = device(b, H, srv2); run(E, ADD, 'طير', 'p.png', 'xyz'); withbytes = run(E, "async (db) => await db.exportAll()")
+        c5, F = device(b, H, srv2); run(E, SYNC); run(F, SYNC); f0 = media(F); run(F, "async (db, f) => db.importAll(f, 'merge')", withbytes); f1 = media(F)
+        check('[seen · not ruled] a second device holding the row without bytes, merge-importing the first device\'s export WITH the bytes: the row is skipped and the bytes do not arrive', f0 == [['p.png', 'NO BYTES']] and f1 == [['p.png', 'NO BYTES']], (f0, f1))
+        c3.close(); c4.close(); c5.close()
 
         check(f'zero page errors across {len(PAGES)} devices', not any(p.errs for p in PAGES), [e[:160] for p in PAGES for e in p.errs][:3])
         NET.assert_empty(check)

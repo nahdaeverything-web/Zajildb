@@ -132,7 +132,7 @@ export {
   exportableSettings,
   importAll,
   listBackups,
-  replacePreview, replaceMediaLoss,
+  replacePreview, replaceMediaLoss, carriesBytes,
 } from './db/io.js';
 
 export {

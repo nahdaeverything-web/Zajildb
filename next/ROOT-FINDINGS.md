@@ -2861,6 +2861,22 @@ OVERWRITES the real photo. No export the app makes today has this shape (a blobl
 it is reachable only by a hand-made or future file. The RF-4 fix-at-source (admit a null `dataURL`, keep the bytes
 already here) covers it. Not built.
 
+### RF-24 fixed 2026-11-16 (RULED) — the second commit of the photo-safety set
+
+`carriesBytes()` in `src/db/io.js`: only a `data:` URL is bytes. `importAll()` REJECTS any other media row — no
+dataURL, the text «undefined», a file name, an address: it is never fetched and never written, so it can neither
+replace a photo that has its bytes nor become a "photo" made of an error page. Rejected rows are counted
+(`counts.mediaRejected`) and the import screen says how many (`backup.mediaRejected`, PROPOSED). A `data:` URL that
+fails to decode still fails the WHOLE import before anything is touched, as before. A row a replace rejects is not
+"carried" by the file: a dropped bird's photo listed that way goes with its bird and is counted in the question (P2/P3).
+Read literally and to be confirmed: a rejected row is not stored as a bytes-less placeholder either.
+Mutant M-rf24 (the rejection removed): 14 passed, 4 failed. Its first draft died on a traceback (the unguarded
+`importAll` threw); the steps were made non-raising and it was rerun — first log kept as `ps-M-rf24-first-draft-TRACEBACK.log`.
+
+**SEEN, not ruled:** a merge-import skips a media row the device already has, even when the device's row has no
+bytes and the file's has them. So a second device cannot receive photos by importing the first device's export in
+merge mode (a replace does bring them). Pinned as a `[seen · not ruled]` check in `photo_safety.py`.
+
 ## RF-22 — the example-data removal decides membership by loft and id shape, so a teaching bird filed elsewhere survives and keeps its ancestors
 
 **Where:** `src/example-data.js` `examplePresence()`: `example` = birds filed in a present dataset loft whose id

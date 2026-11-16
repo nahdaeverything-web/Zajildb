@@ -276,8 +276,10 @@ export function ImportDetail() {
         const ok = await confirmDialog({ title: t('confirm.replace.title'), body, cancelLabel: t('act.cancel'), confirmLabel: t('act.replace'), confirmKind: 'danger' });
         if (!ok) return;
       }
-      const counts = await db.importAll(payload, mode) as { birds: number; pairs: number; raceResults: number };
-      toast(t('backup.imported', { birds: fmtNum(counts.birds), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) }), { timeout: 7000, kind: 'info' });
+      const counts = await db.importAll(payload, mode) as { birds: number; pairs: number; raceResults: number; mediaRejected: number };
+      // RF-24: media rows the file carried without bytes were rejected — the import says how many
+      toast(t('backup.imported', { birds: fmtNum(counts.birds), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) })
+        + (counts.mediaRejected ? ' ' + t('backup.mediaRejected', { n: fmtNum(counts.mediaRejected) }) : ''), { timeout: counts.mediaRejected ? 12000 : 7000, kind: 'info' });
       setFile(null);
     } catch (e) {
       toast(t('backup.importFailed', { why: (e as Error)?.message || '' }), { timeout: 12000, kind: 'error' });

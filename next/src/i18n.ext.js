@@ -32,6 +32,8 @@ export const EXT = {
   'confirm.replace.removes':  { ar: 'سيُحذف من السجلّ {birds} طيرًا و{others} سجلًا آخر غير موجودة في الملف، ويحلّ محتوى الملف مكانها.', en: '{birds} birds and {others} other records that are not in the file will be deleted, and the file takes their place.' },
   // P3 (RULED 2026-11-16) — PROPOSED wording: the question counts the photos and documents a replace deletes with the dropped birds
   'confirm.replace.photos':   { ar: 'عدد الصور والوثائق التي ستُحذف مع هذه الطيور: {n}. لا يمكن استرجاعها بعد الحذف.', en: 'Photos and documents that will be deleted with these birds: {n}. They cannot be recovered once deleted.' },
+  // RF-24 (RULED 2026-11-16) — PROPOSED wording: the import rejected media rows that carried no bytes
+  'backup.mediaRejected':     { ar: 'عدد الصور والوثائق التي لم تُستورد لأن الملف لا يحمل محتواها: {n}.', en: 'Photos and documents not imported because the file does not carry their content: {n}.' },
   'confirm.replace.removesNone': { ar: 'لن يُحذف شيء: كل ما في السجلّ موجود في الملف.', en: 'Nothing will be deleted: everything in the records is in the file.' },
   'confirm.replace.devices':  { ar: 'يسري هذا على كل أجهزتك: ما يُحذف هنا يُحذف منها عند المزامنة.', en: 'This applies to all your devices: what is deleted here is deleted from them at the next sync.' },
   'confirm.replace.continue': { ar: 'متابعة؟', en: 'Continue?' },

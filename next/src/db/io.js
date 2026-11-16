@@ -24,6 +24,13 @@ function blobToDataURL(blob) {
   });
 }
 
+/**
+ * RF-24 (RULED 2026-11-16): does this media row of a file carry bytes? Only a `data:` URL does. Anything else — no
+ * dataURL at all, or an address — used to be handed to fetch(), which fetched the address and stored whatever came
+ * back as the photo: a hand-made row with no dataURL replaced a real photo with 335 bytes of a not-found page.
+ */
+export const carriesBytes = (m) => !!m && typeof m.dataURL === 'string' && m.dataURL.startsWith('data:');
+
 export async function dataURLToBlob(dataURL) {
   const res = await fetch(dataURL);
   return res.blob();
@@ -195,7 +202,7 @@ async function droppedMediaByReplace(payload) {
   if (!payload || payload.kind === 'auto-backup') return [];
   const birdsDropped = new Set(droppedByReplace(payload).filter(([s]) => s === 'birds').map(([, b]) => b.id));
   if (!birdsDropped.size) return [];
-  const incoming = new Set((payload.media || []).map((m) => m && m.id));
+  const incoming = new Set((payload.media || []).filter(carriesBytes).map((m) => m.id));   // a row the import rejects (RF-24) carries nothing
   return (await idbGetAll('media')).filter((m) => birdsDropped.has(m.birdId) && !incoming.has(m.id));
 }
 
@@ -210,7 +217,7 @@ export async function replaceMediaLoss(payload) {
  */
 export async function importAll(payload, mode = 'merge') {
   if (!payload || payload.format !== 'zajil-export') throw new Error('bad-format');
-  const counts = { birds: 0, pairs: 0, raceResults: 0, healthEvents: 0, lofts: 0, media: 0, skipped: 0, removed: 0 };
+  const counts = { birds: 0, pairs: 0, raceResults: 0, healthEvents: 0, lofts: 0, media: 0, skipped: 0, removed: 0, mediaRejected: 0 };
 
   // ── decode and validate EVERYTHING before touching the database ──
   // A replace-import used to clear all six stores and only then decode the
@@ -228,6 +235,9 @@ export async function importAll(payload, mode = 'merge') {
   const decodedMedia = [];
   for (const m of payload.media || []) {
     if (!m || typeof m.id !== 'string') throw new Error('bad-format: a media entry has no id');
+    // RF-24: a row with no bytes is REJECTED — never fetched, never written, so it can neither replace a photo that
+    // has its bytes nor become a "photo" made of an error page. Counted, and the import says so.
+    if (!carriesBytes(m)) { counts.mediaRejected++; continue; }
     let blob;
     try {
       blob = await dataURLToBlob(m.dataURL);
