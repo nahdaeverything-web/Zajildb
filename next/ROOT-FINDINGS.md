@@ -2842,6 +2842,16 @@ contacted. Not checked: whether Samir's devices hold any photo that still has it
 with a check that a photo survives three cycles with its bytes and a mutant that removes the line. It cannot bring back
 bytes already lost.
 
+### RF-23 fixed 2026-11-16 (RULED) — the first commit of the photo-safety set
+
+**The invariant of the set: a media record that holds bytes is never replaced by one that does not.**
+`withHeldBytes()` in `src/db/records.js`; `applySyncPut()` passes a pulled media row through it, so the record written
+carries the bytes the device already holds. Port-only; vanilla keeps the defect. It cannot bring back bytes already lost.
+`tests/e2e/screens/photo_safety.py`: the bytes survive «مزامنة الآن» (one cycle, and three), survive the coordinator's
+own cycles with no press (the coordinator pulls before it pushes, so the row returns on the NEXT automatic cycle; the
+suite brings one with a second change), and survive a newer row for the same photo pushed by a device with no bytes
+(the name changes, the bytes stay). Mutant M-rf23 (the line removed): 5 passed, 4 failed, each at its named check.
+
 ## RF-24 — an import stores a media row that has no `dataURL` as a "photo" made of whatever the address `undefined` returns (MEASURED 2026-11-16, NOT FIXED)
 
 Section 3 of the probe above: a hand-made file whose media rows carry no `dataURL` was replace-imported onto a device

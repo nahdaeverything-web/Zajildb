@@ -352,7 +352,9 @@ const guards = {
        + 'is NOT changed — main is the live deployment.'],
       ['src/db/records.js',
        'RF-14 (RULED 2026-10-14): the generic remove() and applySyncDelete() call ensureCurrentLoft() '
-       + 'after a loft goes, locally or by a pulled tombstone. Port-only, as storage.js.'],
+       + 'after a loft goes, locally or by a pulled tombstone. Port-only, as storage.js. RF-23 (RULED 2026-11-16): '
+       + 'withHeldBytes() — applySyncPut() keeps the bytes a media record already holds instead of replacing the '
+       + 'record with the pulled, bytes-less row. Vanilla has the same defect and is NOT changed.'],
       ['src/db/sync.js',
        'the account collision (RF-13): signIn() compares the incoming user with the owner of '
        + 'the data on the device and stops before storing a session that is not the same '

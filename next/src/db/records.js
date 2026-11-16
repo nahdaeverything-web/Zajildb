@@ -280,6 +280,17 @@ export async function addMedia(birdId, kind, subtype, name, blob) {
   emitChange({ type: 'media', id: m.id, birdId });
   return m;
 }
+/**
+ * THE PHOTO INVARIANT (RULED 2026-11-16): a media record that holds bytes is never replaced by one that does not.
+ * Photos have no server copy (DF-4), so the bytes on a device are the only ones. Every writer that can meet a media
+ * record WITHOUT bytes — a pulled row, an imported row — passes it through here first: if the device already holds
+ * bytes under that id, the record written carries them.
+ */
+export async function withHeldBytes(m) {
+  if (!m || m.blob) return m;
+  const have = await idbGet('media', m.id);
+  return have && have.blob ? { ...m, blob: have.blob } : m;
+}
 export function mediaForBird(birdId) { return idbGetAll('media', 'birdId', birdId); }
 /** Put a media record back after a delete (undo). Emits, so views refresh. */
 export async function restoreMedia(m) {
@@ -391,6 +402,9 @@ export async function applySyncPut(store, record, at, recordId) {
     }
   }
 
+  // RF-23 (RULED 2026-11-16): a pulled media row is metadata only (§7) — and it used to replace the stored record
+  // whole, so the first cycle after a photo was taken removed its bytes from the device that took it.
+  if (store === 'media') body = await withHeldBytes(body);
   await idbPut(store, body);
   const mirror = SYNC_MIRROR[store];
   if (mirror) state[mirror].set(id, body);
