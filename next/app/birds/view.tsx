@@ -34,7 +34,7 @@ const searchText = (b: Bird) => [b.name, b.strain, b.colour, b.eyeSign, b.breede
 /** js/views/birds.js loadExample — merge, never destroy. */
 async function loadExample(file: string) {
   const payload = await (await fetch(asset(file))).json();
-  const counts = await db.importAll(payload, 'merge');
+  const counts = await db.loadExampleDataset(payload);   // RF-16: forgets the removal's tombstones for the file's own shipped ids, then merges
   toast(t('bird.exampleLoaded', { n: counts.birds }), { timeout: 7000, kind: 'info' });
 }
 

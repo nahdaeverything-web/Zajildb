@@ -3689,3 +3689,84 @@ gate-26 (the settings controls, first attempt) was red, 2352 / 1, in `screens/au
 **RF-23 confirmed on a real device (reported by Samir, 2026-11-17).** A photo added on his phone survived automatic
 sync and a reload; his PC shows the «photo on another device» placeholder for it. This is his observation on his
 own devices, recorded here as reported — not a measurement made in this tree.
+
+## 2026-11-18 — RF-16: the teaching data can be loaded again after it was removed
+
+RULED 2026-11-18: forget tombstones by shipped-id membership on the three dataset loaders only; `importAll`
+untouched; a guard on the call site; kept references stay references on a reload; general loft removal parked.
+
+**Built.** `loadExampleDataset()` in `src/example-data.js`, called by the empty-register button
+(`app/birds/view.tsx`) and the two buttons in الأدوات (`app/tools/parts.tsx`, one shared `load()`). A record is
+eligible only when its id is BOTH in the file AND in the shipped-id membership set (`exampleIds()`).
+Guard `example-loader-only`: who may clear a tombstone, exactly one clear in the example module, nothing under
+`src/db/` mentions the example data, the three call sites pinned.
+
+**The order is not the one first built, and the ruling does not state it — reported.** Built first as "forget the
+tombstones, then merge" (the 16 October proposal). Measured with automatic sync running (load → remove → load,
+`~/zajil-gate-logs/rf16-stress-3.log`): in 1 run of 8, **11 of 68 records were gone again** — device 57 records and
+11 tombstones, server 57 live rows, a second device 57. A device's own pushed deletions sit above its cursor; an
+automatic pull landed between the two steps, wrote 11 tombstones back, and the merge skipped those records. No
+operation was logged for them, so nothing would ever have brought them back.
+Now: (1) a shipped record that has a tombstone is handed to the merge stamped as made now (later than its deletion);
+(2) `importAll` merges as it always has; (3) the tombstone of every such record that is on the device afterwards is
+cleared. Nothing is forgotten before the data is in; a load that fails part-way clears only what came in. A record
+with no tombstone is passed through untouched — a first load keeps the file's own `updatedAt` on all 38 birds
+(checked). After the change: 24 runs of the same stress, 24 agree on 68 records (`rf16-stress-5.log`).
+**The stamp is a decision inside the ruling's "forget", made here because the measurement required it.** If it is
+not wanted, the alternative is a lock that keeps the coordinator out for the length of a load — sync design.
+
+**The 16 October measurement, repeated under membership by id** (`tests/e2e/screens/example_reload.py`, a stub that
+models the trigger's last-write-wins): the reload pushes 68 live rows, 0 rejected; a device that signs in afterwards
+holds 38 birds; a device that removed locally BEFORE the reload and syncs after it pulls first, its 128 pending
+operations are superseded, it POSTs nothing and holds the data again; a device that removes AFTER the reload wins
+and the other follows; a brand-new device ends with the latest intent. Same as October in every line.
+
+**Kept references.** After a removal that kept the sire's ancestor closure, a reload leaves each kept bird exactly
+as it was (flag, status, loft, `updatedAt`), loads the other example birds around them, and the toast counts only
+what was loaded.
+
+**Not covered, as ruled or as found:** tombstones of the pre-1.9.1 generation's ids stay (the loaders load only the
+current files). The empty-register loader has no failure message of its own — a refused load there is an unhandled
+rejection, as before this change (seen, not changed). Navigating away while a load is running can leave a record
+written without its operation — `importAll` writes the record and logs the op in two transactions (seen in a probe
+that reloaded mid-load: the loft never reached the server; not changed).
+
+## 2026-11-18 — RF-26 (FOUND, NOT FIXED): a pull can undo a local save made while it was applying
+
+Found while building RF-16. **Pre-existing and live** (`gh-pages bfe6ef5`); not introduced by RF-16.
+
+**Measured** (harness build, stub project, twice in two runs of the same sequence): load the teaching loft, add an
+own bird with an example sire, call the removal at once — while the automatic cycle started by the save is still
+pulling. Afterwards the sire «الفارس» is `external: false`, `status: breeder` — NOT a reference — and stays so.
+Its operations, verbatim from the log:
+
+```
+seq  14  put  import  …47.881Z   external false  status breeder      (the load)
+seq  70  put  user    …52.041Z   external true   status reference    changed: status+external+updatedAt+deviceId   (the removal's flip)
+seq 173  put  user    …52.607Z   external false  status breeder      changed: updatedAt+loftId+deviceId            (the removal's re-file)
+```
+
+Between 70 and 173 the record went back to `external false / breeder` with NO operation. Operation 173 changed only
+the loft, so it read a record that had already been reverted, and it is then pushed as the newest version: the
+server and every device converge on the wrong record.
+
+**Mechanism, read from `src/db/sync.js` and `src/db/records.js`:** a pull page decides last-write-wins against the
+operations that were PENDING WHEN THE PAGE STARTED (`pending.get(...)`), then applies each row; `applySyncPut` and
+`applySyncDelete` do not compare the row with the record on the device. A device's own pushed rows sit above its
+cursor and come back on its next pull. So a save made after the page started and before its row is applied is not
+seen: the older row (here the load's own row for the sire) is written over it. The removal is exposed because it is
+many saves in a row; any save in that window is.
+
+**Where it bites, in the fancier's terms:** an edit or a removal made in the seconds after a load or another burst of
+changes, while the sync indicator is still working, can be silently taken back — and the taken-back version then
+syncs as the truth. In the measured case a kept pedigree ancestor is left as an ordinary breeder in the fancier's
+loft.
+
+**Why the suites never saw it:** `example_remove.py` removes through the dialog, which takes long enough for the
+pull to finish. `example_reload.py` settles sync before each removal and says so.
+
+**Not fixed — it is sync design (§4).** Candidates, for a ruling: (a) re-read the pending operations for the row's
+record immediately before applying it, and compare; (b) make the comparison and the write one IndexedDB transaction;
+(c) keep the coordinator's pull and local multi-record actions (removal, import, replace) mutually exclusive.
+(a) narrows the window, (b) and (c) close it. Probe logs: `~/zajil-gate-logs/rf16-stress-*.log`, and the op listing
+above from `~/zajil-work/rf16/`.

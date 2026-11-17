@@ -13,9 +13,11 @@
 // computed from the two keys and the one namespace. A wrong derivation finds nothing to remove; it
 // never removes the wrong thing.
 import {
-  Health, Lofts, Pairs, Races, REFERENCE_STATUS, deleteBird, emitChange, idbGetAll, saveBird, state,
+  Health, Lofts, Pairs, Races, REFERENCE_STATUS, deleteBird, emitChange, idbGetAll, nowISO, saveBird, state,
 } from './db.js';
 import { EXAMPLE_ID_KEYS } from './example-ids.js';
+import { clearTombstone, getTombstone } from './db/oplog.js';
+import { importAll } from './db/io.js';
 
 /** The two dataset lofts, as tools/gen-example-large.js and the small example name them. */
 export const EXAMPLE_KEYS = ['loft-irbid-demo', 'loft-zarqa'];
@@ -167,4 +169,66 @@ export async function removeExampleData() {
   emitChange({ type: 'import' });
   // what was removed in all — the presence counts; the sweep only catches what deleteBird's cascade did not reach
   return { lofts: p.ids.length, birds, pairs: p.pairs, races: p.races, health: p.health, swept: { pairs, races, health }, kept: p.kept, moved, target };
+}
+
+/** The stores a dataset file carries records for. */
+const DATASET_STORES = Object.freeze(['lofts', 'birds', 'pairs', 'raceResults', 'healthEvents']);
+
+/**
+ * THE DATASET LOADERS (RF-16, RULED 2026-11-18): someone who removed the teaching data can load it again.
+ *
+ * The removal tombstones every example record, and a merge refuses a record whose deletion is newer than it — so
+ * loading the same dataset afterwards imported nothing, without a word. A loader therefore FORGETS the tombstones of
+ * the records it loads, and only those: an id that is BOTH in the file AND in the shipped-id membership set
+ * (exampleIds()). A fancier's own deleted record is never in that set, so no file — whatever it carries — can make
+ * this bring one back.
+ *
+ * NOT in importAll: importing a backup must keep honouring deletions. This is the loaders' act alone
+ * (guards/run.mjs `example-loader-only`).
+ * KEPT REFERENCES STAY REFERENCES (same ruling): an example bird the removal kept was never deleted, has no tombstone,
+ * and is newer than the file's copy, so the merge skips it — the loader does not touch a record the fancier's birds
+ * point at.
+ *
+ * THE ORDER, and why (measured 2026-11-18; the ruling says "forget", the order is this file's — reported).
+ * Forgetting FIRST and merging after lost data: a device's own pushed deletions sit above its cursor, an automatic
+ * pull landed between the two steps and wrote the tombstones back, and the merge then skipped those records — 11 of
+ * 68 gone again in one run of eight, on the device, the server and a second device alike. So nothing is forgotten
+ * before the data is in:
+ *   1. a shipped record that has a tombstone is handed to the merge STAMPED as made now (later than its deletion,
+ *      whatever clock wrote that) — it IS a newer act than its removal, and the merge's own rule then admits it;
+ *   2. importAll merges, exactly as it always has;
+ *   3. the tombstone of every such record that is now on the device is cleared — a winning record clears its
+ *      tombstone, the corollary applySyncPut and restoreBird already follow.
+ * A tombstone written back mid-load is older than the stamped record and is cleared in step 3. A load that fails
+ * part-way clears only what did come in: every other deletion still stands.
+ * A record with no tombstone is passed through untouched, so a first load is byte-for-byte what it was.
+ */
+export async function loadExampleDataset(payload) {
+  const IDS = await exampleIds();
+  const again = [];
+  let fresh = payload;
+  if (payload && typeof payload === 'object') {
+    fresh = { ...payload };
+    for (const store of DATASET_STORES) {
+      if (!Array.isArray(payload[store])) continue;
+      const out = [];
+      for (const rec of payload[store]) {
+        const tomb = rec && typeof rec.id === 'string' && IDS[store] && IDS[store].has(rec.id) ? await getTombstone(store, rec.id) : null;
+        if (!tomb) { out.push(rec); continue; }
+        const now = nowISO(); const after = new Date((Date.parse(tomb.at) || 0) + 1).toISOString();
+        out.push({ ...rec, updatedAt: now > after ? now : after });
+        again.push([store, rec.id]);
+      }
+      fresh[store] = out;
+    }
+  }
+  try {
+    const counts = await importAll(fresh, 'merge');
+    return { ...counts, forgotten: again.length };
+  } finally {
+    for (const [store, id] of again) {
+      if (!state[store] || !state[store].has(id)) continue;                    // it did not come in: its deletion stands
+      try { await clearTombstone(store, id); } catch { /* the load's own failure, if any, is the one to report */ }
+    }
+  }
 }

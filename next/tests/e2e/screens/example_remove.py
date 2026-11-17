@@ -185,9 +185,9 @@ try:
         gone = row_present(d2, ROOT); d2.goto(H, wait_until='load'); d2.wait_for_function('window.__zajilReady')
         again = run(d2, "async (db) => { const big = await (await fetch('/example-loft-large.json')).json(); return db.importAll(big, 'merge'); }")
         check('[own] the row is gone', gone == 0, gone)
-        # MEASURED, recorded as a follow-up (not ruled): the 68 tombstones the removal wrote are newer than the dataset's records,
-        # so a merge-import of the same dataset on this device brings nothing back — the loader says «0» and the row stays absent
-        check('[own · seen] loading the same teaching loft again on this device imports nothing — the tombstones win (follow-up, not ruled)', again['birds'] == 0 and again['skipped'] >= 68 and row_present(d2, ROOT) == 0, again)
+        # RF-16 (RULED 2026-11-18): this is importAll, NOT a dataset loader — a backup import goes on honouring the removal's
+        # tombstones. Loading the teaching data again is the loaders' act (loadExampleDataset; screens/example_reload.py).
+        check('[own · importAll] importing the same file as a backup after the removal brings nothing back — importAll honours the deletions (RF-16)', again['birds'] == 0 and again['skipped'] >= 68 and row_present(d2, ROOT) == 0, again)
         c2.close()
 
         # ═══ RF-14 by a PULLED tombstone: another device removes the loft this one is standing in ═══

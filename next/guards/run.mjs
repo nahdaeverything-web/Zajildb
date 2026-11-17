@@ -323,6 +323,31 @@ const guards = {
     return bad;
   },
 
+  // RF-16 (RULED 2026-11-18): forgetting a deletion is the DATASET LOADERS' act alone. loadExampleDataset() clears the
+  // tombstones of the shipped ids in the file it is about to load; importAll must go on honouring every deletion.
+  // Pinned: who may clear a tombstone at all, that the example module clears in exactly one place, that importAll's
+  // file knows nothing of the example data, and the three call sites of the loader (comments masked).
+  'example-loader-only'() {
+    const bad = [];
+    const CLEARERS = new Set(['src/db/oplog.js', 'src/db/io.js', 'src/db/records.js', 'src/example-data.js']);
+    const CALLS = new Map([['src/example-data.js', 1], ['app/birds/view.tsx', 1], ['app/tools/parts.tsx', 1]]);   // the definition; the empty state; الأدوات (both buttons share one load())
+    const seen = new Map();
+    for (const f of files('.js', '.mjs', '.ts', '.tsx')) {
+      const rel_ = relative(ROOT, f);
+      if (!/^(src|app)\//.test(rel_)) continue;
+      const src = maskComments(readFileSync(f, 'utf8'));
+      const clears = (src.match(/\bclearTombstone\s*\(/g) || []).length;
+      if (clears && !CLEARERS.has(rel_)) bad.push(`${rel_} clears a tombstone (${clears}×) — only the data layer and the dataset loader may`);
+      if (rel_ === 'src/example-data.js' && clears !== 1) bad.push(`src/example-data.js clears a tombstone ${clears}× — 1 ruled, inside loadExampleDataset()`);
+      const calls = (src.match(/\bloadExampleDataset\s*\(/g) || []).length;
+      if (calls) seen.set(rel_, calls);
+      if (calls && !CALLS.has(rel_)) bad.push(`${rel_} calls loadExampleDataset (${calls}×) — the three dataset loaders only; a backup import must honour deletions`);
+      if (/^src\/db\//.test(rel_) && /example-data|example-ids|exampleIds|loadExampleDataset/.test(src)) bad.push(`${rel_} mentions the example data — importAll and the data layer must not know it`);
+    }
+    for (const [rel_, n] of CALLS) if ((seen.get(rel_) || 0) !== n) bad.push(`${rel_}: loadExampleDataset appears ${seen.get(rel_) || 0}× — ${n} pinned`);
+    return bad;
+  },
+
   // RULED 2026-11-13 (RF-19): ONE coordinator owns every reason a sync cycle runs. It lives in src/db/sync.js and is
   // started once, by src/components/SyncCoordinator.tsx. The only other doors are the two that ask it for a cycle NOW —
   // the sign-in flow and the «مزامنة الآن» button — and the on/off switch; all three go through its single flight.

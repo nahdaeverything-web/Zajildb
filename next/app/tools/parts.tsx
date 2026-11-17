@@ -381,7 +381,7 @@ export function ExamplesDetail() {
     try {
       // asset(), not a relative URL: this screen is at `<base>/tools/` since trailingSlash was ruled (app/birds/view.tsx)
       await destructive(async () => {
-        const counts = await db.importAll(await (await fetch(asset(file))).json(), 'merge') as { birds: number };
+        const counts = await db.loadExampleDataset(await (await fetch(asset(file))).json()) as { birds: number };   // RF-16
         toast(t('bird.exampleLoaded', { n: counts.birds }), { timeout: 7000, kind: 'info' });
       }, failedAction(t('example.title')));
     } finally { setBusy(false); }
