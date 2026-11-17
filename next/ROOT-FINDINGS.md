@@ -3770,3 +3770,26 @@ record immediately before applying it, and compare; (b) make the comparison and 
 (c) keep the coordinator's pull and local multi-record actions (removal, import, replace) mutually exclusive.
 (a) narrows the window, (b) and (c) close it. Probe logs: `~/zajil-gate-logs/rf16-stress-*.log`, and the op listing
 above from `~/zajil-work/rf16/`.
+
+## 2026-11-18 — deploy record: RF-16 (`gh-pages f6110c1`)
+
+Live: `gh-pages f6110c1`, built from `feat/react-port fa08b40`. **Rollback target: `bfe6ef5`** (then `9bcbc0b`).
+Rollback is `git push -f git@github.com:nahdaeverything-web/zajilv2.git bfe6ef5:gh-pages` from a clone that has it.
+Mirror `main` = `bb492d2` (`git subtree split --prefix=next fa08b40`, fast-forward from `af64982`).
+
+| step | result | log (`~/zajil-gate-logs/`) |
+|---|---|---|
+| gate-33 on the RF-16 tree | 2393 passed, 0 failed across 38 steps, control 548/548, 0 page-error records | `gate-33-rf16.log` |
+| stage for `/zajilv2/`, inject, verify, scan | 159 files, CLEAN | `deploy8-01`, `deploy8-02` |
+| rehearsal on the local Pages stand-in | 44 passed, 0 failed, NET armed | `deploy8-04` |
+| live before | `gh-pages bfe6ef5`, `main af64982` | `deploy8-03` |
+| live bytes | 158 files by sha256, 0 differ (new sw.js after 31 s) | `deploy8-05` |
+| live verification | 44 passed, 0 failed, NET armed — nothing reached the real project | `deploy8-06` |
+
+Two things about the run itself. The rehearsal used a stand-in server already listening on :8178 from the previous
+deploy (it serves a symlink to `release/`, re-resolved per request, so it served this build); the second server
+this run tried to start failed to bind and was not needed. The first push of the deploy commit failed — the clone
+was made over https, which has no credentials here — and was repeated over ssh; nothing reached the remote from the
+failed attempt.
+
+Not yet accepted on Samir's two devices. RF-26 (above) is live in this build as it was in the last.
