@@ -194,6 +194,17 @@ export default function BirdForm() {
   const firstRing = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
   const photoIn = useRef<HTMLInputElement>(null); const docIn = useRef<HTMLInputElement>(null);
+  // RULED 2026-11-17 (from Samir's phone): a picked photo SHOWS, in the photo tile, before the form is saved. It showed
+  // as a file name in 12 px type and nothing else. The tile draws the photo picked last; the bytes are still stored
+  // only on save. The object URL is revoked when another photo replaces it and when the form goes away.
+  const lastPhoto = [...pending].reverse().find((m) => m.kind === 'photo')?.file || null;
+  const [preview, setPreview] = useState<string | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!lastPhoto) { setPreview(null); return; }
+    const url = URL.createObjectURL(lastPhoto); setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [lastPhoto]);
 
   // bird-form.js:13-26 — the draft: a clone to edit, or a fresh record with the entry-point intents applied
   // The draft is seeded FROM the data layer, which cannot be read until initDB() resolves —
@@ -358,7 +369,10 @@ export default function BirdForm() {
           <div className={s.seclbl}>{t('form.sec.basics')}</div>
           <div className={s.card}>
             <div className={s.photo}>
-              <button type="button" aria-label={t('bird.addPhoto')} onClick={() => photoIn.current?.click()} data-testid="photo-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></button>
+              <button type="button" aria-label={t('bird.addPhoto')} onClick={() => photoIn.current?.click()} data-testid="photo-btn">{preview
+                /* eslint-disable-next-line @next/next/no-img-element */
+                ? <img src={preview} alt="" data-testid="photo-preview" />
+                : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>}</button>
               <div><div className={s.t}>{t('bird.addPhoto')}</div><p>{t('form.photo.hint')}</p>
                 {/* not a <button>: the spec's .photo button rule is the 92px photo tile */}
                 <span role="button" tabIndex={0} className={s.linkbtn} onClick={() => docIn.current?.click()} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); docIn.current?.click(); } }} data-testid="doc-btn">{t('bird.addDocument')}</span>

@@ -254,6 +254,20 @@ try:
         pg.go_back(); pg.wait_for_timeout(700)
         check('[entry_ergonomics#13] …and going back returns to the LIST, never to a stale form (replace, not push)', '/birds' in pg.url and pg.locator('[data-testid=bird-row]').count() > 0, pg.url)
 
+        # ── a picked photo shows before the form is saved (RULED 2026-11-17, from Samir's phone) ──
+        PICK = os.path.join(HERE, '..', 'fixtures', 'picked-3000x2000.jpg')
+        TILE = "() => { const i = document.querySelector('[data-testid=photo-btn] [data-testid=photo-preview]'); const b = document.querySelector('[data-testid=photo-btn]'); if (!i) return null; const r = i.getBoundingClientRect(), q = b.getBoundingClientRect(); return { natural: [i.naturalWidth, i.naturalHeight], drawn: [Math.round(r.width), Math.round(r.height)], tile: [Math.round(q.width), Math.round(q.height)], blob: i.src.startsWith('blob:') }; }"
+        pg.goto(NEW, wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
+        check('[photo] before a photo is picked the tile shows the plus, no picture', pg.evaluate(TILE) is None and pg.locator('[data-testid=photo-btn] svg').count() == 1)
+        pg.locator('[data-testid=bird-form] input[type=file]').first.set_input_files(PICK); pg.wait_for_timeout(1500); tile = pg.evaluate(TILE)
+        check('[photo · M-preview fails here] a picked photo is DRAWN in the photo tile before saving — the picture itself, decoded, filling the 92 px tile',
+              bool(tile) and tile['natural'] == [3000, 2000] and tile['blob'] and tile['drawn'][0] >= 88 and tile['drawn'][1] >= 88 and tile['tile'] == [92, 92], tile)
+        check('[photo] …its file name is still listed, and nothing is stored yet', pg.locator('[data-testid=pending-media]').inner_text().strip() == 'picked-3000x2000.jpg' and snap(pg, "async () => (await window.__zajilDb.idbGetAll('media')).length") == 0)
+        pg.fill('[data-testid=f-name]', 'طير الصورة'); pg.click('[data-testid=save-btn]'); pg.wait_for_url(re.compile(r'/bird/\?id='), timeout=6000)
+        try: pg.wait_for_selector('[data-testid=media-photo] img', timeout=6000)
+        except Exception: pass
+        check('[photo] after saving, the profile shows the photo without being reopened', pg.locator('[data-testid=media-photo] img').count() == 1 and snap(pg, "async () => (await window.__zajilDb.idbGetAll('media')).filter(m => m.blob).length") == 1)
+
         check('zero page errors', not errs, errs)
         b.close()
 finally:

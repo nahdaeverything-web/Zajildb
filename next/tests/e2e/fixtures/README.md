@@ -8,3 +8,5 @@
   `loftId`. It reproduces the real dev project's state measured in ROOT-FINDINGS RF-17, where a
   device that loaded the teaching loft before and after v1.9.1 pushed both generations.
   `screens/example_remove.py` merge-imports it beside the shipped file so one device holds both.
+
+- `picked-3000x2000.jpg` — a SYNTHETIC 3000×2000 JPEG (generated 2026-11-17 with PIL from a seeded random pattern, 2.1 MB). No person, no place, no camera. Used by `screens/bird_form.py` for the picked-photo preview.

@@ -3620,3 +3620,29 @@ uses a new string, `example.remove.bodyOutside` (PROPOSED): no loft is named, an
 because that loft is removed. With no dataset loft on the device the wording is `example.remove.bodyNoLoft`, as
 before, and a new check holds that branch. Suite `example_remove.py` 70 checks. Mutant M-clause (the clause
 dropped): 69 passed, 1 failed, at the named check (`~/zajil-gate-logs/clause-mutant.log`).
+
+---
+
+## 2026-11-17 — a picked photo shows in the bird form before saving
+
+**Reported from Samir's phone:** a photo picked on the bird form shows nothing until the form is saved and the bird
+reopened.
+
+**Measured before the change** (`~/zajil-gate-logs/photoform-probe-BEFORE.log`, 390×844, harness build):
+
+```
+after picking  : {"imgsInForm": [], "tileHtml": "<svg …plus…>", "tileBg": "none", "pendingText": "picked.jpg", "pendingFontPx": "12px"}
+after save +300 ms: {"tiles": 0, "photos": []}
+after save +1000 ms: {"tiles": 1, "photos": [[2048, 1365, true]]}
+the EDIT form of that bird: {"imgsInForm": [], "tileHtml": "<svg …plus…>", "pendingText": null}
+```
+
+The form showed the file name in 12 px type and no picture. In this measurement the profile did show the photo
+within a second of saving, without being reopened — the "reopened" half of the report was not reproduced here.
+
+**Built (RULED 2026-11-17, "fix it here if small").** The 92 px photo tile draws the photo picked last, from an
+object URL revoked when it is replaced and when the form goes away. Bytes are still stored only on save.
+`screens/bird_form.py` 63 checks; mutant M-preview: 62 passed, 1 failed, at its named check.
+
+**Seen, not changed:** the edit form shows nothing for the photos a bird already has; with several photos picked only
+the last is drawn (all are listed by name).
