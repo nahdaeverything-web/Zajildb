@@ -200,10 +200,17 @@ export function loftStatuses({ includeReference = false } = {}) {
  * loft data, and syncing it would fight the user across devices.
  */
 export async function setSetting(key, value) {
-  // RF-25 (RULED 2026-11-17): storage FIRST. Memory was written first, so a write storage refused left the app showing
-  // — and acting on — a value that was gone at the next reload. Memory now takes the value only once it is stored.
-  await idbPut('settings', { key, value });
+  // RF-25 (RULED 2026-11-17): a value storage refuses does not stay in memory. Memory is written first, as it always
+  // was — callers and the snapshot timer read it the moment this is called — and is put back if the write fails.
+  // (Storage-first was tried, 9ac7e7a: it left a gap in which «آخر نسخة تلقائية» was stored-but-not-yet-in-memory, and
+  // auto_backup.py failed on it one run in six.) Put back only if nothing newer has been set meanwhile.
+  const had = Object.prototype.hasOwnProperty.call(state.settings, key); const before = state.settings[key];
   state.settings[key] = value;
+  try { await idbPut('settings', { key, value }); }
+  catch (e) {
+    if (state.settings[key] === value) { if (had) state.settings[key] = before; else delete state.settings[key]; }
+    throw e;
+  }
 }
 
 /**

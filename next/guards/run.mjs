@@ -374,8 +374,8 @@ const guards = {
        'RF-14 (RULED 2026-10-14): ensureCurrentLoft() — a stored currentLoftId is validated at boot '
        + 'instead of trusted; a dangling one adopts the single remaining loft or gets a fresh pristine '
        + 'loft, so a new bird is never filed under an id no loft has. Vanilla has the same defect and '
-       + 'is NOT changed — main is the live deployment. RF-25 (RULED 2026-11-17): setSetting() writes storage '
-       + 'before memory, so a setting storage refused is never shown or acted on. Vanilla is NOT changed.'],
+       + 'is NOT changed — main is the live deployment. RF-25 (RULED 2026-11-17): setSetting() puts memory back '
+       + 'when storage refuses the write, so a refused setting does not stay shown or acted on. Vanilla is NOT changed.'],
       ['src/db/records.js',
        'RF-14 (RULED 2026-10-14): the generic remove() and applySyncDelete() call ensureCurrentLoft() '
        + 'after a loft goes, locally or by a pulled tombstone. Port-only, as storage.js. RF-23 (RULED 2026-11-16): '

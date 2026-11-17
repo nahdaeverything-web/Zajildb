@@ -3578,3 +3578,26 @@ suite exit 1 · 40 passed, 2 failed
 ```
 
 Vanilla has the same order and is not changed.
+
+---
+
+## 2026-11-17 — RF-25 corrected: memory is put back, not written second
+
+**`9ac7e7a` (storage first) was wrong, and its green gate was luck.** gate-26, on the next change, failed 1 of
+2353 in `screens/auto_backup.py`:
+
+```
+✗ [boot · M-boot fails here] the last snapshot 13 hours old: the boot takes a new one  {'n': 2, … 'last': '2026-11-17T01:26:30.944Z', …}
+```
+
+The snapshot was stored and «آخر نسخة تلقائية» was not yet in memory: storage-first opened a gap of one write in
+which memory is behind. Rerun on that tree, the suite failed 1 run in 6 (a second check, same cause). The product
+reads that setting from memory to decide whether a snapshot is due (`src/components/AutoBackup.tsx`), so the gap
+is not only a test's concern.
+
+**Now:** `setSetting()` writes memory first, as before RF-25, and puts the previous value back when storage refuses
+the write — unless something newer was set meanwhile. Both forms were allowed by the ruling.
+`auto_backup.py`: 14 runs, 0 failed. `tools_failures.py`: 42 passed. Mutant M-rf25b (the put-back removed)
+fails at the same two named checks as M-rf25 (`~/zajil-gate-logs/rf25b-mutant.log`).
+
+The change that was under gate-26 (the settings controls) was not committed; it is gated again after this.
