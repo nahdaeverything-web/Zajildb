@@ -3601,3 +3601,12 @@ the write — unless something newer was set meanwhile. Both forms were allowed 
 fails at the same two named checks as M-rf25 (`~/zajil-gate-logs/rf25b-mutant.log`).
 
 The change that was under gate-26 (the settings controls) was not committed; it is gated again after this.
+
+---
+
+## 2026-11-17 — the settings controls in الأدوات surface a failed save
+
+**RULED 2026-11-17.** `set()` in `app/tools/view.tsx` — language, numerals, dates, COI depth, contrast — runs
+through `destructive()` like the eleven, named by each control's existing label. No new string.
+Suite `tools_failures.py`, now 57 checks. Mutant M-h12 (the bare call restored): 47 passed, 10 failed — the five
+named checks and the five typography checks that find no toast (`~/zajil-gate-logs/set-mutant.log`).

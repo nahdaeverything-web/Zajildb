@@ -52,7 +52,9 @@ export default function ToolsView() {
   const anomalies = (db.listSyncAnomalies ? db.listSyncAnomalies() : []) as Anomaly[];
   const sync = syncRowCopy(settings, cfg, auth, status, anomalies);
   const dups = (findDuplicateRings(birds) as unknown[]).length;
-  const set = (k: string, v: unknown) => { saveSetting(k, v); };
+  // RULED 2026-11-17: the five settings controls surface a failed save like the eleven — it was a bare, un-awaited call
+  const SETTING_LABEL: Record<string, string> = { lang: 'set.language', numerals: 'set.numerals', dates: 'set.dates', coiDepth: 'set.coiDepth', highContrast: 'set.highContrast' };
+  const set = (k: string, v: unknown) => { void destructive(async () => { await saveSetting(k, v); }, failedAction(t(SETTING_LABEL[k] || 'tools.settings'))); };
   const depth = +(settings.coiDepth as number || 10);
   const hc = !!settings.highContrast;
   const lang = (settings.lang as string) || 'ar';

@@ -143,6 +143,14 @@ try:
         pg.fill('[data-testid=scan-url]', 'https://vision2.example.org'); pg.evaluate(ARM); pg.locator('[data-testid=scan-url]').blur()
         verdict(pg, '7b', 'M-h07', 'saving the scanner address by leaving the field', 'ماسح شهادات النسب الورقية')
 
+        # ── 12 the five settings controls (RULED 2026-11-17): one handler, set(), behind all of them ──
+        goto(pg, ROOT + 'tools/', '[data-testid=tools-list]')
+        for row, sel, key, what in [('lang', "[data-row=lang] [data-testid=seg-btn] >> nth=1", 'lang', 'اللغة'), ('numerals', "[data-row=numerals] [data-testid=seg-btn] >> nth=1", 'numerals', 'الأرقام'),
+                                    ('dates', "[data-row=dates] [data-testid=seg-btn] >> nth=0", 'dates', 'عرض التاريخ'), ('coi', '[data-testid=coi-more]', 'coiDepth', 'عمق حساب COI (أجيال)'), ('contrast', '[data-testid=hc-input]', 'highContrast', 'وضع التباين العالي (ضوء الشمس)')]:
+            open_row(pg, row); was = (run(pg, STORED, key), run(pg, "(db, k) => db.state.settings[k] ?? null", key))
+            pg.evaluate(ARM); pg.locator(sel).click()
+            verdict(pg, f'12 · {key}', 'M-h12', f'changing «{what}»', what, unchanged=('the setting is as it was, in storage and in memory', lambda: (run(pg, STORED, key), run(pg, "(db, k) => db.state.settings[k] ?? null", key)) == was))
+
         # ── 9 saving the loft ──
         goto(pg, ROOT + 'tools/', '[data-testid=tools-list]'); open_row(pg, 'loft-name'); pg.fill('[data-testid=ln]', 'اسم لن يُحفظ'); pg.evaluate(ARM); pg.locator('[data-testid=loft-save][data-field=name]').click()
         verdict(pg, '9', 'M-h09', 'saving the loft', 'اللوفت', unchanged=('the loft keeps its name', lambda: run(pg, "(db) => db.currentLoft().name") == 'لوفت الاختبار'))
