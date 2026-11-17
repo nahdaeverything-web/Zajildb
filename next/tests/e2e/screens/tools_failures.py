@@ -107,8 +107,17 @@ try:
         pg.evaluate(ARM); pg.click('[data-testid=sync-toggle]')
         verdict(pg, '2', 'M-h02', 'the sync toggle', lab, unchanged=('the stored setting is as it was', lambda: run(pg, STORED, 'syncEnabled') == was))
         mem = run(pg, "(db) => db.state.settings.syncEnabled"); stored = run(pg, STORED, 'syncEnabled')
-        check('[seen · not ruled · RF-25] …but the setting IN MEMORY changed though nothing was stored: the screen shows sync off until the next reload, when it is on again', mem is False and stored is not False, (mem, stored))
-        pg.reload(wait_until='load'); pg.wait_for_selector('[data-testid=sync-toggle]', timeout=15000); pg.wait_for_timeout(800); clear(pg); pg.errs.clear()
+        check('[RF-25 · M-rf25 fails here] …and the setting IN MEMORY is what storage holds — sync is still on, and the button still offers to turn it off, with no reload', mem is not False and stored is not False and pg.locator('[data-testid=sync-toggle]').inner_text().strip() == lab, (mem, stored, pg.locator('[data-testid=sync-toggle]').inner_text().strip()))
+        # RF-25 at the layer itself: a refused write rejects, and neither a setting that existed nor one that did not is left changed in memory
+        pg.evaluate(ARM)
+        direct = run(pg, """async (db) => { const before = db.state.settings.coiDepth; const out = {};
+            try { await db.setSetting('coiDepth', 14); out.a = 'resolved'; } catch (e) { out.a = 'rejected'; }
+            try { await db.setSetting('rf25-never-set', 'x'); out.b = 'resolved'; } catch (e) { out.b = 'rejected'; }
+            return { ...out, same: db.state.settings.coiDepth === before, absent: !('rf25-never-set' in db.state.settings) }; }"""); pg.evaluate(HEAL)
+        check('[RF-25 · M-rf25 fails here] setSetting() with storage refusing: it rejects, an existing setting keeps its value in memory, and a new one does not appear', direct == {'a': 'rejected', 'b': 'rejected', 'same': True, 'absent': True}, direct)
+        run(pg, "async (db) => { await db.setSetting('rf25-probe', 7); }")
+        check('[RF-25] …and with storage accepting, memory and storage both take the value', run(pg, "(db) => db.state.settings['rf25-probe']") == 7 and run(pg, STORED, 'rf25-probe') == 7, '')
+        pg.errs.clear()
 
         # ── 3 deleting a duplicate copy ──
         goto(pg, ROOT + 'tools/duplicates/', '[data-testid=dup-delete]')

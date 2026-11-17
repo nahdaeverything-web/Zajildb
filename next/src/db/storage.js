@@ -200,8 +200,10 @@ export function loftStatuses({ includeReference = false } = {}) {
  * loft data, and syncing it would fight the user across devices.
  */
 export async function setSetting(key, value) {
-  state.settings[key] = value;
+  // RF-25 (RULED 2026-11-17): storage FIRST. Memory was written first, so a write storage refused left the app showing
+  // — and acting on — a value that was gone at the next reload. Memory now takes the value only once it is stored.
   await idbPut('settings', { key, value });
+  state.settings[key] = value;
 }
 
 /**

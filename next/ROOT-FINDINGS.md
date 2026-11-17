@@ -3554,3 +3554,27 @@ not complete; the screen still shows the unsaved value until the reload. The sui
 
 **Seen, not ruled, not fixed.** `set()` in `app/tools/view.tsx` — language, numerals, dates, COI depth, contrast —
 calls `saveSetting` without awaiting or catching it. It was not among the eleven listed.
+
+---
+
+## 2026-11-17 — RF-25 fixed: a setting storage refused is not kept in memory
+
+**RULED 2026-11-17.** `setSetting()` (`src/db/storage.js`) writes storage first and memory second. Storage-first
+was chosen over a rollback because every caller awaits it, and there is then no moment at which memory holds a
+value storage has not taken.
+
+**Correction to the first report of RF-25.** It said "the screen shows sync off". That was read from memory
+(`state.settings.syncEnabled === false`), not from the screen: under the mutant the button still read
+«إيقاف المزامنة». What was measured is that memory and storage disagreed until a reload.
+
+**Tests** (`tests/e2e/screens/tools_failures.py`, now 42 checks) and the mutant, memory-first restored
+(`~/zajil-gate-logs/rf25-mutant.log`):
+
+```
+═══ MUTANT M-rf25
+suite exit 1 · 40 passed, 2 failed
+  ✗ [RF-25 · M-rf25 fails here] …and the setting IN MEMORY is what storage holds — sync is still on, and the button still offers to turn it off, with no reload  (False, None, 'إيقاف المزامنة')
+  ✗ [RF-25 · M-rf25 fails here] setSetting() with storage refusing: it rejects, an existing setting keeps its value in memory, and a new one does not appear  {'a': 'rejected', 'b': 'rejected', 'same': False, 'absent': False}
+```
+
+Vanilla has the same order and is not changed.
