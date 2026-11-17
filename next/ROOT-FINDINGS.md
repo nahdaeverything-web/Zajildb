@@ -3664,3 +3664,28 @@ NO service worker | url /sign-in/ | footer: الإصدار غير معروف | h
 **Fixed:** `<code>` wraps a reported version only. The walk now opens /sign-in with no service worker at phone
 width: on the unfixed build 18 passed, 1 failed at the named check (`signin-mono-BEFORE.log`); fixed, 19 passed.
 Not explained: why the walk's existing /sign-in visit (1400 wide) never caught it.
+
+---
+
+## 2026-11-17 — deploy record: the handlers set (`gh-pages bfe6ef5`)
+
+Built from `feat/react-port 10d10ac`. Rollback target `9bcbc0b`. Live bytes: 158 files compared by sha256, 0 differ.
+Live verification: 44 passed, 0 failed, THE NET armed. Logs `~/zajil-gate-logs/deploy7-01…06-*.log`.
+Mirror `main` `d1ff92c` → `af64982` (fast-forward).
+
+| commit | what | gate |
+|---|---|---|
+| `155ec2e` | the eleven handlers say their failures | gate-24 · 2336 / 0 |
+| `9ac7e7a` | RF-25, storage first — superseded by the next | gate-25 · 2338 / 0 |
+| `e1ca54c` | RF-25 corrected: memory put back on a refused write | gate-27 · 2338 / 0 |
+| `2b2f799` | the five settings controls say a failed save | gate-28 · 2353 / 0 |
+| `8a45d80` | the no-loft wording keeps «ثم اللوفت التجريبي نفسه» | gate-29 · 2354 / 0 |
+| `db7e3e5` | a picked photo is drawn in the bird form before saving | gate-30 · 2358 / 0 |
+| `10d10ac` | the sign-in footer's «غير معروف» in the Arabic face | gate-31 · 2360 / 0 |
+
+gate-26 (the settings controls, first attempt) was red, 2352 / 1, in `screens/auto_backup.py`; the cause was
+`9ac7e7a`, recorded above under «RF-25 corrected». Nothing was committed from it.
+
+**RF-23 confirmed on a real device (reported by Samir, 2026-11-17).** A photo added on his phone survived automatic
+sync and a reload; his PC shows the «photo on another device» placeholder for it. This is his observation on his
+own devices, recorded here as reported — not a measurement made in this tree.
