@@ -3610,3 +3610,13 @@ The change that was under gate-26 (the settings controls) was not committed; it 
 through `destructive()` like the eleven, named by each control's existing label. No new string.
 Suite `tools_failures.py`, now 57 checks. Mutant M-h12 (the bare call restored): 47 passed, 10 failed — the five
 named checks and the five typography checks that find no toast (`~/zajil-gate-logs/set-mutant.log`).
+
+---
+
+## 2026-11-17 — the no-loft wording keeps the clause that the teaching loft goes
+
+**RULED 2026-11-17.** With an example record filed outside the named lofts AND a dataset loft present, the question
+uses a new string, `example.remove.bodyOutside` (PROPOSED): no loft is named, and «ثم اللوفت التجريبي نفسه» is kept
+because that loft is removed. With no dataset loft on the device the wording is `example.remove.bodyNoLoft`, as
+before, and a new check holds that branch. Suite `example_remove.py` 70 checks. Mutant M-clause (the clause
+dropped): 69 passed, 1 failed, at the named check (`~/zajil-gate-logs/clause-mutant.log`).

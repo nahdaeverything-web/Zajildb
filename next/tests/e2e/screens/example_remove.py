@@ -257,10 +257,17 @@ try:
               one['birds'] == 38 and one['kept'] == 0 and one['elsewhere'] == 1 and one['because'] == 0 and one['own'] == 0, one)
         text, toast, gone = ui_remove(h0, ROOT); s = run(h0, STATE)
         # H3 DECISION 4 (RULED 2026-11-17): with ANY example record filed outside the named dataset lofts, the question uses the no-loft wording
-        check('[H3 · decision 4 · M-outside fails here] one example record is filed outside the named loft, so the question names NO loft: «…من البيانات التجريبية.», not «من «loft»، ثم اللوفت التجريبي نفسه»',
-              one['outside'] == 1 and bool(one['loftName']) and 'سجلًا صحيًا من البيانات التجريبية. لا يُمسّ أي طير من طيورك.' in text and one['loftName'] not in text and 'ثم اللوفت التجريبي نفسه' not in text, (one['outside'], one['loftName'], text[:220]))
+        check('[H3 · decision 4 · M-outside fails here] one example record is filed outside the named loft, so the question names NO loft — «…من البيانات التجريبية» — and still says the teaching loft itself goes: «، ثم اللوفت التجريبي نفسه.»',
+              one['outside'] == 1 and bool(one['loftName']) and 'سجلًا صحيًا من البيانات التجريبية، ثم اللوفت التجريبي نفسه. لا يُمسّ أي طير من طيورك.' in text and one['loftName'] not in text, (one['outside'], one['loftName'], text[:220]))
         check('[H3 · M-loft fails here] …the removal deletes it with the rest: no bird left, no reference bird made, the own loft untouched', gone and s['birds'] == 0 and s['external'] == [] and s['lofts'] == {one['mine']: 'لوفتي'} and 'كمراجع' not in text, (s['birds'], s['external'], text[:160]))
         ch.close()
+        # the other branch of the same rule: NO dataset loft is on the device, so there is no loft to say goes
+        cn, hn = device(b, H, 'n@zajil.test')
+        run(hn, "async (db) => { await db.Lofts.save({ ...db.currentLoft(), name: 'لوفتي' }); await db.importAll(await (await fetch('/example-loft-large.json')).json(), 'merge'); await db.Lofts.remove('8f268d1b-3dbe-57be-8d77-ede52297a2cd'); }")
+        pn = run(hn, "async (db) => { const p = await db.examplePresence(); return p ? { lofts: p.lofts.length, birds: p.birds } : null; }")
+        textn = ui_remove(hn, ROOT, confirm=False)[0] if pn else ''
+        check('[H3 · decision 4] with example birds on the device and NO dataset loft, the question names no loft and does not say a loft goes', bool(pn) and pn['lofts'] == 0 and pn['birds'] > 0 and 'من البيانات التجريبية. لا يُمسّ أي طير من طيورك.' in textn and 'اللوفت التجريبي نفسه' not in textn, (pn, textn[:200]))
+        cn.close()
 
         # ── direction TWO: a fancier's record whose id is NOT a v4 uuid, filed IN the teaching loft, is NOT example data (the old rule deleted it) ──
         ci, h1 = device(b, H, 'i@zajil.test')

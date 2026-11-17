@@ -453,7 +453,8 @@ export function ExampleRemoveRow() {
     const names = p.because.slice(0, shown).map((x) => x.name || x.ring || '—').join('، ')
       + (p.because.length > shown ? ' ' + t('restore.confirm.more', { n: fmtNum(p.because.length - shown) }) : '');
     const counts = { birds: fmtNum(p.birds), pairs: fmtNum(p.pairs), races: fmtNum(p.races), health: fmtNum(p.health) };
-    const body = (p.lofts.length && !p.outside ? t('example.remove.body', { ...counts, lofts }) : t('example.remove.bodyNoLoft', counts))
+    // RULED 2026-11-17: with a record filed outside the named lofts the question names none — but a dataset loft that is present IS removed, and it says so
+    const body = (p.lofts.length && !p.outside ? t('example.remove.body', { ...counts, lofts }) : p.lofts.length ? t('example.remove.bodyOutside', counts) : t('example.remove.bodyNoLoft', counts))
       + (p.kept ? ' ' + t('example.remove.kept', { k: fmtNum(p.kept) }) + (p.because.length ? ' ' + t('example.remove.because', { names }) : '') : '')
       + (p.own ? ' ' + t('example.remove.own', { m: fmtNum(p.own) }) : '')
       + ((await db.unsentChanges()) as number > 0 ? ' ' + t('confirm.unsent') : '');
