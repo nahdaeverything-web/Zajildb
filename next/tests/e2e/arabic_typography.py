@@ -120,6 +120,14 @@ try:
         check('/tools with no service worker: the version row says «غير معروف»', shown == 'غير معروف', shown)
         check('[M-mono fails here] …and no Arabic on that screen is in a face that cannot draw it',
               not hits, '; '.join(f"{h['why'].strip()} face={h['face']} «{h['text'][:26]}»" for h in hits[:3]))
+        # …and the sign-in screen's footer, which had the same fault in its own markup (measured 2026-11-17 at phone width)
+        p3 = ctx2.new_page(); p3.add_init_script("Object.defineProperty(navigator, 'serviceWorker', { get: () => undefined });")
+        p3.goto(ROOT + 'sign-in/', wait_until='load'); p3.wait_for_selector('[data-testid=version]'); p3.wait_for_timeout(1500)
+        p3.evaluate("async () => { try { await document.fonts.ready; } catch (e) {} }")
+        foot = p3.locator('[data-testid=version]').inner_text().strip(); hits = p3.evaluate(SCAN)
+        check('/sign-in with no service worker: the footer says «الإصدار غير معروف»', 'غير معروف' in foot, foot)
+        check('[M-mono-signin fails here] …and no Arabic on that screen is in a face that cannot draw it',
+              not hits, '; '.join(f"{h['why'].strip()} face={h['face']} «{h['text'][:26]}»" for h in hits[:3]))
         ctx2.close()
         b.close()
 finally:

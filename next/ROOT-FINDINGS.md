@@ -3646,3 +3646,21 @@ object URL revoked when it is replaced and when the form goes away. Bytes are st
 
 **Seen, not changed:** the edit form shows nothing for the photos a bird already has; with several photos picked only
 the last is drawn (all are listed by name).
+
+---
+
+## 2026-11-17 — the sign-in footer drew «غير معروف» in the mono face too
+
+**Missed on 2026-11-17 when the version row on الأدوات was fixed.** The ruling was to fix «غير معروف» in the mono
+face and extend the typography walk to that state; only الأدوات was fixed and walked. The sign-in footer wraps the
+same fallback in `<code>`. Measured at 390×844, with and without a service worker
+(`~/zajil-gate-logs/signin-mono-probe.log`):
+
+```
+service worker | url /sign-in/ | footer: الإصدار غير معروف | hits: [('NO-ARABIC-COVERAGE', 'plexMono', 'غير معروف')]
+NO service worker | url /sign-in/ | footer: الإصدار غير معروف | hits: [('NO-ARABIC-COVERAGE', 'plexMono', 'غير معروف')]
+```
+
+**Fixed:** `<code>` wraps a reported version only. The walk now opens /sign-in with no service worker at phone
+width: on the unfixed build 18 passed, 1 failed at the named check (`signin-mono-BEFORE.log`); fixed, 19 passed.
+Not explained: why the walk's existing /sign-in visit (1400 wide) never caught it.
