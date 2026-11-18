@@ -400,12 +400,15 @@ const guards = {
        + 'instead of trusted; a dangling one adopts the single remaining loft or gets a fresh pristine '
        + 'loft, so a new bird is never filed under an id no loft has. Vanilla has the same defect and '
        + 'is NOT changed — main is the live deployment. RF-25 (RULED 2026-11-17): setSetting() puts memory back '
-       + 'when storage refuses the write, so a refused setting does not stay shown or acted on. Vanilla is NOT changed.'],
+       + 'when storage refuses the write, so a refused setting does not stay shown or acted on. Vanilla is NOT changed. '
+       + 'RF-26 (RULED 2026-11-18): idbAtomic() — one readwrite transaction over several stores, for the pull apply.'],
       ['src/db/records.js',
        'RF-14 (RULED 2026-10-14): the generic remove() and applySyncDelete() call ensureCurrentLoft() '
        + 'after a loft goes, locally or by a pulled tombstone. Port-only, as storage.js. RF-23 (RULED 2026-11-16): '
        + 'withHeldBytes() — applySyncPut() keeps the bytes a media record already holds instead of replacing the '
-       + 'record with the pulled, bytes-less row. Vanilla has the same defect and is NOT changed.'],
+       + 'record with the pulled, bytes-less row. Vanilla has the same defect and is NOT changed. RF-26 (RULED 2026-11-18): '
+       + 'applySyncPut() and applySyncDelete() compare the row with the record on the device and its unpushed operations, '
+       + 'and write, in ONE IndexedDB transaction; remoteWins() moved here from sync.js. Vanilla has the same defect and is NOT changed.'],
       ['src/db/sync.js',
        'the account collision (RF-13): signIn() compares the incoming user with the owner of '
        + 'the data on the device and stops before storing a session that is not the same '
@@ -420,7 +423,7 @@ const guards = {
        + 'heartbeat is 60 s while unsent, 1-2-4-8-15 minutes capped while failing, 5 minutes idle, and nothing '
        + 'while hidden or signed out. Vanilla keeps its 2-60 s curve and flat 60 s heartbeat. HONEST STATUS '
        + '(RULED 2026-11-13, RF-19): syncStatus() answers unknown until the op log is counted after a load and '
-       + 'never synced inside an error window; pendingSince; unsentChanges() for the destructive questions.'],
+       + 'never synced inside an error window; pendingSince; unsentChanges() for the destructive questions. RF-26 (RULED 2026-11-18): applyPage() hands each row\'s last-write-wins decision to records.js, where it runs in the transaction that writes.'],
     ]);
     const FILES = [
       'src/db.js', 'src/db/storage.js', 'src/db/oplog.js', 'src/db/records.js',

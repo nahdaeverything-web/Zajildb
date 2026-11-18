@@ -9,9 +9,9 @@
 
 import { classifySave } from '../engine/validate.js';
 import {
-  REFERENCE_STATUS, allBirds, emitChange, ensureCurrentLoft, getBird, idbDelete, idbGet, idbGetAll, idbPut, nowISO, stamp, state, uuid,
+  REFERENCE_STATUS, allBirds, emitChange, ensureCurrentLoft, getBird, idbAtomic, idbDelete, idbGet, idbGetAll, idbPut, nowISO, stamp, state, uuid,
 } from './storage.js';
-import { clearTombstone, diffFields, getTombstone, logOp, writeTombstone } from './oplog.js';
+import { clearTombstone, diffFields, logOp, writeTombstone } from './oplog.js';
 
 /**
  * THE bird factory. Every bird record in the app is minted here.
@@ -345,19 +345,96 @@ const SYNC_MIRROR = {
 /** Every store a pulled row may name. Anything else is refused rather than guessed. */
 export const SYNC_STORES = [...Object.keys(SYNC_MIRROR), 'media'];
 
+// ── RF-26 (RULED 2026-11-18): THE COMPARISON AND THE WRITE ARE ONE TRANSACTION ──
+// A pull page used to decide last-write-wins against the operations that were pending WHEN THE PAGE STARTED, and
+// then write each row without looking at the device. A save made after the page started was therefore invisible:
+// an older row — typically this device's own echo — was written over it, and the next local save of that record
+// read the reverted version and pushed it as the newest. Every device then converged on the wrong record.
+//
+// Now, for each row, ONE IndexedDB transaction over the record's store, the op log and the tombstones:
+//   1. reads the operations for this record that are not yet pushed — the page's index plus every op logged since;
+//   2. reads the record on the device;
+//   3. decides; and only then supersedes the losing ops and writes.
+// A local write is either committed before this transaction (and is seen) or queued behind it (and lands on top).
+
+/**
+ * Does the incoming row beat the local unpushed op?
+ *
+ * Tie-break is lexicographic on deviceId — arbitrary, but STABLE, which is the
+ * only property that matters. A tie means the same millisecond on two devices,
+ * and both must reach the same verdict without talking to each other.
+ */
+export function remoteWins(row, local) {
+  if (!local) return true;
+  const remoteAt = String(row.updated_at || '');
+  const localAt = String(local.at || '');
+  if (remoteAt !== localAt) return remoteAt > localAt;
+  return String(row.device_id || '') > String(local.deviceId || '');
+}
+
+/**
+ * Is the record on this device a LOCAL write newer than the incoming row?
+ *
+ * This covers the one moment the op log cannot: a local save writes its record first and logs its op after, so for
+ * a few milliseconds the newer record is on the device with no op to speak for it. Only a record this device
+ * stamped counts (`deviceId`), and only when its stamp is strictly after the row's operation time. A record that
+ * arrived by pull carries its author's device id and never blocks a later row; a restored record carries its
+ * original, older stamp (restoreBird) and never blocks one either.
+ */
+function locallyNewer(have, at) {
+  const me = state.settings.deviceId;
+  return !!(have && me && have.deviceId === me && String(have.updatedAt || '') > String(at || ''));
+}
+
+/**
+ * The shared decision. Runs INSIDE the transaction. Returns `{ skip }` or `{ lost, have, tomb }` to go on and write.
+ * `ctx.pending` is the page's index entry for this record and `ctx.seen` the op ids that index was built from; a
+ * caller with neither (a direct call) has every unpushed op read here instead.
+ */
+async function decide(h, store, id, at, ctx) {
+  const local = ctx.pending ? { at: ctx.pending.at, deviceId: ctx.pending.deviceId, opIds: [...ctx.pending.opIds] } : null;
+  let mine = local;
+  const acked = state.settings.lastAckedSeq || 0;
+  for (const opId of await h.opIdsAbove(acked)) {
+    if (ctx.seen && ctx.seen.has(opId)) continue;               // already weighed when the page's index was built
+    const op = await h.get('oplog', opId);
+    if (!op || op.superseded || op.store !== store || op.recordId !== id) continue;
+    if (!mine) mine = { at: op.at, deviceId: op.deviceId || '', opIds: [op.opId] };
+    else { mine.opIds.push(op.opId); if (op.at > mine.at) { mine.at = op.at; mine.deviceId = op.deviceId || ''; } }
+  }
+  if (mine && !remoteWins({ updated_at: at, device_id: ctx.deviceId }, mine)) return { skip: 'local-op' };
+  const have = (await h.get(store, id)) || null;
+  if (locallyNewer(have, at)) return { skip: 'local-record' };
+
+  // The row wins. Any local op it beat is SUPERSEDED — otherwise push would send the loser straight afterwards
+  // and overwrite the version that just won. They are not deleted (§4): only their right to be pushed goes.
+  let lost = 0;
+  for (const opId of (mine ? mine.opIds : [])) {
+    const op = await h.get('oplog', opId);
+    if (!op || op.superseded) continue;
+    await h.put('oplog', { ...op, superseded: true });
+    lost++;
+  }
+  const tomb = (await h.get('tombstones', `${store}:${id}`)) || null;   // the key writeTombstone() uses (oplog.js)
+  return { skip: null, lost, have, tomb };
+}
+
 /**
  * Write a pulled record VERBATIM.
  *
- * @returns {{applied: boolean, skipped: string|null, anomaly: object|null}}
+ * @param ctx  from the pull page: `{ deviceId, pending, seen }`. Optional.
+ * @returns {{applied: boolean, skipped: string|null, anomaly: object|null, superseded: number}}
  *   `skipped: 'tombstone'` when a newer local deletion wins (§3, the v1.8
- *   merge-import rule reused unchanged rather than re-derived).
+ *   merge-import rule reused unchanged rather than re-derived);
+ *   `'local-op'` when an unpushed local operation is newer; `'local-record'`
+ *   when a local save newer than the row is on the device and its op is not logged yet.
  */
-export async function applySyncPut(store, record, at, recordId) {
+export async function applySyncPut(store, record, at, recordId, ctx = {}) {
   if (!SYNC_STORES.includes(store)) {
-    return { applied: false, skipped: 'unknown-store', anomaly: { reason: 'unknown-store', store } };
+    return { applied: false, skipped: 'unknown-store', anomaly: { reason: 'unknown-store', store }, superseded: 0 };
   }
   if (!record || typeof record.id !== 'string' || !record.id) {
-    return { applied: false, skipped: 'no-id', anomaly: { reason: 'no-id', store } };
+    return { applied: false, skipped: 'no-id', anomaly: { reason: 'no-id', store }, superseded: 0 };
   }
 
   // ── THE SERVER'S IDENTITY WINS ──
@@ -379,44 +456,55 @@ export async function applySyncPut(store, record, at, recordId) {
     anomaly = { reason: 'id-mismatch', store, recordId, bodyId: record.id };
   }
 
-  // A deletion newer than this version of the record wins, and the record stays
-  // gone. Identical to what importAll does with a merge payload — reusing the
-  // rule rather than writing a second, subtly different one.
-  const tomb = await getTombstone(store, id);
-  if (tomb && (tomb.at || '') > (at || '')) {
-    return { applied: false, skipped: 'tombstone', anomaly };
-  }
-
   // Diagnose without force so the real verdict is available, then apply anyway.
+  // Before the transaction: it reads the in-memory flock, and nothing but the transaction's own requests may be
+  // awaited inside it.
+  let invalid = null;
   if (store === 'birds') {
     const verdict = classifySave(body, getBird, allBirds(), {});
     if (!verdict.ok) {
-      const invalid = {
+      invalid = {
         reason: 'validation',
         store,
         recordId: id,
         errors: (verdict.errors || []).map((e) => e.key),
         warnings: (verdict.warnings || []).map((w) => w.key),
       };
-      anomaly = anomaly ? { ...anomaly, alsoInvalid: invalid } : invalid;
     }
   }
 
-  // RF-23 (RULED 2026-11-16): a pulled media row is metadata only (§7) — and it used to replace the stored record
-  // whole, so the first cycle after a photo was taken removed its bytes from the device that took it.
-  if (store === 'media') body = await withHeldBytes(body);
-  await idbPut(store, body);
-  const mirror = SYNC_MIRROR[store];
-  if (mirror) state[mirror].set(id, body);
+  const done = await idbAtomic([store, 'oplog', 'tombstones'], async (h) => {
+    const d = await decide(h, store, id, at, ctx);
+    if (d.skip) return { skipped: d.skip, lost: 0 };
+    // A deletion newer than this version of the record wins, and the record stays
+    // gone. Identical to what importAll does with a merge payload — reusing the
+    // rule rather than writing a second, subtly different one.
+    if (d.tomb && (d.tomb.at || '') > (at || '')) return { skipped: 'tombstone', lost: d.lost };
+    // RF-23 (RULED 2026-11-16): a pulled media row is metadata only (§7) — and it used to replace the stored record
+    // whole, so the first cycle after a photo was taken removed its bytes from the device that took it.
+    // withHeldBytes(), with the record this transaction has already read.
+    let written = body;
+    if (store === 'media' && !body.blob && d.have && d.have.blob) written = { ...body, blob: d.have.blob };
+    await h.put(store, written);
+    // THE COROLLARY (§2a): a winning record clears the tombstone. Leaving it
+    // would let the record be re-suppressed by the next merge-import or
+    // comparison, and the device would flip between states. restoreBird already
+    // does this on undo; this is the same rule reached from the other direction.
+    if (d.tomb) await h.del('tombstones', d.tomb.id);
+    return { skipped: null, lost: d.lost, written };
+  });
 
-  // THE COROLLARY (§2a): a winning record clears the tombstone. Leaving it
-  // would let the record be re-suppressed by the next merge-import or
-  // comparison, and the device would flip between states. restoreBird already
-  // does this on undo; this is the same rule reached from the other direction.
-  if (tomb) await clearTombstone(store, id);
+  if (done.skipped) {
+    return { applied: false, skipped: done.skipped, anomaly: done.skipped === 'tombstone' ? anomaly : null, superseded: done.lost };
+  }
+  if (invalid) anomaly = anomaly ? { ...anomaly, alsoInvalid: invalid } : invalid;
+  // The mirror follows the store, in the same order: every local writer puts to the store first and sets the mirror
+  // after, so a local write queued behind this transaction also sets the mirror after this line has run.
+  const mirror = SYNC_MIRROR[store];
+  if (mirror) state[mirror].set(id, done.written);
 
   emitChange({ type: 'sync', store, id });
-  return { applied: true, skipped: null, anomaly };
+  return { applied: true, skipped: null, anomaly, superseded: done.lost };
 }
 
 /**
@@ -430,19 +518,27 @@ export async function applySyncPut(store, record, at, recordId) {
  * origin device never deleted — anything linked LOCALLY but not remotely —
  * which is data loss dressed up as consistency.
  */
-export async function applySyncDelete(store, recordId, at) {
+export async function applySyncDelete(store, recordId, at, ctx = {}) {
   if (!SYNC_STORES.includes(store)) {
-    return { applied: false, skipped: 'unknown-store', anomaly: { reason: 'unknown-store', store } };
+    return { applied: false, skipped: 'unknown-store', anomaly: { reason: 'unknown-store', store }, superseded: 0 };
   }
-  await idbDelete(store, recordId);
+  const done = await idbAtomic([store, 'oplog', 'tombstones'], async (h) => {
+    const d = await decide(h, store, recordId, at, ctx);
+    if (d.skip) return { skipped: d.skip, lost: 0 };
+    await h.del(store, recordId);
+    // seq is null: there is no local op behind this deletion. `at` is the remote
+    // operation time, so the tombstone claims the moment the delete happened.
+    // The same record writeTombstone() writes (oplog.js), inside this transaction.
+    await h.put('tombstones', { id: `${store}:${recordId}`, store, recordId, at,
+                                deviceId: state.settings.deviceId || null, seq: null });
+    return { skipped: null, lost: d.lost };
+  });
+  if (done.skipped) return { applied: false, skipped: done.skipped, anomaly: null, superseded: 0 };
   const mirror = SYNC_MIRROR[store];
   if (mirror) state[mirror].delete(recordId);
-  // seq is null: there is no local op behind this deletion. `at` is the remote
-  // operation time, so the tombstone claims the moment the delete happened.
-  await writeTombstone(store, recordId, null, at);
   if (store === 'lofts') await ensureCurrentLoft();   // RF-14: a loft removed on another device may be this one's current loft
   emitChange({ type: 'sync', store, id: recordId });
-  return { applied: true, skipped: null, anomaly: null };
+  return { applied: true, skipped: null, anomaly: null, superseded: done.lost };
 }
 
 // ───────────────────── the pristine default loft (R4) ─────────────────────

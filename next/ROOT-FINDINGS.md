@@ -3731,7 +3731,7 @@ rejection, as before this change (seen, not changed). Navigating away while a lo
 written without its operation — `importAll` writes the record and logs the op in two transactions (seen in a probe
 that reloaded mid-load: the loft never reached the server; not changed).
 
-## 2026-11-18 — RF-26 (FOUND, NOT FIXED): a pull can undo a local save made while it was applying
+## 2026-11-18 — RF-26 (FOUND; FIXED — see “RF-26 fixed” below): a pull can undo a local save made while it was applying
 
 Found while building RF-16. **Pre-existing and live** (`gh-pages bfe6ef5`); not introduced by RF-16.
 
@@ -3825,3 +3825,62 @@ as `supabase/photo-storage.sql` — the text as PROPOSED; if what was run had be
 amended to match. Consequence of the four-type allow-list, as flagged when it was proposed: an image the app stores
 as-is in another format (GIF, HEIC, BMP, AVIF, SVG) is refused by the bucket and stays on its device; stage 1 says so
 to the fancier instead of sending it.
+
+## 2026-11-18 — RF-26 fixed (RULED: candidate b): the comparison and the write are one transaction
+
+**Ruling:** "the last-write-wins comparison against the record on the device and its pending operations, and the
+write, happen in ONE IndexedDB transaction, for applySyncPut and applySyncDelete."
+
+**What was built** (`src/db/records.js`, `storage.js`, `sync.js`): for each pulled row, one readwrite transaction
+over the record's store, `oplog` and `tombstones` (`idbAtomic`) —
+
+1. reads this record's unpushed operations: the page's index (built once, as before) plus every operation logged
+   since it was built. The second part is read inside the transaction by key (`getAllKeys` on the `seq` index, then
+   only the ops the index has not seen), so a page of 500 rows does not re-read the whole log 500 times;
+2. reads the record on the device;
+3. decides, supersedes the operations the row beat, and writes the record or the deletion and its tombstone.
+
+It holds across a pull page: nothing is carried from one row to the next except the head-start index, and what that
+index cannot know is read fresh for every row. Candidate (c) was not needed and was not built.
+
+**The record half is a rule, and the rule is narrower than "newer stamp wins" — a choice made while building, for
+confirmation.** A local save writes its record first and logs its operation after, so for a few milliseconds the
+newer record is on the device with no operation to speak for it. The record on the device stands against a row only
+when (i) THIS device stamped it (`deviceId`) and (ii) its `updatedAt` is strictly after the row's operation time.
+Without (i), a record that arrived by pull with a stamp later than its operation time (a restored or imported
+record, an author whose clock ran ahead) would block every later row for it, and this device would keep a version
+the server had moved on from; mutant M-anydevice shows it.
+
+**Where the rule can still be wrong, by reading, not measured:** a record this device stamped, whose operation is
+gone or acknowledged, meeting a row dated before the stamp that is nevertheless the server's current row. With the
+server's own last-write-wins guard that needs the operation's time to be EARLIER than the record's stamp, which no
+writer in the port produces (a save's operation is logged after its stamp; first-login operations carry the stamp
+itself; an undo restores an older stamp). Two fixtures in `tests/e2e/pull.py` did produce it artificially — they
+clear the op log and then send a deletion dated in August for a bird saved on the device a moment ago — and those
+two fixture dates were moved after the save, deliberately, with the reason written at the spot. No assertion in
+that suite was changed.
+
+**Windows that remain, by reading:** a local DELETE removes the record, logs its operation, then writes its
+tombstone; a row for that record applied between the first and the last step puts the record back on the device
+until the deletion's own echo removes it again. An undo (`restoreBird`) is covered once its operation is logged,
+but not in the instant between its record write and that log, because a restored record carries its old stamp.
+Both need the local writers themselves to become one transaction — a larger change, not ordered, not made.
+
+**Proof** — `tests/e2e/pull_race.py`, 27 checks, deterministic: the local write is started from inside the change
+event of the page's first row, so it always begins after the page's index was built; where the row under test sits
+in the page decides which half is exercised.
+
+| mutant | what it restores | result |
+|---|---|---|
+| M-old | both halves off — the behaviour before the fix | RED at 12 named checks |
+| M-snapshot | operations logged since the page index are not read | RED at 5 |
+| M-norecord | the record on the device is not compared | RED at 3 |
+| M-anydevice | any newer stamp stands, not only this device's | RED at 1 |
+
+Log: `~/zajil-gate-logs/rf26-mutants-1.log`. The plain case (save, save again, first echo arrives; then the second
+echo) is checks `[plain]`. The 16 October agreement stress (`~/zajil-work/rf16/stress.py`, 8 delays; device, server and a second device)
+was run three times on the fixed build: 0 runs disagreed (`rf26-stress-after-*.log`). The exact script that first
+showed the reverted sire was not kept, so that measurement was not repeated as it was; `[page]` in the suite is
+that shape made deterministic.
+
+Vanilla has the same defect and is NOT changed.

@@ -240,8 +240,15 @@ with sync_playwright() as p:
         await db.setSetting('opSeq', 0);
         return { sireId: sire.id, chickId: chick.id };
     }""")
+    # RF-26 (RULED 2026-11-18): the row is now compared with the record on the device, and the sire was saved on
+    # THIS device a moment ago — so a deletion dated before that save loses to it (tests/e2e/pull_race.py). This
+    # step is about the cascade, so the deletion is dated AFTER the save, as a real one that removes it would be.
+    # Before RF-26 the fixed date '2026-08-29T15:00:00.000Z' was used and the comparison was not made at all.
+    import datetime as _dt
+    _later = (_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(minutes=1)).strftime('%Y-%m-%dT%H:%M:%S.000Z')
+    _later2 = (_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(minutes=2)).strftime('%Y-%m-%dT%H:%M:%S.000Z')
     srv['rows'] = [row(1, 'birds', cas['sireId'], {'id': cas['sireId'], 'name': 'cascade-sire'},
-                       deleted=True, updated_at='2026-08-29T15:00:00.000Z')]
+                       deleted=True, updated_at=_later)]
     cas2 = run(page, """async (db, a) => {
         await db.setSetting('syncCursor', 0);
         const opsBefore = (await db.listOps()).length;
@@ -263,9 +270,9 @@ with sync_playwright() as p:
         row(1, 'birds', cas['chickId'],
             {'id': cas['chickId'], 'name': 'cascade-chick', 'sex': 'hen',
              'sireId': None, 'damId': None, 'rings': [], 'status': 'stock', 'external': False},
-            updated_at='2026-08-29T14:59:00.000Z'),
+            updated_at=_later),                    # RF-26: dated after the local saves, as above
         row(2, 'birds', cas['sireId'], {'id': cas['sireId'], 'name': 'cascade-sire'},
-            deleted=True, updated_at='2026-08-29T15:00:00.000Z'),
+            deleted=True, updated_at=_later2),
     ]
     integ = run(page, """async (db) => {
         const { checkIntegrity } = window.__zajilEngine.integrity;

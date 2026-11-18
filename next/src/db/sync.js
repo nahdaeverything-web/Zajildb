@@ -30,9 +30,9 @@ import {
 } from './storage.js';
 import { findDuplicateRings } from '../engine/rings.js';
 import { toISO } from '../dates.js';
-import { getOpsSinceSeq, logOp, markOpsSuperseded } from './oplog.js';
+import { getOpsSinceSeq, logOp } from './oplog.js';
 import {
-  applySyncPut, applySyncDelete, isPristineLoft, dropPristineLoft,
+  applySyncPut, applySyncDelete, remoteWins, isPristineLoft, dropPristineLoft,
 } from './records.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../sync-config.js';
 
@@ -803,26 +803,22 @@ async function fetchPage(cursor, { allowRefresh = true } = {}) {
 async function applyPage(rows) {
   let applied = 0, skipped = 0, cursor = null, lost = 0;
   const anomalies = [];
-  const pending = await pendingOpIndex();
+  // RF-26: this index is only a head start. Each row's transaction reads every op logged since it was built
+  // (`seen` says which ones it already weighed), so a save made while the page is applying is never missed.
+  const { index: pending, seen } = await pendingOpIndex();
   for (const row of rows) {
     try {
       // ── §4, per-record last-write-wins ──
       // The incoming row meets whatever this device has written but not yet
-      // pushed. If the local op is newer, the row loses and is left alone: our
-      // push will carry the winner. If the row wins, any local op it beat is
-      // SUPERSEDED — otherwise push would send the loser straight afterwards
-      // and overwrite the version that just won.
-      const local = pending.get(`${row.store} ${row.record_id}`);
-      if (local && !remoteWins(row, local)) {
-        skipped++;
-        cursor = row.server_seq;
-        continue;
-      }
-      if (local) { lost += await markOpsSuperseded(local.opIds); }
-
+      // pushed, and the record on the device. If the local side is newer, the
+      // row loses and is left alone: our push will carry the winner. If the row
+      // wins, any local op it beat is SUPERSEDED. The comparison and the write
+      // are ONE transaction (records.js).
+      const ctx = { deviceId: row.device_id, pending: pending.get(`${row.store} ${row.record_id}`), seen };
       const result = row.deleted
-        ? await applySyncDelete(row.store, row.record_id, row.updated_at)
-        : await applySyncPut(row.store, row.data, row.updated_at, row.record_id);
+        ? await applySyncDelete(row.store, row.record_id, row.updated_at, ctx)
+        : await applySyncPut(row.store, row.data, row.updated_at, row.record_id, ctx);
+      lost += result.superseded || 0;
       if (result.applied) applied++; else skipped++;
       if (result.anomaly) {
         anomalies.push({ at: nowISO(), store: row.store, recordId: row.record_id,
@@ -919,30 +915,20 @@ export async function pullAll({ maxPages = 100 } = {}) {
 async function pendingOpIndex() {
   const since = state.settings.lastAckedSeq || 0;
   const index = new Map();
+  const seen = new Set();
   for (const op of await getOpsSinceSeq(since)) {
+    seen.add(op.opId);
     if (op.superseded) continue;
     const key = `${op.store} ${op.recordId}`;
-    const seen = index.get(key);
-    if (seen) { seen.opIds.push(op.opId); if (op.at > seen.at) { seen.at = op.at; seen.deviceId = op.deviceId; } }
+    const had = index.get(key);
+    if (had) { had.opIds.push(op.opId); if (op.at > had.at) { had.at = op.at; had.deviceId = op.deviceId; } }
     else index.set(key, { at: op.at, deviceId: op.deviceId || '', opIds: [op.opId] });
   }
-  return index;
+  return { index, seen };
 }
 
-/**
- * Does the incoming row beat the local unpushed op?
- *
- * Tie-break is lexicographic on deviceId — arbitrary, but STABLE, which is the
- * only property that matters. A tie means the same millisecond on two devices,
- * and both must reach the same verdict without talking to each other.
- */
-export function remoteWins(row, local) {
-  if (!local) return true;
-  const remoteAt = String(row.updated_at || '');
-  const localAt = String(local.at || '');
-  if (remoteAt !== localAt) return remoteAt > localAt;
-  return String(row.device_id || '') > String(local.deviceId || '');
-}
+// remoteWins() lives in records.js since RF-26: the comparison runs inside the transaction that writes.
+export { remoteWins };
 
 // ───────────────────────────── first login (§6) ─────────────────────────────
 

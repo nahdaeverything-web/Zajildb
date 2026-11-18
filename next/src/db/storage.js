@@ -89,6 +89,33 @@ export function idbGetAll(store, indexName, key) {
   }));
 }
 
+/**
+ * RF-26 (RULED 2026-11-18): ONE readwrite transaction over several stores, so a decision and the write it leads to
+ * cannot have another write land between them. `fn(h)` is called at once, inside the transaction, and may await ONLY
+ * the requests it makes through `h` — awaiting anything else lets the transaction close under it. What `fn` returns
+ * is the result once the transaction has COMMITTED; if `fn` throws, the transaction is aborted and nothing is written.
+ */
+export function idbAtomic(stores, fn) {
+  return openDB().then((db) => new Promise((resolve, reject) => {
+    const t = db.transaction(stores, 'readwrite');
+    const req = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+    const h = {
+      get: (s, k) => req(t.objectStore(s).get(k)),
+      put: (s, v) => req(t.objectStore(s).put(v)),
+      del: (s, k) => req(t.objectStore(s).delete(k)),
+      /** primary keys of the ops above `seq`, without reading the ops themselves */
+      opIdsAbove: (seq) => req(t.objectStore('oplog').index('seq').getAllKeys(IDBKeyRange.lowerBound(seq, true))),
+    };
+    let out, failure = null;
+    t.oncomplete = () => resolve(out);
+    t.onerror = () => reject(failure || t.error);
+    t.onabort = () => reject(failure || t.error || new Error('transaction aborted'));
+    let running;
+    try { running = Promise.resolve(fn(h)); } catch (err) { running = Promise.reject(err); }
+    running.then((v) => { out = v; }, (err) => { failure = err; try { t.abort(); } catch { /* already finished */ } });
+  }));
+}
+
 export function idbPut(store, value) { return tx(store, 'readwrite', (s) => s.put(value)); }
 export function idbDelete(store, key) { return tx(store, 'readwrite', (s) => s.delete(key)); }
 export function idbClear(store) { return tx(store, 'readwrite', (s) => s.clear()); }
