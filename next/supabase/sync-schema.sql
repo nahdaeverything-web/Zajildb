@@ -1,11 +1,17 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- Zajil — sync schema, trigger, grants and row-level security, as ONE file.
 --
--- NOT YET RUN AGAINST POSTGRES ON SUPABASE. Written 2026-11-17, accepted 2026-11-18.
--- Checked on 2026-11-18 on PGlite (PostgreSQL 18.6 in WebAssembly) with stubs for
--- the auth schema and the three roles: PART 1 executes; PARTS 2 and 3 return what
--- they say they expect; PART 1 a second time stops at "already exists". That is a
--- syntax and catalog check, not a run against the project.
+-- CHECKED AGAINST THE LIVE PROJECT ON 2026-11-18, AND IT MATCHED. Samir ran
+-- supabase/sync-schema-check.sql (read-only, one statement) in the SQL Editor of
+-- the real project: 17 rows; rows 1-16 ok = true, each found value equal to its
+-- expected value; row 17 (information only): service_role holds REFERENCES,
+-- TRIGGER, TRUNCATE on sync_records. PART 1 itself has still NOT been executed
+-- from this file on Supabase Postgres — the project was built earlier, by Route A;
+-- what is established is that the project's catalog is what this file describes.
+-- Written 2026-11-17, accepted 2026-11-18. Also checked on 2026-11-18 on PGlite
+-- (PostgreSQL 18.6 in WebAssembly) with stubs for the auth schema and the three
+-- roles: PART 1 executes; PARTS 2 and 3 return what they say they expect; PART 1
+-- a second time stops at "already exists". That is a syntax and catalog check.
 -- The same checks as ONE statement, for the SQL Editor: supabase/sync-schema-check.sql.
 --
 -- SOURCE: docs/SYNC-DESIGN.md §1 «Migration SQL» and «Verification query»

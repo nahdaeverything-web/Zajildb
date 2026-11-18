@@ -3793,3 +3793,35 @@ was made over https, which has no credentials here — and was repeated over ssh
 failed attempt.
 
 Not yet accepted on Samir's two devices. RF-26 (above) is live in this build as it was in the last.
+
+## 2026-11-18 — the live project was checked against `supabase/sync-schema.sql`, and matched
+
+Samir ran `supabase/sync-schema-check.sql` (one read-only statement) in the SQL Editor of the real project and the
+reviewer reported the output: **17 rows; `ok = true` on rows 1–16, each found value equal to its expected value.**
+The header of `supabase/sync-schema.sql` now says so. PART 1 of that file has still never been executed from the
+file on Supabase Postgres — the project was built earlier (Route A); what is established is that its catalog is
+what the file describes.
+
+**Row 17, information only:** `service_role` holds `REFERENCES, TRIGGER, TRUNCATE` on `sync_records` — it has **no
+`SELECT`, `INSERT`, `UPDATE` or `DELETE`** on the table. Nothing in the app uses the service key, so nothing is
+affected today. It matters only if an admin tool using the service key is ever built: that tool could not read or
+write a row until the grants are added, and adding them is a change to the project that needs its own ruling.
+
+## 2026-11-18 — photo storage exists on the live project: bucket `photos`, owner-only
+
+Samir ran the storage SQL once, without error, after the reviewer read it. The verification returned the five
+expected rows, verbatim from the reviewer's message:
+
+```
+bucket | photos public=false limit=5242880 types={image/jpeg,image/png,image/webp,application/pdf}
+policy | photos owner delete DELETE {authenticated}
+policy | photos owner insert INSERT {authenticated}
+policy | photos owner select SELECT {authenticated}
+policy | photos owner update UPDATE {authenticated}
+```
+
+The bucket exists and is **empty**; no deployed build uploads to it yet (stage 1 is not deployed). The text is kept
+as `supabase/photo-storage.sql` — the text as PROPOSED; if what was run had been amended in review, the file must be
+amended to match. Consequence of the four-type allow-list, as flagged when it was proposed: an image the app stores
+as-is in another format (GIF, HEIC, BMP, AVIF, SVG) is refused by the bucket and stays on its device; stage 1 says so
+to the fancier instead of sending it.
