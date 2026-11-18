@@ -3884,3 +3884,22 @@ showed the reverted sire was not kept, so that measurement was not repeated as i
 that shape made deterministic.
 
 Vanilla has the same defect and is NOT changed.
+
+## 2026-11-19 — deploy record: RF-26 (`gh-pages dccd8d7`)
+
+Live: `gh-pages dccd8d7`, built from `feat/react-port d043eb4`. **Rollback target: `f6110c1`** (then `bfe6ef5`).
+Rollback is `git -C ~/zajil-work/deploy/ghp-rf26-2026-11-19 push -f origin f6110c1:gh-pages`.
+Mirror `main` = `65fe47c` (`git subtree split --prefix=next d043eb4`, run from `~/zajil`, fast-forward from `bb492d2`).
+
+| step | result | log (`~/zajil-gate-logs/`) |
+|---|---|---|
+| gate-41 on the RF-26 tree | 2420 passed, 0 failed across 38 steps, 0 page-error records | `gate-41-rf26.log` |
+| stage for `/zajilv2/`, inject, verify, scan | 159 files, CLEAN | `deploy9-01`, `deploy9-02` |
+| live before | `gh-pages f6110c1`, `main bb492d2` | `deploy9-03` |
+| rehearsal on the local Pages stand-in | 44 passed, 0 failed, NET armed | `deploy9-04` |
+| live bytes | 158 files by sha256, 0 differ (new sw.js after 33 s) | `deploy9-05` |
+| live verification | 44 passed, 0 failed, NET armed — nothing reached the real project | `deploy9-06` |
+
+The steps were run by `~/zajil-work/deploy/deploy.sh`, which is the RF-16 deploy's commands in the same order with
+a stop after any step that fails (`deploy9-00-run.log`). The deploy commit's author is read from the previous deploy
+commit. Not yet accepted on Samir's two devices.
