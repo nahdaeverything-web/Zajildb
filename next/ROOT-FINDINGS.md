@@ -3966,7 +3966,7 @@ own 404 `NoSuchBucket` — which is the ruled case where bytes stay on the devic
 expected counts are untouched. The thirteen that passed gate-37 had been answering storage requests by accident of
 how their handlers were written; they now answer on purpose.
 
-## 2026-11-18 — TF (FOUND, NOT FIXED): `auto_backup.py` can read between the snapshot and its marker
+## 2026-11-18 — TF (FOUND; FIXED 2026-11-19, test-only, APPROVED): `auto_backup.py` can read between the snapshot and its marker
 
 gate-38 on the stage-1 tree was RED on one check and committed nothing:
 
@@ -3992,3 +3992,74 @@ for `last == ids[-1]`, bounded as it is now, so the check reads a finished boot.
 not touched and uploads as it is. Ruled without the measurement from Samir's own photos — he sends them to the
 reviewer, who revises the size only if a ring number is not legible at 1600 px. `tests/e2e/media_downscale.py` now
 pins the exact edge (`== 1600`) where it used to accept anything `<= 2048`.
+
+## 2026-11-19 — photo sync, stage 1: rebased onto RF-26, and the five things ordered before its gate
+
+Rulings of 2026-11-19: the nine strings stand as proposals; the strip layout and the 📄 glyph are accepted for now;
+the two hardening checks are accepted; RF-16's order (stamp, merge, clear) is confirmed; `no_bucket()` in the
+record-only stubs is accepted.
+
+**The rebase.** Four files conflicted, each because both sides had added text at the same place; both sides were
+kept. `src/db/sync.js`: stage 1's `import { runPhotoPass }` kept, and `markOpsSuperseded` left out of the oplog
+import as RF-26 left it. `guards/run.mjs` and `PORT-COMPLETE.md`: both reasons kept, stage 1's sentence then
+RF-26's. This file: RF-26's sections, then stage 1's.
+
+**(a) The allow-list** (`src/components/media.ts`). An image of a type outside JPEG, PNG and WebP that the browser
+can decode is converted to JPEG at 1600 px on its longest edge, never enlarged, on a white ground (JPEG has no
+transparency). One the browser cannot decode is stored as it is; the upload pass refuses its type and says so with
+the existing notice, and its bytes stay. Choices made while building, for confirmation:
+- the conversion runs where the downscale already ran — when the form is SAVED, not at the moment of picking. The
+  picked file is what the strip shows until then;
+- a converted file is stored under a `.jpg` name (`storedName()`, at all four pick sites: the bird form, the
+  certificate's photo and logo, the loft logo in الأدوات). Its bytes are no longer what the old extension says;
+- an animated GIF becomes its first frame;
+- SVG is no longer passed through by name: it meets the same rule, and since neither browser here decodes one from
+  a file, it is stored as it is and stays on the device.
+
+Measured on this desktop (`~/zajil-gate-logs/photo1-type-probe.log`), files picked through a real file input:
+
+| picked | Chromium 145 | WebKit 26 (Playwright, Linux) |
+|---|---|---|
+| GIF, AVIF, BMP | decoded → converted | decoded → converted |
+| SVG | not decoded → stays | not decoded → stays |
+| a file named `.heic` (NOT a real HEIC) | type reported `image/heif`, not decoded → stays | the same |
+
+**HEIC is NOT measured.** No tool on this machine can write a real HEIC (ImageMagick reads it only; ffmpeg has no
+HEIF muxer), and installing one was refused. What is known is only that a file the browser cannot decode takes the
+"stays on the device, and the user is told" path. **Untested, and only a real iPhone can show it:** whether Safari
+hands the picker a JPEG or a HEIC for a photo from the library or the camera; if a HEIC, whether
+`createImageBitmap` decodes it there (then it is converted) or not (then it stays on the phone and the notice
+appears after the next sync); and whether the orientation of a converted photo is right.
+
+**(b) A refused file.** Current behaviour, unchanged: a refusal is written to this device's settings
+(`photoRefused`, by media id), `photosAwaitingUpload()` leaves refused ids out, and the notice is raised only by the
+pass that refused. So a refused file is sent zero more times and announced zero more times, including after the app
+is opened again — new check `[refused · M-forget fails here]`. It did not repeat; nothing was fixed. Two limits by
+reading: the refusal is permanent on that device (nothing clears it if the limit or the allow-list later changes),
+and a second device holding the same bytes makes its own refusal and says it once too.
+
+**(c)** `auto_backup.py`: `settled()` now waits for the count AND for the marker to name the newest interval
+snapshot. Test-only. 38 passed.
+
+**(d)** The three `…File` strings are now each drawn on a real document tile and put through the typography scan:
+`[file · not uploaded]`, `[file · fetching]`, `[file · failed]` in `photo_sync.py`. All nine strings have now been
+through it.
+
+**(e) Mutants, all re-run on the final code** (`~/zajil-gate-logs/photo1-mutants-5.log`; the runner's limits on,
+none HUNG, no traceback):
+
+| mutant | red at | mutant | red at |
+|---|---|---|---|
+| M-await | 1 | M-anyok | 1 |
+| M-nofetch | 11 | M-anylen | 1 |
+| M-nokeep | 8 | M-nosaved | 2 |
+| M-drop | 15 | M-lastonly | 1 |
+| M-hot (bucket missing) | 2 | M-forget (new) | 1 |
+| M-each | 2 | M-2048 | 2 |
+| M-bigsend | 4 | M-noconvert (new) | 4 |
+
+G-await, G-second and G-endpoint each fail the build at `photo-pass-owner` with the reason printed. Only this
+section of this file was written after the batch; no code or test changed after it.
+
+**Local bytes are never removed whatever storage answers** — the file's invariant; M-drop is the mutant that removes
+them on a failure and on a refusal, and 15 checks catch it.

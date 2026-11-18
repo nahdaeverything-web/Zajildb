@@ -22,10 +22,10 @@
  *   · 1600px on the longest edge is ~1.7 MP: enough for a phone screen and a certificate, not
  *     an archival copy. Whether a ring number stays legible at it is being checked on real photos.
  *
- * WHAT IT PRESERVES: the original filename, and the original format for anything that is not
- * a JPEG — a scanned pedigree arrives as PNG and stays PNG, because JPEG rings badly on text.
- * Anything that is not a raster image the browser can decode (a PDF, say) passes through
- * untouched.
+ * WHAT IT PRESERVES: the original filename, and PNG as PNG — a scanned pedigree arrives as PNG
+ * and stays PNG, because JPEG rings badly on text. Anything that is not an image the browser
+ * can decode (a PDF, say) passes through untouched. An image of a type outside JPEG, PNG and
+ * WebP is converted to JPEG — see downscaleImage.
  */
 
 /** The longest edge a stored image may have. RULED 2026-11-18 with photo sync: ONE size, 1600 px (≈ 1.7 MP), for NEW
@@ -35,35 +35,53 @@ export const MAX_EDGE = 1600;
 /** Quality for the JPEG re-encode. 0.85 measured at 0.44 MB for a 6.7 MP source. */
 const JPEG_QUALITY = 0.85;
 
+/** The name to store a picked file under: the converted file's own name when downscaleImage() renamed it. */
+export function storedName(picked: File, out: Blob | File): string {
+  return (out instanceof File && out.name) || picked.name;
+}
+
+/** The image types kept as they are picked: the storage allow-list's three image types. */
+const KEPT_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+/**
+ * RULED 2026-11-19 (the allow-list): an image of ANY OTHER type that the browser can decode — GIF, BMP, AVIF, HEIC
+ * where the browser reads it, SVG where it does — is converted to JPEG at MAX_EDGE when picked, whatever its size,
+ * because storage would refuse it as it is. One the browser cannot decode is stored as it is: it stays on this
+ * device, and the upload pass tells the user so («نوع الملف … غير مسموح برفعه»). A converted file takes a `.jpg`
+ * name, since its bytes are no longer what its old extension says.
+ */
 export async function downscaleImage(file: File): Promise<Blob | File> {
   if (!file.type.startsWith('image/')) return file;          // a PDF, or anything else
-  // SVG has no pixel dimensions to cap and would be destroyed by a raster round trip
-  if (file.type === 'image/svg+xml') return file;
+  const convert = !KEPT_TYPES.includes(file.type);
 
   let bmp: ImageBitmap;
   try {
     bmp = await createImageBitmap(file);
   } catch {
-    return file;                                             // undecodable here — store as-is
+    return file;                                             // undecodable here — store as-is; it stays on this device
   }
   try {
-    if (Math.max(bmp.width, bmp.height) <= MAX_EDGE) return file;   // already small enough
+    const longest = Math.max(bmp.width, bmp.height);
+    if (!convert && longest <= MAX_EDGE) return file;        // already small enough
 
-    const k = MAX_EDGE / Math.max(bmp.width, bmp.height);
+    const k = Math.min(1, MAX_EDGE / longest);               // a converted image is never enlarged
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(bmp.width * k);
-    canvas.height = Math.round(bmp.height * k);
+    canvas.width = Math.max(1, Math.round(bmp.width * k));
+    canvas.height = Math.max(1, Math.round(bmp.height * k));
     const ctx = canvas.getContext('2d');
     if (!ctx) return file;
+    if (convert) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }   // JPEG has no transparency: white, not black
     ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
 
     // keep PNG as PNG: a scanned pedigree is text, and JPEG rings on text
-    const outType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+    const outType = !convert && file.type === 'image/png' ? 'image/png' : 'image/jpeg';
     const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, outType, JPEG_QUALITY));
     if (!blob) return file;
-    // never make it worse: a small source can re-encode LARGER than it arrived
-    if (blob.size >= file.size) return file;
-    return new File([blob], file.name, { type: outType, lastModified: file.lastModified });
+    // never make it worse: a small source can re-encode LARGER than it arrived. Not for a conversion — the point
+    // there is the type, not the size.
+    if (!convert && blob.size >= file.size) return file;
+    const name = convert ? `${file.name.replace(/\.[^.\/\\]*$/, '')}.jpg` : file.name;
+    return new File([blob], name, { type: outType, lastModified: file.lastModified });
   } finally {
     bmp.close();
   }

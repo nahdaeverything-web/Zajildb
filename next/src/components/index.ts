@@ -11,7 +11,7 @@ export { BirdLabel, SexChip, COIValue, Plate, primaryRing, birdLabelText, sexIco
 export { seasonStart, seasonLabel } from './season';
 export { downloadJSON, downloadBlob } from './download';
 export { asset } from './asset';
-export { downscaleImage, MAX_EDGE } from './media';
+export { downscaleImage, storedName, MAX_EDGE } from './media';
 export { pickerModel, candidates, exactMatch, createFromQuery } from './picker';
 export { Tpl } from './Tpl';
 export { applySettings, saveSetting } from './settings';

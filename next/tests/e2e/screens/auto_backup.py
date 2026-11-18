@@ -49,9 +49,13 @@ SNAPS = """async (db) => { const st = {}; for (const r of await db.idbGetAll('se
     listed: (await db.listBackups()).map(x => x.id) }; }"""
 def snaps(pg): return run(pg, SNAPS)
 def settled(pg, want, seconds=6):
-    """The snapshot is written after the boot, asynchronously: poll for the count, bounded, and return what is there."""
+    """The snapshot is written after the boot, asynchronously: poll for the count, bounded, and return what is there.
+    TF (APPROVED 2026-11-19): autoBackup() writes the snapshot and THEN its marker (io.js), and a read between the two
+    saw the new count with the old marker — gate-38, once in 21 runs. So the wait is for both: the count, and the
+    marker naming the newest interval snapshot. Still bounded; when no new snapshot is due it returns what is there."""
     end = time.time() + seconds; s = snaps(pg)
-    while s['n'] != want and time.time() < end: time.sleep(0.25); s = snaps(pg)
+    def there(s): return s['n'] == want and s['last'] == (s['auto'][-1] if s['auto'] else None)
+    while not there(s) and time.time() < end: time.sleep(0.25); s = snaps(pg)
     return s
 def boot(pg, H): pg.goto(H, wait_until='load'); pg.wait_for_function('window.__zajilReady')
 STUB = 'https://stub.example.test'

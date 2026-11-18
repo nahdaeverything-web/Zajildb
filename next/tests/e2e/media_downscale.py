@@ -143,6 +143,46 @@ try:
               len(tiny) == 1 and tiny[0]['bytes'] == small['bytes'],
               f"{small['bytes']} -> {tiny[0]['bytes'] if tiny else 'missing'}")
 
+        # ═══ THE ALLOW-LIST (RULED 2026-11-19): an image type outside JPEG/PNG/WebP that the browser can decode is
+        # converted to JPEG at the ruled size when picked; one it cannot decode is stored as it is ═══
+        import struct
+        FIX = os.path.join(HERE, 'fixtures')
+        def bmp(w, h):
+            """An uncompressed 24-bit BMP built here, byte by byte: a drawn gradient, no camera, no person."""
+            row = b''.join(bytes(((x * 255) // w, 128, 255 - (x * 255) // w)) for x in range(w)); pad = b'\0' * ((4 - (w * 3) % 4) % 4)
+            data = (row + pad) * h
+            return b'BM' + struct.pack('<IHHI', 54 + len(data), 0, 0, 54) + struct.pack('<IiiHHIIiiII', 40, w, h, 1, 24, 0, len(data), 2835, 2835, 0, 0) + data
+        picks = [
+            {'name': 'animated.gif', 'mimeType': 'image/gif', 'buffer': open(os.path.join(FIX, 'picked-synthetic.gif'), 'rb').read()},
+            {'name': 'new-format.avif', 'mimeType': 'image/avif', 'buffer': open(os.path.join(FIX, 'picked-synthetic.avif'), 'rb').read()},
+            {'name': 'scanner.big.bmp', 'mimeType': 'image/bmp', 'buffer': bmp(2400, 1800)},
+            {'name': 'IMG_0001.HEIC', 'mimeType': 'image/heic', 'buffer': b'\0\0\0\x18ftypheic' + bytes(range(256)) * 8},   # NOT a real HEIC: bytes no browser can decode
+        ]
+        form3 = ctx.new_page(); form3.on('pageerror', lambda e, _p=form3: errs.append(perr(e, _p)))
+        form3.goto(f'{ROOT}bird/new/', wait_until='load'); form3.wait_for_timeout(1200)
+        form3.set_input_files('input[type=file][accept="image/*"]', files=picks); form3.wait_for_timeout(400)
+        form3.fill('[data-testid=f-name]', 'طائر الأنواع'); form3.click('[data-testid=save-btn]'); form3.wait_for_timeout(3000)
+        RAWSTORE = """async () => { const db = await window.__zajilDb; const out = {};
+          for (const m of await db.idbGetAll('media')) { let w = null, h = null;
+            try { const b = await createImageBitmap(m.blob); w = b.width; h = b.height; b.close(); } catch { }
+            out[m.name] = { type: m.blob.type, bytes: m.blob.size, w, h }; }
+          return out; }"""
+        got = pg.evaluate(RAWSTORE)
+        g = got.get('animated.jpg')
+        check('[allow-list · M-noconvert fails here] a picked GIF is stored as a JPEG, under a .jpg name, at its own size (never enlarged)',
+              g is not None and g['type'] == 'image/jpeg' and (g['w'], g['h']) == (64, 48) and 'animated.gif' not in got, str({k: v for k, v in got.items() if 'animated' in k}))
+        a = got.get('new-format.jpg')
+        check('[allow-list] a picked AVIF is stored as a JPEG', a is not None and a['type'] == 'image/jpeg' and (a['w'], a['h']) == (64, 48), str(a))
+        m = got.get('scanner.big.jpg')
+        check('[allow-list] a picked 2400×1800 BMP is stored as a JPEG at 1600 px on its longest edge — only the last extension is replaced',
+              m is not None and m['type'] == 'image/jpeg' and (m['w'], m['h']) == (1600, 1200), str(m))
+        hc = got.get('IMG_0001.HEIC')
+        check('[allow-list] an image the browser cannot decode is stored AS IT IS — same bytes, same type, same name — so it stays on the device',
+              hc is not None and hc['type'] == 'image/heic' and hc['bytes'] == len(picks[3]['buffer']) and hc['w'] is None, str(hc))
+        keep = pg.evaluate("""async () => { const db = await window.__zajilDb; return (await db.photosAwaitingUpload()).map(m => m.name).sort(); }""")
+        check('[allow-list] the three converted files are of a type storage accepts; the undecodable one is the only one it will refuse',
+              all(n in keep for n in ('animated.jpg', 'new-format.jpg', 'scanner.big.jpg')) and 'IMG_0001.HEIC' in keep, str(keep))
+
         check('zero page errors', not errs, '; '.join(errs[:2]))
         b.close()
 finally:

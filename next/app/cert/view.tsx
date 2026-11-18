@@ -7,7 +7,7 @@ import { t, fmtDate, fmtNum, fmtPercent, getLang, configure } from '@/src/i18n.e
 import { pedigreeGrid } from '@/src/engine/pedigree.js';
 import { todayISO } from '@/src/dates.js';
 import { inbreeding, ancestorLoss } from '@/src/engine/coi.js';
-import { Loading, toast, downloadJSON, downscaleImage, primaryRing, birdLabelText, initDB } from '@/src/components';
+import { Loading, toast, downloadJSON, downscaleImage, storedName, primaryRing, birdLabelText, initDB } from '@/src/components';
 import s from './cert.module.css';
 
 // Certificate — design/approved/certificate-v1.html, wiring from js/views/cert.js.
@@ -227,13 +227,15 @@ function Panel(p: ScreenProps & { slots: SlotMap; urls: Record<string, string> }
     const file = e.target.files?.[0]; e.target.value = '';
     const target = slots[picking].bird;
     if (!file || !target) return;
-    await db.addMedia(target.id, 'photo', 'body', file.name, await downscaleImage(file));
+    const out = await downscaleImage(file);
+    await db.addMedia(target.id, 'photo', 'body', storedName(file, out), out);
     p.setPhotos({ ...photos, [picking]: true });
   }
   async function pickLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; e.target.value = '';
     if (!file || !loft) return;
-    const m = await db.addMedia(loft.id, 'document', 'logo', file.name, await downscaleImage(file)) as { id: string };
+    const out = await downscaleImage(file);
+    const m = await db.addMedia(loft.id, 'document', 'logo', storedName(file, out), out) as { id: string };
     await saveLoft({ logoMediaId: m.id });
   }
   function share() {

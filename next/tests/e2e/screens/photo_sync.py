@@ -198,6 +198,19 @@ try:
         check('[refused] …and the photo behind them in the queue was still stored: a refusal does not stop the pass', bool(lf['stored']), lf)
         n = len(srv.posts); run(dd, SYNC); run(dd, PASS); run(dd, SYNC); run(dd, PASS); dd.wait_for_timeout(400)
         check('[refused] a refused file is not tried, or announced, again', len(srv.posts) == n and toasts(dd).count('لم تُرفع') <= 1, (n, len(srv.posts)))
+        # …and not after the app is opened again either: the refusal is remembered on the device (M-forget fails here)
+        home(dd, H); run(dd, SYNC); run(dd, PASS); run(dd, SYNC); run(dd, PASS); dd.wait_for_timeout(600)
+        check('[refused · M-forget fails here] after the app is opened again, two more syncs send neither refused file and say nothing more about them',
+              len(srv.posts) == n and 'لم تُرفع' not in toasts(dd) and 'غير مسموح' not in toasts(dd), (n, len(srv.posts), toasts(dd)[:200]))
+        lb, lg = run(dd, LOCAL, big['id']), run(dd, LOCAL, gif['id'])
+        check('[refused] …and both still hold every byte', lb['size'] == big['size'] and lg['size'] == 2048, (lb, lg))
+        # ONE file of a type the browser could not decode (so it was stored as picked): named, said once, kept
+        heic = run(dd, RAW, birdd, 'IMG_0001.HEIC', 4096, 'image/heic'); run(dd, SYNC); run(dd, PASS); dd.wait_for_timeout(500); said = toasts(dd); ty = typo(dd)
+        check('[refused · type] a file of a type storage does not take is named in the notice: «نوع الملف «IMG_0001.HEIC» غير مسموح برفعه — بقي محفوظًا على هذا الجهاز فقط»',
+              'نوع الملف «IMG_0001.HEIC» غير مسموح برفعه — بقي محفوظًا على هذا الجهاز فقط' in said, said[-260:])
+        check('[typography] the named type-refusal notice is drawn in a face that has Arabic', 'IMG_0001.HEIC' in said and not ty, ty[:3])
+        lh_ = run(dd, LOCAL, heic['id'])
+        check('[refused · type] …it was never sent, and its bytes stay', not any(p_[2] == heic['id'] for p_ in srv.posts) and lh_['size'] == 4096 and not lh_['stored'], lh_)
         srv.mode['user-D'] = 'toolarge'; srvbig = run(dd, PHOTO, birdd, 'server-says-no.jpg'); run(dd, SYNC); run(dd, PASS); dd.wait_for_timeout(500)
         ls = run(dd, LOCAL, srvbig['id']); ty = typo(dd)
         check('[typography] the named refusal notice («الملف «…» أكبر من الحد…») is drawn in a face that has Arabic', 'server-says-no.jpg' in toasts(dd) and not ty, ty[:3])
@@ -235,6 +248,34 @@ try:
         except Exception: pass
         check('[down · failed] opening the bird again retries, and the photo arrives', df.locator('[data-testid=media-photo] img').count() == 1)
         ce.close(); cf.close()
+
+        # ═══ A DOCUMENT (not a photo) says the same three things in its own words — the …File strings ═══
+        DOC = "async (db, bird, name) => { const blob = new Blob([new TextEncoder().encode('%PDF-1.4 synthetic ' + 'x'.repeat(600))], { type: 'application/pdf' }); const m = await db.addMedia(bird, 'document', 'other', name, blob); return { id: m.id, size: blob.size }; }"
+        def tile_text(pg, where):
+            ok_ = waits(pg, f'[data-testid=media-elsewhere][data-where={where}]'); pg.wait_for_timeout(300)
+            return ok_, (pg.locator('[data-testid=media-elsewhere]').all_inner_texts() or [''])[0].strip(), typo(pg)
+        ck, dk = device(b, H, 'k@zajil.test'); birdk = run(dk, BIRD, 'وثيقة'); srv.mode['user-K'] = 'abort'
+        pk = run(dk, DOC, birdk, 'pedigree.pdf'); run(dk, SYNC); run(dk, PASS)
+        cl, dl = device(b, H, 'k@zajil.test'); run(dl, SYNC); dl.goto(ROOT + 'bird/?id=' + birdk, wait_until='load')
+        got, text, ty = tile_text(dl, 'pending')
+        check('[file · not uploaded] a document on another device and not uploaded yet says «الملف على جهاز آخر ولم يُرفع بعد», in a face that has Arabic',
+              got and text == 'الملف على جهاز آخر ولم يُرفع بعد' and not ty, (got, text, ty[:3]))
+        srv.mode['user-K'] = 'ok'; run(dk, SYNC); run(dk, PASS); run(dk, SYNC)
+        check('[file · setup] the document is stored: a PDF is on the allow-list', ('user-K', pk['id']) in srv.objects and srv.objects[('user-K', pk['id'])]['type'] == 'application/pdf', list(srv.objects)[-1:])
+        run(dl, SYNC); srv.held.clear(); srv.mode['user-K'] = 'gethold'; dl.goto(ROOT + 'bird/?id=' + birdk, wait_until='load')
+        got, text, ty = tile_text(dl, 'fetching')
+        check('[file · fetching] while a document is on its way the tile says «جارٍ تنزيل الملف…», in a face that has Arabic',
+              got and text == 'جارٍ تنزيل الملف…' and not ty, (got, text, ty[:3]))
+        srv.mode['user-K'] = 'getfail'
+        for route, o in srv.held: err(route, 404, 'NoSuchKey', 'Object not found')
+        srv.held.clear()
+        got, text, ty = tile_text(dl, 'failed')
+        check('[file · failed] a document whose download fails says «تعذّر تنزيل الملف — ستُعاد المحاولة عند فتحه», in a face that has Arabic',
+              got and text == 'تعذّر تنزيل الملف — ستُعاد المحاولة عند فتحه' and not ty, (got, text, ty[:3]))
+        srv.mode['user-K'] = 'ok'; dl.goto(ROOT + 'bird/?id=' + birdk, wait_until='load'); arrived = waits(dl, '[data-testid=media-file]')
+        lk = run(dl, LOCAL, pk['id'])
+        check('[file] opening the bird again fetches the document, and its bytes are kept', arrived and lk is not None and lk['size'] == pk['size'] and lk['type'] == 'application/pdf', (arrived, lk))
+        ck.close(); cl.close()
 
         # ═══ NEVER ANOTHER ACCOUNT'S FOLDER, and nothing without an account ═══
         check('[owner] every upload and download in this run was addressed to the signed-in user’s own folder', all(p_[0] == p_[1] for p_ in srv.posts) and all(g[0] == g[1] for g in srv.gets), [x for x in srv.posts if x[0] != x[1]][:2])

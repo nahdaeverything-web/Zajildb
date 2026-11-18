@@ -6,7 +6,7 @@ import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds, useMediaForBird } from '@/src/db/react';
 import { t, statusLabel } from '@/src/i18n.ext.js';
 import { parseRing, RING_TYPES } from '@/src/engine/rings.js';
-import { Loading, toast, confirmDialog, choiceDialog, downscaleImage, primaryRing, birdLabelText, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
+import { Loading, toast, confirmDialog, choiceDialog, downscaleImage, storedName, primaryRing, birdLabelText, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
 import s from './form.module.css';
 
 // Add / edit bird — design/approved/add-edit-bird-v2.html, behaviour from
@@ -304,7 +304,7 @@ export default function BirdForm() {
       if (notes.trim()) bird.notes = [...(bird.notes || []), { id: db.uuid(), at: db.nowISO(), text: notes.trim() }];
       await db.saveBird(bird, opts);
       // downscaled on the way in — see src/components/media.ts for the measured reason
-      for (const m of pending) await db.addMedia(bird.id, m.kind, m.subtype, m.file.name, await downscaleImage(m.file));
+      for (const m of pending) { const out = await downscaleImage(m.file); await db.addMedia(bird.id, m.kind, m.subtype, storedName(m.file, out), out); }
       if (andNew) {
         // stay in the entry rhythm: a fresh form carrying the batch-constant fields and the ring prefix
         toast(t('toast.savedNext', { name: bird.name || (bird.rings && bird.rings[0] && bird.rings[0].raw) || '' }), { kind: 'success' });

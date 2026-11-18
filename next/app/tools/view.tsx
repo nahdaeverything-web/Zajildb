@@ -5,7 +5,7 @@ import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds, useMediaForBird } from '@/src/db/react';
 import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { findDuplicateRings } from '@/src/engine/rings.js';
-import { SyncRow, Loading, toast, confirmDialog, downscaleImage, saveSetting, initDB } from '@/src/components';
+import { SyncRow, Loading, toast, confirmDialog, downscaleImage, storedName, saveSetting, initDB } from '@/src/components';
 import { useAppVersion } from '@/src/components/version';
 import { Section, Row, Seg, StatusLine, ExportDetail, ExamplesDetail, ExampleRemoveRow, IntegrityDetail, ScannerDetail, DevDetail, syncRowCopy, Lofts, destructive, failedAction } from './parts';
 import type { Loft, Bird, Backup, SyncStatus, Anomaly } from './parts';
@@ -210,7 +210,8 @@ function LoftRows({ loft }: { loft: Loft | null }) {
     const file = e.target.files?.[0]; if (!file || !loft) return;
     const input = e.target;
     await destructive(async () => {
-      const m = await db.addMedia(loft.id, 'document', 'logo', file.name, await downscaleImage(file)) as { id: string };
+      const out = await downscaleImage(file);
+      const m = await db.addMedia(loft.id, 'document', 'logo', storedName(file, out), out) as { id: string };
       setLogo(m.id);
     }, failedAction(t('tools.logo.pick')));
     input.value = '';
