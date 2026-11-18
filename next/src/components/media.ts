@@ -11,16 +11,16 @@
  * Measured, same photograph, through this exact pipeline:
  *
  *   as stored today   3176×2117   5.18 MB      77 photos
- *   @2048 q0.85       2048×1365   0.44 MB     904 photos      ← what this does
- *   @1600 q0.85       1600×1066   0.30 MB    1331 photos
+ *   @2048 q0.85       2048×1365   0.44 MB     904 photos      ← what this did until 2026-11-18
+ *   @1600 q0.85       1600×1066   0.30 MB    1331 photos      ← what this does (RULED 2026-11-18)
  *
  * WHAT IT COSTS, plainly:
  *   · it is LOSSY and IRREVERSIBLE — the original bytes are never stored, so a fancier
  *     cannot get the full-resolution image back out of Zajil later;
  *   · it applies to NEW photos only. Nothing already in a loft is touched, so an existing
  *     loft keeps whatever ceiling it already has;
- *   · 2048px on the longest edge is ~3 MP, which is more than a pedigree certificate or a
- *     phone screen ever shows, but it is not an archival copy.
+ *   · 1600px on the longest edge is ~1.7 MP: enough for a phone screen and a certificate, not
+ *     an archival copy. Whether a ring number stays legible at it is being checked on real photos.
  *
  * WHAT IT PRESERVES: the original filename, and the original format for anything that is not
  * a JPEG — a scanned pedigree arrives as PNG and stays PNG, because JPEG rings badly on text.
@@ -28,8 +28,10 @@
  * untouched.
  */
 
-/** The longest edge a stored image may have. 2048px ≈ 3 MP. */
-export const MAX_EDGE = 2048;
+/** The longest edge a stored image may have. RULED 2026-11-18 with photo sync: ONE size, 1600 px (≈ 1.7 MP), for NEW
+ *  photos; a photo already stored at 2048 px stays and uploads as it is. The reviewer revises it only if a ring number
+ *  proves illegible at 1600 px on Samir's own photos. It was 2048 until then. */
+export const MAX_EDGE = 1600;
 /** Quality for the JPEG re-encode. 0.85 measured at 0.44 MB for a 6.7 MP source. */
 const JPEG_QUALITY = 0.85;
 

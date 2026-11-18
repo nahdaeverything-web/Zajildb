@@ -8,7 +8,7 @@ string at 536,870,888 bytes and the export runs 1.3337x source. Measured on a RE
 photograph, 3176x2117 at 5.18 MB, that is 77 photos before a loft can no longer be moved
 between origins. Seventy-seven is a normal loft.
 
-`src/components/media.ts` caps the longest edge at 2048px on the way in. Measured through
+`src/components/media.ts` caps the longest edge at 1600px (2048 until 2026-11-18) on the way in. Measured through
 that same pipeline, the same photograph becomes 0.44 MB — 904 photos before the wall.
 
 This suite asserts the cap actually applies to what is STORED, by reading the blob back out
@@ -37,7 +37,7 @@ def check(n, ok, d=''):
 srv, HARNESS = serve()
 ROOT = HARNESS.replace('test-harness/', '')
 
-# A large source image, built in the page: 4000x3000 (12 MP), well over the 2048 cap. It is
+# A large source image, built in the page: 4000x3000 (12 MP), well over the 1600 cap. It is
 # drawn with structure rather than flat colour so the JPEG encoder has something to do — a
 # flat image would compress to nothing and the "did it shrink" assertion would be vacuous.
 MAKE_BIG = """async (mime) => {
@@ -111,8 +111,8 @@ try:
         check('exactly one photo was stored', len(stored) == 1, str(len(stored)))
         if stored:
             m = stored[0]
-            check('[downscale] the STORED image is capped at 2048px on its longest edge',
-                  max(m['w'], m['h']) <= 2048, f"{m['w']}x{m['h']}")
+            check('[downscale] the STORED image is 1600px on its longest edge — exactly the ruled size, not merely under a cap (M-2048 fails here)',
+                  max(m['w'], m['h']) == 1600, f"{m['w']}x{m['h']}")
             check('[downscale] …and it is materially smaller than what the camera produced',
                   m['bytes'] < big['bytes'] / 2,
                   f"{big['bytes'] / 1e6:.2f} MB -> {m['bytes'] / 1e6:.2f} MB "

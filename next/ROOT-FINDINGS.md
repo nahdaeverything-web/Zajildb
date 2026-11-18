@@ -3985,3 +3985,10 @@ no-bucket line in its stub.
 
 **Not fixed — reported.** The gate was run again on the unchanged tree. Proposed, for a ruling: `settled()` also waits
 for `last == ids[-1]`, bounded as it is now, so the check reads a finished boot.
+
+## 2026-11-18 — new photos are stored at 1600 px (RULED), on the stage-1 branch
+
+`MAX_EDGE` 2048 → 1600 in `src/components/media.ts`: one size, for NEW photos; a photo already stored at 2048 px is
+not touched and uploads as it is. Ruled without the measurement from Samir's own photos — he sends them to the
+reviewer, who revises the size only if a ring number is not legible at 1600 px. `tests/e2e/media_downscale.py` now
+pins the exact edge (`== 1600`) where it used to accept anything `<= 2048`.
