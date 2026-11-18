@@ -4063,3 +4063,30 @@ section of this file was written after the batch; no code or test changed after 
 
 **Local bytes are never removed whatever storage answers** — the file's invariant; M-drop is the mutant that removes
 them on a failure and on a refusal, and 15 checks catch it.
+
+## 2026-11-19 — deploy record: photo sync, stage 1 (`gh-pages 7fd5c08`)
+
+Live: `gh-pages 7fd5c08`, built from `feat/react-port eb776d0`. **Rollback target: `dccd8d7`** (the RF-26 build; then
+`f6110c1`). Rollback is `git -C ~/zajil-work/deploy/ghp-photo1-2026-11-19 push -f origin dccd8d7:gh-pages`.
+Mirror `main` = `3fe5548` (`git subtree split --prefix=next eb776d0`, run from `~/zajil`, fast-forward from `65fe47c`).
+
+| step | result | log (`~/zajil-gate-logs/`) |
+|---|---|---|
+| gate-43 on the stage-1 tree, rebased onto RF-26 | 2484 passed, 0 failed across 39 steps, 0 page-error records | `gate-43-photo-stage-1-final.log` |
+| stage for `/zajilv2/`, inject, verify, scan | 159 files, CLEAN | `deploy10-01`, `deploy10-02` |
+| live before | `gh-pages dccd8d7`, `main 65fe47c` | `deploy10-03` |
+| rehearsal on the local Pages stand-in | 44 passed, 0 failed, NET armed | `deploy10-04` |
+| live bytes | 158 files by sha256, 0 differ (new sw.js after 31 s) | `deploy10-05` |
+| live verification | 44 passed, 0 failed, NET armed — nothing reached the real project | `deploy10-06` |
+
+**This is the first build that writes to the real `photos` bucket.** Nothing in the deploy or its verification wrote
+there: the live verification runs with the backend stubbed. The first objects will be written by Samir's own
+devices on their first sync after they take this build. A rollback to `dccd8d7` stops further uploads and leaves
+whatever was uploaded in the bucket and every byte on the devices; a media record's `stored` marker is an ordinary
+field the older build ignores.
+
+The two stage-1 commits made before the rebase (`bc8b7f8`, `e1b25ba`) were gated as gate-39 and gate-40 on their
+old base; after the rebase they were gated only together with `eb776d0`, by gate-43.
+
+Not yet accepted on Samir's two devices. Acceptance: an existing phone photo appears on the PC when that bird is
+opened; a photo added on the PC appears on the phone.
