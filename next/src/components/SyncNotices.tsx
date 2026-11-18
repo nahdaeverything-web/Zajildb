@@ -21,8 +21,15 @@ import { toast } from './shell';
  * Renders nothing.
  */
 export default function SyncNotices() {
-  useEffect(() => { const off = db.onChange((ev: { type?: string; key?: string } | null) => {
+  useEffect(() => { const off = db.onChange((ev: { type?: string; key?: string; files?: { name: string; reason: string }[] } | null) => {
     if (!ev) return;
+    // PHOTO SYNC, STAGE 1 (RULED 2026-11-18): a file the server will not take is SAID, once, and its bytes stay here.
+    // ONE notice per pass: the shell shows two toasts at most, so a notice per file would lose all but the last two
+    if (ev.type === 'photo-refused' && ev.files && ev.files.length) {
+      const f = ev.files;
+      toast(f.length === 1 ? t('media.refused.' + (f[0].reason === 'type' ? 'type' : 'size'), { name: f[0].name }) : t('media.refused.many', { n: f.length }), { timeout: 12000 });
+      return;
+    }
     if (ev.type === 'sync-interrupt' && ev.key) { toast(t(ev.key), { timeout: 10000 }); return; }
     if (ev.type === 'sync-complete') {
       db.takeSyncDuplicateNotice().then((n: number | null) => { if (n) toast(t('sync.duplicates', { n }), { timeout: 8000 }); });

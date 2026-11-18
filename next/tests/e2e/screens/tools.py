@@ -37,7 +37,7 @@ sys.path.insert(0, HERE)
 from _serve import serve                      # noqa: E402
 from _layout import check_clearance, check_toast_clear, wait_toasts_clear, shot   # noqa: E402
 sys.path.insert(0, os.path.join(HERE, '..'))
-from _net import Net                          # noqa: E402  THE NET (RULED 2026-10-08): armed beneath the stub, asserted at the end
+from _net import Net, no_bucket                          # noqa: E402  THE NET (RULED 2026-10-08): armed beneath the stub, asserted at the end
 NET = Net()
 
 FID = os.path.abspath(os.path.join(HERE, '..', '..', '..', 'fidelity', 'tools')); os.makedirs(FID, exist_ok=True)
@@ -105,6 +105,7 @@ srv_state = {'rows': {}, 'seq': 0, 'token_mode': 'ok'}
 
 def handler(route, request):
     url = request.url
+    if no_bucket(route, request): return          # this suite's project has no photo bucket (tests/e2e/_net.py)
     if '/auth/v1/token' in url:
         if srv_state['token_mode'] == 'reject':
             route.fulfill(status=400, content_type='application/json',

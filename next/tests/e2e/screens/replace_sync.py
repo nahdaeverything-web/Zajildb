@@ -24,7 +24,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve                      # noqa: E402
 sys.path.insert(0, os.path.join(HERE, '..'))
-from _net import Net                          # noqa: E402  THE NET: armed beneath the stub, asserted at the end
+from _net import Net, no_bucket                          # noqa: E402  THE NET: armed beneath the stub, asserted at the end
 NET = Net()
 PAGES = []
 
@@ -47,6 +47,7 @@ class Server:
     def live(self, o, store): return sorted((r['data'].get('name') or r['record_id']) for (w, s, _), r in self.rows.items() if w == o and s == store and not r['deleted'])
 srv = Server()
 def handler(route, request):
+    if no_bucket(route, request): return          # this suite's project has no photo bucket (tests/e2e/_net.py)
     if '/auth/v1/token' in request.url:
         body = json.loads(request.post_data or '{}'); who = (body.get('email') or 'a@').split('@')[0].upper() or (body.get('refresh_token') or '').replace('REFRESH-', '')
         route.fulfill(status=200, content_type='application/json', body=json.dumps({'access_token': 'ACCESS-' + who, 'refresh_token': 'REFRESH-' + who, 'token_type': 'bearer', 'expires_in': 3600, 'user': {'id': 'user-' + who, 'email': who.lower() + '@zajil.test'}})); return

@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 sys.path.insert(0, HERE)
 from _serve import serve                      # noqa: E402
 sys.path.insert(0, os.path.join(HERE, '..'))
-from _net import Net                          # noqa: E402
+from _net import Net, no_bucket                          # noqa: E402
 from _typography import SCAN                  # noqa: E402
 NET = Net()
 
@@ -36,6 +36,7 @@ STUB = 'https://stub.example.test'
 PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
 SRV = {'rows': {}, 'seq': 0, 'down': False}
 def handler(route, request):
+    if no_bucket(route, request): return          # this suite's project has no photo bucket (tests/e2e/_net.py)
     if '/auth/v1/token' in request.url:
         route.fulfill(status=200, content_type='application/json', body=json.dumps({'access_token': 'ACCESS-A', 'refresh_token': 'REFRESH-A', 'token_type': 'bearer', 'expires_in': 3600, 'user': {'id': 'user-A', 'email': 'a@zajil.test'}})); return
     if SRV['down']: route.fulfill(status=500, content_type='application/json', body='{"message":"stub down"}'); return

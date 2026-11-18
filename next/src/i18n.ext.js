@@ -513,6 +513,17 @@ export const EXT = {
   'example.remove.failed':    { ar: 'لم تُزل البيانات التجريبية — لم يتغيّر شيء. السبب: {reason}', en: 'The sample data was not removed — nothing changed. Reason: {reason}' },
   'tools.failed.validation':  { ar: 'سجلّ لم يجتز التحقق ({what})', en: 'a record failed validation ({what})' },
   // THE ELEVEN (RULED 2026-11-17) — PROPOSED wording: an action in الأدوات that did not complete, named by its own control's label
+  // PHOTO SYNC, STAGE 1 (RULED 2026-11-18). All eight PROPOSED: the first three were listed in the design report, the
+  // file variants and the two refusals are new in the build.
+  'media.notUploadedYet':     { ar: 'الصورة على جهاز آخر ولم تُرفع بعد', en: 'The photo is on another device and has not been uploaded yet' },
+  'media.notUploadedYetFile': { ar: 'الملف على جهاز آخر ولم يُرفع بعد', en: 'The file is on another device and has not been uploaded yet' },
+  'media.fetching':           { ar: 'جارٍ تنزيل الصورة…', en: 'Downloading the photo…' },
+  'media.fetchingFile':       { ar: 'جارٍ تنزيل الملف…', en: 'Downloading the file…' },
+  'media.fetchFailed':        { ar: 'تعذّر تنزيل الصورة — ستُعاد المحاولة عند فتحها', en: 'The photo could not be downloaded — it will be tried again when opened' },
+  'media.fetchFailedFile':    { ar: 'تعذّر تنزيل الملف — ستُعاد المحاولة عند فتحه', en: 'The file could not be downloaded — it will be tried again when opened' },
+  'media.refused.size':       { ar: 'الملف «{name}» أكبر من الحد المسموح للرفع — بقي محفوظًا على هذا الجهاز فقط', en: '“{name}” is larger than the upload limit — it stays on this device only' },
+  'media.refused.type':       { ar: 'نوع الملف «{name}» غير مسموح برفعه — بقي محفوظًا على هذا الجهاز فقط', en: 'Files of the type of “{name}” cannot be uploaded — it stays on this device only' },
+  'media.refused.many':       { ar: 'عدد الملفات التي لم تُرفع لأنها أكبر من الحد أو من نوع غير مسموح: {n}. بقيت محفوظة على هذا الجهاز فقط.', en: 'Files not uploaded because they are over the limit or of a type that is not allowed: {n}. They stay on this device only.' },
   'tools.failed.action':      { ar: 'لم يكتمل «{what}». السبب: {reason}', en: '“{what}” did not complete. Reason: {reason}' },
   'tools.failed.unknown':     { ar: 'خطأ غير متوقع ({what})', en: 'an unexpected error ({what})' },
   'backup.snapshot':          { ar: 'النسخة', en: 'Snapshot' },

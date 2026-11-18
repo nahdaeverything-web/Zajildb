@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import * as db from '@/src/db.js';
-import { useZajilStore, selectBirds } from '@/src/db/react';
+import { useZajilStore, selectBirds, useMediaForBird } from '@/src/db/react';
 import { t, statusLabel } from '@/src/i18n.ext.js';
 import { parseRing, RING_TYPES } from '@/src/engine/rings.js';
 import { Loading, toast, confirmDialog, choiceDialog, downscaleImage, primaryRing, birdLabelText, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
@@ -206,6 +206,28 @@ export default function BirdForm() {
     return () => URL.revokeObjectURL(url);
   }, [lastPhoto]);
 
+  // PHOTO SYNC, STAGE 1 (RULED 2026-11-18, from the same phone): the EDIT form shows the photos the bird already has,
+  // and EVERY picked file shows before saving — not only the last. A strip of small tiles under the photo block: the
+  // saved ones first, then the picked ones. Read-only here; a photo is deleted from the profile, as before.
+  const saved = useMediaForBird(editId || null) as Array<{ id: string; kind?: string; name?: string; hasBlob?: boolean }>;
+  const [savedUrls, setSavedUrls] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let live = true; const made: string[] = [];
+    Promise.all(saved.filter((m) => m.hasBlob && m.kind === 'photo').map(async (m) => { const row = (await db.idbGet('media', m.id)) as { blob?: Blob } | undefined; return row && row.blob ? ([m.id, URL.createObjectURL(row.blob)] as const) : null; }))
+      .then((pairs) => {
+        if (!live) { for (const x of pairs) if (x) URL.revokeObjectURL(x[1]); return; }
+        const map: Record<string, string> = {}; for (const x of pairs) if (x) { map[x[0]] = x[1]; made.push(x[1]); } setSavedUrls(map);
+      });
+    return () => { live = false; for (const u of made) URL.revokeObjectURL(u); };
+  }, [saved]);
+  const [thumbs, setThumbs] = useState<string[]>([]);
+  useEffect(() => {
+    const urls = pending.map((m) => (m.file.type.startsWith('image/') ? URL.createObjectURL(m.file) : ''));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setThumbs(urls);
+    return () => { for (const u of urls) if (u) URL.revokeObjectURL(u); };
+  }, [pending]);
+
   // bird-form.js:13-26 — the draft: a clone to edit, or a fresh record with the entry-point intents applied
   // The draft is seeded FROM the data layer, which cannot be read until initDB() resolves —
   // so there is no render-time value to compute it from. `seeded` states the once-ness
@@ -381,6 +403,22 @@ export default function BirdForm() {
                 <input ref={docIn} type="file" accept="image/*,.pdf" multiple hidden onChange={(e) => { const fs = [...(e.target.files || [])]; setPending([...pending, ...fs.map((f) => ({ kind: 'document' as const, subtype: 'other', file: f }))]); e.target.value = ''; }} />
               </div>
             </div>
+            {(saved.length > 0 || pending.length > 0) && (
+              <div className={s.strip} data-testid="photo-strip">
+                {saved.map((m) => (
+                  <span key={m.id} className={s.thumb} title={m.name} data-testid="strip-saved" data-has={m.hasBlob ? '1' : '0'}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {savedUrls[m.id] ? <img src={savedUrls[m.id]} alt="" /> : m.hasBlob ? '📄' : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4 4 0 0 1 0 9H7z" /></svg>}
+                  </span>
+                ))}
+                {pending.map((m, i) => (
+                  <span key={`p${i}`} className={`${s.thumb} ${s.fresh}`} title={m.file.name} data-testid="strip-pending">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {thumbs[i] ? <img src={thumbs[i]} alt="" /> : '📄'}
+                  </span>
+                ))}
+              </div>
+            )}
             <FormField label={t('bird.name')}><input value={draft.name || ''} onChange={(e) => set({ name: e.target.value })} placeholder={t('form.name.placeholder')} data-testid="f-name" /></FormField>
             <FormField label={t('bird.ring')} testid="f-ring-field">
               {rings.map((r, i) => (

@@ -28,7 +28,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve                      # noqa: E402
 sys.path.insert(0, os.path.join(HERE, '..'))
-from _net import Net                          # noqa: E402  THE NET: armed, asserted at the end
+from _net import Net, no_bucket                          # noqa: E402  THE NET: armed, asserted at the end
 from _typography import SCAN                  # noqa: E402
 NET = Net()
 PAGES = []
@@ -57,6 +57,7 @@ def boot(pg, H): pg.goto(H, wait_until='load'); pg.wait_for_function('window.__z
 STUB = 'https://stub.example.test'
 def stub(route, request):
     """A backend with no rows: a session for whoever asks, every push echoed, every pull empty."""
+    if no_bucket(route, request): return          # this suite's project has no photo bucket (tests/e2e/_net.py)
     if '/auth/v1/token' in request.url:
         body = json.loads(request.post_data or '{}'); who = (body.get('email') or '').split('@')[0].upper() or (body.get('refresh_token') or '').replace('REFRESH-', '')
         return route.fulfill(status=200, content_type='application/json', body=json.dumps({'access_token': 'ACCESS-' + who, 'refresh_token': 'REFRESH-' + who, 'token_type': 'bearer', 'expires_in': 3600, 'user': {'id': 'user-' + who, 'email': who.lower() + '@zajil.test'}}))

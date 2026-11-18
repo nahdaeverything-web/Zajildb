@@ -84,6 +84,9 @@ export {
 // the example data the loaders put in, and the one action that takes it out (RULED 2026-10-14; port-only, src/example-data.js)
 export { BECAUSE_SHOWN, EXAMPLE_KEYS, ID_NAMESPACE, exampleIds, exampleLoftIds, examplePresence, loadExampleDataset, removeExampleData, uuid5 } from './example-data.js';
 
+// photo sync, stage 1 (RULED 2026-11-18; port-only, src/db/photos.js)
+export { PHOTO_BUCKET, PHOTO_MAX_BYTES, PHOTO_TYPES, fetchPhotoBytes, photoSyncState, photosAwaitingUpload, runPhotoPass } from './db/photos.js';
+
 export {
   diffFields,
   getOpsSinceSeq,

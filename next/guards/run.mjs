@@ -348,6 +348,28 @@ const guards = {
     return bad;
   },
 
+  // PHOTO SYNC, STAGE 1 (RULED 2026-11-18): bytes travel AFTER records and never hold them up. One door starts an
+  // upload pass — the coordinator, after a record cycle that succeeded, and it does not wait for it. One file speaks
+  // to storage. A second caller, an awaited pass, or a second place that knows the storage endpoint fails the build.
+  'photo-pass-owner'() {
+    const bad = []; let calls = 0;
+    for (const f of files('.js', '.mjs', '.ts', '.tsx')) {
+      const rel_ = relative(ROOT, f);
+      if (!/^(src|app)\//.test(rel_)) continue;
+      const src = maskComments(readFileSync(f, 'utf8'));
+      const n = (src.match(/\brunPhotoPass\s*\(/g) || []).length;
+      if (rel_ === 'src/db/sync.js') {
+        calls = n;
+        if (/await\s+runPhotoPass\s*\(/.test(src)) bad.push('src/db/sync.js awaits runPhotoPass() — a record cycle must never wait for bytes');
+      } else if (rel_ === 'src/db/photos.js') {
+        if (n !== 1) bad.push(`src/db/photos.js: runPhotoPass( appears ${n}× — 1 pinned, its definition`);
+      } else if (n) bad.push(`${rel_} calls runPhotoPass (${n}×) — only the coordinator starts an upload pass (src/db/sync.js)`);
+      if (rel_ !== 'src/db/photos.js' && /storage\/v1\//.test(src)) bad.push(`${rel_} names the storage endpoint — only src/db/photos.js speaks to storage`);
+    }
+    if (calls !== 1) bad.push(`src/db/sync.js: runPhotoPass( appears ${calls}× — 1 pinned, after a cycle that succeeded`);
+    return bad;
+  },
+
   // RULED 2026-11-13 (RF-19): ONE coordinator owns every reason a sync cycle runs. It lives in src/db/sync.js and is
   // started once, by src/components/SyncCoordinator.tsx. The only other doors are the two that ask it for a cycle NOW —
   // the sign-in flow and the «مزامنة الآن» button — and the on/off switch; all three go through its single flight.
@@ -394,7 +416,7 @@ const guards = {
       ['src/db.js',
        'the facade must re-export exportAllBlob and replacePreview (because src/db/io.js is divergent), '
        + 'ensureCurrentLoft (RF-14) and the example-data module src/example-data.js '
-       + '(RULED 2026-10-14, port-only).'],
+       + '(RULED 2026-10-14, port-only), and the photo-sync module src/db/photos.js (RULED 2026-11-18, port-only).'],
       ['src/db/storage.js',
        'RF-14 (RULED 2026-10-14): ensureCurrentLoft() — a stored currentLoftId is validated at boot '
        + 'instead of trusted; a dangling one adopts the single remaining loft or gets a fresh pristine '
@@ -423,7 +445,9 @@ const guards = {
        + 'heartbeat is 60 s while unsent, 1-2-4-8-15 minutes capped while failing, 5 minutes idle, and nothing '
        + 'while hidden or signed out. Vanilla keeps its 2-60 s curve and flat 60 s heartbeat. HONEST STATUS '
        + '(RULED 2026-11-13, RF-19): syncStatus() answers unknown until the op log is counted after a load and '
-       + 'never synced inside an error window; pendingSince; unsentChanges() for the destructive questions. RF-26 (RULED 2026-11-18): applyPage() hands each row\'s last-write-wins decision to records.js, where it runs in the transaction that writes.'],
+       + 'never synced inside an error window; pendingSince; unsentChanges() for the destructive questions. '
+       + 'PHOTO SYNC, STAGE 1 (RULED 2026-11-18): after a cycle that succeeded the coordinator starts the upload pass of '
+       + 'src/db/photos.js (port-only, no vanilla counterpart) and does not wait for it. RF-26 (RULED 2026-11-18): applyPage() hands each row\'s last-write-wins decision to records.js, where it runs in the transaction that writes.'],
     ]);
     const FILES = [
       'src/db.js', 'src/db/storage.js', 'src/db/oplog.js', 'src/db/records.js',

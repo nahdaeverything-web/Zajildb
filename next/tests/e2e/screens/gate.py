@@ -31,7 +31,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'sync'))
 from _serve import serve, OUT                 # noqa: E402
 sys.path.insert(0, os.path.join(HERE, '..'))
-from _net import Net                          # noqa: E402  THE NET (RULED 2026-10-08): armed beneath the stub, asserted at the end
+from _net import Net, no_bucket                          # noqa: E402  THE NET (RULED 2026-10-08): armed beneath the stub, asserted at the end
 NET = Net()
 
 passed = failed = 0
@@ -69,6 +69,7 @@ srv = Server()
 
 def handler(route, request):
     url = request.url
+    if no_bucket(route, request): return          # this suite's project has no photo bucket (tests/e2e/_net.py)
     if '/auth/v1/token' in url:
         body = json.loads(request.post_data or '{}')
         who = (body.get('email') or '').split('@')[0].upper() or (body.get('refresh_token') or '').replace('REFRESH-', '')

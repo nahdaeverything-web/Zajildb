@@ -51,3 +51,19 @@ class Net:
     def assert_empty(self, check):
         """The zero assertion at the suite's end."""
         check(LABEL, not self.escaped, '; '.join(self.escaped[:3]))
+
+
+# PHOTO SYNC, STAGE 1 (2026-11-18). A signed-in device that holds photo bytes now also speaks to STORAGE after a record
+# cycle. A suite whose stub models the record API only must answer that deliberately — its handler parses every POST as
+# JSON rows, and photo bytes are not JSON (gate-37: two suites died in a traceback on exactly that). Such a suite calls
+# this FIRST in its handler: its project has NO BUCKET. That is the true answer of a project before the storage SQL is
+# run, and stage 1's ruled behaviour for it is: the bytes stay on the device and the pass waits. The suite that models
+# storage itself is screens/photo_sync.py; it does not use this.
+STORAGE_SEEN = []
+def no_bucket(route, request):
+    """True when the request was a storage request and has been answered «no bucket» (404, storage's own error shape)."""
+    if '/storage/v1/' not in request.url: return False
+    STORAGE_SEEN.append(f'{request.method} {request.url.split("/storage/v1/")[1][:60]}')
+    import json as _j
+    route.fulfill(status=404, content_type='application/json', body=_j.dumps({'statusCode': '404', 'error': 'Bucket not found', 'message': 'Bucket not found', 'code': 'NoSuchBucket'}))
+    return True

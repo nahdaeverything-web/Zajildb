@@ -268,6 +268,29 @@ try:
         except Exception: pass
         check('[photo] after saving, the profile shows the photo without being reopened', pg.locator('[data-testid=media-photo] img').count() == 1 and snap(pg, "async () => (await window.__zajilDb.idbGetAll('media')).filter(m => m.blob).length") == 1)
 
+        # ── the edit form shows the bird's photos, and every picked photo shows before saving (PHOTO SYNC stage 1, RULED 2026-11-18) ──
+        STRIP = "() => [...document.querySelectorAll('[data-testid=photo-strip] > span')].map(x => { const i = x.querySelector('img'); const r = x.getBoundingClientRect(); return { kind: x.dataset.testid, name: x.title, w: Math.round(r.width), h: Math.round(r.height), natural: i ? [i.naturalWidth, i.naturalHeight] : null }; })"
+        pid = pg.url.split('id=')[1].split('&')[0]
+        pg.goto(f'{ROOT}bird/edit/?id={pid}', wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
+        try: pg.wait_for_function("() => { const i = document.querySelector('[data-testid=strip-saved] img'); return i && i.naturalWidth > 0; }", timeout=6000)
+        except Exception: pass
+        st = pg.evaluate(STRIP)
+        check('[strip · M-nosaved fails here] the edit form shows the photo the bird already has — decoded, in a 56 px tile',
+              len(st) == 1 and st[0]['kind'] == 'strip-saved' and bool(st[0]['natural']) and st[0]['natural'][0] > 0 and (st[0]['w'], st[0]['h']) == (56, 56), st)
+        PICK2 = os.path.join(HERE, '..', 'fixtures', 'picked-second.png')
+        fin = pg.locator('[data-testid=bird-form] input[type=file]').first
+        fin.set_input_files(PICK); pg.wait_for_timeout(300); fin.set_input_files(PICK2)
+        try: pg.wait_for_function("() => { const x = [...document.querySelectorAll('[data-testid=strip-pending] img')]; return x.length === 2 && x.every(i => i.naturalWidth > 0); }", timeout=8000)
+        except Exception: pass
+        st = pg.evaluate(STRIP)
+        check('[strip · M-lastonly fails here] two photos picked one after the other BOTH show before saving, after the saved one, each decoded from its own file',
+              [x['kind'] for x in st] == ['strip-saved', 'strip-pending', 'strip-pending'] and [x['natural'] for x in st[1:]] == [[3000, 2000], [8, 6]] and [x['name'] for x in st[1:]] == ['picked-3000x2000.jpg', 'picked-second.png'], st)
+        check('[strip] …and nothing more is stored until the form is saved', snap(pg, "async () => (await window.__zajilDb.idbGetAll('media')).length") == 1)
+        pg.click('[data-testid=save-btn]'); pg.wait_for_url(re.compile(r'/bird/\?id='), timeout=6000)
+        try: pg.wait_for_function("() => document.querySelectorAll('[data-testid=media-photo] img').length === 3", timeout=8000)
+        except Exception: pass
+        check('[strip] after saving, the profile shows all three', pg.locator('[data-testid=media-photo] img').count() == 3 and snap(pg, "async () => (await window.__zajilDb.idbGetAll('media')).filter(m => m.blob).length") == 3)
+
         check('zero page errors', not errs, errs)
         b.close()
 finally:

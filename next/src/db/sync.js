@@ -31,6 +31,7 @@ import {
 import { findDuplicateRings } from '../engine/rings.js';
 import { toISO } from '../dates.js';
 import { getOpsSinceSeq, logOp } from './oplog.js';
+import { runPhotoPass } from './photos.js';
 import {
   applySyncPut, applySyncDelete, remoteWins, isPristineLoft, dropPristineLoft,
 } from './records.js';
@@ -1245,6 +1246,9 @@ async function fly(manual) {
   try { result = await cycle({ manual }); }
   catch (err) { result = { ok: false, reason: 'network', thrown: String((err && err.message) || err) }; }
   flight = null;
+  // PHOTO SYNC, STAGE 1 (RULED 2026-11-18): the bytes go AFTER the records and never hold them up — started here,
+  // not awaited. A cycle that failed starts nothing: the same wall would meet the photos. (src/db/photos.js)
+  if (result && result.ok) { try { void runPhotoPass({ manual }); } catch { /* never the cycle's problem */ } }
   const next = queued; queued = null;
   if (next) { flight = fly(next.manual); flight.then(next.resolve); }
   else plan();

@@ -12,7 +12,7 @@
 import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr   # TF-12: a page error is recorded with its stack, address, device and step
 import json, os, re
 from playwright.sync_api import sync_playwright
-from _net import Net                           # THE NET (RULED 2026-10-08): armed beneath the stub, asserted at the end
+from _net import Net, no_bucket                           # THE NET (RULED 2026-10-08): armed beneath the stub, asserted at the end
 NET = Net()
 
 BASE = os.environ.get('ZAJIL_URL', 'http://127.0.0.1:8123/')
@@ -35,6 +35,7 @@ srv = {
 
 def handler(route, request):
     url = request.url
+    if no_bucket(route, request): return          # this suite's project has no photo bucket (tests/e2e/_net.py)
     if '/auth/v1/token' in url:
         if srv['token_mode'] == 'dead':
             route.fulfill(status=400, content_type='application/json',

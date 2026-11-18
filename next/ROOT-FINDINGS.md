@@ -3903,3 +3903,85 @@ Mirror `main` = `65fe47c` (`git subtree split --prefix=next d043eb4`, run from `
 The steps were run by `~/zajil-work/deploy/deploy.sh`, which is the RF-16 deploy's commands in the same order with
 a stop after any step that fails (`deploy9-00-run.log`). The deploy commit's author is read from the previous deploy
 commit. Not yet accepted on Samir's two devices.
+
+## 2026-11-18 — photo sync, stage 1 (BUILT, NOT DEPLOYED): bytes follow records, fetched on first view
+
+Ruled 2026-11-18 (C, stages 1–3 in order). Stage 1 is on branch `feat/photo-stage-1`; it is **not deployed** and is
+held for the size ruling from Samir's own photos.
+
+**What it does.** `src/db/photos.js` (port-only). After a record cycle that SUCCEEDED the coordinator starts one
+upload pass and does not wait for it. The pass sends every media record that holds bytes and has no `stored` marker
+to `photos/<owner id>/<media id>` (upsert), then writes `stored: {at, size, type}` on the record as it stands then
+and logs that as an ordinary change, so the marker reaches the other devices with the record. A device that has the
+record, the marker and no bytes fetches them when the bird's profile first draws the tile, and keeps them (no
+operation is logged for that). Until then the tile says where the photo is: on another device and not uploaded yet;
+coming down; or the download failed and will be tried when opened again.
+
+**What it refuses, and how it waits.** A file over 5 MiB or outside JPEG/PNG/WebP/PDF is never sent; a file the
+server refuses for size or type is treated the same. Refusals are said ONCE, in one notice per pass (the shell shows
+two notices at most — a notice per file lost all but the last two; found by the suite's first run), and the bytes
+stay on the device. Anything else — no network, no bucket, a server fault — stops the pass at the first failure and
+waits the coordinator's backoff (1-2-4-8-15 min); «مزامنة الآن» retries at once. A 2xx that is not storage's own
+acknowledgement (`Key` = the object's path — a captive portal answers 200 too) marks nothing; a download whose length
+is not the marker's length is not kept.
+
+**The form (ruled with stage 1).** The edit form shows the bird's existing photos, and every picked photo shows
+before saving: a strip of 56 px tiles under the photo block, saved first, then picked. The strip's layout is not from
+a design spec — it is the builder's, and awaits a look.
+
+**Guard** `photo-pass-owner`: one caller of `runPhotoPass` (the coordinator), never awaited; only `photos.js` names
+the storage endpoint. Its three mutants each fail the build with the reason printed.
+
+**Suite** `tests/e2e/screens/photo_sync.py` (45 checks, storage stub, THE NET armed) and six more checks in
+`bird_form.py`. **Mutants** (`~/zajil-gate-logs/photo1-mutants-2.log`, `-3.log`), each red at named checks, no
+traceback: M-await 1, M-nofetch 9, M-nokeep 7, M-drop 9, M-hot 2 (the bucket-missing case), M-each 1, M-bigsend 3,
+M-anyok 1, M-anylen 1, M-nosaved 2, M-lastonly 1.
+
+**The first mutant batch HUNG for seven hours and proved nothing.** M-await makes the cycle wait for the upload; the
+suite holds that upload unanswered; the page call to `syncNow()` therefore never returned, and a page call has no
+time limit of its own. Two faults, both the builder's: a check that could hang instead of fail, and a runner with no
+limit. Fixed in both places: the held sync gives up after 10 s and fails its check; `~/zajil-work/ps/mut.sh` gives
+the build and the suite 300 s each, kills the process group past that, reports `HUNG` (which is not a red mutant),
+and restores sources on every exit. Four mutants in the rerun ended in tracebacks — not proof either — and were run
+again after the suite's waits were made to answer instead of raise.
+
+**Known limits of stage 1, not hidden:** the certificate view and the loft logo do not fetch (stage 3); deleting a
+photo leaves its object in the bucket (stage 2); a refused file is named only in the notice — nothing on its tile
+says it stays on this device; a page reload forgets the in-memory waits, so each app open may try once; the
+`*File` variants of the tile strings and the single «نوع الملف…» notice are drawn by the same elements as their
+checked siblings but are not themselves visited by a typography check; the 1600 px size is its own commit after this one.
+
+**Strings, all PROPOSED (shipped as written in this build, corrections as one follow-up):** `media.notUploadedYet`,
+`media.notUploadedYetFile`, `media.fetching`, `media.fetchingFile`, `media.fetchFailed`, `media.fetchFailedFile`,
+`media.refused.size`, `media.refused.type`, `media.refused.many`.
+
+**gate-37 was RED on this tree, and why.** Two suites died in a traceback — `photo_safety.py`
+(`json.decoder.JSONDecodeError`) and `tools_failures.py` (`UnicodeDecodeError … byte 0x89`): their stubs model the
+record API only and parse every POST as JSON rows, and a signed-in device with photo bytes now also POSTs those
+bytes to storage. Nothing was committed. Answered deliberately, not by loosening anything: `tests/e2e/_net.py` gains
+`no_bucket()`, and each of the fifteen record-only stubs (the two above, `sync_auto`, `tools`, `replace_sync`,
+`example_remove`, `example_reload`, `auto_backup`, `gate`, `account_collision`, `pull`, `push`, `convergence`,
+`sync_ui`, and the deploy gate `live_deployment.py`) calls it first: their project has no photo bucket — storage's
+own 404 `NoSuchBucket` — which is the ruled case where bytes stay on the device and the pass waits. THE NET and its
+expected counts are untouched. The thirteen that passed gate-37 had been answering storage requests by accident of
+how their handlers were written; they now answer on purpose.
+
+## 2026-11-18 — TF (FOUND, NOT FIXED): `auto_backup.py` can read between the snapshot and its marker
+
+gate-38 on the stage-1 tree was RED on one check and committed nothing:
+
+```
+✗ [boot · M-boot fails here] the last snapshot 13 hours old: the boot takes a new one
+  {'n': 2, 'ids': ['2026-11-18T09:10:13.907Z', '2026-11-18T09:10:18.226Z'], … 'last': '2026-11-17T20:10:18.129Z', …}
+```
+
+The new snapshot IS there (`n` 2, the second id); `last` still holds the 13-hours-ago value the test had planted
+97 ms earlier. `src/db/io.js` writes the snapshot and THEN `setSetting('lastAutoBackup', id)`; the suite's
+`settled()` polls only for the snapshot count and returned between the two writes. The product order is right (a
+marker without its snapshot would be the worse failure); the observation is racy. The suite passed in gates 30–37,
+and 12 of 12 times run alone afterwards on the same tree (`~/zajil-gate-logs/photo1-autobackup-run*.log`): one
+failure in 21 observed runs. Nothing in stage 1 touches the snapshot path; the only change to this suite is the
+no-bucket line in its stub.
+
+**Not fixed — reported.** The gate was run again on the unchanged tree. Proposed, for a ruling: `settled()` also waits
+for `last == ids[-1]`, bounded as it is now, so the check reads a finished boot.

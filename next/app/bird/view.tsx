@@ -27,7 +27,7 @@ type Bird = { id: string; name?: string; sex?: string; status?: string; hatchDat
 type Race = { id: string; birdId: string; date?: string; raceName?: string; raceType?: string; releasePoint?: { name?: string } | null; distanceKm?: number; velocity?: number; position?: number | null; birdsEntered?: number };
 type HealthEvent = { id: string; birdId?: string | null; loftId?: string; wholeLoft?: boolean; eventType: string; date?: string; medication?: string; notes?: string };
 type Pair = { id: string; sireId?: string; damId?: string };
-type Media = { id: string; kind?: string; subtype?: string; name?: string; hasBlob?: boolean };
+type Media = { id: string; kind?: string; subtype?: string; name?: string; hasBlob?: boolean; stored?: { at?: string } | null };
 type Slot = { id: string; bird: Bird | undefined } | null;
 type Tab = 'over' | 'ped' | 'race' | 'hlth';
 const TABS: Array<[Tab, string]> = [['over', 'tab.overview'], ['ped', 'tab.pedigree'], ['race', 'nav.races'], ['hlth', 'nav.health']];
@@ -96,6 +96,19 @@ export default function BirdView() {
       });
     return () => { live = false; for (const u of made) URL.revokeObjectURL(u); };
   }, [media]);
+  // PHOTO SYNC, STAGE 1 (RULED 2026-11-18): ON FIRST VIEW. A row whose bytes are on the server and not on this device is
+  // fetched when the profile draws it, and kept (src/db/photos.js fetchPhotoBytes — one fetch per id, never repeated by
+  // a re-render, a failure backed off). The layer emits a media change when the bytes land, and the tile becomes the photo.
+  const [fetchFailed, setFetchFailed] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    let live = true;
+    for (const m of media) {
+      if (m.hasBlob || !m.stored) continue;
+      (db.fetchPhotoBytes(m.id) as Promise<string>).then((r) => { if (live && (r === 'failed' || r === 'waiting')) setFetchFailed((f) => (f[m.id] ? f : { ...f, [m.id]: true })); });
+    }
+    return () => { live = false; };
+  }, [media]);
+  const whereOf = (m: Media) => (m.stored ? (fetchFailed[m.id] ? 'failed' : 'fetching') : db.isSignedIn() ? 'pending' : 'elsewhere') as 'elsewhere' | 'pending' | 'fetching' | 'failed';
   useEffect(() => { if (booted && !bird) router.replace('/birds'); }, [booted, bird, router]);   // bird-detail.js:21
 
   if (!booted || !bird) return <section className={s.screen}><Loading /></section>;
@@ -298,7 +311,7 @@ export default function BirdView() {
                 <div className={s.gal} data-testid="gallery">
                   {media.map((m) => (
                     <div key={m.id} className={s.phwrap} data-testid="media-tile">
-                      {!m.hasBlob ? <MediaPlaceholder kind={m.kind === 'photo' ? 'photo' : 'file'} filename={m.name} />
+                      {!m.hasBlob ? <MediaPlaceholder kind={m.kind === 'photo' ? 'photo' : 'file'} filename={m.name} where={whereOf(m)} />
                         : !urls[m.id] ? <div className={s.ph} />
                         : m.kind === 'photo' ? <div className={`${s.ph} ${s.img}`} role="img" aria-label={`${t('media.photo')} — ${t('photo.' + (m.subtype || 'other'))}`} data-testid="media-photo"><img src={urls[m.id]} alt={`${t('media.photo')} — ${t('photo.' + (m.subtype || 'other'))}`} loading="lazy" /><span>{m.name}</span></div>
                         : <a className={`${s.ph} ${s.img}`} href={urls[m.id]} download={m.name || 'document'} data-testid="media-file">📄<span>{m.name || 'document'}</span></a>}

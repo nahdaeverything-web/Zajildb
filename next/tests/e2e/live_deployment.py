@@ -55,7 +55,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 NEXT = os.path.abspath(os.path.join(HERE, '..', '..'))
 sys.path.insert(0, os.path.join(HERE, 'screens'))
 import _language as L                          # noqa: E402  the dictionary-derived detector
-from _net import Net                           # noqa: E402  THE NET (TF-6; RULED 2026-10-08 for every stub-backed suite)
+from _net import Net, no_bucket                           # noqa: E402  THE NET (TF-6; RULED 2026-10-08 for every stub-backed suite)
 NET = Net()
 
 # ── what to test, and what to expect of it ────────────────────────────────────────
@@ -121,6 +121,7 @@ with urllib.request.urlopen(URL + 'sync-config.js', timeout=30) as _r:
 BACKEND = ((_m.group(1) or _m.group(2)) if _m else '').rstrip('/')
 _seq = {'n': 0}
 def _stub(route, request):
+    if no_bucket(route, request): return          # this suite's project has no photo bucket (tests/e2e/_net.py)
     if '/auth/v1/token' in request.url:
         route.fulfill(status=200, content_type='application/json', body=json.dumps({
             'access_token': 'ACCESS-G', 'refresh_token': 'REFRESH-G', 'token_type': 'bearer', 'expires_in': 3600,
