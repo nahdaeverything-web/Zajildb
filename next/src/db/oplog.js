@@ -73,6 +73,20 @@ async function nextSeq() {
 }
 
 /**
+ * RF-27 (RULED 2026-11-19): the op logOp() writes, as a VALUE, for a writer that puts it inside its own transaction
+ * together with the record it describes. The sequence number is claimed here, synchronously, exactly as nextSeq()
+ * claims it; the caller persists `opSeq` and the op in that same transaction. PORT-ONLY.
+ */
+export function buildOp({ origin, store, op, recordId, record, changed, at }) {
+  const seq = (state.settings.opSeq || 0) + 1;
+  state.settings.opSeq = seq;
+  return {
+    opId: uuid(), seq, deviceId: state.settings.deviceId || null, actorId: state.settings.authUserId || null,
+    at: at || nowISO(), origin, store, op, recordId, changed: changed || [], record: opRecord(record),
+  };
+}
+
+/**
  * Append one op. Internal to db.js by design — a view must never write to the
  * log directly, or the log stops being a faithful record of the write path.
  * Enforced by tests/guards.test.js.
@@ -157,15 +171,14 @@ const tombstoneId = (store, recordId) => `${store}:${recordId}`;
  *   happened. Same reasoning as §2a's timestamp rule, reached from the other
  *   side. `seq` is null for a sync-applied delete — there is no local op.
  */
+/** RF-27: the tombstone as a value, and its key — for a writer that puts or clears it inside its own transaction. PORT-ONLY. */
+export function tombstoneRecord(store, recordId, seq, at = nowISO()) {
+  return { id: tombstoneId(store, recordId), store, recordId, at, deviceId: state.settings.deviceId || null, seq };
+}
+export function tombstoneKey(store, recordId) { return tombstoneId(store, recordId); }
+
 export async function writeTombstone(store, recordId, seq, at = nowISO()) {
-  await idbPut('tombstones', {
-    id: tombstoneId(store, recordId),
-    store,
-    recordId,
-    at,
-    deviceId: state.settings.deviceId || null,
-    seq,
-  });
+  await idbPut('tombstones', tombstoneRecord(store, recordId, seq, at));
 }
 
 /** The tombstone for one record, or null. */

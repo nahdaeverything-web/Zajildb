@@ -4090,3 +4090,38 @@ old base; after the rebase they were gated only together with `eb776d0`, by gate
 
 Not yet accepted on Samir's two devices. Acceptance: an existing phone photo appears on the PC when that bird is
 opened; a photo added on the PC appears on the phone.
+
+## 2026-11-19 — rulings recorded, and RF-27: a local delete and its undo are each one transaction
+
+**Confirmed 2026-11-19:** the RF-26 record rule (the device's record stands against a pulled row only if this device
+stamped it and its stamp is strictly later than the row's operation time); the two `pull.py` fixture dates; the
+stage-1 choices (conversion at save, `.jpg` name, first frame of an animated GIF, white for transparency, SVG stays
+local). **Known limit, recorded as ruled:** a refusal is remembered per device, and a refused file STAYS refused on
+that device if the size limit or the allow-list later changes — nothing clears `photoRefused`.
+
+**RF-27 — the two windows read under RF-26, now measured.** Both were real
+(`~/zajil-gate-logs/windows-measure-before.log`, on the deployed code `eb776d0`). Made deterministic by issuing the
+pulled row from inside the writer's own first store request, so its transaction is queued directly behind it:
+
+| window | measured before | after |
+|---|---|---|
+| a row for a record applied behind a local delete's removal, before its operation and tombstone | the row was APPLIED: the record was back in the store and in memory, beside a tombstone and an owed delete operation | skipped (`local-op`); deleted in both |
+| the echoed deletion applied behind an undo's put, before its operation | the deletion was APPLIED: the bird was gone from the store and from memory, with the restore operation still owed | skipped; the bird is there in both |
+
+Both healed themselves once the device's own later row came back — unless something was saved on top of the wrong
+state first, which is how RF-26 became permanent.
+
+**Fix** (`src/db/records.js` `atomicWrite`, `src/db/oplog.js` `buildOp`/`tombstoneRecord`/`tombstoneKey`):
+`deleteBird()` (its whole cascade), `restoreBird()`, the generic `remove()` and `restore()`, `deleteMedia()` and
+`restoreMedia()` each write every record change, operation and tombstone in ONE transaction, and change the mirror
+only after it commits. `oplog.js` is now divergent from vanilla for those three functions; `logOp()` is unchanged.
+
+**Proof:** `[window]` checks in `tests/e2e/pull_race.py` (34 checks in all). M-split-delete and M-split-undo — the
+bird's own write moved back in front of the transaction — are each red at their named check
+(`rf27-mutants-1.log`). The checks and mutants exercise `deleteBird` and `restoreBird`; the generic and media
+writers use the same helper and are covered only by the existing delete and undo suites, not by a window check of
+their own.
+
+**Not changed, by reading:** saves (`saveBird`, the generic `save`, `addMedia`) still write the record and then log
+— the RF-26 record rule covers that instant for stamped records, and a new media record has an id no row can name
+yet. `importAll` and the pruning of the op log are as they were. Vanilla has the same windows and is NOT changed.

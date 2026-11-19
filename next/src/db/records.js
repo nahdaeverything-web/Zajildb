@@ -11,7 +11,7 @@ import { classifySave } from '../engine/validate.js';
 import {
   REFERENCE_STATUS, allBirds, emitChange, ensureCurrentLoft, getBird, idbAtomic, idbDelete, idbGet, idbGetAll, idbPut, nowISO, stamp, state, uuid,
 } from './storage.js';
-import { clearTombstone, diffFields, logOp, writeTombstone } from './oplog.js';
+import { buildOp, diffFields, logOp, tombstoneKey, tombstoneRecord } from './oplog.js';
 
 /**
  * THE bird factory. Every bird record in the app is minted here.
@@ -113,6 +113,32 @@ export async function saveBird(bird, { allowWarnings = false, force = false } = 
  * bird that does not exist is not a record of anything. Eggs in OTHER pairs
  * that pointed at this bird as their chick are unlinked.
  */
+// ── RF-27 (RULED 2026-11-19): A LOCAL DELETE, AND ITS UNDO, ARE ONE TRANSACTION ──
+// A delete used to remove the record, then log its operation, then write its tombstone — three transactions. A pulled
+// row applied between the first and the rest saw no operation and no tombstone, and put the record back (measured).
+// An undo had the mirror image: the record back, its operation not logged, the echoed deletion took it away again.
+// Now every record change of one delete or one undo, its operations, and its tombstones are written together: a
+// pulled row is either before all of it or after all of it. The mirror is changed only once the transaction has
+// committed, so memory never shows a write the store did not take.
+async function atomicWrite(stores, fn) {
+  const after = [];                                  // mirror changes, applied in order after the commit
+  const out = await idbAtomic([...new Set([...stores, 'oplog', 'tombstones', 'settings'])], async (h) => fn({
+    put: (store, value) => h.put(store, value),
+    del: (store, key) => h.del(store, key),
+    log: async (entry) => {                          // what logOp() does, inside this transaction
+      const op = buildOp(entry);
+      await h.put('settings', { key: 'opSeq', value: state.settings.opSeq });
+      await h.put('oplog', op);
+      return op.seq;
+    },
+    tomb: (store, id, seq) => h.put('tombstones', tombstoneRecord(store, id, seq)),
+    untomb: (store, id) => h.del('tombstones', tombstoneKey(store, id)),
+    then: (f) => { after.push(f); },
+  }));
+  for (const f of after) f();
+  return out;
+}
+
 export async function deleteBird(id) {
   const bird = state.birds.get(id);
   const media = await idbGetAll('media', 'birdId', id);
@@ -122,71 +148,75 @@ export async function deleteBird(id) {
   const removedPairs = [];
   const affectedPairs = [];       // pairs that merely referenced it from an egg
 
-  for (const b of state.birds.values()) {
-    if (b.sireId === id || b.damId === id) {
-      affectedOriginals.push({ ...b });
-      const copy = { ...b };
-      if (copy.sireId === id) copy.sireId = null;
-      if (copy.damId === id) copy.damId = null;
-      stamp(copy);
-      await idbPut('birds', copy);
-      state.birds.set(copy.id, copy);
-      await logOp({ origin: 'user', store: 'birds', op: 'put', recordId: copy.id,
-                    record: copy, changed: diffFields(affectedOriginals[affectedOriginals.length - 1], copy) });
-    }
-  }
-  for (const r of [...state.raceResults.values()]) {
-    if (r.birdId === id) {
-      removedRaces.push({ ...r });
-      await idbDelete('raceResults', r.id); state.raceResults.delete(r.id);
-      const seq = await logOp({ origin: 'user', store: 'raceResults', op: 'delete', recordId: r.id, record: r });
-      await writeTombstone('raceResults', r.id, seq);
-    }
-  }
-  for (const e of [...state.healthEvents.values()]) {
-    if (e.birdId === id) {
-      removedHealth.push({ ...e });
-      await idbDelete('healthEvents', e.id); state.healthEvents.delete(e.id);
-      const seq = await logOp({ origin: 'user', store: 'healthEvents', op: 'delete', recordId: e.id, record: e });
-      await writeTombstone('healthEvents', e.id, seq);
-    }
-  }
-  for (const p of [...state.pairs.values()]) {
-    if (p.sireId === id || p.damId === id) {
-      removedPairs.push(JSON.parse(JSON.stringify(p)));
-      await idbDelete('pairs', p.id);
-      state.pairs.delete(p.id);
-      const seq = await logOp({ origin: 'user', store: 'pairs', op: 'delete', recordId: p.id, record: p });
-      await writeTombstone('pairs', p.id, seq);
-      continue;
-    }
-    const referencesBird = (p.rounds || []).some((r) =>
-      (r.eggs || []).some((e) => e.chickId === id));
-    if (referencesBird) {
-      affectedPairs.push(JSON.parse(JSON.stringify(p)));   // snapshot BEFORE mutating
-      for (const round of p.rounds || []) {
-        for (const egg of round.eggs || []) {
-          if (egg.chickId === id) { egg.chickId = null; egg.ringed = false; }
-        }
+  await atomicWrite(['birds', 'pairs', 'raceResults', 'healthEvents', 'media'], async (w) => {   // the whole deletion
+    for (const b of state.birds.values()) {
+      if (b.sireId === id || b.damId === id) {
+        affectedOriginals.push({ ...b });
+        const copy = { ...b };
+        if (copy.sireId === id) copy.sireId = null;
+        if (copy.damId === id) copy.damId = null;
+        stamp(copy);
+        await w.put('birds', copy);
+        w.then(() => state.birds.set(copy.id, copy));
+        await w.log({ origin: 'user', store: 'birds', op: 'put', recordId: copy.id,
+                      record: copy, changed: diffFields(affectedOriginals[affectedOriginals.length - 1], copy) });
       }
-      stamp(p);
-      await idbPut('pairs', p);
-      await logOp({ origin: 'user', store: 'pairs', op: 'put', recordId: p.id,
-                    record: p, changed: ['rounds'] });
     }
-  }
+    for (const r of [...state.raceResults.values()]) {
+      if (r.birdId === id) {
+        removedRaces.push({ ...r });
+        await w.del('raceResults', r.id); w.then(() => state.raceResults.delete(r.id));
+        const seq = await w.log({ origin: 'user', store: 'raceResults', op: 'delete', recordId: r.id, record: r });
+        await w.tomb('raceResults', r.id, seq);
+      }
+    }
+    for (const e of [...state.healthEvents.values()]) {
+      if (e.birdId === id) {
+        removedHealth.push({ ...e });
+        await w.del('healthEvents', e.id); w.then(() => state.healthEvents.delete(e.id));
+        const seq = await w.log({ origin: 'user', store: 'healthEvents', op: 'delete', recordId: e.id, record: e });
+        await w.tomb('healthEvents', e.id, seq);
+      }
+    }
+    for (const p of [...state.pairs.values()]) {
+      if (p.sireId === id || p.damId === id) {
+        removedPairs.push(JSON.parse(JSON.stringify(p)));
+        await w.del('pairs', p.id);
+        w.then(() => state.pairs.delete(p.id));
+        const seq = await w.log({ origin: 'user', store: 'pairs', op: 'delete', recordId: p.id, record: p });
+        await w.tomb('pairs', p.id, seq);
+        continue;
+      }
+      const referencesBird = (p.rounds || []).some((r) =>
+        (r.eggs || []).some((e) => e.chickId === id));
+      if (referencesBird) {
+        affectedPairs.push(JSON.parse(JSON.stringify(p)));   // snapshot BEFORE changing
+        const copy = JSON.parse(JSON.stringify(p));           // the mirror's own object is not touched before the commit
+        for (const round of copy.rounds || []) {
+          for (const egg of round.eggs || []) {
+            if (egg.chickId === id) { egg.chickId = null; egg.ringed = false; }
+          }
+        }
+        stamp(copy);
+        await w.put('pairs', copy);
+        w.then(() => state.pairs.set(copy.id, copy));
+        await w.log({ origin: 'user', store: 'pairs', op: 'put', recordId: copy.id,
+                      record: copy, changed: ['rounds'] });
+      }
+    }
 
-  // A1: the cascade hard-deletes media rows directly rather than via
-  // deleteMedia(), so each one is logged here.
-  for (const m of media) {
-    await idbDelete('media', m.id);
-    const seq = await logOp({ origin: 'user', store: 'media', op: 'delete', recordId: m.id, record: m });
-    await writeTombstone('media', m.id, seq);   // A1: the cascade deletes media directly
-  }
-  await idbDelete('birds', id);
-  state.birds.delete(id);
-  const birdSeq = await logOp({ origin: 'user', store: 'birds', op: 'delete', recordId: id, record: bird });
-  await writeTombstone('birds', id, birdSeq);
+    // A1: the cascade hard-deletes media rows directly rather than via
+    // deleteMedia(), so each one is logged here.
+    for (const m of media) {
+      await w.del('media', m.id);
+      const seq = await w.log({ origin: 'user', store: 'media', op: 'delete', recordId: m.id, record: m });
+      await w.tomb('media', m.id, seq);   // A1: the cascade deletes media directly
+    }
+    await w.del('birds', id);
+    w.then(() => state.birds.delete(id));
+    const birdSeq = await w.log({ origin: 'user', store: 'birds', op: 'delete', recordId: id, record: bird });
+    await w.tomb('birds', id, birdSeq);
+  });
   emitChange({ type: 'bird', id });
   return { bird, media, affectedOriginals, removedRaces, removedHealth, removedPairs, affectedPairs };
 }
@@ -197,37 +227,20 @@ export async function restoreBird(snapshot) {
           removedPairs, affectedPairs } = snapshot || {};
   if (!bird) return;
   // an undo restores exactly what was there; it is not a new edit to re-judge
-  await idbPut('birds', bird);
-  state.birds.set(bird.id, bird);
-  await logOp({ origin: 'restore', store: 'birds', op: 'put', recordId: bird.id, record: bird });
-  await clearTombstone('birds', bird.id);
-  for (const orig of affectedOriginals || []) {
-    await idbPut('birds', orig);
-    state.birds.set(orig.id, orig);
-    await logOp({ origin: 'restore', store: 'birds', op: 'put', recordId: orig.id, record: orig });
-    await clearTombstone('birds', orig.id);
-  }
-  for (const r of removedRaces || []) {
-    await idbPut('raceResults', r); state.raceResults.set(r.id, r);
-    await logOp({ origin: 'restore', store: 'raceResults', op: 'put', recordId: r.id, record: r });
-    await clearTombstone('raceResults', r.id);
-  }
-  for (const e of removedHealth || []) {
-    await idbPut('healthEvents', e); state.healthEvents.set(e.id, e);
-    await logOp({ origin: 'restore', store: 'healthEvents', op: 'put', recordId: e.id, record: e });
-    await clearTombstone('healthEvents', e.id);
-  }
-  for (const p of [...(removedPairs || []), ...(affectedPairs || [])]) {
-    await idbPut('pairs', p);
-    state.pairs.set(p.id, p);
-    await logOp({ origin: 'restore', store: 'pairs', op: 'put', recordId: p.id, record: p });
-    await clearTombstone('pairs', p.id);
-  }
-  for (const m of media || []) {
-    await idbPut('media', m);
-    await logOp({ origin: 'restore', store: 'media', op: 'put', recordId: m.id, record: m });
-    await clearTombstone('media', m.id);
-  }
+  await atomicWrite(['birds', 'pairs', 'raceResults', 'healthEvents', 'media'], async (w) => {   // the whole undo
+    const back = async (store, mirror, rec) => {
+      await w.put(store, rec);
+      if (mirror) w.then(() => state[mirror].set(rec.id, rec));
+      await w.log({ origin: 'restore', store, op: 'put', recordId: rec.id, record: rec });
+      await w.untomb(store, rec.id);
+    };
+    await back('birds', 'birds', bird);
+    for (const orig of affectedOriginals || []) await back('birds', 'birds', orig);
+    for (const r of removedRaces || []) await back('raceResults', 'raceResults', r);
+    for (const e of removedHealth || []) await back('healthEvents', 'healthEvents', e);
+    for (const p of [...(removedPairs || []), ...(affectedPairs || [])]) await back('pairs', 'pairs', p);
+    for (const m of media || []) await back('media', null, m);
+  });
   emitChange({ type: 'bird', id: bird.id });
 }
 
@@ -246,19 +259,23 @@ export function makeGeneric(storeName, stateMap, typeName) {
     },
     async remove(id) {
       const rec = state[stateMap].get(id);
-      await idbDelete(storeName, id);
-      state[stateMap].delete(id);
-      const seq = await logOp({ origin: 'user', store: storeName, op: 'delete', recordId: id, record: rec });
-      await writeTombstone(storeName, id, seq);
+      await atomicWrite([storeName], async (w) => {       // RF-27: the removal, its operation and its tombstone together
+        await w.del(storeName, id);
+        w.then(() => state[stateMap].delete(id));
+        const seq = await w.log({ origin: 'user', store: storeName, op: 'delete', recordId: id, record: rec });
+        await w.tomb(storeName, id, seq);
+      });
       if (storeName === 'lofts') await ensureCurrentLoft();   // RF-14: removing the current loft must not leave it dangling
       emitChange({ type: typeName, id });
       return rec;
     },
     async restore(rec) {
-      await idbPut(storeName, rec);
-      state[stateMap].set(rec.id, rec);
-      await logOp({ origin: 'restore', store: storeName, op: 'put', recordId: rec.id, record: rec });
-      await clearTombstone(storeName, rec.id);
+      await atomicWrite([storeName], async (w) => {       // RF-27
+        await w.put(storeName, rec);
+        w.then(() => state[stateMap].set(rec.id, rec));
+        await w.log({ origin: 'restore', store: storeName, op: 'put', recordId: rec.id, record: rec });
+        await w.untomb(storeName, rec.id);
+      });
       emitChange({ type: typeName, id: rec.id });
     },
   };
@@ -295,18 +312,22 @@ export function mediaForBird(birdId) { return idbGetAll('media', 'birdId', birdI
 /** Put a media record back after a delete (undo). Emits, so views refresh. */
 export async function restoreMedia(m) {
   if (!m) return null;
-  await idbPut('media', m);
-  await logOp({ origin: 'restore', store: 'media', op: 'put', recordId: m.id, record: m });
-  await clearTombstone('media', m.id);
+  await atomicWrite(['media'], async (w) => {             // RF-27
+    await w.put('media', m);
+    await w.log({ origin: 'restore', store: 'media', op: 'put', recordId: m.id, record: m });
+    await w.untomb('media', m.id);
+  });
   emitChange({ type: 'media', id: m.id, birdId: m.birdId });
   return m;
 }
 
 export async function deleteMedia(id) {
   const m = await idbGet('media', id);
-  await idbDelete('media', id);
-  const seq = await logOp({ origin: 'user', store: 'media', op: 'delete', recordId: id, record: m });
-  await writeTombstone('media', id, seq);
+  await atomicWrite(['media'], async (w) => {             // RF-27
+    await w.del('media', id);
+    const seq = await w.log({ origin: 'user', store: 'media', op: 'delete', recordId: id, record: m });
+    await w.tomb('media', id, seq);
+  });
   emitChange({ type: 'media', id, birdId: m && m.birdId });
   return m;
 }
@@ -415,7 +436,7 @@ async function decide(h, store, id, at, ctx) {
     await h.put('oplog', { ...op, superseded: true });
     lost++;
   }
-  const tomb = (await h.get('tombstones', `${store}:${id}`)) || null;   // the key writeTombstone() uses (oplog.js)
+  const tomb = (await h.get('tombstones', tombstoneKey(store, id))) || null;
   return { skip: null, lost, have, tomb };
 }
 
@@ -528,9 +549,7 @@ export async function applySyncDelete(store, recordId, at, ctx = {}) {
     await h.del(store, recordId);
     // seq is null: there is no local op behind this deletion. `at` is the remote
     // operation time, so the tombstone claims the moment the delete happened.
-    // The same record writeTombstone() writes (oplog.js), inside this transaction.
-    await h.put('tombstones', { id: `${store}:${recordId}`, store, recordId, at,
-                                deviceId: state.settings.deviceId || null, seq: null });
+    await h.put('tombstones', tombstoneRecord(store, recordId, null, at));
     return { skipped: null, lost: d.lost };
   });
   if (done.skipped) return { applied: false, skipped: done.skipped, anomaly: null, superseded: 0 };

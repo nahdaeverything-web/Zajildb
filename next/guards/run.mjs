@@ -424,13 +424,19 @@ const guards = {
        + 'is NOT changed — main is the live deployment. RF-25 (RULED 2026-11-17): setSetting() puts memory back '
        + 'when storage refuses the write, so a refused setting does not stay shown or acted on. Vanilla is NOT changed. '
        + 'RF-26 (RULED 2026-11-18): idbAtomic() — one readwrite transaction over several stores, for the pull apply.'],
+      ['src/db/oplog.js',
+       'RF-27 (RULED 2026-11-19): buildOp(), tombstoneRecord() and tombstoneKey() — the op and the tombstone as values, '
+       + 'so a local delete or undo can write its record change, its operation and its tombstone in ONE transaction '
+       + '(records.js). logOp() and the rest are unchanged. Vanilla has the same windows and is NOT changed.'],
       ['src/db/records.js',
        'RF-14 (RULED 2026-10-14): the generic remove() and applySyncDelete() call ensureCurrentLoft() '
        + 'after a loft goes, locally or by a pulled tombstone. Port-only, as storage.js. RF-23 (RULED 2026-11-16): '
        + 'withHeldBytes() — applySyncPut() keeps the bytes a media record already holds instead of replacing the '
        + 'record with the pulled, bytes-less row. Vanilla has the same defect and is NOT changed. RF-26 (RULED 2026-11-18): '
        + 'applySyncPut() and applySyncDelete() compare the row with the record on the device and its unpushed operations, '
-       + 'and write, in ONE IndexedDB transaction; remoteWins() moved here from sync.js. Vanilla has the same defect and is NOT changed.'],
+       + 'and write, in ONE IndexedDB transaction; remoteWins() moved here from sync.js. Vanilla has the same defect and is NOT changed. '
+       + 'RF-27 (RULED 2026-11-19): deleteBird(), restoreBird(), the generic remove() and restore(), deleteMedia() and '
+       + 'restoreMedia() each write everything they change in ONE transaction (atomicWrite); the mirror follows the commit.'],
       ['src/db/sync.js',
        'the account collision (RF-13): signIn() compares the incoming user with the owner of '
        + 'the data on the device and stops before storing a session that is not the same '

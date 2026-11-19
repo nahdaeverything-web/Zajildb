@@ -246,6 +246,50 @@ with sync_playwright() as p:
     check('[other device · M-anydevice fails here] a record another device stamped never blocks the next row for it, whatever its stamp says',
           o['applied'] == 1 and o['name'] == 'بعد', o)
 
+    # ── 9. THE TWO WINDOWS INSIDE A LOCAL WRITER (measured 2026-11-19, then closed) ──
+    # A local delete used to remove the record, THEN log its operation, THEN write its tombstone — three transactions;
+    # an undo used to put the record back, THEN log, THEN clear the tombstone. A pulled row applied between the first
+    # step and the rest saw neither the operation nor the tombstone. Made deterministic by issuing the row from
+    # INSIDE the writer's own first store request: the row's transaction is then queued directly behind it.
+    HOOKED = """async (db, a) => {
+        const proto = IDBObjectStore.prototype, orig = proto[a.method]; let row = null, fired = 0;
+        proto[a.method] = function (v) {
+            const key = a.method === 'delete' ? v : (v && v.id);
+            if (this.name === 'birds' && key === a.id && !fired) {
+                fired++;
+                row = a.method === 'delete' ? db.applySyncPut('birds', a.echo.data, a.echo.updated_at, a.id, { deviceId: a.echo.device_id })
+                                            : db.applySyncDelete('birds', a.id, a.echo.updated_at, { deviceId: a.echo.device_id });
+            }
+            return orig.apply(this, arguments);
+        };
+        try { if (a.method === 'delete') window.__snap = await db.deleteBird(a.id); else await db.restoreBird(window.__snap); }
+        finally { proto[a.method] = orig; }
+        const res = await row;
+        const disk = await db.idbGet('birds', a.id), mem = db.getBird(a.id);
+        const tomb = (await db.listTombstones()).some(t => t.recordId === a.id);
+        const ops = (await db.listOps()).filter(o => o.recordId === a.id && o.seq > (db.state.settings.lastAckedSeq || 0));
+        return { fired, row: res && { applied: res.applied, skipped: res.skipped }, disk: !!disk, mem: !!mem, tomb,
+                 ops: ops.map(o => ({ op: o.op, origin: o.origin, superseded: !!o.superseded })) };
+    }"""
+    run(page, RESET); srv['pushed'].clear()
+    b = run(page, SAVE_AND_PUSH, {'name': 'يُحذف والصف في الطريق'})
+    put_echo = echo_of(b['id'], 1)
+    w = run(page, HOOKED, {'id': b['id'], 'method': 'delete', 'echo': put_echo})
+    check('[window · setup] the echoed row was issued from inside the delete, once', w['fired'] == 1 and w['row'] is not None, w)
+    check('[window · delete · M-split-delete fails here] a row applied behind a local delete\'s first write does NOT put the record back — the store and memory both say deleted',
+          w['disk'] is False and w['mem'] is False and w['row']['applied'] is False, w)
+    check('[window · delete] the deletion is whole: its tombstone is there and its operation is owed, not superseded',
+          w['tomb'] is True and any(o['op'] == 'delete' and not o['superseded'] for o in w['ops']), w)
+    run(page, "async (db) => await db.pushOnce()")
+    del_echo = echo_of(b['id'], 2)
+    check('[window · setup] the deletion was pushed', del_echo['deleted'] is True, del_echo['deleted'])
+    w = run(page, HOOKED, {'id': b['id'], 'method': 'put', 'echo': del_echo})
+    check('[window · setup] the echoed deletion was issued from inside the undo, once', w['fired'] == 1 and w['row'] is not None, w)
+    check('[window · undo · M-split-undo fails here] a deletion applied behind an undo\'s first write does NOT take the bird away again — the store and memory both hold it',
+          w['disk'] is True and w['mem'] is True and w['row']['applied'] is False, w)
+    check('[window · undo] the undo is whole: no tombstone is left and its operation is owed, not superseded',
+          w['tomb'] is False and any(o['origin'] == 'restore' and not o['superseded'] for o in w['ops']), w)
+
     check('zero page errors overall', not errs, '; '.join(errs[:2]))
     NET.assert_empty(check)
     br.close()
