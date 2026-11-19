@@ -30,6 +30,8 @@ export default function SyncNotices() {
       toast(f.length === 1 ? t('media.refused.' + (f[0].reason === 'type' ? 'type' : 'size'), { name: f[0].name }) : t('media.refused.many', { n: f.length }), { timeout: 12000 });
       return;
     }
+    // STAGE 2 (RULED 2026-11-19): storage that is full is SAID, once, when it begins; the bytes stay on the device
+    if (ev.type === 'photo-storage-full') { toast(t('media.storageFull'), { timeout: 12000 }); return; }
     if (ev.type === 'sync-interrupt' && ev.key) { toast(t(ev.key), { timeout: 10000 }); return; }
     if (ev.type === 'sync-complete') {
       db.takeSyncDuplicateNotice().then((n: number | null) => { if (n) toast(t('sync.duplicates', { n }), { timeout: 8000 }); });

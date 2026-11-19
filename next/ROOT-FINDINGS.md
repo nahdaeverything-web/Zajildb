@@ -4153,3 +4153,85 @@ its data carries the `stored` mark and the mark's value, and whether the mark's 
 media row with no object and every object with no row. The file states the expected row for a phone photo whose
 upload and mark both reached the server, and how to read the other kinds. Checked on PGlite only (syntax, join, row
 counts unchanged — `photo-diagnostic-pglite.log`); the real storage schema's column names are the docs', unmeasured.
+
+## 2026-11-19 — photo sync, stage 2 (BUILT, NOT DEPLOYED)
+
+Ordered: a photo tombstone removes the stored object, queued if offline; the sync status counts photos waiting to
+upload; a full-storage refusal is said, with bytes kept locally; a refused file is marked on its own tile.
+
+**Removing the object** (`src/db/records.js` `unstore`, `src/db/photos.js` `removeOne`). When `deleteMedia()` or
+`deleteBird()`'s cascade deletes a media record that carries the `stored` marker, its id is queued in the same
+transaction that deletes it (RF-27), in the device setting `photoRemovals`. The photo pass sends
+`DELETE /storage/v1/object/photos/<owner>/<id>` for each queued id, BEFORE its uploads, and takes the id off the
+queue when storage answers. A dropped connection, a missing bucket, a server fault or a 200 that is not storage's
+own JSON leaves the id queued and stops the pass on the coordinator's backoff, as for uploads. Choices made while
+building, for a ruling:
+
+- **Only the device that made the deletion removes the object.** A device that receives the tombstone by pull
+  sends nothing. One request, and no second device racing an undo it cannot see.
+- **A grace of 60 seconds** (`PHOTO_REMOVE_GRACE_MS`) before a queued removal is sent. The «تراجع» notice lasts 6
+  seconds; the other device drops its bytes as soon as it pulls the tombstone, so inside the undo the object can be
+  the only copy the undoing device could fetch. After the grace nothing in the app can undo the deletion.
+- **A record that exists again is never un-stored.** Before each DELETE the pass looks for the media record on the
+  device; if it is there (an undo), nothing is sent and the id leaves the queue.
+- **An object that is not there ends the matter** (`NoSuchKey`, or the older "Object not found"): the id leaves the
+  queue. A missing BUCKET does not.
+- A photo deleted while its own upload was in flight is queued when that upload finishes (`'gone'`).
+
+**Known limits of the removal, by reading:** (1) a device that deletes a media record it holds WITHOUT the marker,
+while another device has uploaded and its marker has not arrived yet, queues nothing — the object is orphaned; the
+design leaves orphan reconciliation to stage 3. (2) Storage answers a DELETE the policy does not allow the same way
+as a missing object, so a wrong policy would look like success here; the bucket's four owner policies were verified
+on 2026-11-18. (3) The DELETE's answers are taken from Supabase's documentation and client code, not from the real
+project: nothing is run against it. The usage query after a real deletion is the check.
+
+**The status counts photos waiting** (`photos.js` `refreshPhotoWaiting`, `syncStatus().photosWaiting`). Files that
+hold bytes on this device, are not marked stored and are not refused. Counted whenever the record status is
+counted, and after every pass. Shown in two places: the sync screen in الأدوات (a line under the status), and the
+status row above the lists — which until now was SILENT whenever records were in step, and would have gone on
+saying "everything is sent" by saying nothing. The row now speaks, in its calm dress, when records are in step and
+photos wait. A refused file is not counted: it is not waiting for anything.
+
+**Storage that is full.** Supabase documents no error for it — the published list of storage error codes has
+nothing for a quota. So what is recognised is a GUESS at what such an answer would look like: HTTP 402 or 507, or a
+code or message naming a quota / insufficient storage / storage full or exceeded. **Unverified against the real
+service, and it cannot be verified without filling a project.** What IS proven is what the app does if storage
+answers that way: the pass stops at the first such answer and backs off; nothing is marked refused; every byte
+stays; it is said once, when it begins («امتلأت مساحة التخزين…»), not on every retry; the sync screen shows the same
+sentence while it lasts; and when an upload goes through again it clears. If the real answer is something else, it
+is treated as any other failed upload: bytes kept, retried with backoff, the photos counted as waiting — and NOT
+said as "full".
+
+**A refused file is marked on its own tile** (`app/bird/view.tsx`): «لم يُرفع — على هذا الجهاز فقط» across the foot of
+the tile, with the full sentence (size or type, with the file's name) as its title. The placement and dress are the
+builder's — no spec draws it. On the bird's profile only; the edit form's strip is not marked.
+
+**New strings — three, all PROPOSED, all through the typography scan:**
+
+| key | Arabic | where |
+|---|---|---|
+| `sync.photosWaiting` | «صور وملفات بانتظار الرفع: {n}» | sync screen line; status row |
+| `media.storageFull` | «امتلأت مساحة التخزين على الخادم — لم تُرفع الصور، وهي محفوظة على هذا الجهاز» | notice; sync screen line |
+| `media.refusedMark` | «لم يُرفع — على هذا الجهاز فقط» | the refused file's tile |
+
+**Proof** — `tests/e2e/screens/photo_sync.py`, 84 checks (29 new). Mutants on this code, the runner's limits on,
+none HUNG, no traceback (`~/zajil-gate-logs/photo2-mutants-1.log`):
+
+| stage-2 mutant | what it does | red at |
+|---|---|---|
+| M-nograce | a queued removal is sent at once | 5 |
+| M-dropqueue | the id leaves the queue before storage has answered | 3 |
+| M-anydel | any 200 counts as removed | 2 |
+| M-noremove | nothing is ever removed | 8 |
+| M-noundo | the record on the device is not looked for | 1 |
+| M-nocascade | deleting a bird queues nothing | 1 |
+| M-nocount | the status carries no count | 4 |
+| M-rowsilent | the status row stays silent | 1 |
+| M-nomark | the tile is not marked | 2 |
+| M-fullsilent | full storage is not said | 2 |
+| M-fullrefuse | full storage marks the file refused | 7 |
+
+Every stage-1 mutant was run again on this code and is red at a named check: M-await 1, M-nofetch 11, M-nokeep 8,
+M-drop 22 (re-anchored: the pass was restructured), M-hot 3, M-each 2, M-bigsend 6, M-anyok 1, M-anylen 1,
+M-nosaved 2, M-lastonly 1, M-forget 1, M-2048 2, M-noconvert 4. G-await, G-second and G-endpoint each fail the build
+at `photo-pass-owner`. Only this file, `PORT-COMPLETE.md` and the guard's reason text were written after the batch.

@@ -108,6 +108,8 @@ export default function BirdView() {
     }
     return () => { live = false; };
   }, [media]);
+  // STAGE 2 (RULED 2026-11-19): a file storage will not take is marked on its own tile, not only in the notice
+  const refused = (db.photoSyncState() as { refused: Record<string, string> }).refused;
   const whereOf = (m: Media) => (m.stored ? (fetchFailed[m.id] ? 'failed' : 'fetching') : db.isSignedIn() ? 'pending' : 'elsewhere') as 'elsewhere' | 'pending' | 'fetching' | 'failed';
   useEffect(() => { if (booted && !bird) router.replace('/birds'); }, [booted, bird, router]);   // bird-detail.js:21
 
@@ -315,6 +317,7 @@ export default function BirdView() {
                         : !urls[m.id] ? <div className={s.ph} />
                         : m.kind === 'photo' ? <div className={`${s.ph} ${s.img}`} role="img" aria-label={`${t('media.photo')} — ${t('photo.' + (m.subtype || 'other'))}`} data-testid="media-photo"><img src={urls[m.id]} alt={`${t('media.photo')} — ${t('photo.' + (m.subtype || 'other'))}`} loading="lazy" /><span>{m.name}</span></div>
                         : <a className={`${s.ph} ${s.img}`} href={urls[m.id]} download={m.name || 'document'} data-testid="media-file">📄<span>{m.name || 'document'}</span></a>}
+                      {refused[m.id] && <span className={s.refused} data-testid="media-refused" data-reason={refused[m.id]} title={t('media.refused.' + (refused[m.id] === 'type' ? 'type' : 'size'), { name: m.name || '' })}>{t('media.refusedMark')}</span>}
                       <button type="button" className={s.del} aria-label={t('act.delete')} onClick={() => delMedia(m)} data-testid="media-delete">✕</button>
                     </div>
                   ))}

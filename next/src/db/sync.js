@@ -31,7 +31,7 @@ import {
 import { findDuplicateRings } from '../engine/rings.js';
 import { toISO } from '../dates.js';
 import { getOpsSinceSeq, logOp } from './oplog.js';
-import { runPhotoPass } from './photos.js';
+import { photoStatus, refreshPhotoWaiting, runPhotoPass } from './photos.js';
 import {
   applySyncPut, applySyncDelete, remoteWins, isPristineLoft, dropPristineLoft,
 } from './records.js';
@@ -1136,6 +1136,7 @@ export async function refreshSyncStatus() {
   const since = state.settings.pendingSince || null;
   if (pendingCount > 0 && !since) await setSetting('pendingSince', nowISO());
   else if (pendingCount === 0 && since) await setSetting('pendingSince', null);
+  await refreshPhotoWaiting().catch(() => {});   // stage 2: counted with the op log, so the status is whole
   emitChange({ type: 'sync-status' });
   return pendingCount;
 }
@@ -1173,8 +1174,12 @@ export function syncStatus() {
     email: s.authEmail || null,
     lastSyncAt: s.lastSyncAt || null,
     error,
+    // PHOTO SYNC, STAGE 2 (RULED 2026-11-19): files that hold bytes here and are not on the server, and whether
+    // storage refused the last upload as full. Beside the record state, never instead of it.
+    photosWaiting: photoStatus().waiting,
+    storageFull: photoStatus().full,
   };
-  if (!syncConfig().configured || !isSignedIn()) return { ...base, state: 'hidden', pending: 0 };
+  if (!syncConfig().configured || !isSignedIn()) return { ...base, state: 'hidden', pending: 0, photosWaiting: 0, storageFull: false };
   if (s.syncEnabled === false) return { ...base, state: 'off' };
   // HONEST STATUS (RULED 2026-11-13, RF-19): «متزامن» MEANS SYNCED — nothing unsent, no error, online. The count
   // lives in memory and starts at zero on every load, so until the op log has been counted the answer is 'unknown',

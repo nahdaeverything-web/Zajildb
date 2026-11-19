@@ -37,7 +37,7 @@ OBJ = re.compile(r'/storage/v1/object/(authenticated/)?photos/([^/]+)/([^/?]+)')
 class Server:
     """The table (owner rows, one server_seq) and the storage bucket (objects by owner/id), with switchable faults."""
     def __init__(self):
-        self.rows = {}; self.seq = 0; self.objects = {}; self.posts = []; self.gets = []; self.held = []
+        self.rows = {}; self.seq = 0; self.objects = {}; self.posts = []; self.gets = []; self.held = []; self.deletes = []
         self.stub_errors = []
         self.mode = {}       # owner -> 'ok' | 'nobucket' | 'abort' | 'hold' | 'toolarge' | 'badmime' | 'getfail' | 'portal' | 'getportal' | 'gethold'
     def upsert(self, o, r): self.seq += 1; row = dict(r, server_seq=self.seq, owner=o); self.rows[(o, r['store'], r['record_id'])] = row; return row
@@ -63,6 +63,7 @@ def _handler(route, request):
             srv.posts.append((who, owner, mid, len(request.post_data_buffer or b'')))
             if owner != who: err(route, 403, 'AccessDenied', 'new row violates row-level security policy'); return
             if mode == 'nobucket': err(route, 404, 'NoSuchBucket', 'Bucket not found'); return
+            if mode == 'full': err(route, 507, 'InsufficientStorage', 'storage quota exceeded'); return
             if mode == 'toolarge': err(route, 413, 'EntityTooLarge', 'The object exceeded the maximum allowed size'); return
             if mode == 'badmime': err(route, 400, 'InvalidMimeType', 'mime type image/jpeg is not supported'); return
             if mode == 'abort': route.abort('internetdisconnected'); return
@@ -76,6 +77,14 @@ def _handler(route, request):
             if mode == 'gethold': srv.held.append((route, o)); return
             if mode == 'getportal': route.fulfill(status=200, content_type='text/html', body='<html>sign in to the wifi</html>'); return
             route.fulfill(status=200, content_type=o['type'], body=o['bytes']); return
+        if request.method == 'DELETE':
+            srv.deletes.append((who, owner, mid))
+            if mode == 'delabort': route.abort('internetdisconnected'); return
+            if mode == 'delportal': route.fulfill(status=200, content_type='text/html', body='<html>sign in to the wifi</html>'); return
+            if mode == 'nobucket': err(route, 404, 'NoSuchBucket', 'Bucket not found'); return
+            if owner != who or (owner, mid) not in srv.objects: err(route, 404, 'NoSuchKey', 'Object not found'); return
+            del srv.objects[(owner, mid)]
+            route.fulfill(status=200, content_type='application/json', body=json.dumps({'message': 'Successfully deleted'})); return
         err(route, 400, 'InvalidRequest', 'unexpected'); return
     if request.method == 'POST':
         rows = json.loads(request.post_data or '[]')
@@ -108,6 +117,7 @@ RAW = "async (db, bird, name, size, type) => { const m = await db.addMedia(bird,
 LOCAL = """async (db, id) => { const m = await db.idbGet('media', id); if (!m) return null; let sha = null;
     if (m.blob) { const h = new Uint8Array(await crypto.subtle.digest('SHA-256', await m.blob.arrayBuffer())); sha = [...h].map(x => x.toString(16).padStart(2, '0')).join(''); }
     return { size: m.blob ? m.blob.size : null, type: m.blob ? m.blob.type : null, sha, stored: m.stored || null }; }"""
+def digits(s_): return re.sub(r'[٠-٩]', lambda m: str('٠١٢٣٤٥٦٧٨٩'.index(m.group())), s_ or '')
 def storage_posts(who): return [p for p in srv.posts if p[0] == who]
 def toasts(pg): return ' | '.join(pg.locator('[data-testid=toast]').all_inner_texts()).replace('\n', ' ')
 
@@ -276,6 +286,99 @@ try:
         lk = run(dl, LOCAL, pk['id'])
         check('[file] opening the bird again fetches the document, and its bytes are kept', arrived and lk is not None and lk['size'] == pk['size'] and lk['type'] == 'application/pdf', (arrived, lk))
         ck.close(); cl.close()
+
+        # ══════════════════════ STAGE 2 (RULED 2026-11-19) ══════════════════════
+        # ═══ A DELETED PHOTO'S OBJECT IS REMOVED — by the device that deleted it, after the undo has passed ═══
+        AGE = "async (db) => { await db.setSetting('photoRemovals', (db.state.settings.photoRemovals || []).map(q => ({ ...q, at: new Date(Date.now() - db.PHOTO_REMOVE_GRACE_MS - 1000).toISOString() }))); }"
+        QUEUE = "async (db) => (db.photoSyncState().removals || []).map(q => q.id)"
+        def cycle(pg): run(pg, SYNC); return run(pg, PASS)
+        cm, dm = device(b, H, 'm@zajil.test'); birdm = run(dm, BIRD, 'حذف'); pm = run(dm, PHOTO, birdm, 'm1.jpg'); cycle(dm); run(dm, SYNC)
+        cn, dn = device(b, H, 'm@zajil.test'); run(dn, SYNC)
+        check('[remove · setup] the photo is stored, and the second device has its record', ('user-M', pm['id']) in srv.objects and run(dn, LOCAL, pm['id']) is not None)
+        run(dm, "async (db, id) => { window.__m = await db.deleteMedia(id); }", pm['id']); q = run(dm, QUEUE); cycle(dm)
+        check('[remove] deleting a stored photo queues its object for removal, on the device that deleted it', q == [pm['id']], q)
+        check('[remove · M-nograce fails here] while an undo is still possible NOTHING is removed: no DELETE is sent and the object is there',
+              not srv.deletes and ('user-M', pm['id']) in srv.objects and run(dm, QUEUE) == [pm['id']], (srv.deletes, run(dm, QUEUE)))
+        srv.mode['user-M'] = 'delabort'; run(dm, AGE); st = cycle(dm); n = len(srv.deletes)
+        check('[remove · offline · M-dropqueue fails here] a removal the network drops stays queued, and the object stays',
+              n == 1 and run(dm, QUEUE) == [pm['id']] and ('user-M', pm['id']) in srv.objects and st['last']['failed'] is not None, (n, run(dm, QUEUE), st['last']))
+        for _ in range(5): run(dm, "async (db) => { await db.runSyncCycle(); }"); run(dm, PASS)
+        st = run(dm, PASS)
+        check('[remove · offline] five more automatic cycles send it ZERO more times — it waits out the same backoff as uploads', len(srv.deletes) == n and st['waitMs'] > 30000, (len(srv.deletes), st['waitMs']))
+        srv.mode['user-M'] = 'delportal'; st = cycle(dm)
+        check('[remove · portal · M-anydel fails here] a 200 that is not storage\'s answer removes nothing from the queue',
+              run(dm, QUEUE) == [pm['id']] and st['last']['failed'] and st['last']['failed']['code'] == 'Unacknowledged', (run(dm, QUEUE), st['last']))
+        srv.mode['user-M'] = 'ok'; st = cycle(dm)
+        check('[remove · M-noremove fails here] with the network back the object is REMOVED from the owner\'s own folder, and the queue is empty',
+              ('user-M', pm['id']) not in srv.objects and srv.deletes[-1] == ('user-M', 'user-M', pm['id']) and run(dm, QUEUE) == [] and st['last']['removed'] == 1, (srv.deletes[-1:], run(dm, QUEUE), st['last']))
+        n = len(srv.deletes); cycle(dm); cycle(dm)
+        check('[remove] …and it is not asked for again', len(srv.deletes) == n, len(srv.deletes) - n)
+        run(dn, SYNC); stn = cycle(dn)
+        check('[remove] the OTHER device takes the deletion and sends no DELETE of its own: one device removes an object',
+              run(dn, LOCAL, pm['id']) is None and not any(d[0] == 'user-M' and d is not srv.deletes[n - 1] for d in srv.deletes[n:]) and run(dn, QUEUE) == [], (srv.deletes[n:], run(dn, QUEUE)))
+        # an undo inside the grace: the record is back, so the object must never go
+        pu = run(dm, PHOTO, birdm, 'undo.jpg'); cycle(dm); run(dm, SYNC)
+        run(dm, "async (db, id) => { const m = await db.deleteMedia(id); await db.restoreMedia(m); }", pu['id']); run(dm, AGE); n = len(srv.deletes); st = cycle(dm)
+        check('[remove · undo · M-noundo fails here] a deletion that was undone removes NOTHING: no DELETE, the object is there, the queue is cleared',
+              len(srv.deletes) == n and ('user-M', pu['id']) in srv.objects and run(dm, QUEUE) == [], (srv.deletes[n:], run(dm, QUEUE)))
+        # never stored: there is no object to remove
+        srv.mode['user-M'] = 'abort'; pz = run(dm, PHOTO, birdm, 'never-up.jpg'); cycle(dm); run(dm, "async (db, id) => { await db.deleteMedia(id); }", pz['id'])
+        check('[remove] deleting a photo that was never uploaded queues nothing', run(dm, QUEUE) == [], run(dm, QUEUE))
+        srv.mode['user-M'] = 'ok'
+        # the object is already gone (removed by hand, or never arrived): that is the end of it, not a retry forever
+        pg2 = run(dm, PHOTO, birdm, 'gone.jpg'); cycle(dm); run(dm, SYNC); del srv.objects[('user-M', pg2['id'])]
+        run(dm, "async (db, id) => { await db.deleteMedia(id); }", pg2['id']); run(dm, AGE); st = cycle(dm)
+        check('[remove] an object that is already gone (404 NoSuchKey) ends the matter: the queue is empty and nothing failed', run(dm, QUEUE) == [] and not st['last']['failed'], (run(dm, QUEUE), st['last']))
+        # deleting the BIRD removes its photos' objects too
+        bird2 = run(dm, BIRD, 'طير يُحذف'); pc = run(dm, PHOTO, bird2, 'c.jpg'); cycle(dm); run(dm, SYNC)
+        run(dm, "async (db, id) => { await db.deleteBird(id); }", bird2); q = run(dm, QUEUE); run(dm, AGE); cycle(dm)
+        check('[remove · M-nocascade fails here] deleting a bird queues and removes the objects of its photos', q == [pc['id']] and ('user-M', pc['id']) not in srv.objects and run(dm, QUEUE) == [], (q, run(dm, QUEUE)))
+        check('[remove] every DELETE in this run was addressed to the signed-in user\'s own folder', all(d[0] == d[1] for d in srv.deletes), srv.deletes[:3])
+        cm.close(); cn.close()
+
+        # ═══ THE STATUS COUNTS PHOTOS WAITING TO UPLOAD ═══
+        STATUS = "async (db) => { await db.refreshSyncStatus(); const s = db.syncStatus(); return { state: s.state, waiting: s.photosWaiting, full: s.storageFull }; }"
+        cs, ds = device(b, H, 's@zajil.test'); birds_ = run(ds, BIRD, 'ينتظر'); srv.mode['user-S'] = 'nobucket'
+        run(ds, PHOTO, birds_, 'w1.jpg'); run(ds, PHOTO, birds_, 'w2.jpg'); run(ds, RAW, birds_, 'too-big.jpg', 5 * 1024 * 1024 + 1, 'image/jpeg'); cycle(ds); st = run(ds, STATUS)
+        check('[status · M-nocount fails here] the status counts the files waiting to upload: 3 before any verdict (records are in step, photos are not)', st['state'] == 'synced' and st['waiting'] == 3, st)
+        ds.goto(ROOT + 'tools/sync/', wait_until='load'); waits(ds, '[data-testid=sync-detail]'); got = waits(ds, '[data-testid=photos-waiting]'); ds.wait_for_timeout(400)
+        line = (ds.locator('[data-testid=photos-waiting]').all_inner_texts() or [''])[0].strip(); ty = typo(ds)
+        check('[status] the sync screen in الأدوات says «صور وملفات بانتظار الرفع: 3» (in the device\'s numerals), in a face that has Arabic', got and digits(line) == 'صور وملفات بانتظار الرفع: 3' and not ty, (got, line, ty[:3]))
+        ds.goto(ROOT + 'birds/', wait_until='load'); got = waits(ds, '[data-testid=sync-row][data-state=photos]'); row_ = (ds.locator('[data-testid=sync-row]').all_inner_texts() or [''])[0].replace('\n', ' ').strip(); ty = typo(ds)
+        check('[status · M-rowsilent fails here] the status row above the register says it too — silence would have claimed everything is sent', got and 'صور وملفات بانتظار الرفع' in row_ and not ty, (got, row_, ty[:3]))
+        home(ds, H); srv.mode['user-S'] = 'ok'; cycle(ds); cycle(ds); st = run(ds, STATUS)
+        check('[status] once the two photos are stored the count is 0: the file over the limit was refused, and a refused file is not waiting', st['waiting'] == 0, st)
+        ds.goto(ROOT + 'birds/', wait_until='load'); ds.wait_for_timeout(1500)
+        check('[status] …and the row is silent again', ds.locator('[data-testid=sync-row]').count() == 0, (ds.locator('[data-testid=sync-row]').all_inner_texts() or [''])[0])
+
+        # ═══ A REFUSED FILE IS MARKED ON ITS OWN TILE ═══
+        ds.goto(ROOT + 'bird/?id=' + birds_, wait_until='load'); got = waits(ds, '[data-testid=media-refused]'); ds.wait_for_timeout(400)
+        marks = ds.evaluate("() => [...document.querySelectorAll('[data-testid=media-tile]')].map(t => { const r = t.querySelector('[data-testid=media-refused]'); return r ? { text: r.innerText.trim(), reason: r.dataset.reason, title: r.title } : null; })")
+        ty = typo(ds)
+        check('[tile · M-nomark fails here] the refused file\'s own tile says «لم يُرفع — على هذا الجهاز فقط»; the two stored photos\' tiles say nothing',
+              got and len(marks) == 3 and [m_ for m_ in marks if m_] == [{'text': 'لم يُرفع — على هذا الجهاز فقط', 'reason': 'size', 'title': 'الملف «too-big.jpg» أكبر من الحد المسموح للرفع — بقي محفوظًا على هذا الجهاز فقط'}], marks)
+        check('[typography] the tile mark is drawn in a face that has Arabic', got and not ty, ty[:3])
+        cs.close()
+
+        # ═══ STORAGE THAT IS FULL is said, once, and the bytes stay ═══
+        ct, dt = device(b, H, 't@zajil.test'); birdt = run(dt, BIRD, 'ممتلئ'); srv.mode['user-T'] = 'full'
+        f1 = run(dt, PHOTO, birdt, 'f1.jpg'); f2 = run(dt, PHOTO, birdt, 'f2.jpg'); st = cycle(dt); dt.wait_for_timeout(500); said = toasts(dt); ty = typo(dt)
+        check('[full · M-fullsilent fails here] storage that answers "full" is SAID: «امتلأت مساحة التخزين على الخادم — لم تُرفع الصور، وهي محفوظة على هذا الجهاز»',
+              'امتلأت مساحة التخزين على الخادم — لم تُرفع الصور، وهي محفوظة على هذا الجهاز' in said, said[-200:])
+        check('[typography] the full-storage notice is drawn in a face that has Arabic', 'امتلأت' in said and not ty, ty[:3])
+        l1, l2 = run(dt, LOCAL, f1['id']), run(dt, LOCAL, f2['id'])
+        check('[full · M-fullrefuse fails here] nothing is marked refused and every byte stays: a full store is not a verdict on the file',
+              l1['size'] == f1['size'] and l2['size'] == f2['size'] and not l1['stored'] and not l2['stored'] and not run(dt, "async (db) => Object.keys(db.photoSyncState().refused).length"), (l1, l2))
+        check('[full] the pass stopped at the first refusal — one request, not one per photo — and waits', len(storage_posts('user-T')) == 1 and st['last']['failed']['code'] == 'StorageFull' and st['waitMs'] > 30000, (storage_posts('user-T'), st['last']))
+        cycle(dt); dt.wait_for_timeout(400)
+        check('[full] a second pass that meets the same answer does not say it a second time', toasts(dt).count('امتلأت') <= 1, toasts(dt)[-200:])
+        st2 = run(dt, STATUS)
+        check('[full] the status carries it, with the two photos still counted as waiting', st2['full'] is True and st2['waiting'] == 2, st2)
+        dt.goto(ROOT + 'tools/sync/', wait_until='load'); waits(dt, '[data-testid=sync-detail]'); got = waits(dt, '[data-testid=storage-full]')
+        check('[full] الأدوات shows the same sentence while it lasts', got and 'امتلأت مساحة التخزين' in (dt.locator('[data-testid=storage-full]').all_inner_texts() or [''])[0], got)
+        home(dt, H); srv.mode['user-T'] = 'ok'; cycle(dt); cycle(dt); st3 = run(dt, STATUS); l1 = run(dt, LOCAL, f1['id'])
+        check('[full] when storage takes uploads again both photos are stored and the status is clear', bool(l1['stored']) and st3['full'] is False and st3['waiting'] == 0, (l1['stored'], st3))
+        ct.close()
 
         # ═══ NEVER ANOTHER ACCOUNT'S FOLDER, and nothing without an account ═══
         check('[owner] every upload and download in this run was addressed to the signed-in user’s own folder', all(p_[0] == p_[1] for p_ in srv.posts) and all(g[0] == g[1] for g in srv.gets), [x for x in srv.posts if x[0] != x[1]][:2])

@@ -134,6 +134,16 @@ async function atomicWrite(stores, fn) {
     tomb: (store, id, seq) => h.put('tombstones', tombstoneRecord(store, id, seq)),
     untomb: (store, id) => h.del('tombstones', tombstoneKey(store, id)),
     then: (f) => { after.push(f); },
+    // PHOTO SYNC, STAGE 2 (RULED 2026-11-19): a deleted media record that was marked stored has an object on the
+    // server. Its id is queued HERE, in the transaction that deletes it, for the photo pass to remove (photos.js).
+    // Device-local (`photoRemovals`), never synced: only the device that made the deletion removes the object.
+    unstore: async (media) => {
+      const add = (media || []).filter((m) => m && m.stored).map((m) => ({ id: m.id, at: nowISO() }));
+      if (!add.length) return;
+      const have = Array.isArray(state.settings.photoRemovals) ? state.settings.photoRemovals : [];
+      state.settings.photoRemovals = [...have.filter((q) => !add.some((x) => x.id === q.id)), ...add];
+      await h.put('settings', { key: 'photoRemovals', value: state.settings.photoRemovals });
+    },
   }));
   for (const f of after) f();
   return out;
@@ -212,6 +222,7 @@ export async function deleteBird(id) {
       const seq = await w.log({ origin: 'user', store: 'media', op: 'delete', recordId: m.id, record: m });
       await w.tomb('media', m.id, seq);   // A1: the cascade deletes media directly
     }
+    await w.unstore(media);
     await w.del('birds', id);
     w.then(() => state.birds.delete(id));
     const birdSeq = await w.log({ origin: 'user', store: 'birds', op: 'delete', recordId: id, record: bird });
@@ -327,6 +338,7 @@ export async function deleteMedia(id) {
     await w.del('media', id);
     const seq = await w.log({ origin: 'user', store: 'media', op: 'delete', recordId: id, record: m });
     await w.tomb('media', id, seq);
+    await w.unstore([m]);
   });
   emitChange({ type: 'media', id, birdId: m && m.birdId });
   return m;

@@ -23,7 +23,7 @@ import s from './tools.module.css';
 export type Loft = { id: string; name?: string; location?: string; breederName?: string; phone?: string; website?: string; logoMediaId?: string | null };
 export type Bird = { id: string; name?: string; rings?: Array<{ raw?: string }>; sireId?: string | null; damId?: string | null };
 export type Backup = { id: string; payload?: { birds?: unknown[] } };
-export type SyncStatus = { pending: number; pendingSince?: string | null; state: string; error?: { key: string; status?: number | null; at?: string } | null };
+export type SyncStatus = { photosWaiting?: number; storageFull?: boolean; pending: number; pendingSince?: string | null; state: string; error?: { key: string; status?: number | null; at?: string } | null };
 export type Anomaly = { store?: string; recordId?: string; reason?: string; at?: string };
 export const Lofts = db.Lofts as { save: (l: Loft) => Promise<Loft> };
 
@@ -178,6 +178,9 @@ export function SyncDetail({ settings }: { settings: Record<string, unknown> }) 
     <div data-testid="sync-detail" data-state={status.state}>
       <StatusLine icon={line.icon} gold={line.gold} testid={line.testid || 'sync-status'} state={status.state} title={line.title} text={line.text} code={line.code} />
       {anomalies.length > 0 && <StatusLine icon="list" gold title={t('sync.anomalies', { n: fmtNum(anomalies.length) })} text={t('tools.sync.rejectedText')} />}
+      {/* PHOTO SYNC, STAGE 2 (RULED 2026-11-19): photos waiting, and storage that is full, beside the record state */}
+      {status.state !== 'hidden' && (status.photosWaiting || 0) > 0 && <StatusLine icon="clock" testid="photos-waiting" title={t('sync.photosWaiting', { n: fmtNum(status.photosWaiting || 0) })} />}
+      {status.storageFull && <StatusLine icon="alert" gold testid="storage-full" title={t('media.storageFull')} />}
       <div className={s.kv}>
         <div className={s.kvRow}><span className={s.kvK}>{t('sync.lastSync')}</span><span className={s.kvV}>{settings.lastSyncAt ? fmtDate(settings.lastSyncAt as string, { withTime: true }) : t('sync.never')}</span></div>
       </div>

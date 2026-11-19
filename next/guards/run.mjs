@@ -436,7 +436,9 @@ const guards = {
        + 'applySyncPut() and applySyncDelete() compare the row with the record on the device and its unpushed operations, '
        + 'and write, in ONE IndexedDB transaction; remoteWins() moved here from sync.js. Vanilla has the same defect and is NOT changed. '
        + 'RF-27 (RULED 2026-11-19): deleteBird(), restoreBird(), the generic remove() and restore(), deleteMedia() and '
-       + 'restoreMedia() each write everything they change in ONE transaction (atomicWrite); the mirror follows the commit.'],
+       + 'restoreMedia() each write everything they change in ONE transaction (atomicWrite); the mirror follows the commit. '
+       + 'PHOTO SYNC, STAGE 2 (RULED 2026-11-19): a deleted media record that was marked stored queues its object for '
+       + 'removal in that same transaction (photoRemovals, a device setting).'],
       ['src/db/sync.js',
        'the account collision (RF-13): signIn() compares the incoming user with the owner of '
        + 'the data on the device and stops before storing a session that is not the same '
@@ -453,7 +455,7 @@ const guards = {
        + '(RULED 2026-11-13, RF-19): syncStatus() answers unknown until the op log is counted after a load and '
        + 'never synced inside an error window; pendingSince; unsentChanges() for the destructive questions. '
        + 'PHOTO SYNC, STAGE 1 (RULED 2026-11-18): after a cycle that succeeded the coordinator starts the upload pass of '
-       + 'src/db/photos.js (port-only, no vanilla counterpart) and does not wait for it. RF-26 (RULED 2026-11-18): applyPage() hands each row\'s last-write-wins decision to records.js, where it runs in the transaction that writes.'],
+       + 'src/db/photos.js (port-only, no vanilla counterpart) and does not wait for it. STAGE 2 (RULED 2026-11-19): syncStatus() carries photosWaiting and storageFull, counted with the op log. RF-26 (RULED 2026-11-18): applyPage() hands each row\'s last-write-wins decision to records.js, where it runs in the transaction that writes.'],
     ]);
     const FILES = [
       'src/db.js', 'src/db/storage.js', 'src/db/oplog.js', 'src/db/records.js',

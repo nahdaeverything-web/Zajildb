@@ -524,6 +524,10 @@ export const EXT = {
   'media.refused.size':       { ar: 'الملف «{name}» أكبر من الحد المسموح للرفع — بقي محفوظًا على هذا الجهاز فقط', en: '“{name}” is larger than the upload limit — it stays on this device only' },
   'media.refused.type':       { ar: 'نوع الملف «{name}» غير مسموح برفعه — بقي محفوظًا على هذا الجهاز فقط', en: 'Files of the type of “{name}” cannot be uploaded — it stays on this device only' },
   'media.refused.many':       { ar: 'عدد الملفات التي لم تُرفع لأنها أكبر من الحد أو من نوع غير مسموح: {n}. بقيت محفوظة على هذا الجهاز فقط.', en: 'Files not uploaded because they are over the limit or of a type that is not allowed: {n}. They stay on this device only.' },
+  // PHOTO SYNC, STAGE 2 (RULED 2026-11-19). All three PROPOSED.
+  'sync.photosWaiting':       { ar: 'صور وملفات بانتظار الرفع: {n}', en: 'Photos and files waiting to upload: {n}' },
+  'media.storageFull':        { ar: 'امتلأت مساحة التخزين على الخادم — لم تُرفع الصور، وهي محفوظة على هذا الجهاز', en: 'Server storage is full — the photos were not uploaded, and they are kept on this device' },
+  'media.refusedMark':        { ar: 'لم يُرفع — على هذا الجهاز فقط', en: 'Not uploaded — on this device only' },
   'tools.failed.action':      { ar: 'لم يكتمل «{what}». السبب: {reason}', en: '“{what}” did not complete. Reason: {reason}' },
   'tools.failed.unknown':     { ar: 'خطأ غير متوقع ({what})', en: 'an unexpected error ({what})' },
   'backup.snapshot':          { ar: 'النسخة', en: 'Snapshot' },

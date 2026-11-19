@@ -31,10 +31,23 @@ export const PHOTO_TYPES = Object.freeze(['image/jpeg', 'image/png', 'image/webp
 /** Files this device was told will not be stored, by media id: 'size' | 'type'. Per device, out of sync scope. */
 const refusedMap = () => (state.settings.photoRefused && typeof state.settings.photoRefused === 'object' ? state.settings.photoRefused : {});
 
+/**
+ * STAGE 2 (RULED 2026-11-19). A queued object removal is sent only once it is this old. The «تراجع» notice lasts 6
+ * seconds; inside this time an undo must find the object still there, because the other device has already dropped
+ * its bytes on the tombstone and the object may be the only copy this device can fetch.
+ */
+export const PHOTO_REMOVE_GRACE_MS = 60 * 1000;
+/** Media ids whose object this device is to remove: [{ id, at }]. Written by the delete itself (records.js). */
+const removalQueue = () => (Array.isArray(state.settings.photoRemovals) ? state.settings.photoRemovals : []);
+const dequeue = (id) => setSetting('photoRemovals', removalQueue().filter((q) => q.id !== id));
+
 let pass = null;             // the one pass in flight, or null
 let attempt = 0;             // consecutive passes that ended in a failure
 let notBefore = 0;           // ms epoch: automatic passes before this do nothing
 let last = null;             // what the last pass did, for الأدوات and the suites
+let waiting = null;          // how many files hold bytes here and are not on the server; null until counted
+let full = false;            // the last upload was refused because storage is full
+
 
 const objectUrl = (kind, owner, id) => `${syncConfig().url}/storage/v1/object/${kind}${PHOTO_BUCKET}/${encodeURIComponent(owner)}/${encodeURIComponent(id)}`;
 
@@ -86,6 +99,13 @@ async function uploadOne(m, owner) {
     if (err) {
       if (err.status === 413 || err.code === 'EntityTooLarge') { await refuse(m, 'size'); return 'refused'; }
       if (err.code === 'InvalidMimeType' || /mime/i.test(err.message)) { await refuse(m, 'type'); return 'refused'; }
+      // STAGE 2: storage that is FULL. Supabase documents no error for it (its list of storage codes has none), so
+      // this is what such an answer would most plausibly look like — HTTP 402 or 507, or a code or message that
+      // names a quota — and it is UNVERIFIED against the real service. It is not a verdict on the file: nothing is
+      // marked refused, the bytes stay, and the pass tries again later.
+      if (err.status === 402 || err.status === 507 || /quota|insufficient.?storage|storage.{0,12}(full|exceed)/i.test(`${err.code} ${err.message}`)) {
+        throw Object.assign(new Error(`photo-upload storage full (${err.status} ${err.code || err.message})`.trim()), { status: err.status, code: 'StorageFull' });
+      }
       throw Object.assign(new Error(`photo-upload ${err.status} ${err.code || err.message}`.trim()), { status: err.status, code: err.code });
     }
   }
@@ -96,7 +116,10 @@ async function uploadOne(m, owner) {
   if (!ack || ack.Key !== `${PHOTO_BUCKET}/${owner}/${m.id}`) throw Object.assign(new Error('photo-upload unacknowledged'), { status: res.status, code: 'Unacknowledged' });
   // the bytes are on the server. Mark the record AS IT STANDS NOW — never the copy read before the upload.
   const cur = await idbGet('media', m.id);
-  if (!cur) return 'gone';                                  // deleted while it was being sent; its object is stage 2's to remove
+  if (!cur) {                                               // deleted while it was being sent: the object just written has no record
+    await setSetting('photoRemovals', [...removalQueue().filter((q) => q.id !== m.id), { id: m.id, at: nowISO() }]);
+    return 'gone';
+  }
   const rec = { ...cur, stored: { at: nowISO(), size: m.blob.size, type } };
   await idbPut('media', rec);
   await logOp({ origin: 'user', store: 'media', op: 'put', recordId: rec.id, record: rec, changed: ['stored'] });
@@ -104,33 +127,87 @@ async function uploadOne(m, owner) {
   return 'stored';
 }
 
+/**
+ * Remove one object. Resolves 'removed' | 'absent' (there was nothing there: done all the same) | 'kept' (the record
+ * exists on this device again — an undo — so nothing is removed); THROWS on anything that may succeed later.
+ */
+async function removeOne(id, owner) {
+  if (await idbGet('media', id)) return 'kept';
+  const send = () => fetch(objectUrl('', owner, id), { method: 'DELETE', headers: authHeaders() });
+  let res = await send();
+  if (!res.ok) {
+    let err = await readError(res);
+    if (err.status === 401 || err.code === 'InvalidJWT' || /jwt/i.test(err.message)) {
+      const again = await refreshSession();
+      if (again && again.ok) { res = await send(); err = res.ok ? null : await readError(res); }
+    }
+    if (err) {
+      // a missing OBJECT is the end of the matter; a missing BUCKET is not (the object may exist once it is back)
+      const missing = err.code !== 'NoSuchBucket' && !/bucket not found/i.test(err.message)
+        && (err.code === 'NoSuchKey' || err.code === 'not_found' || /object not found/i.test(err.message));
+      if (missing) return 'absent';
+      throw Object.assign(new Error(`photo-remove ${err.status} ${err.code || err.message}`.trim()), { status: err.status, code: err.code });
+    }
+  }
+  // as for an upload: a 2xx that is not storage's own JSON (a captive portal's page) removed nothing
+  let ack = null;
+  try { ack = await res.json(); } catch { ack = null; }
+  if (!ack || typeof ack !== 'object') throw Object.assign(new Error('photo-remove unacknowledged'), { status: res.status, code: 'Unacknowledged' });
+  return 'removed';
+}
+
+/** Count the files that hold bytes here and are not on the server, and say so if the number changed. */
+export async function refreshPhotoWaiting() {
+  let n = 0;
+  if (syncConfig().configured && isSignedIn()) n = (await photosAwaitingUpload()).length;
+  if (n !== waiting) { waiting = n; emitChange({ type: 'photo-status' }); }
+  return n;
+}
+/** For syncStatus(): the count (0 until counted) and whether storage refused the last upload as full. */
+export function photoStatus() { return { waiting: waiting || 0, full }; }
+
 async function run(manual) {
-  const out = { ran: false, stored: 0, refused: 0, failed: null, skipped: null };
+  const out = { ran: false, stored: 0, refused: 0, removed: 0, failed: null, skipped: null };
   if (!syncConfig().configured || !isSignedIn()) { out.skipped = 'hidden'; return out; }
   if (manual) { attempt = 0; notBefore = 0; }
   if (Date.now() < notBefore) { out.skipped = 'backoff'; return out; }
   const owner = (await dataOwner()).id;
   if (!owner || owner !== state.settings.authUserId) { out.skipped = 'owner'; return out; }   // never another account's folder
   const queue = await photosAwaitingUpload();
-  if (!queue.length) { attempt = 0; return out; }
+  const due = removalQueue().filter((q) => Date.parse(q.at) <= Date.now() - PHOTO_REMOVE_GRACE_MS);
+  if (!queue.length && !due.length) { attempt = 0; return out; }
   if (!(await ensureAccessToken())) { out.skipped = 'session'; return out; }
   out.ran = true; told = [];
+  const stop = (err) => {
+    // stop the pass: the next file would meet the same wall. The bytes are untouched.
+    out.failed = { status: (err && err.status) || null, code: (err && err.code) || null, message: String((err && err.message) || err) };
+    notBefore = Date.now() + backoffDelay(attempt); attempt++;
+    return out;
+  };
   try {
-  for (const m of queue) {
-    try {
-      const r = await uploadOne(m, owner);
-      if (r === 'stored') out.stored++; else if (r === 'refused') out.refused++;
-    } catch (err) {
-      // stop the pass: the next photo would meet the same wall. The bytes are untouched.
-      out.failed = { status: (err && err.status) || null, code: (err && err.code) || null, message: String((err && err.message) || err) };
-      notBefore = Date.now() + backoffDelay(attempt); attempt++;
-      return out;
+    // REMOVALS FIRST: they free space, and an upload that storage refuses as full must not hold them back.
+    for (const q of due) {
+      try {
+        const r = await removeOne(q.id, owner);
+        await dequeue(q.id);
+        if (r === 'removed') out.removed++;
+      } catch (err) { return stop(err); }          // the entry stays queued
     }
-  }
-  attempt = 0; notBefore = 0;
-  return out;
+    for (const m of queue) {
+      try {
+        const r = await uploadOne(m, owner);
+        if (r === 'stored') out.stored++; else if (r === 'refused') out.refused++;
+      } catch (err) {
+        if (err && err.code === 'StorageFull' && !full) { full = true; emitChange({ type: 'photo-storage-full' }); }   // SAID once, when it begins
+        return stop(err);
+      }
+    }
+    if (queue.length && full) { full = false; emitChange({ type: 'photo-status' }); }   // an upload went through: no longer full
+    attempt = 0; notBefore = 0;
+    return out;
   } finally {
     if (told.length) { const files = told; told = []; emitChange({ type: 'photo-refused', files }); }
+    await refreshPhotoWaiting().catch(() => {});
   }
 }
 
@@ -147,7 +224,8 @@ export function runPhotoPass({ manual = false } = {}) {
 
 /** For الأدوات and the suites. Read-only. */
 export function photoSyncState() {
-  return { inFlight: Boolean(pass), failures: attempt, waitMs: Math.max(0, notBefore - Date.now()), last, refused: { ...refusedMap() } };
+  return { inFlight: Boolean(pass), failures: attempt, waitMs: Math.max(0, notBefore - Date.now()), last, refused: { ...refusedMap() },
+           waiting, full, removals: removalQueue().map((q) => ({ ...q })) };
 }
 
 // ───────────────────────────── down ─────────────────────────────
