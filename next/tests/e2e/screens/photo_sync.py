@@ -93,8 +93,8 @@ def _handler(route, request):
     route.fulfill(status=200, content_type='application/json', body=json.dumps(rows))
 
 def run(pg, js, *args): return pg.evaluate(f"async (a) => {{ const db = await window.__zajilDb; return ({js})(db, ...a); }}", list(args))
-def device(b, H, email, touch=False):
-    ctx = NET.arm(check=check, ctx=b.new_context(viewport={'width': 430, 'height': 900}, has_touch=touch))
+def device(b, H, email, touch=False, width=430):
+    ctx = NET.arm(check=check, ctx=b.new_context(viewport={'width': width, 'height': 900}, has_touch=touch))
     ctx.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};"); ctx.route(f'{STUB}/**', handler)
     pg = ctx.new_page(); pg.errs = []; pg.on('pageerror', lambda e, _p=pg: pg.errs.append(perr(e, _p))); PAGES.append(pg)
     pg.goto(H, wait_until='load'); pg.wait_for_function('window.__zajilReady'); run(pg, "async (db, e) => { await db.signIn(e, 'pw'); }", email); return ctx, pg
@@ -338,7 +338,8 @@ try:
 
         # ═══ THE STATUS COUNTS PHOTOS WAITING TO UPLOAD ═══
         STATUS = "async (db) => { await db.refreshSyncStatus(); const s = db.syncStatus(); return { state: s.state, waiting: s.photosWaiting, full: s.storageFull }; }"
-        cs, ds = device(b, H, 's@zajil.test', touch=True); birds_ = run(ds, BIRD, 'ينتظر'); srv.mode['user-S'] = 'nobucket'
+        # a phone's width (390 px): the badge is judged where fanciers see it
+        cs, ds = device(b, H, 's@zajil.test', touch=True, width=390); birds_ = run(ds, BIRD, 'ينتظر'); srv.mode['user-S'] = 'nobucket'
         run(ds, PHOTO, birds_, 'w1.jpg'); run(ds, PHOTO, birds_, 'w2.jpg'); run(ds, RAW, birds_, 'too-big.jpg', 5 * 1024 * 1024 + 1, 'image/jpeg'); cycle(ds); st = run(ds, STATUS)
         check('[status · M-nocount fails here] the status counts the files waiting to upload: 3 before any verdict (records are in step, photos are not)', st['state'] == 'synced' and st['waiting'] == 3, st)
         ds.goto(ROOT + 'tools/sync/', wait_until='load'); waits(ds, '[data-testid=sync-detail]'); got = waits(ds, '[data-testid=photos-waiting]'); ds.wait_for_timeout(400)
@@ -351,13 +352,23 @@ try:
         ds.goto(ROOT + 'birds/', wait_until='load'); ds.wait_for_timeout(1500)
         check('[status] …and the row is silent again', ds.locator('[data-testid=sync-row]').count() == 0, (ds.locator('[data-testid=sync-row]').all_inner_texts() or [''])[0])
 
-        # ═══ A REFUSED FILE IS MARKED ON ITS OWN TILE ═══
+        # ═══ A REFUSED FILE IS MARKED ON ITS OWN TILE — a small corner badge (RULED 2026-11-20), at 390 px ═══
         ds.goto(ROOT + 'bird/?id=' + birds_, wait_until='load'); got = waits(ds, '[data-testid=media-refused]'); ds.wait_for_timeout(400)
         marks = ds.evaluate("() => [...document.querySelectorAll('[data-testid=media-tile]')].map(t => { const r = t.querySelector('[data-testid=media-refused]'); return r ? { text: r.innerText.trim(), reason: r.dataset.reason, title: r.title } : null; })")
         ty = typo(ds)
-        check('[tile · M-nomark fails here] the refused file\'s own tile says «لم يُرفع — على هذا الجهاز فقط»; the two stored photos\' tiles say nothing',
-              got and len(marks) == 3 and [m_ for m_ in marks if m_] == [{'text': 'لم يُرفع — على هذا الجهاز فقط', 'reason': 'size', 'title': 'الملف «too-big.jpg» أكبر من الحد المسموح للرفع — بقي محفوظًا على هذا الجهاز فقط'}], marks)
+        check('[tile · M-nomark fails here] the refused file\'s own tile carries the badge «لم يُرفع»; the two stored photos\' tiles carry nothing',
+              got and len(marks) == 3 and [m_ for m_ in marks if m_] == [{'text': 'لم يُرفع', 'reason': 'size', 'title': 'الملف «too-big.jpg» أكبر من الحد المسموح للرفع — بقي محفوظًا على هذا الجهاز فقط'}], marks)
         check('[typography] the tile mark is drawn in a face that has Arabic', got and not ty, ty[:3])
+        # where it sits: rectangles read off the page, on the refused tile
+        geo = ds.evaluate("""() => { const r = document.querySelector('[data-testid=media-refused]'); if (!r) return null; const t = r.closest('[data-testid=media-tile]');
+            const box = (e) => { if (!e) return null; const b = e.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom }; };
+            return { tile: box(t), badge: box(r), del: box(t.querySelector('[data-testid=media-delete]')), name: box(t.querySelector('[data-testid=media-photo] span')) }; }""")
+        def meets(a, b_): return bool(a and b_) and a['l'] < b_['r'] and b_['l'] < a['r'] and a['t'] < b_['b'] and b_['t'] < a['b']
+        def area(a): return max(0, a['r'] - a['l']) * max(0, a['b'] - a['t'])
+        share = round(area(geo['badge']) / area(geo['tile']), 3) if geo and geo['tile'] else None
+        check('[tile · M-bigmark fails here] at 390 px the badge sits in the tile\'s top corner: inside the tile, over neither the file\'s name nor the delete button, and under a sixth of the photo',
+              bool(geo) and bool(geo['name']) and geo['badge']['l'] >= geo['tile']['l'] and geo['badge']['r'] <= geo['tile']['r'] and geo['badge']['t'] - geo['tile']['t'] <= 10
+              and not meets(geo['badge'], geo['name']) and not meets(geo['badge'], geo['del']) and share < 1 / 6, (share, geo))
         # RULED 2026-11-20: hover does not exist on a phone, where fanciers work — a TAP on the mark says the full sentence
         def tapped(pg, sel):
             """Tap the mark on a touch device; answer the notices shown within 5 s (never raise: a mutant fails AT a check)."""
@@ -369,13 +380,20 @@ try:
         said = tapped(ds, '[data-testid=media-refused]'); ty = typo(ds)
         check('[tile · M-notap fails here] a TAP on the mark says the full sentence: «الملف «too-big.jpg» أكبر من الحد المسموح للرفع — بقي محفوظًا على هذا الجهاز فقط»', 'الملف «too-big.jpg» أكبر من الحد المسموح للرفع — بقي محفوظًا على هذا الجهاز فقط' in said, said[:300])
         check('[typography] the sentence a tap shows is drawn in a face that has Arabic', not ty, ty[:3])
-        # …and the edit form's strip carries the same mark, under the refused file only, also said in full on a tap
+        # …and the edit form's strip carries the same badge ON the refused thumbnail, also said in full on a tap
         ds.goto(ROOT + 'bird/edit/?id=' + birds_, wait_until='load'); got = waits(ds, '[data-testid=strip-refused]'); ds.wait_for_timeout(400)
-        strip = ds.evaluate("() => [...document.querySelectorAll('[data-testid=strip-saved]')].map(x => { const w = x.closest('[data-testid=strip-refused-item]'); const r = w && w.querySelector('[data-testid=strip-refused]'); if (!r) return null; const b = r.getBoundingClientRect(); return { text: r.innerText.trim(), reason: r.dataset.reason, inside: b.left >= 0 && b.right <= innerWidth, oneLine: b.height < 30 }; })")
+        strip = ds.evaluate("() => [...document.querySelectorAll('[data-testid=strip-saved]')].map(x => { const r = x.querySelector('[data-testid=strip-refused]'); return r ? { text: r.innerText.trim(), reason: r.dataset.reason } : null; })")
         ty = typo(ds)
-        check('[strip · M-nostripmark fails here] the edit form\'s strip carries the same mark «لم يُرفع — على هذا الجهاز فقط» under the refused file, and under no other; on one line, inside a 430 px screen',
-              got and len(strip) == 3 and [x for x in strip if x] == [{'text': 'لم يُرفع — على هذا الجهاز فقط', 'reason': 'size', 'inside': True, 'oneLine': True}], strip)
+        check('[strip · M-nostripmark fails here] the edit form\'s strip carries the same badge «لم يُرفع» on the refused file, and on no other',
+              got and len(strip) == 3 and [x for x in strip if x] == [{'text': 'لم يُرفع', 'reason': 'size'}], strip)
         check('[typography] the strip mark is drawn in a face that has Arabic', got and not ty, ty[:3])
+        sgeo = ds.evaluate("""() => { const box = (e) => { const b = e.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom, w: Math.round(b.width), h: Math.round(b.height) }; };
+            const items = [...document.querySelectorAll('[data-testid=photo-strip] > *')].map(box).sort((a, b) => a.l - b.l);
+            const r = document.querySelector('[data-testid=strip-refused]'); const th = r && r.closest('[data-testid=strip-saved]');
+            return { sizes: items.map(i => [i.w, i.h]), gaps: items.slice(1).map((i, k) => Math.round(i.l - items[k].r)), badge: r && box(r), thumb: th && box(th) }; }""")
+        inside = bool(sgeo['badge']) and sgeo['badge']['l'] >= sgeo['thumb']['l'] and sgeo['badge']['r'] <= sgeo['thumb']['r'] and sgeo['badge']['t'] >= sgeo['thumb']['t'] and sgeo['badge']['b'] <= sgeo['thumb']['b']
+        check('[strip · M-stripout fails here] at 390 px every thumbnail keeps 56 × 56 and the strip its even 8 px spacing; the badge sits inside the refused thumbnail',
+              sgeo['sizes'] == [[56, 56]] * 3 and sgeo['gaps'] == [8, 8] and inside, sgeo)
         said = tapped(ds, '[data-testid=strip-refused]'); ty = typo(ds)
         check('[strip · M-nostriptap fails here] a TAP on the strip\'s mark says the same full sentence', 'الملف «too-big.jpg» أكبر من الحد المسموح للرفع — بقي محفوظًا على هذا الجهاز فقط' in said, said[:300])
         check('[typography] …in a face that has Arabic', not ty, ty[:3])

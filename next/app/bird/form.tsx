@@ -210,8 +210,8 @@ export default function BirdForm() {
   // and EVERY picked file shows before saving — not only the last. A strip of small tiles under the photo block: the
   // saved ones first, then the picked ones. Read-only here; a photo is deleted from the profile, as before.
   const saved = useMediaForBird(editId || null) as Array<{ id: string; kind?: string; name?: string; hasBlob?: boolean }>;
-  // PHOTO SYNC STAGE 2 (RULED 2026-11-20): the strip carries the profile's mark under a file storage refused, and a TAP
-  // on it says the full sentence (no hover on a phone). The mark sits UNDER the 56 px thumb: it does not fit across it.
+  // PHOTO SYNC STAGE 2 (RULED 2026-11-20): a file storage refused carries the profile's badge ON its 56 px thumbnail, and a
+  // TAP on it says the full sentence (no hover on a phone). The thumbnail keeps its size and the strip its spacing.
   const refused = (db.photoSyncState() as { refused: Record<string, string> }).refused;
   const refusedWhy = (m: { id: string; name?: string }) => t('media.refused.' + (refused[m.id] === 'type' ? 'type' : 'size'), { name: m.name || '' });
   const [savedUrls, setSavedUrls] = useState<Record<string, string>>({});
@@ -409,20 +409,13 @@ export default function BirdForm() {
             </div>
             {(saved.length > 0 || pending.length > 0) && (
               <div className={s.strip} data-testid="photo-strip">
-                {saved.map((m) => {
-                  const thumb = (
-                    <span key={m.id} className={s.thumb} title={m.name} data-testid="strip-saved" data-has={m.hasBlob ? '1' : '0'}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {savedUrls[m.id] ? <img src={savedUrls[m.id]} alt="" /> : m.hasBlob ? '📄' : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4 4 0 0 1 0 9H7z" /></svg>}
-                    </span>
-                  );
-                  return !refused[m.id] ? thumb : (
-                    <span key={m.id} className={s.refuseditem} data-testid="strip-refused-item">
-                      {thumb}
-                      <button type="button" className={s.refused} onClick={() => toast(refusedWhy(m), { timeout: 12000 })} data-testid="strip-refused" data-reason={refused[m.id]} title={refusedWhy(m)}>{t('media.refusedMark')}</button>
-                    </span>
-                  );
-                })}
+                {saved.map((m) => (
+                  <span key={m.id} className={s.thumb} title={m.name} data-testid="strip-saved" data-has={m.hasBlob ? '1' : '0'}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {savedUrls[m.id] ? <img src={savedUrls[m.id]} alt="" /> : m.hasBlob ? '📄' : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4 4 0 0 1 0 9H7z" /></svg>}
+                    {refused[m.id] && <button type="button" className={s.refused} onClick={() => toast(refusedWhy(m), { timeout: 12000 })} data-testid="strip-refused" data-reason={refused[m.id]} title={refusedWhy(m)}>{t('media.refusedMark')}</button>}
+                  </span>
+                ))}
                 {pending.map((m, i) => (
                   <span key={`p${i}`} className={`${s.thumb} ${s.fresh}`} title={m.file.name} data-testid="strip-pending">
                     {/* eslint-disable-next-line @next/next/no-img-element */}

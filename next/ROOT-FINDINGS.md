@@ -4289,3 +4289,55 @@ place is as wide as its mark and the strip's even spacing is broken around it. B
 
 The stage-2 commit `c749dea` (gate-46) was rebased onto the RF-27 deploy record `33ddf79` as `88adce4` — a docs-only
 change of base, so that stage 2 merges fast-forward. After the rebase it was gated only together with this commit.
+
+### 2026-11-20 (later) — Samir's stage-1 acceptance PASSED; two items before stage 2's gate
+
+**Accepted on Samir's devices:** the phone photo uploaded 2026-11-19 18:51:35 UTC (1 object, 251267 bytes) shows on the
+PC's profile and in its edit form; a photo added on the PC appears on the phone; orientation is right on both. Earlier
+that day the PC had still shown «الصورة على جهاز آخر ولم تُرفع بعد» after two reloads.
+
+**1. Mark timing — MEASURED, nothing changed on the sending side** (`~/zajil-work/photo3/mark_timing.py`, harness
+build with the coordinator RUNNING, table and storage stubbed, the net armed; `~/zajil-gate-logs/mark-timing-3.log`).
+On the device that takes the photo, seconds after the photo is added:
+
+| s | request |
+|---|---|
+| 3.06 | the record cycle (change trigger, 3 s debounce) pushes the media row, no mark |
+| 3.10 | the photo pass, started after that cycle, uploads the bytes |
+| 6.13–6.15 | the upload's own change event starts the next cycle 3 s later: it pushes the row WITH the mark |
+
+The mark is pushed in the SAME session, with nothing pressed, 3.05 s after the upload — by the change trigger the
+upload itself fires. It does not wait for another session or a press, so the extra cycle the order allowed for that
+case was NOT added: it would move the push by three seconds. If the app is put away inside those three seconds, going
+to the background is itself a trigger and pushes it at once — as far as the phone lets the page run.
+
+**What WAS late is the receiving side** (same probe, the PC's profile of the bird open):
+- an idle PC pulls only when it is opened, brought forward, after its own change, or every 5 minutes (RULED idle
+  heartbeat), so the photo and its mark reach an idle PC up to 5 minutes later;
+- when a pull does bring the row and its mark, an OPEN profile does not change: the media list re-reads only on a
+  local `media` event, and a pulled row emits `sync`. Measured: after a cycle pulled the row and its mark, the open
+  profile still showed 0 tiles; after a reload the photo was fetched and shown;
+- a RELOAD whose own opening cycle brings the mark shows the OLD tile throughout (measured every 0.5 s for 5 s), because
+  the profile is read before that pull lands; the NEXT reload shows the photo. That is the shape Samir saw: the first
+  reload after the mark reached the server cannot show it.
+Not fixed here (not ordered). Stage 3's background download refreshes the profile when the bytes land; the open
+profile and form re-reading on a pulled media row is proposed with it.
+
+**2. The refused mark is a small corner badge** (RULED 2026-11-20: it must not cover the photo or its name). One short
+word, «لم يُرفع» (`media.refusedMark`, PROPOSED — it replaces the proposed «لم يُرفع — على هذا الجهاز فقط», which never
+shipped), in the tile's top corner opposite the delete button; the full sentence on a tap, as built. Measured at 390 px:
+the tile is 96 × 96, the badge 52 × 18 (10% of the photo), 4 px from the delete button, 49 px above the file's name. In
+the edit form's strip the badge sits ON the refused thumbnail's top corner; every thumbnail keeps 56 × 56 and the strip
+its 8 px spacing. Screenshots: `~/zajil-gate-logs/s2c-shots/`. The suite's refusal device now runs at 390 px with touch.
+
+| mutant | what it does | red at |
+|---|---|---|
+| M-bigmark | the badge back across the tile's foot | 1 |
+| M-stripout | the strip's badge loses its thumbnail (positioned outside it) | 1 |
+| M-nomark | no badge | 4 |
+| M-notap | no tap | 1 |
+| M-nostripmark | no badge in the strip | 4 |
+| M-nostriptap | no tap in the strip | 1 |
+| M-nosaved, M-lastonly (`bird_form.py`, the strip re-shaped again) | | 2, 1 |
+
+`photo_sync.py` 92 checks. Log: `~/zajil-gate-logs/photo3-mutants-badge.log`; none HUNG, no traceback.

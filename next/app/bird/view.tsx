@@ -108,7 +108,8 @@ export default function BirdView() {
     }
     return () => { live = false; };
   }, [media]);
-  // STAGE 2 (RULED 2026-11-19): a file storage will not take is marked on its own tile, not only in the notice
+  // STAGE 2 (RULED 2026-11-19, 2026-11-20): a file storage will not take carries a small badge on its own tile, not only
+  // the notice — one short word in the corner, never over the photo's face or its name
   const refused = (db.photoSyncState() as { refused: Record<string, string> }).refused;
   // RULED 2026-11-20: hover does not exist on a phone, where fanciers work — the full sentence also shows on TAP, in the
   // notice's own words and for as long as the notice (12 s). The title stays for a pointer that can hover.
