@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as db from '@/src/db.js';
-import { t, fmtNum } from '@/src/i18n.ext.js';
+import { t } from '@/src/i18n.ext.js';
 import { useScrollLock } from './scrim';
 import s from './PhotoViewer.module.css';
 
@@ -10,7 +10,9 @@ import s from './PhotoViewer.module.css';
  *
  * A tap on a photo's tile — the bird's profile or the edit form's strip — opens it full screen. Swipe between the
  * bird's photos (right-to-left: the next photo comes from the left, as the tiles run), pinch to zoom on a phone, and
- * close by a tap, a swipe down or the back button. A photo whose bytes are not on this device opens in the tile's own
+ * close by a tap, a swipe down, the back button or the close button in the top corner. RULED 2026-11-20: a tap closes
+ * only at 1× — zoomed in, a tap does nothing and a double tap returns to 1×; the close button is there on every screen,
+ * because older users will not discover gestures; the counter is «2 / 5» in Western digits whatever the numerals setting. A photo whose bytes are not on this device opens in the tile's own
  * words — «جارٍ تنزيل الصورة…» — and becomes the photo when the bytes land (src/db/photos.js fetchPhotoBytes, the one
  * fetch per id the profile and the background pass share). Documents are not shown here: they open in the browser's
  * own viewer from their tile.
@@ -102,6 +104,7 @@ export default function PhotoViewer({ items, start, onClose }: { items: ViewerIt
   // changes photo; a swipe down closes; when zoomed in, it pans. Two pointers: pinch to zoom, 1× to 4×.
   const pts = useRef(new Map<number, { x: number; y: number }>());
   const g = useRef<{ x0: number; y0: number; t0: number; multi: boolean; axis: '' | 'x' | 'y'; dist0: number; scale0: number; px: number; py: number } | null>(null);
+  const lastTap = useRef(0);                       // when the last tap landed while zoomed in: a second one soon after is a double tap
   const zoomRef = useRef(zoom);
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   const spread = () => { const [a, b] = [...pts.current.values()]; return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0; };
@@ -136,7 +139,14 @@ export default function PhotoViewer({ items, start, onClose }: { items: ViewerIt
     if (!gg) return;
     const dx = e.clientX - gg.x0, dy = e.clientY - gg.y0;
     if (gg.multi) { if (zoomRef.current.scale < 1.05) setZoom({ scale: 1, x: 0, y: 0 }); return; }
-    if (Math.hypot(dx, dy) < 10 && Date.now() - gg.t0 < 500) { close(); return; }   // a tap
+    if (Math.hypot(dx, dy) < 10 && Date.now() - gg.t0 < 500) {                       // a tap
+      if (zoomRef.current.scale > 1) {                // zoomed in: a tap does nothing; a double tap returns to 1×
+        const now = Date.now();
+        if (now - lastTap.current < 350) { lastTap.current = 0; setZoom({ scale: 1, x: 0, y: 0 }); } else lastTap.current = now;
+        return;
+      }
+      close(); return;
+    }
     if (zoomRef.current.scale > 1) return;
     if (gg.axis === 'x' && Math.abs(dx) > 60) { go(dx > 0 ? 1 : -1); return; }       // right-to-left
     if (gg.axis === 'y' && dy > 100) close();
@@ -157,7 +167,7 @@ export default function PhotoViewer({ items, start, onClose }: { items: ViewerIt
           : <div className={s.state} data-testid="viewer-state" data-where={shown.state}><span>{t(STATE_KEY[shown.state])}</span>{item && item.name && <small>{item.name}</small>}</div>}
       </div>
       <div className={s.top}>
-        <span className={s.count} data-testid="viewer-count">{n > 1 ? `${fmtNum(i + 1)} / ${fmtNum(n)}` : ''}</span>
+        <span className={s.count} dir="ltr" data-testid="viewer-count">{n > 1 ? `${i + 1} / ${n}` : ''}</span>
         <button type="button" className={s.btn} onClick={close} aria-label={t('act.close')} data-testid="viewer-close">✕</button>
       </div>
       {n > 1 && i > 0 && <button type="button" className={`${s.btn} ${s.prev}`} onClick={() => go(-1)} aria-label={t('viewer.prev')} data-testid="viewer-prev">›</button>}

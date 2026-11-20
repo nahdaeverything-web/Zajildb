@@ -37,7 +37,8 @@ SETUP = """async (db) => {
     return bird.id; }"""
 COUNT = "async (db, id) => (await db.mediaForBird(id)).length"
 VIEW = """() => { const v = document.querySelector('[data-testid=viewer]'); if (!v) return null; const i = v.querySelector('[data-testid=viewer-img]'); const r = v.getBoundingClientRect();
-    return { index: +v.dataset.index, count: (v.querySelector('[data-testid=viewer-count]') || {}).innerText || '', natural: i && i.naturalWidth ? [i.naturalWidth, i.naturalHeight] : null,
+    const c = v.querySelector('[data-testid=viewer-count]');
+    return { index: +v.dataset.index, count: c ? c.innerText : '', countDir: c ? getComputedStyle(c).direction : '', natural: i && i.naturalWidth ? [i.naturalWidth, i.naturalHeight] : null,
              scale: +v.querySelector('[data-testid=viewer-stage]').dataset.scale, full: Math.round(r.width) === innerWidth && Math.round(r.height) === innerHeight }; }"""
 TILES = "() => [...document.querySelectorAll('[data-testid=media-open]')].map(t => { const i = t.querySelector('img'); return i && i.naturalWidth ? [i.naturalWidth, i.naturalHeight] : null; })"
 
@@ -67,7 +68,9 @@ def tap(loc):
     except Exception: return False
 def close_if_open(pg):
     if pg.locator('[data-testid=viewer]').count():
-        pg.locator('[data-testid=viewer-close]').click(); wait_view(pg, False)
+        try: pg.locator('[data-testid=viewer-close]').click(timeout=3000)
+        except Exception: pg.keyboard.press('Escape')        # no close button (a mutant): never a traceback
+        wait_view(pg, False)
 
 srv, HARNESS = serve(); ROOT = HARNESS.replace('test-harness/', '')
 try:
@@ -80,6 +83,7 @@ try:
         downloads = []; pg.on('download', lambda d: downloads.append(d.suggested_filename))
         pg.goto(HARNESS, wait_until='load'); pg.wait_for_function('window.__zajilReady')
         bird = run(pg, SETUP); T = Touch(ctx, pg)
+        run(pg, "async (db) => { await db.setSetting('numerals', 'eastern'); }")   # the counter must stay Western on a device set to Eastern numerals
         PROFILE = ROOT + 'bird/?id=' + bird
         pg.goto(PROFILE, wait_until='load')
         try: pg.wait_for_function("() => [...document.querySelectorAll('[data-testid=media-open] img')].filter(i => i.naturalWidth > 0).length === 3", timeout=8000)
@@ -90,8 +94,10 @@ try:
         # ── OPEN ON A TAP ──
         tap(pg.locator('[data-testid=media-open]').nth(1))
         opened = wait_view(pg) and wait_img(pg); v = pg.evaluate(VIEW)
-        check('[open · M-noopen fails here] a tap on the second photo\'s tile opens THAT photo full screen, «٢ / ٣»',
-              opened and v and v['natural'] == tiles[1] and digits(v['count']).replace(' ', '') == '2/3' and v['full'], (v, tiles))
+        check('[open · M-noopen fails here] a tap on the second photo\'s tile opens THAT photo full screen',
+              opened and v and v['natural'] == tiles[1] and v['full'], (v, tiles))
+        check('[counter · M-countnumerals fails here] the counter reads «2 / 3» — Western digits, left to right — on a device set to Eastern numerals',
+              bool(v) and v['count'] == '2 / 3' and v['countDir'] == 'ltr', v)
         ty = [(x['why'], x['face'], x['text']) for x in pg.evaluate(SCAN)]
         check('[typography] the viewer\'s count is drawn in a face that has Arabic', opened and not ty, ty[:3])
 
@@ -104,6 +110,11 @@ try:
         # ── PINCH TO ZOOM ──
         T.pinch(195, 420, 80, 260); v3 = pg.evaluate(VIEW)
         check('[pinch · M-nopinch fails here] two fingers spread apart zoom the photo in (×1.5 or more), and it stays open', bool(v3) and v3['scale'] >= 1.5, v3)
+        # RULED 2026-11-20: zoomed in, a tap does nothing; a double tap returns to 1×; at 1× a tap closes
+        pg.touchscreen.tap(195, 600); pg.wait_for_timeout(600); v4 = pg.evaluate(VIEW)
+        check('[zoomed · M-zoomtapclose fails here] zoomed in, a tap does NOT close the viewer — and it stays zoomed', bool(v4) and v4['scale'] == v3['scale'], (v3 and v3['scale'], v4))
+        pg.touchscreen.tap(195, 600); pg.wait_for_timeout(110); pg.touchscreen.tap(195, 600); pg.wait_for_timeout(600); v5 = pg.evaluate(VIEW)
+        check('[zoomed · M-nodoubletap fails here] a double tap returns it to 1×, still open', bool(v5) and v5['scale'] == 1, v5)
 
         # ── CLOSE: a tap · a swipe down · the back button ──
         pg.touchscreen.tap(195, 600); gone = wait_view(pg, False)
@@ -117,6 +128,16 @@ try:
         gone = wait_view(pg, False); pg.wait_for_timeout(600)
         check('[close · back · M-noback fails here] the back button closes it — and the profile stays, nothing navigates',
               gone and pg.url == PROFILE and pg.locator('[data-testid=gallery]').count() == 1, pg.url)
+        # the close button: there in the top corner, on a phone and on a desktop screen (RULED 2026-11-20)
+        def close_btn():
+            b_ = pg.locator('[data-testid=viewer-close]'); bb = b_.bounding_box() if b_.count() else None
+            return bb and b_.is_visible() and bb['width'] >= 44 and bb['height'] >= 44 and bb['y'] <= 60 and (bb['x'] <= 80 or bb['x'] + bb['width'] >= pg.viewport_size['width'] - 80) and [round(bb['x']), round(bb['y']), round(bb['width'])]
+        tap(pg.locator('[data-testid=media-open]').nth(0)); wait_view(pg); phone = close_btn(); close_if_open(pg)
+        pg.set_viewport_size({'width': 1280, 'height': 800}); pg.wait_for_timeout(300)
+        try: pg.locator('[data-testid=media-open]').nth(0).click(timeout=5000)
+        except Exception: pass
+        wait_view(pg); desk = close_btn(); close_if_open(pg); pg.set_viewport_size({'width': 390, 'height': 844}); pg.wait_for_timeout(300)
+        check('[close button · M-noclosebtn fails here] a close button, 44 px or more, in the top corner — on a phone (390 px) and on a desktop screen (1280 px)', bool(phone) and bool(desk), (phone, desk))
         tap(pg.locator('[data-testid=media-open]').nth(0)); wait_view(pg); close_if_open(pg); wait_view(pg, False); pg.wait_for_timeout(300)
         try: pg.go_back(wait_until='commit', timeout=5000)
         except Exception: pass

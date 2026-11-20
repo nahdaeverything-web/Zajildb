@@ -9,6 +9,7 @@ device exactly as they were, and never loops hot. Harness build; the table AND t
 """
 import os as _o, sys as _s; _h = _o.path.dirname(_o.path.abspath(__file__)); _s.path.insert(0, next(d for d in (_h, _o.path.join(_h, '..'), _o.path.join(_h, '..', 'e2e')) if _o.path.isfile(_o.path.join(d, '_pageerr.py')))); from _pageerr import perr
 import hashlib
+import time
 import json
 import os
 import re
@@ -74,7 +75,9 @@ def _handler(route, request):
             srv.gets.append((who, owner, mid))
             o = srv.objects.get((owner, mid))
             if owner != who or not m.group(1) or not o or mode == 'getfail': err(route, 404, 'NoSuchKey', 'Object not found'); return
-            if mode == 'gethold': srv.held.append((route, o)); return
+            if mode == 'gethold' or (mode == 'getholdfirst' and not getattr(srv, 'held_first', False)):
+                if mode == 'getholdfirst': srv.held_first = True
+                srv.held.append((route, o)); return
             if mode == 'getportal': route.fulfill(status=200, content_type='text/html', body='<html>sign in to the wifi</html>'); return
             route.fulfill(status=200, content_type=o['type'], body=o['bytes']); return
         if request.method == 'DELETE':
@@ -124,6 +127,13 @@ LOCAL = """async (db, id) => { const m = await db.idbGet('media', id); if (!m) r
     if (m.blob) { const h = new Uint8Array(await crypto.subtle.digest('SHA-256', await m.blob.arrayBuffer())); sha = [...h].map(x => x.toString(16).padStart(2, '0')).join(''); }
     return { size: m.blob ? m.blob.size : null, type: m.blob ? m.blob.type : null, sha, stored: m.stored || null }; }"""
 def digits(s_): return re.sub(r'[٠-٩]', lambda m: str('٠١٢٣٤٥٦٧٨٩'.index(m.group())), s_ or '')
+def drop_held():
+    """Answer every request still held before forgetting it: a held request the page later abandons (a download now gives
+    up after PHOTO_DOWNLOAD_TIMEOUT_MS) otherwise surfaces as a CancelledError traceback from the driver."""
+    for h in list(srv.held):
+        try: err(h[0], 503, 'Released', 'released by the suite')
+        except Exception: pass
+    srv.held.clear()
 def storage_posts(who): return [p for p in srv.posts if p[0] == who]
 def toasts(pg): return ' | '.join(pg.locator('[data-testid=toast]').all_inner_texts()).replace('\n', ' ')
 
@@ -254,12 +264,12 @@ try:
         check('[typography] «تعذّر تنزيل الصورة…» is drawn in a face that has Arabic', bool(text) and not ty, ty[:3])
         check('[down · failed] …and five more asks in the same visit send nothing: one GET in all', len(srv.gets) - g0 == 1, srv.gets[g0:])
         check('[down · failed] the record on that device is untouched: marker there, no bytes, nothing removed', (lambda x: x and x['size'] is None and bool(x['stored']))(run(df, LOCAL, pe['id'])))
-        srv.held.clear(); srv.mode['user-E'] = 'gethold'; df.goto(ROOT + 'bird/?id=' + birde, wait_until='load')
+        drop_held(); srv.mode['user-E'] = 'gethold'; df.goto(ROOT + 'bird/?id=' + birde, wait_until='load')
         got = waits(df, '[data-testid=media-elsewhere][data-where=fetching]'); text = (df.locator('[data-testid=media-elsewhere]').all_inner_texts() or [''])[0].strip(); ty = typo(df)
         check('[down · fetching] while the bytes are on their way the tile says «جارٍ تنزيل الصورة…», in a face that has Arabic', got and text == 'جارٍ تنزيل الصورة…' and not ty, (got, text, ty[:3]))
         srv.mode['user-E'] = 'ok'
         for route, o in srv.held: route.fulfill(status=200, content_type=o['type'], body=o['bytes'])
-        srv.held.clear()
+        drop_held()
         try: df.wait_for_selector('[data-testid=media-photo] img', timeout=15000)
         except Exception: pass
         check('[down · failed] opening the bird again retries, and the photo arrives', df.locator('[data-testid=media-photo] img').count() == 1)
@@ -279,13 +289,13 @@ try:
         srv.mode['user-K'] = 'ok'; run(dk, SYNC); run(dk, PASS); run(dk, SYNC)
         check('[file · setup] the document is stored: a PDF is on the allow-list', ('user-K', pk['id']) in srv.objects and srv.objects[('user-K', pk['id'])]['type'] == 'application/pdf', list(srv.objects)[-1:])
         # off the profile first: since stage 3 an OPEN profile follows the pull and would fetch the document at once
-        home(dl, H); run(dl, SYNC); srv.held.clear(); srv.mode['user-K'] = 'gethold'; dl.goto(ROOT + 'bird/?id=' + birdk, wait_until='load')
+        home(dl, H); run(dl, SYNC); drop_held(); srv.mode['user-K'] = 'gethold'; dl.goto(ROOT + 'bird/?id=' + birdk, wait_until='load')
         got, text, ty = tile_text(dl, 'fetching')
         check('[file · fetching] while a document is on its way the tile says «جارٍ تنزيل الملف…», in a face that has Arabic',
               got and text == 'جارٍ تنزيل الملف…' and not ty, (got, text, ty[:3]))
         srv.mode['user-K'] = 'getfail'
         for route, o in srv.held: err(route, 404, 'NoSuchKey', 'Object not found')
-        srv.held.clear()
+        drop_held()
         got, text, ty = tile_text(dl, 'failed')
         check('[file · failed] a document whose download fails says «تعذّر تنزيل الملف — ستُعاد المحاولة عند فتحه», in a face that has Arabic',
               got and text == 'تعذّر تنزيل الملف — ستُعاد المحاولة عند فتحه' and not ty, (got, text, ty[:3]))
@@ -440,7 +450,7 @@ try:
             t_ = 0
             while t_ < ms and not held_gets(): du2.wait_for_timeout(200); t_ += 200
             return len(held_gets())
-        srv.mode['user-U'] = 'gethold'; srv.held.clear(); g0 = len(srv.gets)
+        srv.mode['user-U'] = 'gethold'; drop_held(); g0 = len(srv.gets)
         cu2, du2 = device(b, H, 'u@zajil.test')          # the same account on a second device, the app in front
         run(du2, SYNC_BOUNDED); first = wait_held()      # its cycle pulls the rows; the pass after it asks for the first photo
         ok_ = run(du2, SYNC_BOUNDED)
@@ -481,7 +491,7 @@ try:
         check('[down · same backoff · M-downnoback fails here] a failed download stops the pass on the photo backoff, and the next automatic pass waits',
               st_['failures'] >= 1 and st_['waitMs'] > 0 and again['skipped'] == 'backoff' and len(srv.gets) == n_ and run(du2, HELD_, [u4['id']]) == [False], (st_, again))
         # ═══ THE VIEWER ON A DEVICE WITHOUT THE BYTES: the fetching state, then the photo ═══
-        srv.mode['user-U'] = 'gethold'; srv.held.clear(); u5 = run(du1, PHOTO, bu, 'u5.jpg'); cycle(du1); cycle(du1)
+        srv.mode['user-U'] = 'gethold'; drop_held(); u5 = run(du1, PHOTO, bu, 'u5.jpg'); cycle(du1); cycle(du1)
         run(du2, SYNC_BOUNDED); wait_held(4000)          # its background download is held
         du2.goto(ROOT + 'bird/?id=' + bu, wait_until='load'); waits(du2, '[data-testid=media-open]'); du2.wait_for_timeout(800)
         k5 = du2.evaluate("(name) => [...document.querySelectorAll('[data-testid=media-tile]')].findIndex(t => (t.querySelector('[data-testid=media-elsewhere]') || {}).dataset?.where === 'fetching')", 'u5.jpg')
@@ -494,14 +504,36 @@ try:
         try: du2.wait_for_function("() => { const i = document.querySelector('[data-testid=viewer-img]'); return i && i.naturalWidth > 0; }", timeout=8000); shown = True
         except Exception: shown = False
         check('[viewer · bytes not here] …and becomes the photo when its bytes land', shown)
-        du2.locator('[data-testid=viewer-close]').click(); du2.wait_for_timeout(300)
+        du2.keyboard.press('Escape'); du2.wait_for_timeout(300)
         # ═══ AN OPEN PROFILE FOLLOWS A PULL (measured 2026-11-20: it did not) ═══
         tiles0 = du2.locator('[data-testid=media-tile]').count()
         u6 = run(du1, PHOTO, bu, 'u6.jpg'); cycle(du1); cycle(du1)
         run(du2, SYNC_BOUNDED); du2.wait_for_timeout(2500)
         tiles1 = du2.locator('[data-testid=media-tile]').count()
         check('[open profile · M-nosyncload fails here] a photo pulled while the bird\'s profile is open appears on it, without reopening', tiles1 == tiles0 + 1, (tiles0, tiles1))
-        release_gets(); srv.mode['user-U'] = 'ok'
+        release_gets()
+        # ═══ A STUCK DOWNLOAD DOES NOT HOLD THE QUEUE (RULED 2026-11-20): given up after PHOTO_DOWNLOAD_TIMEOUT_MS ═══
+        TMO = run(du2, "async (db) => db.PHOTO_DOWNLOAD_TIMEOUT_MS")
+        # first let the second device finish whatever it still had to bring down, so the pass below starts with the two
+        # new photos at the head of its queue (a file still inside its own backoff is passed over, as designed)
+        home(du2, H); srv.mode['user-U'] = 'ok'; drop_held(); run(du2, SYNC_BOUNDED); run(du2, PASS)
+        srv.mode['user-U'] = 'getholdfirst'; srv.held_first = False
+        s1 = run(du1, PHOTO, bu, 's1.jpg'); s2 = run(du1, PHOTO, bu, 's2.jpg'); cycle(du1); cycle(du1)
+        run(du2, PASS); run(du2, SYNC_BOUNDED); t0 = time.time(); got = None
+        while time.time() - t0 < TMO / 1000 + 25:
+            du2.wait_for_timeout(1000); got = run(du2, HELD_, [s1['id'], s2['id']])
+            if got == [False, True]: break
+        took = round(time.time() - t0)
+        check(f'[down · stuck · M-notimeout fails here] a download that never answers is given up after {TMO // 1000} s, and the next photo comes down without it',
+              got == [False, True] and TMO / 1000 - 5 <= took <= TMO / 1000 + 25, (got, took, TMO, [g[2][:8] for g in srv.gets if g[0] == 'user-U'][-4:], s1['id'][:8], s2['id'][:8], len(held_gets())))
+        st_ = run(du2, DSTATE)
+        check('[down · stuck] the pass did not stop for it: one download given up, the other done, no failure counted against the pass',
+              st_['failures'] == 0 and (st_['last'] or {}).get('timedOut') == 1 and (st_['last'] or {}).get('downloaded') == 1, st_)
+        for h in held_gets():
+            srv.held.remove(h)
+            try: h[0].fulfill(status=200, content_type=h[1]['type'], body=h[1]['bytes'])
+            except Exception: pass            # the page gave up on it already
+        srv.mode['user-U'] = 'ok'
         cu1.close(); cu2.close()
 
         # ═══ NEVER ANOTHER ACCOUNT'S FOLDER, and nothing without an account ═══

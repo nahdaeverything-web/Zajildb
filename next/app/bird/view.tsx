@@ -106,7 +106,7 @@ export default function BirdView() {
     let live = true;
     for (const m of media) {
       if (m.hasBlob || !m.stored) continue;
-      (db.fetchPhotoBytes(m.id) as Promise<string>).then((r) => { if (live && (r === 'failed' || r === 'waiting')) setFetchFailed((f) => (f[m.id] ? f : { ...f, [m.id]: true })); });
+      (db.fetchPhotoBytes(m.id) as Promise<string>).then((r) => { if (live && (r === 'failed' || r === 'waiting' || r === 'timeout')) setFetchFailed((f) => (f[m.id] ? f : { ...f, [m.id]: true })); });
     }
     return () => { live = false; };
   }, [media]);

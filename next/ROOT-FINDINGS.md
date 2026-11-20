@@ -4519,3 +4519,41 @@ Proved against a local Pages stand-in that injects faults (`~/zajil-work/deploy/
 | `sw.js` held 12 s | 43 / 1 at «the cache is EXACTLY …» | 44 / 0 (active 6.4 s after) |
 | `sw.js` 404 every time | — | 37 / 7, first at «service worker registered …», no traceback |
 | the real origin | — | 44 / 0 |
+
+### 2026-11-20 (later) — rulings on stage 3, and the amendments built before its deploy
+
+**Ruled:** (1) the profile follows synced photos — APPROVED; (2) the swipe direction — APPROVED (Samir checks it feels
+natural); (4) the arrows and the counter — APPROVED, the counter «2 / 5» in Western digits, on phones too; (5) the offer
+only when the save changed the parents, any season counting — APPROVED; (6) the document filling its tile — APPROVED.
+The six strings stand as proposals. Stage 3 deploys only after Samir's stage-2 acceptance passes.
+
+**(3) CHANGED — a tap closes only at 1×.** Zoomed in, a tap does nothing; a double tap (two taps within 350 ms) returns to
+1×. The close button in the top corner is there on every screen size (it already was; now pinned at 390 and 1280 px, 44 px).
+
+**The counter** reads «2 / 5» in Western digits, left to right, whatever the numerals setting (it used the device's
+numerals, and in a right-to-left line «2 / 3» was drawn «3 / 2»). Shown whenever the bird has more than one photo, on
+every screen size, as before.
+
+**A stuck download no longer holds the queue.** Each download is given `PHOTO_DOWNLOAD_TIMEOUT_MS` — PROPOSED 60 s (a
+1600 px photo, 0.3–0.5 MB, comes in seconds on a slow phone line; a 5 MiB document needs about 40 s at 1 Mbit/s). Then
+it is abandoned: that file fails, waits out its own backoff, and the pass goes on to the next file — a timeout does
+not stop the pass (`timedOut` counts it); any other failure still does, as ruled. A tile or the viewer waiting on it
+says «تعذّر تنزيل الصورة…» as for any failed download. Measured in the suite: given up at about 60 s, the next photo
+came down in the same pass. Found while testing it: a photo that arrives while a pass is already running waits for the
+next pass (the pass works from the list it started with) — unchanged, recorded.
+
+Also, test-only: the suite now ANSWERS every request it was holding before it forgets it (`drop_held()`): with the
+timeout, a held request the page abandoned surfaced as a `CancelledError` traceback from the driver.
+
+| mutant | what it does | red at |
+|---|---|---|
+| M-zoomtapclose | a tap closes even when zoomed in | 2 |
+| M-nodoubletap | a double tap does not return to 1× | 3 |
+| M-countnumerals | the counter in the device's numerals, right to left | 1 |
+| M-noclosebtn | no close button | 1 |
+| M-notimeout | a download is never given up | 2 |
+
+`photo_viewer.py` 23 checks, `photo_sync.py` 106. On the amended suites every stage-3 mutant was run again and is red
+(`stage3-mutants-amend.log`): M-nopinch 3, M-noswipe 1, M-noback 2, M-noopen 10, M-nodoc 1, M-delcover 11, M-doctiny 1,
+M-nostripopen 1, M-nodown 8, M-parallel 4, M-hiddendown 6, M-offlinedown 1, M-downnoback 1, M-nosyncload 1,
+M-nostriptap2 1, M-stripout2 1. None HUNG, no traceback.

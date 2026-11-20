@@ -55,6 +55,12 @@ let full = false;            // the last upload was refused because storage is f
  * and the app is in front — never from a pocket, never into a dead network — one at a time, after the uploads, on the
  * pass's own backoff; record sync never waits for it (the pass is not awaited).
  */
+/**
+ * RULED 2026-11-20: A STUCK DOWNLOAD MUST NOT HOLD THE QUEUE. One download is given this long; then it is abandoned —
+ * that file fails and waits out its own backoff, and the next file goes. PROPOSED: 60 s — a 1600 px photo (0.3–0.5 MB)
+ * comes down in seconds on a slow phone line, and a 5 MiB document needs about 40 s at 1 Mbit/s.
+ */
+export const PHOTO_DOWNLOAD_TIMEOUT_MS = 60 * 1000;
 const downloadAllowed = () => (typeof navigator === 'undefined' || navigator.onLine !== false)
   && (typeof document === 'undefined' || document.visibilityState !== 'hidden');
 /** Media records marked stored whose bytes are not here: the ones that failed least first, then oldest first. */
@@ -183,7 +189,7 @@ export async function refreshPhotoWaiting() {
 export function photoStatus() { return { waiting: waiting || 0, full }; }
 
 async function run(manual) {
-  const out = { ran: false, stored: 0, refused: 0, removed: 0, downloaded: 0, failed: null, skipped: null };
+  const out = { ran: false, stored: 0, refused: 0, removed: 0, downloaded: 0, timedOut: 0, failed: null, skipped: null };
   if (!syncConfig().configured || !isSignedIn()) { out.skipped = 'hidden'; return out; }
   if (manual) { attempt = 0; notBefore = 0; }
   if (Date.now() < notBefore) { out.skipped = 'backoff'; return out; }
@@ -227,6 +233,7 @@ async function run(manual) {
       if (!downloadAllowed()) { out.skipped = 'background'; break; }
       const r = await fetchPhotoBytes(m.id);
       if (r === 'here') out.downloaded++;
+      else if (r === 'timeout') out.timedOut++;     // given up on: it waits out its own backoff, and the next one goes
       else if (r === 'failed') return stop(Object.assign(new Error('photo-download failed'), { code: 'DownloadFailed' }));
     }
     attempt = 0; notBefore = 0;
@@ -264,7 +271,8 @@ const failedAt = new Map();   // media id -> { n, notBefore } — a failed fetch
 /**
  * Bring one record's bytes to this device and keep them. Resolves
  * 'here' (already held, or just stored) | 'not-stored' (no marker: the bytes are on another device and not uploaded)
- * | 'waiting' (a recent failure; not asked again yet) | 'failed' | 'gone'. Never throws, never removes anything.
+ * | 'waiting' (a recent failure; not asked again yet) | 'failed' | 'timeout' (no answer within PHOTO_DOWNLOAD_TIMEOUT_MS)
+ * | 'gone'. Never throws, never removes anything.
  */
 export function fetchPhotoBytes(id) {
   if (fetching.has(id)) return fetching.get(id);
@@ -278,9 +286,11 @@ export function fetchPhotoBytes(id) {
     if (f && Date.now() < f.notBefore) return 'waiting';
     const owner = (await dataOwner()).id;
     if (!owner || owner !== state.settings.authUserId) return 'failed';
+    const ctl = typeof AbortController === 'undefined' ? null : new AbortController();
+    const timer = ctl ? setTimeout(() => ctl.abort(), PHOTO_DOWNLOAD_TIMEOUT_MS) : null;
     try {
       if (!(await ensureAccessToken())) throw new Error('no session');
-      const get = () => fetch(objectUrl('authenticated/', owner, id), { headers: authHeaders() });
+      const get = () => fetch(objectUrl('authenticated/', owner, id), { headers: authHeaders(), signal: ctl ? ctl.signal : undefined });
       let res = await get();
       if (res.status === 401 || res.status === 400 || res.status === 403) {
         const again = await refreshSession();
@@ -303,8 +313,8 @@ export function fetchPhotoBytes(id) {
     } catch {
       const n = f ? f.n + 1 : 1;
       failedAt.set(id, { n, notBefore: Date.now() + backoffDelay(n - 1) });
-      return 'failed';
-    }
+      return ctl && ctl.signal.aborted ? 'timeout' : 'failed';
+    } finally { if (timer) clearTimeout(timer); }
   }).finally(() => { fetching.delete(id); });
   fetching.set(id, p);
   return p;
