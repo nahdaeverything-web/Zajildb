@@ -4557,3 +4557,38 @@ timeout, a held request the page abandoned surfaced as a `CancelledError` traceb
 (`stage3-mutants-amend.log`): M-nopinch 3, M-noswipe 1, M-noback 2, M-noopen 10, M-nodoc 1, M-delcover 11, M-doctiny 1,
 M-nostripopen 1, M-nodown 8, M-parallel 4, M-hiddendown 6, M-offlinedown 1, M-downnoback 1, M-nosyncload 1,
 M-nostriptap2 1, M-stripout2 1. None HUNG, no traceback.
+
+## 2026-11-20 — deploy record: photo sync, stage 3; the photo viewer; the pair offer (`gh-pages 4acbf2a`)
+
+**Stage 2 closed first.** Samir's stage-2 acceptance PASSED on his phone and PC (relayed 2026-11-20): a test photo
+added on the phone raised the bucket count by one and showed on the PC; after its deletion and a sync it was gone from
+the PC and the bucket count was back at its starting value. Before that, the stage-2 live verification was run once
+more, clean (`deploy12-06c-live-verify-rerun2.log`, 44 passed, 0 failed); then **the mirror's `main` was pushed as
+`3fbbc26`** (`git subtree split --prefix=next 2323fc2`, fast-forward from `a0ea16c`) and **`origin/feat/photo-stage-2`
+and `origin/feat/photo-stage-2b` were deleted**: the two things the stage-2 record above says wait are done.
+
+**Ruled with the deploy order:** the download timeout of 60 s APPROVED (the comment above `PHOTO_DOWNLOAD_TIMEOUT_MS`
+in `src/db/photos.js` still says PROPOSED; it is corrected with the next code change, not in this record); TF-13 and the
+stage-3 amendments accepted. The six stage-3 strings ship as written, as proposals; corrections come as one follow-up.
+
+Live: `gh-pages 4acbf2a`, built from `feat/react-port 591622c`, fast-forwarded from `feat/photo-stage-3`
+(`697e145` stage 3, viewer, pair offer; `b16ad55` TF-13; `591622c` the amendments). **Rollback target: `6ca309e`**
+(stage 2; then `73036f1`). Rollback is `git -C ~/zajil-work/deploy/ghp-photo-stage-3-2026-11-20 push -f origin 6ca309e:gh-pages`.
+Mirror `main` = `c7cfe95` (`git subtree split --prefix=next 591622c`, run from `~/zajil`, fast-forward from `3fbbc26`).
+
+| step | result | log (`~/zajil-gate-logs/`) |
+|---|---|---|
+| gate-54 on `591622c` | 2598 passed, 0 failed across 41 steps, 0 page-error records | `gate-54-stage3-amend.log` |
+| stage for `/zajilv2/`, inject, verify, scan | 159 files, CLEAN | `deploy13-01`, `deploy13-02` |
+| live before | `gh-pages 6ca309e`, `main 3fbbc26` | `deploy13-03` |
+| rehearsal on the local Pages stand-in (TF-13 suite) | 44 passed, 0 failed, no WARNING | `deploy13-04` |
+| live bytes | 158 files by sha256, 0 differ (new sw.js after 31 s) | `deploy13-05` |
+| live verification (TF-13 suite) | 44 passed, 0 failed, no WARNING, NET armed — nothing reached the real project; service worker active 2.8 s after the first page settled | `deploy13-06` |
+
+Stage 3 adds no stored shape: a downloaded photo's bytes go into the media row that was already there, as stage 1's
+fetch-on-view did, and the merge-import fill writes the same row. The download backoff (`failedAt`) is held in memory
+only. A rollback to `6ca309e` stops the background download, the viewer and the pair offer, and leaves every record,
+photo and tombstone as it is; photos already downloaded stay on the device.
+
+Not deleted (not ordered): `origin/feat/photo-stage-3` (now equal to `feat/react-port`'s deployed commit) and
+`origin/feat/photo-stage-1`.
