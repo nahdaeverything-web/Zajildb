@@ -4235,3 +4235,57 @@ Every stage-1 mutant was run again on this code and is red at a named check: M-a
 M-drop 22 (re-anchored: the pass was restructured), M-hot 3, M-each 2, M-bigsend 6, M-anyok 1, M-anylen 1,
 M-nosaved 2, M-lastonly 1, M-forget 1, M-2048 2, M-noconvert 4. G-await, G-second and G-endpoint each fail the build
 at `photo-pass-owner`. Only this file, `PORT-COMPLETE.md` and the guard's reason text were written after the batch.
+
+### 2026-11-20 — rulings on stage 2, and what was built before its gate
+
+**Ruled:** (1) only the deleting device removes the object, after the 60-second grace — APPROVED. (2) Full storage:
+the guessed answer is ACCEPTED because a wrong guess falls back to keep-and-retry; it stays **UNVERIFIED** against
+the real service (nothing documents the answer, and it cannot be measured without filling a project). (3) The three
+strings stand as proposals. (4) Known limits ACCEPTED: the object left behind when a device deletes a photo before
+its stored mark arrived (stage 3's clean-up), and a DELETE the policy refuses looking like a missing object.
+
+**The mark is said on a tap** (`app/bird/view.tsx`). Hover does not exist on a phone, where fanciers work. The mark is
+now a button: a tap shows the full sentence (the refusal notice's own words, with the file's name: «الملف «…» أكبر
+من الحد المسموح للرفع — بقي محفوظًا على هذا الجهاز فقط», or the type sentence) as a notice for 12 seconds, as long
+as the refusal notice itself. The title stays for a pointer that can hover. No new string.
+
+**The edit form's strip carries the same mark** (`app/bird/form.tsx`). The strip's tiles are 56 px; the mark does not
+fit across one, so it sits UNDER the refused file's thumb, on one line, in the same dress, and the same tap says the
+same sentence. The placement is the builder's — no spec draws it. Only saved files can be refused; a file picked
+and not yet saved is never marked.
+
+**Window checks for the other writers** (`tests/e2e/pull_race.py` §10). §9 drove `deleteBird`/`restoreBird` only. The
+generic `remove`/`restore` (driven through health events) and `deleteMedia`/`restoreMedia` (a photo holding bytes)
+are now driven the same way: the pulled row is issued from inside the writer's own first store request on that
+record. Each writer's mutant MOVES its own record write out of the transaction, in front of it:
+
+| mutant | what it does | red at |
+|---|---|---|
+| M-split-remove | the generic `remove` deletes the record before its transaction | 1 |
+| M-split-restore | the generic `restore` puts the record back before its transaction | 1 |
+| M-split-mdelete | `deleteMedia` deletes the record before its transaction | 1 |
+| M-split-mrestore | `restoreMedia` puts the record back before its transaction | 1 |
+| M-notap | the profile's mark says nothing on a tap | 1 |
+| M-nostripmark | the strip carries no mark | 3 |
+| M-nostriptap | the strip's mark says nothing on a tap | 1 |
+
+**Proof.** `tests/e2e/pull_race.py` 50 checks (16 new); `tests/e2e/screens/photo_sync.py` 90 checks (6 new: the tap on
+the profile's mark, the strip's mark — under the refused file only, on one line, inside a 430 px screen — the tap on
+it, and the typography of each). The tap is a real touch tap (`has_touch`), not a click. All mutants above, the runner's
+limits on, none HUNG, no traceback (`~/zajil-gate-logs/photo3-mutants-1.log`). On the same final tree, RF-27's own two
+are red again (M-split-delete 1, M-split-undo 1 — these two DUPLICATE the bird's write in front of the transaction;
+the four new ones MOVE it, which is the stricter form), and every stage-2 mutant is red again: M-nograce 5,
+M-dropqueue 3, M-anydel 2, M-noremove 8, M-noundo 1, M-nocascade 1, M-nocount 4, M-rowsilent 1, M-nomark 3 (re-anchored
+on the button; the tap check fails too, as there is nothing to tap), M-fullsilent 2, M-fullrefuse 7, M-drop 22.
+Every stage-1 mutant is red again on this tree (`photo3-mutants-s1.log`): M-await 1, M-nofetch 11, M-nokeep 8, M-hot 3,
+M-each 2, M-bigsend 10, M-anyok 1, M-anylen 1, M-nosaved 2 (re-anchored: the strip's map now returns the thumb or the
+marked pair), M-lastonly 1, M-forget 1, M-2048 2, M-noconvert 4; G-await, G-second and G-endpoint each fail the build at
+`photo-pass-owner`.
+
+**Seen at 390 px (screenshots `~/zajil-gate-logs/s2b-shots/`, staged: the refusal written into the device setting):**
+on the profile the photo grid has three columns, and the mark takes three lines and covers most of the refused photo,
+its file name included (a tap says the name). In the strip the mark is wider than the thumb, so the refused file's
+place is as wide as its mark and the strip's even spacing is broken around it. Both are the builder's placement.
+
+The stage-2 commit `c749dea` (gate-46) was rebased onto the RF-27 deploy record `33ddf79` as `88adce4` — a docs-only
+change of base, so that stage 2 merges fast-forward. After the rebase it was gated only together with this commit.

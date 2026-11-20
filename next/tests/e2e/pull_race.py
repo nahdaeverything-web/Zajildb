@@ -290,6 +290,74 @@ with sync_playwright() as p:
     check('[window · undo] the undo is whole: no tombstone is left and its operation is owed, not superseded',
           w['tomb'] is False and any(o['origin'] == 'restore' and not o['superseded'] for o in w['ops']), w)
 
+    # ── 10. THE SAME WINDOWS IN THE GENERIC AND MEDIA WRITERS (RULED 2026-11-20, before stage 2's gate) ──
+    # Section 9 drives deleteBird/restoreBird only. The generic remove/restore (pairs, races, health, lofts) and
+    # deleteMedia/restoreMedia go through the same one-transaction writer; each is driven here the same way: the
+    # pulled row is issued from INSIDE the writer's own first store request on that record.
+    HOOKED_ANY = """async (db, a) => {
+        const proto = IDBObjectStore.prototype, orig = proto[a.method]; let row = null, fired = 0;
+        proto[a.method] = function (v) {
+            const key = a.method === 'delete' ? v : (v && v.id);
+            if (this.name === a.store && key === a.id && !fired) {
+                fired++;
+                row = a.method === 'delete' ? db.applySyncPut(a.store, a.echo.data, a.echo.updated_at, a.id, { deviceId: a.echo.device_id })
+                                            : db.applySyncDelete(a.store, a.id, a.echo.updated_at, { deviceId: a.echo.device_id });
+            }
+            return orig.apply(this, arguments);
+        };
+        try {
+            if (a.writer === 'generic') { if (a.method === 'delete') window.__snapAny = await db.Health.remove(a.id); else await db.Health.restore(window.__snapAny); }
+            else { if (a.method === 'delete') window.__snapAny = await db.deleteMedia(a.id); else await db.restoreMedia(window.__snapAny); }
+        } finally { proto[a.method] = orig; }
+        const res = await row;
+        const disk = await db.idbGet(a.store, a.id);
+        const mem = a.mirror ? !!db.state[a.mirror].get(a.id) : null;
+        const tomb = (await db.listTombstones()).some(t => t.recordId === a.id);
+        const ops = (await db.listOps()).filter(o => o.recordId === a.id && o.seq > (db.state.settings.lastAckedSeq || 0));
+        return { fired, row: res && { applied: res.applied, skipped: res.skipped }, disk: !!disk, bytes: !!(disk && disk.blob), mem, tomb,
+                 ops: ops.map(o => ({ op: o.op, origin: o.origin, superseded: !!o.superseded })) };
+    }"""
+    def window_pair(label, writer, store, mirror, rid, del_mutant, undo_mutant):
+        a = {'id': rid, 'store': store, 'mirror': mirror, 'writer': writer}
+        put_echo = echo_of(rid, 101)
+        w = run(page, HOOKED_ANY, dict(a, method='delete', echo=put_echo))
+        check(f'[window · {label} · setup] the echoed row was issued from inside the delete, once', w['fired'] == 1 and w['row'] is not None, w)
+        check(f'[window · {label} · delete · {del_mutant} fails here] a row applied behind the delete\'s first write does NOT put the record back'
+              + (' — the store and memory both say deleted' if mirror else ' — the store says deleted'),
+              w['disk'] is False and w['mem'] in (False, None) and w['row']['applied'] is False, w)
+        check(f'[window · {label} · delete] the deletion is whole: its tombstone is there and its operation is owed, not superseded',
+              w['tomb'] is True and any(o['op'] == 'delete' and not o['superseded'] for o in w['ops']), w)
+        run(page, "async (db) => await db.pushOnce()")
+        del_echo = echo_of(rid, 102)
+        check(f'[window · {label} · setup] the deletion was pushed', del_echo['deleted'] is True, del_echo['deleted'])
+        w = run(page, HOOKED_ANY, dict(a, method='put', echo=del_echo))
+        check(f'[window · {label} · setup] the echoed deletion was issued from inside the undo, once', w['fired'] == 1 and w['row'] is not None, w)
+        check(f'[window · {label} · undo · {undo_mutant} fails here] a deletion applied behind the undo\'s first write does NOT take the record away again'
+              + (' — the store and memory both hold it' if mirror else ' — the store holds it, with its bytes'),
+              w['disk'] is True and w['mem'] in (True, None) and (mirror or w['bytes'] is True) and w['row']['applied'] is False, w)
+        check(f'[window · {label} · undo] the undo is whole: no tombstone is left and its operation is owed, not superseded',
+              w['tomb'] is False and any(o['origin'] == 'restore' and not o['superseded'] for o in w['ops']), w)
+
+    # the generic writer, through health events
+    run(page, RESET); srv['pushed'].clear()
+    h = run(page, """async (db) => {
+        const bird = await db.saveBird(db.newBird({ name: 'صاحب الحدث', sex: 'hen' }));
+        const ev = await db.Health.save({ eventType: 'check', wholeLoft: false, birdId: bird.id, date: '2026-11-01', medication: 'فحص', notes: '' });
+        const push = await db.pushOnce(); return { id: ev.id, pushOk: push.ok };
+    }""")
+    check('[window · generic · setup] a health event was saved and pushed', h['pushOk'] is True, h)
+    window_pair('generic', 'generic', 'healthEvents', 'healthEvents', h['id'], 'M-split-remove', 'M-split-restore')
+
+    # the media writer — a photo that holds its bytes
+    run(page, RESET); srv['pushed'].clear()
+    m = run(page, """async (db) => {
+        const bird = await db.saveBird(db.newBird({ name: 'صاحب الصورة', sex: 'cock' }));
+        const md = await db.addMedia(bird.id, 'photo', 'body', 'w.png', new Blob([new Uint8Array(64)], { type: 'image/png' }));
+        const push = await db.pushOnce(); return { id: md.id, pushOk: push.ok };
+    }""")
+    check('[window · media · setup] a photo was saved and its record pushed', m['pushOk'] is True, m)
+    window_pair('media', 'media', 'media', None, m['id'], 'M-split-mdelete', 'M-split-mrestore')
+
     check('zero page errors overall', not errs, '; '.join(errs[:2]))
     NET.assert_empty(check)
     br.close()
