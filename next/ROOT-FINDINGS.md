@@ -4125,3 +4125,31 @@ their own.
 **Not changed, by reading:** saves (`saveBird`, the generic `save`, `addMedia`) still write the record and then log
 — the RF-26 record rule covers that instant for stamped records, and a new media record has an id no row can name
 yet. `importAll` and the pruning of the op log are as they were. Vanilla has the same windows and is NOT changed.
+
+## 2026-11-20 — deploy record: RF-27 (`gh-pages 73036f1`)
+
+Live: `gh-pages 73036f1`, built from `feat/react-port 0181fe7`. **Rollback target: `7fd5c08`** (photo sync stage 1;
+then `dccd8d7`). Rollback is `git -C ~/zajil-work/deploy/ghp-rf27-2026-11-20 push -f origin 7fd5c08:gh-pages`.
+Mirror `main` = `a0ea16c` (`git subtree split --prefix=next 0181fe7`, run from `~/zajil`, fast-forward from
+`3fe5548`); it carries the stage-1 deploy record `782abdd` (split as `ccd85ad`), as ruled.
+
+| step | result | log (`~/zajil-gate-logs/`) |
+|---|---|---|
+| gate-45 on `0181fe7` | 2491 passed, 0 failed across 39 steps | `rf27-gate-45.out` |
+| stage for `/zajilv2/`, inject, verify, scan | 159 files, CLEAN | `deploy11-01`, `deploy11-02` |
+| live before | `gh-pages 7fd5c08`, `main 3fe5548` | `deploy11-03` |
+| rehearsal on the local Pages stand-in | 44 passed, 0 failed, NET armed | `deploy11-04` |
+| live bytes | 158 files by sha256, 0 differ (new sw.js after 31 s) | `deploy11-05` |
+| live verification | 44 passed, 0 failed, NET armed — nothing reached the real project | `deploy11-06` |
+
+RF-27 changes no stored shape: a rollback to `7fd5c08` returns the three-step delete and undo, and leaves every
+record, operation and tombstone as it is. Photo sync stage 2 (`feat/photo-stage-2`) is NOT in this build.
+
+### The photo diagnostic statement (ORDERED 2026-11-20: written, not run)
+
+`supabase/photo-diagnostic.sql` — read-only, one statement for the SQL Editor: each object in the `photos` bucket
+beside the media row in `sync_records` with the same owner and id (its `updated_at`, `deleted`, `device_id`, whether
+its data carries the `stored` mark and the mark's value, and whether the mark's size equals the object's), plus every
+media row with no object and every object with no row. The file states the expected row for a phone photo whose
+upload and mark both reached the server, and how to read the other kinds. Checked on PGlite only (syntax, join, row
+counts unchanged — `photo-diagnostic-pglite.log`); the real storage schema's column names are the docs', unmeasured.
