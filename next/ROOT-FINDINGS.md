@@ -4341,3 +4341,34 @@ its 8 px spacing. Screenshots: `~/zajil-gate-logs/s2c-shots/`. The suite's refus
 | M-nosaved, M-lastonly (`bird_form.py`, the strip re-shaped again) | | 2, 1 |
 
 `photo_sync.py` 92 checks. Log: `~/zajil-gate-logs/photo3-mutants-badge.log`; none HUNG, no traceback.
+
+## 2026-11-20 — deploy record: photo sync, stage 2 (`gh-pages 6ca309e`) — LIVE VERIFICATION NOT CLEAN
+
+Live: `gh-pages 6ca309e`, built from `feat/react-port 2323fc2` (fast-forwarded from the gated stage-2 branch).
+**Rollback target: `73036f1`** (RF-27; then `7fd5c08`). Rollback is
+`git -C ~/zajil-work/deploy/ghp-photo2-2026-11-20 push -f origin 73036f1:gh-pages`.
+
+| step | result | log (`~/zajil-gate-logs/`) |
+|---|---|---|
+| gate-49 on `2323fc2` | 2544 passed, 0 failed across 39 steps, 0 page-error records | `gate-49-photo-stage-2c.log` |
+| stage for `/zajilv2/`, inject, verify, scan | 159 files, CLEAN | `deploy12-01`, `deploy12-02` |
+| live before | `gh-pages 73036f1`, `main a0ea16c` | `deploy12-03` |
+| rehearsal on the local Pages stand-in | 44 passed, 0 failed, NET armed | `deploy12-04` |
+| live bytes | 158 files by sha256, 0 differ (new sw.js after 31 s) | `deploy12-05` |
+| **live verification** | **43 passed, 1 failed**, NET armed — nothing reached the real project | `deploy12-06` |
+
+The failed check, verbatim: `✗ no failed requests  503 https://nahdaeverything-web.github.io/zajilv2/health/__next._tree.txt?_rsc=5CB68i4pnAekjehf`.
+The deploy script stopped there, as built: **the mirror's `main` was NOT pushed (still `a0ea16c`) and
+`origin/feat/photo-stage-2` was NOT deleted** — the order made both follow the live verification.
+
+Measured after the stop, nothing patched:
+- that file, fetched three times: `200`, 832 bytes each; its sha256 equals the release's (`f6742ea48a0e45bc…`);
+- ONE re-run of the live verification (`deploy12-06b-live-verify-rerun.log`): 43 passed, 1 failed — a DIFFERENT check:
+  `✗ service worker registered at the scope this origin implies  none does not end with /zajilv2/` (the 503 check passed);
+- a read-only probe, three fresh browsers on the live origin (`deploy12-live-sw-probe.log`): the service worker
+  registered at `/zajilv2/` 0.8 s after load in all three; no response was 4xx or 5xx; four page requests ended
+  `net::ERR_ABORTED` (`/breeding/`, `/races/`, `/health/`, `/birds/`) — not HTTP errors, and the suite's check does not
+  count them; not examined further.
+Reading, not proven: the two failures are the live origin's (a 503 from Pages, then a registration slower than the
+suite's fixed 3-second wait), not the build's — the bytes are the release's, and the rehearsal of the same bytes passed
+44 of 44. The build stays live; the mirror and the branch deletion wait for a word.
