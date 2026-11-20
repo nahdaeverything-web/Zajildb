@@ -4372,3 +4372,125 @@ Measured after the stop, nothing patched:
 Reading, not proven: the two failures are the live origin's (a 503 from Pages, then a registration slower than the
 suite's fixed 3-second wait), not the build's — the bytes are the release's, and the rehearsal of the same bytes passed
 44 of 44. The build stays live; the mirror and the branch deletion wait for a word.
+
+## 2026-11-20 — photo sync, stage 3; the photo viewer; the pair offer (BUILT, NOT DEPLOYED)
+
+### Stage 3 — every stored photo comes down in the background (`src/db/photos.js`)
+
+Ordered: background download of every photo whose bytes are not on the device, so exports, shares and certificates
+from either device are complete; bounded — one at a time, only while online and in the foreground, never blocking
+record sync, the same backoff; and the merge-import photo gap closed with it.
+
+- **The download leg** of the photo pass runs after the removals and the uploads: every media record marked `stored`
+  whose bytes are not here (`photosAwaitingDownload()`), the ones that failed least first, then oldest first.
+- **One at a time — everywhere.** The pass downloads in sequence, and `fetchPhotoBytes()` itself now runs in a single
+  lane, so the pass, a profile drawing its tiles and the viewer never have two downloads out at once.
+- **Online and in front only.** Checked before the leg starts and again before each file (`navigator.onLine`,
+  `document.visibilityState`). Offline, nothing is even tried: no request, no failure counted, no backoff.
+- **Never in the way.** The pass is still started after a record cycle and not awaited (the `photo-pass-owner` guard).
+- **The same backoff.** A failed download stops the pass on the photo backoff, as a failed upload does; a file whose
+  own last try failed is passed over until its own wait is out, so one bad object cannot hold the others back.
+- **The merge-import gap, closed** (`src/db/io.js`): a merge gives a media row this device holds WITHOUT bytes the
+  file's bytes — bytes only, the row otherwise as it was (its stored mark included), no operation. A row that has
+  bytes is never touched. Recorded as a divergence (guard, PORT-COMPLETE).
+- **An open profile follows a pull** (`src/db/react.ts`) — added from the mark-timing measurement, NOT ordered: a
+  pulled media row re-reads the bird's media list, so a photo pulled while its profile is open appears on it.
+
+### The photo viewer (`src/components/PhotoViewer.tsx`; ORDERED 2026-11-20)
+
+A tap on a photo's tile (the profile) or a thumbnail (the edit form's strip, saved or just picked) opens it full
+screen. Choices made while building, for a ruling:
+- **Swipe direction:** right-to-left, as the tiles run — a swipe to the right brings the next photo.
+- **Close:** a tap (even when zoomed in), a swipe down, the back button, Escape, or the ✕ in the corner.
+- **Pinch:** 1× to 4×; while zoomed a drag pans and a swipe does not change photo; let go under 1.05× and it resets.
+- **A pointer and a keyboard:** two arrow buttons on the sides (labels `viewer.prev` / `viewer.next`, PROPOSED), the
+  arrow keys, and a counter «٢ / ٣».
+- **The back button:** one history entry is pushed when the viewer opens; going back closes it and the page underneath
+  is never navigated; a close from inside the viewer takes the entry back off.
+- **Not on this device:** the viewer says what the tile says — «جارٍ تنزيل الصورة…» — and becomes the photo when the
+  bytes land; «الصورة على جهاز آخر ولم تُرفع بعد» for one not uploaded. No new string.
+- **The delete button** stays the delete control, a sibling in its own corner: a tap on the photo cannot reach it.
+- **Documents** open in the browser's own viewer: the tile is a link to the file (`target="_blank"`), no longer a
+  download. **Found while building, measured, fixed:** that link was `display:inline` — a 22 × 21 px target inside a
+  96 × 96 tile, only the 📄 itself tappable (since stage 1). It now fills its tile, the glyph centred. Measured in Chromium (its new headless mode, which has the PDF viewer): a new page showing the PDF, nothing
+  downloaded. **NOT measured on a real iPhone**, where a link to a blob from an app added to the home screen may not
+  open; Samir's acceptance covers it.
+
+### The pair offer (`app/bird/form.tsx`; ORDERED 2026-11-20)
+
+Found on Samir's data: a father and a mother set on two youngsters, no breeding pair ever made. Built:
+- asked when a bird is saved with both parents and **this save set or changed them** — editing a bird whose parents
+  did not change asks nothing, so an unrelated edit never nags (a choice, for a ruling);
+- not asked when a pair of that cock and that hen exists **in any season, active or not** (a choice);
+- never for an external or reference parent, nor when the father is a hen or the mother a cock;
+- «إنشاء الزوج» saves the bird first, then opens «زوج جديد» on the breeding screen with both parents filled; the nest
+  box and season are still the fancier's; «ليس الآن» goes on as before and makes nothing. It is asked again for the
+  next youngster of the same two while no pair exists.
+- «حفظ وإضافة آخر» asks too; «إنشاء الزوج» there leaves the entry rhythm for the breeding screen (by reading — the
+  suite drives «حفظ» only).
+
+### New strings — six, all PROPOSED, all through the typography scan
+
+| key | Arabic | where |
+|---|---|---|
+| `viewer.prev` | «الصورة السابقة» | the viewer's arrow (read by a screen reader) |
+| `viewer.next` | «الصورة التالية» | the viewer's arrow (read by a screen reader) |
+| `pairOffer.title` | «لا يوجد زوج تربية لهذين الأبوين» | the offer's title |
+| `pairOffer.body` | «اخترت {sire} أبًا و{dam} أمًّا، ولا يوجد في السجل زوج تربية يجمعهما. هل تريد إنشاء هذا الزوج الآن؟» | the offer |
+| `pairOffer.create` | «إنشاء الزوج» | the offer's answer |
+| `pairOffer.later` | «ليس الآن» | the offer's other answer |
+
+### Proof
+
+New suites: `tests/e2e/screens/photo_viewer.py` (19 checks — real touch sequences at 390 px: tap, swipe, pinch, swipe
+down, the back button; full Chromium for the PDF) and `tests/e2e/screens/pair_offer.py` (15). `photo_sync.py` 104
+checks (12 new). `photo_safety.py` 29: its `[seen · not ruled]` merge check is replaced, deliberately, by three checks
+of the closed gap.
+
+Test changes made deliberately because the behaviour changed: the stage-1 «down» sections prove the fetch ON VIEW, and
+a background pass now fetches first — so their receiving device is put "in the pocket" (a per-tab test switch that
+makes the page report itself hidden), which keeps the background pass out of them; the document section leaves the
+profile before its pull, because an open profile now follows the pull and would fetch at once.
+
+| mutant | what it does | red at |
+|---|---|---|
+| M-nodown | no download leg | 6 |
+| M-parallel | the lane removed, the leg in parallel | 3 |
+| M-hiddendown | downloads in the background | 4 |
+| M-offlinedown | downloads tried offline | 1 (first run SURVIVED — the check was strengthened; see below) |
+| M-downnoback | a failed download does not stop the pass | 1 |
+| M-nosyncload | an open profile ignores a pulled row | 1 |
+| M-mergeskip | the merge fill removed | 2 |
+| M-noopen | a tap on a photo opens nothing | 6 |
+| M-delcover | the delete button covers the tile | 6 (its named check: the centre tap asked to delete) |
+| M-noswipe | no swipe | 1 |
+| M-nopinch | no pinch | 1 |
+| M-noback | no history entry: back leaves the profile | 1 |
+| M-nodoc | the document downloads again | 1 |
+| M-nostripopen | a strip thumbnail opens nothing | 1 |
+| M-doctiny | the document's link back to an inline 22 × 21 px target | 1 |
+| M-nostriptap2 | the strip badge's tap says nothing (re-anchored: the badge now stops its tap opening the viewer) | 1 |
+| M-nooffer | no offer | 7 |
+| M-noprefill | the sheet opens with no father | 4 |
+| M-offerref | a reference parent is offered | 1 |
+| M-offerevery | every save with parents asks | 1 |
+
+M-offlinedown survived its first run: offline, the test's stub still ANSWERS a routed request (the browser's offline
+switch does not stop a request the test intercepts), so the mutant's download hung on a held request and the check —
+which read only the failure count — passed. The check now also asserts `navigator.onLine` is false, that no request
+was made and that no pass is left hanging; the mutant is red at it. Logs: `stage3-mutants-1.log`, `stage3-mutants-2.log`.
+
+Every earlier photo mutant was run again on this tree (`stage3-mutants-rerun.log`, `stage3-mutants-3.log`) and is red:
+stage 2 — M-nograce 5, M-dropqueue 3, M-anydel 2, M-noremove 8, M-noundo 1, M-nocascade 1, M-nocount 4, M-rowsilent 1,
+M-fullsilent 2, M-fullrefuse 7, M-drop 23; the badge — M-nomark 4, M-notap 1, M-nostripmark 4, M-bigmark 1, M-stripout 1
+(re-anchored as M-stripout2: the thumbnail's rule gained `cursor:zoom-in`); stage 1 — M-await 3, M-nofetch 12,
+M-nokeep 14, M-hot 4, M-each 2, M-bigsend 12, M-anyok 2, M-anylen 1, M-forget 1, M-nosaved 2, M-lastonly 1. None HUNG,
+no traceback. Screenshots at 390 px: `~/zajil-gate-logs/s3-shots/`.
+
+**Gate-51 FAILED (2590 passed, 1 failed), not committed.** `photo_viewer.py`'s «a tap on the photo never deletes» check:
+every tap opened nothing. Measured, not guessed: my first reading (a banner moving the page) was wrong — a probe showed
+the tile never moves; the same check failed once in three runs alone; a diagnostic copy printed what each tap hit, and in
+the failing run tile 0 was the DOCUMENT's tile (the tiles follow the media ids, which are random), whose link did not
+fill its tile — the second finding above. The suite now picks a photo's tile; five runs in a row green; the document's
+link fills its tile, pinned by its own check and M-doctiny. Logs: `s3-viewer-diag-*.log`, `stage3-mutants-4.log`
+(the eight viewer mutants re-run on the changed suite, all red).

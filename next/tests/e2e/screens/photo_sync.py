@@ -96,8 +96,14 @@ def run(pg, js, *args): return pg.evaluate(f"async (a) => {{ const db = await wi
 def device(b, H, email, touch=False, width=430):
     ctx = NET.arm(check=check, ctx=b.new_context(viewport={'width': width, 'height': 900}, has_touch=touch))
     ctx.add_init_script(f"globalThis.ZAJIL_SYNC_CONFIG = {{ url: '{STUB}', publishableKey: 'sb_publishable_test' }};"); ctx.route(f'{STUB}/**', handler)
+    ctx.add_init_script(POCKET_INIT)
     pg = ctx.new_page(); pg.errs = []; pg.on('pageerror', lambda e, _p=pg: pg.errs.append(perr(e, _p))); PAGES.append(pg)
     pg.goto(H, wait_until='load'); pg.wait_for_function('window.__zajilReady'); run(pg, "async (db, e) => { await db.signIn(e, 'pw'); }", email); return ctx, pg
+# STAGE 3: a device whose app is "in the pocket" reports itself hidden, so its background pass downloads nothing. The
+# stage-1 sections below prove the ON-VIEW fetch, so their receiving device is put in the pocket; the switch is per tab
+# and survives navigation (sessionStorage), and is off by default.
+POCKET_INIT = "Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (sessionStorage.getItem('zajil-test-pocket') === '1' ? 'hidden' : 'visible') });"
+def pocket(pg, on): pg.evaluate("(on) => sessionStorage.setItem('zajil-test-pocket', on ? '1' : '0')", on)
 def waits(pg, sel, timeout=15000):
     """A wait that answers instead of raising: a mutant must fail AT a check, never in a traceback."""
     try: pg.wait_for_selector(sel, timeout=timeout); return True
@@ -145,7 +151,7 @@ try:
         check('[up] …and the pulled-back copy of its own row did not take the bytes away (RF-23 holds)', run(da, LOCAL, ph['id'])['size'] == ph['size'])
 
         # ═══ DOWN: the other device, on first view of that bird ═══
-        cb, dbb = device(b, H, 'a@zajil.test'); run(dbb, SYNC); before = run(dbb, LOCAL, ph['id'])
+        cb, dbb = device(b, H, 'a@zajil.test'); pocket(dbb, True); run(dbb, SYNC); before = run(dbb, LOCAL, ph['id'])
         check('[down · setup] the second device has the record, marked stored, without bytes — and has fetched nothing yet', before is not None and before['size'] is None and bool(before['stored']) and not srv.gets, (before, srv.gets))
         dbb.goto(ROOT + 'bird/?id=' + bird, wait_until='load')
         try: dbb.wait_for_selector('[data-testid=media-photo] img', timeout=15000)
@@ -240,7 +246,7 @@ try:
 
         # ═══ A DOWNLOAD THAT FAILS says so, once ═══
         ce, de = device(b, H, 'e@zajil.test'); birde = run(de, BIRD, 'تنزيل'); pe = run(de, PHOTO, birde, 'e.jpg'); run(de, SYNC); run(de, PASS); run(de, SYNC)
-        cf, df = device(b, H, 'e@zajil.test'); run(df, SYNC); srv.mode['user-E'] = 'getfail'; g0 = len(srv.gets)
+        cf, df = device(b, H, 'e@zajil.test'); pocket(df, True); run(df, SYNC); srv.mode['user-E'] = 'getfail'; g0 = len(srv.gets)
         df.goto(ROOT + 'bird/?id=' + birde, wait_until='load'); waits(df, '[data-testid=media-elsewhere][data-where=failed]')
         text = (df.locator('[data-testid=media-elsewhere]').all_inner_texts() or [''])[0].strip(); ty = typo(df)
         run(df, "async (db, id) => { for (let i = 0; i < 5; i++) await db.fetchPhotoBytes(id); }", pe['id'])
@@ -266,13 +272,14 @@ try:
             return ok_, (pg.locator('[data-testid=media-elsewhere]').all_inner_texts() or [''])[0].strip(), typo(pg)
         ck, dk = device(b, H, 'k@zajil.test'); birdk = run(dk, BIRD, 'وثيقة'); srv.mode['user-K'] = 'abort'
         pk = run(dk, DOC, birdk, 'pedigree.pdf'); run(dk, SYNC); run(dk, PASS)
-        cl, dl = device(b, H, 'k@zajil.test'); run(dl, SYNC); dl.goto(ROOT + 'bird/?id=' + birdk, wait_until='load')
+        cl, dl = device(b, H, 'k@zajil.test'); pocket(dl, True); run(dl, SYNC); dl.goto(ROOT + 'bird/?id=' + birdk, wait_until='load')
         got, text, ty = tile_text(dl, 'pending')
         check('[file · not uploaded] a document on another device and not uploaded yet says «الملف على جهاز آخر ولم يُرفع بعد», in a face that has Arabic',
               got and text == 'الملف على جهاز آخر ولم يُرفع بعد' and not ty, (got, text, ty[:3]))
         srv.mode['user-K'] = 'ok'; run(dk, SYNC); run(dk, PASS); run(dk, SYNC)
         check('[file · setup] the document is stored: a PDF is on the allow-list', ('user-K', pk['id']) in srv.objects and srv.objects[('user-K', pk['id'])]['type'] == 'application/pdf', list(srv.objects)[-1:])
-        run(dl, SYNC); srv.held.clear(); srv.mode['user-K'] = 'gethold'; dl.goto(ROOT + 'bird/?id=' + birdk, wait_until='load')
+        # off the profile first: since stage 3 an OPEN profile follows the pull and would fetch the document at once
+        home(dl, H); run(dl, SYNC); srv.held.clear(); srv.mode['user-K'] = 'gethold'; dl.goto(ROOT + 'bird/?id=' + birdk, wait_until='load')
         got, text, ty = tile_text(dl, 'fetching')
         check('[file · fetching] while a document is on its way the tile says «جارٍ تنزيل الملف…», in a face that has Arabic',
               got and text == 'جارٍ تنزيل الملف…' and not ty, (got, text, ty[:3]))
@@ -418,6 +425,84 @@ try:
         home(dt, H); srv.mode['user-T'] = 'ok'; cycle(dt); cycle(dt); st3 = run(dt, STATUS); l1 = run(dt, LOCAL, f1['id'])
         check('[full] when storage takes uploads again both photos are stored and the status is clear', bool(l1['stored']) and st3['full'] is False and st3['waiting'] == 0, (l1['stored'], st3))
         ct.close()
+
+        # ══════════════════════ STAGE 3 (ORDERED 2026-11-20) ══════════════════════
+        # ═══ EVERY STORED PHOTO COMES DOWN IN THE BACKGROUND — one at a time, online and in front, never holding records up ═══
+        HELD_ = "async (db, ids) => { const out = []; for (const id of ids) { const m = await db.idbGet('media', id); out.push(!!(m && m.blob)); } return out; }"
+        DSTATE = "async (db) => { const s = db.photoSyncState(); return { inFlight: s.inFlight, failures: s.failures, waitMs: s.waitMs, last: s.last }; }"
+        held_gets = lambda: [h for h in srv.held if len(h) == 2]
+        def release_gets():
+            for h in held_gets(): srv.held.remove(h); h[0].fulfill(status=200, content_type=h[1]['type'], body=h[1]['bytes'])
+        cu1, du1 = device(b, H, 'u@zajil.test'); bu = run(du1, BIRD, 'ينزل وحده')
+        ups = [run(du1, PHOTO, bu, f'u{k}.jpg') for k in range(3)]; cycle(du1); cycle(du1)
+        check('[setup] the first device stored three photos', all(run(du1, LOCAL, u_['id'])['stored'] for u_ in ups), [run(du1, LOCAL, u_['id'])['stored'] for u_ in ups])
+        def wait_held(ms=6000):
+            t_ = 0
+            while t_ < ms and not held_gets(): du2.wait_for_timeout(200); t_ += 200
+            return len(held_gets())
+        srv.mode['user-U'] = 'gethold'; srv.held.clear(); g0 = len(srv.gets)
+        cu2, du2 = device(b, H, 'u@zajil.test')          # the same account on a second device, the app in front
+        run(du2, SYNC_BOUNDED); first = wait_held()      # its cycle pulls the rows; the pass after it asks for the first photo
+        ok_ = run(du2, SYNC_BOUNDED)
+        check('[down · never in the way] while a download hangs unanswered, a record cycle still completes', first >= 1 and ok_ is True, (first, ok_))
+        most = first
+        for _ in range(6):
+            du2.wait_for_timeout(1200); most = max(most, len(held_gets()))     # time enough for a parallel pass to ask for more
+            if not held_gets(): break
+            release_gets(); wait_held(4000)
+        mine = [g for g in srv.gets[g0:] if g[0] == 'user-U']
+        check('[down · one at a time · M-parallel fails here] three photos to bring down, ONE request out at a time — the next asked only when the last is answered',
+              most == 1 and len(mine) == 3, (most, len(mine)))
+        got = run(du2, HELD_, [u_['id'] for u_ in ups]); same = [run(du2, LOCAL, u_['id'])['sha'] == run(du1, LOCAL, u_['id'])['sha'] for u_ in ups]
+        check('[down · M-nodown fails here] with the bird\'s profile never opened, all three photos are on the second device, byte for byte', got == [True] * 3 and all(same), (got, same))
+        exp = run(du2, "async (db, bird) => { let missing = null; const f = await db.exportAll({ onMissing: (n) => { missing = n; } }); return { missing, here: f.media.filter(m => m.birdId === bird).length }; }", bu)
+        check('[down] an export on the second device is now complete: it carries the three photos, and none is missing', exp == {'missing': 0, 'here': 3}, exp)
+        # in the background, nothing comes down
+        u3 = run(du1, PHOTO, bu, 'u3.jpg'); cycle(du1); cycle(du1); n_ = len(srv.gets)
+        pocket(du2, True); run(du2, SYNC_BOUNDED); du2.wait_for_timeout(2500)
+        check('[down · M-hiddendown fails here] with the app in the background, a cycle pulls the new photo\'s row and NOTHING is downloaded', len(srv.gets) == n_ and run(du2, HELD_, [u3['id']]) == [False], (len(srv.gets) - n_))
+        pocket(du2, False)
+        # offline, nothing is even tried
+        cu2.set_offline(True); n_ = len(srv.gets)
+        off_ = du2.evaluate("() => navigator.onLine")
+        st_ = run(du2, "async (db) => { await Promise.race([db.runPhotoPass({ manual: true }), new Promise(r => setTimeout(r, 10000))]); return db.photoSyncState(); }")
+        check('[down · M-offlinedown fails here] offline (navigator.onLine false), the pass does not even try: no request, nothing left hanging, no failure counted, no backoff',
+              off_ is False and len(srv.gets) == n_ and st_['inFlight'] is False and st_['failures'] == 0 and not st_['last']['failed'] and st_['last']['downloaded'] == 0,
+              (off_, len(srv.gets) - n_, st_['inFlight'], st_['failures'], st_['last']))
+        cu2.set_offline(False)
+        run(du2, SYNC_BOUNDED); wait_held(4000)
+        for _ in range(4):
+            release_gets(); du2.wait_for_timeout(700)
+        check('[down] back in front and online, it comes down', run(du2, HELD_, [u3['id']]) == [True], run(du2, HELD_, [u3['id']]))
+        # a failed download: the pass stops on the photo backoff
+        srv.mode['user-U'] = 'getfail'; u4 = run(du1, PHOTO, bu, 'u4.jpg'); cycle(du1); cycle(du1)
+        run(du2, SYNC_BOUNDED); du2.wait_for_timeout(2500); st_ = run(du2, DSTATE); n_ = len(srv.gets)
+        again = run(du2, "async (db) => { await Promise.race([db.runPhotoPass({}), new Promise(r => setTimeout(r, 10000))]); return db.photoSyncState().last; }")
+        check('[down · same backoff · M-downnoback fails here] a failed download stops the pass on the photo backoff, and the next automatic pass waits',
+              st_['failures'] >= 1 and st_['waitMs'] > 0 and again['skipped'] == 'backoff' and len(srv.gets) == n_ and run(du2, HELD_, [u4['id']]) == [False], (st_, again))
+        # ═══ THE VIEWER ON A DEVICE WITHOUT THE BYTES: the fetching state, then the photo ═══
+        srv.mode['user-U'] = 'gethold'; srv.held.clear(); u5 = run(du1, PHOTO, bu, 'u5.jpg'); cycle(du1); cycle(du1)
+        run(du2, SYNC_BOUNDED); wait_held(4000)          # its background download is held
+        du2.goto(ROOT + 'bird/?id=' + bu, wait_until='load'); waits(du2, '[data-testid=media-open]'); du2.wait_for_timeout(800)
+        k5 = du2.evaluate("(name) => [...document.querySelectorAll('[data-testid=media-tile]')].findIndex(t => (t.querySelector('[data-testid=media-elsewhere]') || {}).dataset?.where === 'fetching')", 'u5.jpg')
+        if k5 >= 0: du2.locator('[data-testid=media-tile]').nth(k5).locator('[data-testid=media-open]').click()
+        waits(du2, '[data-testid=viewer]'); du2.wait_for_timeout(500)
+        st5 = du2.evaluate("() => { const e = document.querySelector('[data-testid=viewer-state]'); return e ? { where: e.dataset.where, text: e.innerText.split('\\n')[0].trim() } : null; }"); ty = typo(du2)
+        check('[viewer · bytes not here] a photo whose bytes are not on this device opens saying «جارٍ تنزيل الصورة…», in a face that has Arabic',
+              k5 >= 0 and st5 == {'where': 'fetching', 'text': 'جارٍ تنزيل الصورة…'} and not ty, (k5, st5, ty[:3]))
+        release_gets()
+        try: du2.wait_for_function("() => { const i = document.querySelector('[data-testid=viewer-img]'); return i && i.naturalWidth > 0; }", timeout=8000); shown = True
+        except Exception: shown = False
+        check('[viewer · bytes not here] …and becomes the photo when its bytes land', shown)
+        du2.locator('[data-testid=viewer-close]').click(); du2.wait_for_timeout(300)
+        # ═══ AN OPEN PROFILE FOLLOWS A PULL (measured 2026-11-20: it did not) ═══
+        tiles0 = du2.locator('[data-testid=media-tile]').count()
+        u6 = run(du1, PHOTO, bu, 'u6.jpg'); cycle(du1); cycle(du1)
+        run(du2, SYNC_BOUNDED); du2.wait_for_timeout(2500)
+        tiles1 = du2.locator('[data-testid=media-tile]').count()
+        check('[open profile · M-nosyncload fails here] a photo pulled while the bird\'s profile is open appears on it, without reopening', tiles1 == tiles0 + 1, (tiles0, tiles1))
+        release_gets(); srv.mode['user-U'] = 'ok'
+        cu1.close(); cu2.close()
 
         # ═══ NEVER ANOTHER ACCOUNT'S FOLDER, and nothing without an account ═══
         check('[owner] every upload and download in this run was addressed to the signed-in user’s own folder', all(p_[0] == p_[1] for p_ in srv.posts) and all(g[0] == g[1] for g in srv.gets), [x for x in srv.posts if x[0] != x[1]][:2])

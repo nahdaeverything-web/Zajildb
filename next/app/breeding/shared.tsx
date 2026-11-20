@@ -119,8 +119,9 @@ export function BirdPick({ label, value, filter, placeholder, onPick, testid, er
 }
 
 /** «زوج جديد» — breeding.js:54 newPairDialog in the spec's sheet, with the kin box and the spec's inline error list. */
-export function NewPairSheet({ season, seasons, onClose, onSaved }: { season: string; seasons: string[]; onClose: () => void; onSaved: (id: string) => void }) {
-  const [sireId, setSire] = useState<string | null>(null); const [damId, setDam] = useState<string | null>(null);
+export function NewPairSheet({ season, seasons, onClose, onSaved, initialSire = null, initialDam = null }: { season: string; seasons: string[]; onClose: () => void; onSaved: (id: string) => void; initialSire?: string | null; initialDam?: string | null }) {
+  // the pair offer (ORDERED 2026-11-20) fills both parents; an id that is not a bird here is left empty
+  const [sireId, setSire] = useState<string | null>(initialSire && getBird(initialSire) ? initialSire : null); const [damId, setDam] = useState<string | null>(initialDam && getBird(initialDam) ? initialDam : null);
   const [nest, setNest] = useState(''); const [ssn, setSsn] = useState(season); const [mated, setMated] = useState(todayISO()); const [source, setSource] = useState(''); const [bought, setBought] = useState('');
   const [errs, setErrs] = useState<string[]>([]); const [bad, setBad] = useState<Record<string, boolean>>({});
   const depth = +((db.state.settings as Record<string, unknown>).coiDepth || 10);

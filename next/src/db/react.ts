@@ -75,7 +75,9 @@ export function useMediaForBird(birdId: string | null) {
       if (live) setMedia(rows.map((m) => { const { blob, ...meta } = m; return { ...meta, hasBlob: !!blob }; }));
     });
     load();
-    const off = db.onChange((ev: ChangeEvent) => { if (ev && ev.type === 'media' && ev.birdId === birdId) load(); });
+    // STAGE 3 (2026-11-20, measured): a PULLED media row arrives as a `sync` event with no bird id. Re-read on it too, or
+    // an open profile keeps showing what was there before the pull until it is opened again.
+    const off = db.onChange((ev: ChangeEvent) => { if (ev && ((ev.type === 'media' && ev.birdId === birdId) || (ev.type === 'sync' && ev.store === 'media'))) load(); });
     return () => { live = false; off(); };
   }, [birdId]);
   return media;

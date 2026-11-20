@@ -524,6 +524,14 @@ export const EXT = {
   'media.refused.size':       { ar: 'الملف «{name}» أكبر من الحد المسموح للرفع — بقي محفوظًا على هذا الجهاز فقط', en: '“{name}” is larger than the upload limit — it stays on this device only' },
   'media.refused.type':       { ar: 'نوع الملف «{name}» غير مسموح برفعه — بقي محفوظًا على هذا الجهاز فقط', en: 'Files of the type of “{name}” cannot be uploaded — it stays on this device only' },
   'media.refused.many':       { ar: 'عدد الملفات التي لم تُرفع لأنها أكبر من الحد أو من نوع غير مسموح: {n}. بقيت محفوظة على هذا الجهاز فقط.', en: 'Files not uploaded because they are over the limit or of a type that is not allowed: {n}. They stay on this device only.' },
+  // THE PHOTO VIEWER (ORDERED 2026-11-20). Both PROPOSED: the labels of its two arrows, read by a screen reader.
+  'viewer.prev':              { ar: 'الصورة السابقة', en: 'Previous photo' },
+  'viewer.next':              { ar: 'الصورة التالية', en: 'Next photo' },
+  // THE PAIR OFFER (ORDERED 2026-11-20). All four PROPOSED.
+  'pairOffer.title':          { ar: 'لا يوجد زوج تربية لهذين الأبوين', en: 'There is no breeding pair for these parents' },
+  'pairOffer.body':           { ar: 'اخترت {sire} أبًا و{dam} أمًّا، ولا يوجد في السجل زوج تربية يجمعهما. هل تريد إنشاء هذا الزوج الآن؟', en: 'You chose {sire} as father and {dam} as mother, and there is no breeding pair of the two in the register. Create the pair now?' },
+  'pairOffer.create':         { ar: 'إنشاء الزوج', en: 'Create the pair' },
+  'pairOffer.later':          { ar: 'ليس الآن', en: 'Not now' },
   // PHOTO SYNC, STAGE 2 (RULED 2026-11-19). All three PROPOSED.
   'sync.photosWaiting':       { ar: 'صور وملفات بانتظار الرفع: {n}', en: 'Photos and files waiting to upload: {n}' },
   'media.storageFull':        { ar: 'امتلأت مساحة التخزين على الخادم — لم تُرفع الصور، وهي محفوظة على هذا الجهاز', en: 'Server storage is full — the photos were not uploaded, and they are kept on this device' },

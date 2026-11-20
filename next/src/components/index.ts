@@ -7,6 +7,7 @@ export { default as Loading } from './Loading';
 export { default as Field } from './Field';
 export { default as Notice } from './Notice';
 export { default as MediaPlaceholder } from './MediaPlaceholder';
+export { default as PhotoViewer, type ViewerItem } from './PhotoViewer';
 export { BirdLabel, SexChip, COIValue, Plate, primaryRing, birdLabelText, sexIcon } from './BirdBits';
 export { seasonStart, seasonLabel } from './season';
 export { downloadJSON, downloadBlob } from './download';

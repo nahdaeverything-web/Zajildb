@@ -8,7 +8,7 @@ import { t, fmtDate, fmtNum, fmtPercent, statusLabel } from '@/src/i18n.ext.js';
 import { inbreeding, ancestorLoss } from '@/src/engine/coi.js';
 import { descendantDepths, pedigreeGrid } from '@/src/engine/pedigree.js';
 import { birdEligibility } from '@/src/engine/fci.js';
-import { SyncRow, Loading, MediaPlaceholder, COIValue, BirdLabel, primaryRing, birdLabelText, toast, undoToast, confirmDialog, choiceDialog, seasonStart, downloadJSON, initDB } from '@/src/components';
+import { SyncRow, Loading, MediaPlaceholder, PhotoViewer, COIValue, BirdLabel, primaryRing, birdLabelText, toast, undoToast, confirmDialog, choiceDialog, seasonStart, downloadJSON, initDB } from '@/src/components';
 import sh from '@/src/components/shared.module.css';
 import s from './bird.module.css';
 
@@ -87,6 +87,8 @@ export default function BirdView() {
   const media = useMediaForBird(id || null) as Media[];
   // object URLs for the rows whose bytes are on this device; revoked on change and unmount (ui.js onViewTeardown)
   const [urls, setUrls] = useState<Record<string, string>>({});
+  // THE PHOTO VIEWER (ORDERED 2026-11-20): which of the bird's photos is open full screen, or none
+  const [viewing, setViewing] = useState<number | null>(null);
   useEffect(() => {
     let live = true; const made: string[] = [];
     Promise.all(media.filter((m) => m.hasBlob).map(async (m) => { const row = (await db.idbGet('media', m.id)) as { blob?: Blob } | undefined; return row && row.blob ? ([m.id, URL.createObjectURL(row.blob)] as const) : null; }))
@@ -114,6 +116,7 @@ export default function BirdView() {
   // RULED 2026-11-20: hover does not exist on a phone, where fanciers work — the full sentence also shows on TAP, in the
   // notice's own words and for as long as the notice (12 s). The title stays for a pointer that can hover.
   const refusedWhy = (m: Media) => t('media.refused.' + (refused[m.id] === 'type' ? 'type' : 'size'), { name: m.name || '' });
+  const photos = media.filter((m) => m.kind === 'photo');
   const whereOf = (m: Media) => (m.stored ? (fetchFailed[m.id] ? 'failed' : 'fetching') : db.isSignedIn() ? 'pending' : 'elsewhere') as 'elsewhere' | 'pending' | 'fetching' | 'failed';
   useEffect(() => { if (booted && !bird) router.replace('/birds'); }, [booted, bird, router]);   // bird-detail.js:21
 
@@ -317,15 +320,27 @@ export default function BirdView() {
                 <div className={s.gal} data-testid="gallery">
                   {media.map((m) => (
                     <div key={m.id} className={s.phwrap} data-testid="media-tile">
-                      {!m.hasBlob ? <MediaPlaceholder kind={m.kind === 'photo' ? 'photo' : 'file'} filename={m.name} where={whereOf(m)} />
+                      {m.kind === 'photo' ? (
+                        // a tap anywhere on the photo opens it full screen; the delete button is a sibling in its own corner,
+                        // so a tap on the photo cannot reach it (ORDERED 2026-11-20)
+                        <div className={s.phopen} role="button" tabIndex={0} aria-label={`${t('media.photo')} — ${t('photo.' + (m.subtype || 'other'))}`} data-testid="media-open"
+                          onClick={() => setViewing(photos.findIndex((p) => p.id === m.id))} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setViewing(photos.findIndex((p) => p.id === m.id)); } }}>
+                          {!m.hasBlob ? <MediaPlaceholder kind="photo" filename={m.name} where={whereOf(m)} />
+                            : !urls[m.id] ? <div className={s.ph} />
+                            : <div className={`${s.ph} ${s.img}`} role="img" aria-label={`${t('media.photo')} — ${t('photo.' + (m.subtype || 'other'))}`} data-testid="media-photo"><img src={urls[m.id]} alt={`${t('media.photo')} — ${t('photo.' + (m.subtype || 'other'))}`} loading="lazy" /><span>{m.name}</span></div>}
+                        </div>
+                      ) : !m.hasBlob ? <MediaPlaceholder kind="file" filename={m.name} where={whereOf(m)} />
                         : !urls[m.id] ? <div className={s.ph} />
-                        : m.kind === 'photo' ? <div className={`${s.ph} ${s.img}`} role="img" aria-label={`${t('media.photo')} — ${t('photo.' + (m.subtype || 'other'))}`} data-testid="media-photo"><img src={urls[m.id]} alt={`${t('media.photo')} — ${t('photo.' + (m.subtype || 'other'))}`} loading="lazy" /><span>{m.name}</span></div>
-                        : <a className={`${s.ph} ${s.img}`} href={urls[m.id]} download={m.name || 'document'} data-testid="media-file">📄<span>{m.name || 'document'}</span></a>}
+                        // a document opens in the browser's own viewer (ORDERED 2026-11-20), not as a download
+                        : <a className={`${s.ph} ${s.img}`} href={urls[m.id]} target="_blank" rel="noopener" data-testid="media-file">📄<span>{m.name || 'document'}</span></a>}
                       {refused[m.id] && <button type="button" className={s.refused} onClick={() => toast(refusedWhy(m), { timeout: 12000 })} data-testid="media-refused" data-reason={refused[m.id]} title={refusedWhy(m)}>{t('media.refusedMark')}</button>}
                       <button type="button" className={s.del} aria-label={t('act.delete')} onClick={() => delMedia(m)} data-testid="media-delete">✕</button>
                     </div>
                   ))}
                 </div>
+              )}
+              {viewing !== null && viewing >= 0 && photos.length > 0 && (
+                <PhotoViewer items={photos.map((p) => ({ key: p.id, id: p.id, name: p.name }))} start={viewing} onClose={() => setViewing(null)} />
               )}
             </div>
             <div className={s.card}>

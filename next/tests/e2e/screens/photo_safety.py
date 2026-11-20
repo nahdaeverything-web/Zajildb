@@ -145,10 +145,18 @@ try:
         drop = json.loads(json.dumps(bare)); drop['birds'] = [x for x in drop['birds'] if x['name'] == 'قديم']; drop['media'] = [m for m in drop['media'] if m['name'] in ('on-new.png', 'on-old.png')]
         lost = run(D, "async (db, f) => db.replaceMediaLoss(f)", drop); run(D, "async (db, f) => db.importAll(f, 'replace')", drop)
         check('[RF-24 + P2] a replace that drops «جديد» and lists its photo without bytes: the photo is counted as lost (1) and goes with the bird; the staying bird\'s photo keeps its bytes', lost == 1 and media(D) == [['on-old.png', 2]], (lost, media(D)))
-        # SEEN, not ruled: a merge-import skips a media row the device already has — even when the device's row has no bytes and the file's has them
+        # STAGE 3 (ORDERED 2026-11-20): the merge-import photo gap, closed. Until then a merge-import skipped a media row the
+        # device already had, even when the device's row had no bytes and the file's had them (pinned here as «seen · not ruled»).
         srv2 = Server(); c4, E = device(b, H, srv2); run(E, ADD, 'طير', 'p.png', 'xyz'); withbytes = run(E, "async (db) => await db.exportAll()")
-        c5, F = device(b, H, srv2); run(E, SYNC); run(F, SYNC); f0 = media(F); run(F, "async (db, f) => db.importAll(f, 'merge')", withbytes); f1 = media(F)
-        check('[seen · not ruled] a second device holding the row without bytes, merge-importing the first device\'s export WITH the bytes: the row is skipped and the bytes do not arrive', f0 == [['p.png', 'NO BYTES']] and f1 == [['p.png', 'NO BYTES']], (f0, f1))
+        c5, F = device(b, H, srv2); run(E, SYNC); run(F, SYNC); f0 = media(F)
+        OPS = "async (db) => (await db.listOps()).filter(o => o.store === 'media').length"
+        ROW = "async (db) => { const m = (await db.idbGetAll('media'))[0]; const { blob, ...rest } = m || {}; return rest; }"
+        ops0 = run(F, OPS); row0 = run(F, ROW); run(F, "async (db, f) => db.importAll(f, 'merge')", withbytes); f1 = media(F)
+        check('[merge · M-mergeskip fails here] a second device holding the row WITHOUT bytes, merge-importing the first device\'s export WITH them: the bytes arrive',
+              f0 == [['p.png', 'NO BYTES']] and f1 == [['p.png', 3]], (f0, f1))
+        check('[merge] …and only the bytes: the row keeps what this device had, and no operation is logged for it', run(F, ROW) == row0 and run(F, OPS) == ops0, (row0, run(F, ROW), ops0, run(F, OPS)))
+        run(F, "async (db, f) => db.importAll(f, 'merge')", withbytes)
+        check('[merge] a row that HAS bytes is never touched by a merge (the photo invariant)', media(F) == [['p.png', 3]] and run(F, OPS) == ops0, media(F))
         c3.close(); c4.close(); c5.close()
 
         # ═══ RF-4 — a device holding rows without bytes can still export, and says what is not in the file ═══

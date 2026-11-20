@@ -17,7 +17,8 @@ export default function BreedingView() {
   const params = useSearchParams(); const router = useRouter();
   const [booted, setBooted] = useState(false);
   const [season, setSeason] = useState(params.get('season') || currentYear());
-  const [sheet, setSheet] = useState(false);
+  // THE PAIR OFFER (ORDERED 2026-11-20): /breeding?newPair=1&sire=&dam= opens the new-pair sheet with both parents filled
+  const [sheet, setSheet] = useState(params.get('newPair') === '1');
   useEffect(() => { initDB().then(() => setBooted(true)); }, []);
   const pairs = useZajilStore(selectPairs) as Pair[];
   useZajilStore((x) => x.birds.size);   // names / plates come from the birds
@@ -73,7 +74,7 @@ export default function BreedingView() {
         )}
       </section>
       <div className={s.fab} data-bottom-chrome="fab"><button type="button" onClick={() => setSheet(true)} data-testid="new-pair-fab"><Plus />{t('br.newPair')}</button></div>
-      {sheet && <NewPairSheet season={season} seasons={seasons} onClose={() => setSheet(false)} onSaved={(id) => { setSheet(false); router.push(`/pair?id=${id}`); }} />}
+      {sheet && <NewPairSheet season={season} seasons={seasons} initialSire={params.get('sire')} initialDam={params.get('dam')} onClose={() => { setSheet(false); if (params.get('newPair')) router.replace(`/breeding?season=${season}`); }} onSaved={(id) => { setSheet(false); router.push(`/pair?id=${id}`); }} />}
     </section>
   );
 }

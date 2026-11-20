@@ -360,7 +360,13 @@ export async function importAll(payload, mode = 'merge') {
   for (const h of payload.healthEvents || []) await put('healthEvents', 'healthEvents', h);
   for (const m of decodedMedia) {
     const existing = await idbGet('media', m.id);
-    if (mode === 'merge' && existing) { counts.skipped++; continue; }
+    if (mode === 'merge' && existing) {
+      // STAGE 3 (ORDERED 2026-11-20): THE MERGE-IMPORT PHOTO GAP, closed. A row this device holds WITHOUT bytes takes the
+      // file's bytes; everything else on the row stays this device's, its stored mark included. Bytes only: no op —
+      // there is nothing to tell the server. A row that has bytes is never touched (the photo invariant, RF-23).
+      if (!existing.blob && m.blob) { await idbPut('media', { ...existing, blob: m.blob }); counts.media++; continue; }
+      counts.skipped++; continue;
+    }
     await idbPut('media', m);
     await logOp({ origin: 'import', store: 'media', op: 'put', recordId: m.id, record: m });
     if (mode === 'replace') await clearTombstone('media', m.id);

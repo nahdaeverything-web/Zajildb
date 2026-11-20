@@ -1,0 +1,14 @@
+/* THE PHOTO VIEWER (ORDERED 2026-11-20) — full screen, dark whatever the theme: a photo is looked at on black. */
+.viewer{ position:fixed; inset:0; z-index:1000; background:rgba(8, 12, 16, .96); color:#FFFFFF; }
+.stage{ position:absolute; inset:0; display:grid; place-items:center; overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none; }
+.stage img{ max-width:100%; max-height:100%; object-fit:contain; display:block; transition:transform .16s ease-out; will-change:transform; -webkit-user-drag:none; }
+.stage img.live{ transition:none; }
+.state{ display:flex; flex-direction:column; align-items:center; gap:8px; padding:24px; text-align:center; font-family:inherit; font-size:16px; font-weight:700; color:#FFFFFF; }
+.state small{ font-family:var(--f-mono); font-size:12px; font-weight:500; color:rgba(255, 255, 255, .7); direction:ltr; }
+.top{ position:absolute; top:0; inset-inline:0; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:calc(12px + env(safe-area-inset-top, 0px)) 16px 12px; pointer-events:none; }
+.top > *{ pointer-events:auto; }
+.count{ font-size:14px; font-weight:700; color:rgba(255, 255, 255, .85); min-height:1px; }
+.btn{ width:44px; height:44px; border-radius:999px; border:0; background:rgba(255, 255, 255, .16); color:#FFFFFF; font-family:inherit; font-size:20px; font-weight:800; line-height:1; display:grid; place-items:center; cursor:pointer; }
+.prev, .next{ position:absolute; top:50%; margin-top:-22px; }
+.prev{ inset-inline-start:12px; }
+.next{ inset-inline-end:12px; }

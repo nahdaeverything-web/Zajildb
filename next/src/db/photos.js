@@ -49,6 +49,22 @@ let waiting = null;          // how many files hold bytes here and are not on th
 let full = false;            // the last upload was refused because storage is full
 
 
+/**
+ * STAGE 3 (ORDERED 2026-11-20): every photo whose bytes are on the server and not on this device comes down in the
+ * background, so an export, a share or a certificate made on EITHER device is complete. Only while the device is online
+ * and the app is in front — never from a pocket, never into a dead network — one at a time, after the uploads, on the
+ * pass's own backoff; record sync never waits for it (the pass is not awaited).
+ */
+const downloadAllowed = () => (typeof navigator === 'undefined' || navigator.onLine !== false)
+  && (typeof document === 'undefined' || document.visibilityState !== 'hidden');
+/** Media records marked stored whose bytes are not here: the ones that failed least first, then oldest first. */
+export async function photosAwaitingDownload() {
+  const tries = (m) => (failedAt.get(m.id) || { n: 0 }).n;
+  return (await idbGetAll('media'))
+    .filter((m) => m && !m.blob && m.stored)
+    .sort((a, b) => tries(a) - tries(b) || String(a.addedAt || '').localeCompare(String(b.addedAt || '')));
+}
+
 const objectUrl = (kind, owner, id) => `${syncConfig().url}/storage/v1/object/${kind}${PHOTO_BUCKET}/${encodeURIComponent(owner)}/${encodeURIComponent(id)}`;
 
 /** Media records that hold bytes here and are not on the server yet, oldest first. Refused files are not in it. */
@@ -167,7 +183,7 @@ export async function refreshPhotoWaiting() {
 export function photoStatus() { return { waiting: waiting || 0, full }; }
 
 async function run(manual) {
-  const out = { ran: false, stored: 0, refused: 0, removed: 0, failed: null, skipped: null };
+  const out = { ran: false, stored: 0, refused: 0, removed: 0, downloaded: 0, failed: null, skipped: null };
   if (!syncConfig().configured || !isSignedIn()) { out.skipped = 'hidden'; return out; }
   if (manual) { attempt = 0; notBefore = 0; }
   if (Date.now() < notBefore) { out.skipped = 'backoff'; return out; }
@@ -175,7 +191,8 @@ async function run(manual) {
   if (!owner || owner !== state.settings.authUserId) { out.skipped = 'owner'; return out; }   // never another account's folder
   const queue = await photosAwaitingUpload();
   const due = removalQueue().filter((q) => Date.parse(q.at) <= Date.now() - PHOTO_REMOVE_GRACE_MS);
-  if (!queue.length && !due.length) { attempt = 0; return out; }
+  const down = downloadAllowed() ? await photosAwaitingDownload() : [];
+  if (!queue.length && !due.length && !down.length) { attempt = 0; return out; }
   if (!(await ensureAccessToken())) { out.skipped = 'session'; return out; }
   out.ran = true; told = [];
   const stop = (err) => {
@@ -203,6 +220,15 @@ async function run(manual) {
       }
     }
     if (queue.length && full) { full = false; emitChange({ type: 'photo-status' }); }   // an upload went through: no longer full
+    // STAGE 3: then the bytes this device lacks, ONE AT A TIME, re-checking before each that the device is still online
+    // and in front. A failed download stops the pass on the same backoff as an upload; a file whose own last try failed
+    // is passed over until its own wait is out ('waiting'), so one bad object cannot hold the others back.
+    for (const m of down) {
+      if (!downloadAllowed()) { out.skipped = 'background'; break; }
+      const r = await fetchPhotoBytes(m.id);
+      if (r === 'here') out.downloaded++;
+      else if (r === 'failed') return stop(Object.assign(new Error('photo-download failed'), { code: 'DownloadFailed' }));
+    }
     attempt = 0; notBefore = 0;
     return out;
   } finally {
@@ -231,6 +257,8 @@ export function photoSyncState() {
 // ───────────────────────────── down ─────────────────────────────
 
 const fetching = new Map();   // media id -> the one fetch in flight
+let lane = Promise.resolve();  // STAGE 3: ONE download at a time, whoever asks (the pass, a profile, the viewer)
+const oneAtATime = (fn) => { const run = lane.then(fn, fn); lane = run.catch(() => {}); return run; };
 const failedAt = new Map();   // media id -> { n, notBefore } — a failed fetch is not repeated by every re-render
 
 /**
@@ -240,7 +268,7 @@ const failedAt = new Map();   // media id -> { n, notBefore } — a failed fetch
  */
 export function fetchPhotoBytes(id) {
   if (fetching.has(id)) return fetching.get(id);
-  const p = (async () => {
+  const p = oneAtATime(async () => {
     const cur = await idbGet('media', id);
     if (!cur) return 'gone';
     if (cur.blob) return 'here';
@@ -277,7 +305,7 @@ export function fetchPhotoBytes(id) {
       failedAt.set(id, { n, notBefore: Date.now() + backoffDelay(n - 1) });
       return 'failed';
     }
-  })().finally(() => { fetching.delete(id); });
+  }).finally(() => { fetching.delete(id); });
   fetching.set(id, p);
   return p;
 }

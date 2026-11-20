@@ -6,7 +6,7 @@ import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds, useMediaForBird } from '@/src/db/react';
 import { t, statusLabel } from '@/src/i18n.ext.js';
 import { parseRing, RING_TYPES } from '@/src/engine/rings.js';
-import { Loading, toast, confirmDialog, choiceDialog, downscaleImage, storedName, primaryRing, birdLabelText, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
+import { Loading, PhotoViewer, toast, confirmDialog, choiceDialog, downscaleImage, storedName, primaryRing, birdLabelText, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
 import s from './form.module.css';
 
 // Add / edit bird — design/approved/add-edit-bird-v2.html, behaviour from
@@ -53,6 +53,22 @@ const REFERENCE_STATUS = db.REFERENCE_STATUS as string;
  */
 const EXTERNAL_STATUSES = [REFERENCE_STATUS, 'dead'];
 /** Exactly what collect() will store for this draft — the single rule, used in both places. */
+/**
+ * THE PAIR OFFER (ORDERED 2026-11-20, found on Samir's data: he set رعد and ابتسام as father and mother on two youngsters
+ * and never made the breeding pair, and believed he had). A save that SETS or CHANGES both parents, when no pair of that
+ * cock and that hen exists in any season, is offered the pair — a question, never a record made for him. Never for an
+ * external or reference parent: those are pedigree, not birds in this loft that can be paired.
+ */
+function pairToOffer(bird: Bird, before: Bird | null | undefined): { sire: Bird; dam: Bird } | null {
+  if (!bird.sireId || !bird.damId) return null;
+  if (before && before.sireId === bird.sireId && before.damId === bird.damId) return null;   // this save did not set them
+  const sire = getBird(bird.sireId), dam = getBird(bird.damId);
+  if (!sire || !dam) return null;
+  const inLoft = (b: Bird) => !b.external && b.status !== REFERENCE_STATUS;
+  if (!inLoft(sire) || !inLoft(dam) || sire.sex === 'hen' || dam.sex === 'cock') return null;
+  for (const p of (db.state.pairs as Map<string, { sireId?: string; damId?: string }>).values()) if (p.sireId === sire.id && p.damId === dam.id) return null;
+  return { sire, dam };
+}
 const effectiveStatus = (external: boolean, status?: string) => (external
   ? (EXTERNAL_STATUSES.includes(status as string) ? (status as string) : REFERENCE_STATUS)
   : (status === REFERENCE_STATUS ? 'stock' : (status || 'stock')));
@@ -213,11 +229,13 @@ export default function BirdForm() {
   // PHOTO SYNC STAGE 2 (RULED 2026-11-20): a file storage refused carries the profile's badge ON its 56 px thumbnail, and a
   // TAP on it says the full sentence (no hover on a phone). The thumbnail keeps its size and the strip its spacing.
   const refused = (db.photoSyncState() as { refused: Record<string, string> }).refused;
+  // THE PHOTO VIEWER (ORDERED 2026-11-20): a tap on a thumbnail opens the photo full screen, saved and picked alike
+  const [viewing, setViewing] = useState<number | null>(null);
   const refusedWhy = (m: { id: string; name?: string }) => t('media.refused.' + (refused[m.id] === 'type' ? 'type' : 'size'), { name: m.name || '' });
   const [savedUrls, setSavedUrls] = useState<Record<string, string>>({});
   useEffect(() => {
     let live = true; const made: string[] = [];
-    Promise.all(saved.filter((m) => m.hasBlob && m.kind === 'photo').map(async (m) => { const row = (await db.idbGet('media', m.id)) as { blob?: Blob } | undefined; return row && row.blob ? ([m.id, URL.createObjectURL(row.blob)] as const) : null; }))
+    Promise.all(saved.filter((m) => m.hasBlob).map(async (m) => { const row = (await db.idbGet('media', m.id)) as { blob?: Blob } | undefined; return row && row.blob ? ([m.id, URL.createObjectURL(row.blob)] as const) : null; }))
       .then((pairs) => {
         if (!live) { for (const x of pairs) if (x) URL.revokeObjectURL(x[1]); return; }
         const map: Record<string, string> = {}; for (const x of pairs) if (x) { map[x[0]] = x[1]; made.push(x[1]); } setSavedUrls(map);
@@ -225,6 +243,18 @@ export default function BirdForm() {
     return () => { live = false; for (const u of made) URL.revokeObjectURL(u); };
   }, [saved]);
   const [thumbs, setThumbs] = useState<string[]>([]);
+  // the strip's photos in its own order — saved first, then picked — for the viewer; a document opens in the browser
+  const viewItems = [
+    ...saved.filter((m) => m.kind === 'photo').map((m) => ({ key: m.id, id: m.id, name: m.name })),
+    ...pending.map((m, i) => ({ key: `p${i}`, url: thumbs[i], name: m.file.name, isImage: m.file.type.startsWith('image/') })).filter((x) => x.isImage && x.url).map(({ key, url, name }) => ({ key, url, name })),
+  ];
+  function openThumb(key: string) {
+    const at = viewItems.findIndex((x) => x.key === key);
+    if (at >= 0) { setViewing(at); return; }
+    const doc = key.startsWith('p') ? pending[Number(key.slice(1))] : null;
+    const url = doc ? URL.createObjectURL(doc.file) : savedUrls[key];
+    if (url) window.open(url, '_blank', 'noopener');      // a document: the browser's own viewer
+  }
   useEffect(() => {
     const urls = pending.map((m) => (m.file.type.startsWith('image/') ? URL.createObjectURL(m.file) : ''));
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -298,6 +328,7 @@ export default function BirdForm() {
   async function doSave(bird: Bird, andNew: boolean, opts: { allowWarnings?: boolean } = {}) {
     setBusy(true);
     try {
+      const before = getBird(bird.id) || null;           // the record as stored before this save (null: a new bird)
       if (siblingOf && !bird.sireId && !bird.damId) {
         // deferred sibling intent: mint the placeholders now, attach them to BOTH birds, only then persist
         const ps = await db.saveBird(db.newBird({ name: t('bird.unknownSire'), sex: 'cock', external: true })) as Bird;
@@ -309,6 +340,16 @@ export default function BirdForm() {
       await db.saveBird(bird, opts);
       // downscaled on the way in — see src/components/media.ts for the measured reason
       for (const m of pending) { const out = await downscaleImage(m.file); await db.addMedia(bird.id, m.kind, m.subtype, storedName(m.file, out), out); }
+      const offer = pairToOffer(bird, before);
+      if (offer) {
+        const make = await confirmDialog({ title: t('pairOffer.title'), body: t('pairOffer.body', { sire: birdLabelText(offer.sire), dam: birdLabelText(offer.dam) }),
+          cancelLabel: t('pairOffer.later'), confirmLabel: t('pairOffer.create'), confirmKind: 'primary' });
+        if (make) {
+          toast(t('toast.saved'), { kind: 'success' });
+          router.push(`/breeding?newPair=1&sire=${encodeURIComponent(offer.sire.id)}&dam=${encodeURIComponent(offer.dam.id)}`);
+          return;
+        }
+      }
       if (andNew) {
         // stay in the entry rhythm: a fresh form carrying the batch-constant fields and the ring prefix
         toast(t('toast.savedNext', { name: bird.name || (bird.rings && bird.rings[0] && bird.rings[0].raw) || '' }), { kind: 'success' });
@@ -410,20 +451,21 @@ export default function BirdForm() {
             {(saved.length > 0 || pending.length > 0) && (
               <div className={s.strip} data-testid="photo-strip">
                 {saved.map((m) => (
-                  <span key={m.id} className={s.thumb} title={m.name} data-testid="strip-saved" data-has={m.hasBlob ? '1' : '0'}>
+                  <span key={m.id} className={s.thumb} title={m.name} data-testid="strip-saved" data-has={m.hasBlob ? '1' : '0'} role="button" tabIndex={0} onClick={() => openThumb(m.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openThumb(m.id); } }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {savedUrls[m.id] ? <img src={savedUrls[m.id]} alt="" /> : m.hasBlob ? '📄' : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4 4 0 0 1 0 9H7z" /></svg>}
-                    {refused[m.id] && <button type="button" className={s.refused} onClick={() => toast(refusedWhy(m), { timeout: 12000 })} data-testid="strip-refused" data-reason={refused[m.id]} title={refusedWhy(m)}>{t('media.refusedMark')}</button>}
+                    {m.kind === 'photo' && savedUrls[m.id] ? <img src={savedUrls[m.id]} alt="" /> : m.hasBlob ? '📄' : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4 4 0 0 1 0 9H7z" /></svg>}
+                    {refused[m.id] && <button type="button" className={s.refused} onClick={(e) => { e.stopPropagation(); toast(refusedWhy(m), { timeout: 12000 }); }} data-testid="strip-refused" data-reason={refused[m.id]} title={refusedWhy(m)}>{t('media.refusedMark')}</button>}
                   </span>
                 ))}
                 {pending.map((m, i) => (
-                  <span key={`p${i}`} className={`${s.thumb} ${s.fresh}`} title={m.file.name} data-testid="strip-pending">
+                  <span key={`p${i}`} className={`${s.thumb} ${s.fresh}`} title={m.file.name} data-testid="strip-pending" role="button" tabIndex={0} onClick={() => openThumb(`p${i}`)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openThumb(`p${i}`); } }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {thumbs[i] ? <img src={thumbs[i]} alt="" /> : '📄'}
                   </span>
                 ))}
               </div>
             )}
+            {viewing !== null && viewing >= 0 && viewItems.length > 0 && <PhotoViewer items={viewItems} start={viewing} onClose={() => setViewing(null)} />}
             <FormField label={t('bird.name')}><input value={draft.name || ''} onChange={(e) => set({ name: e.target.value })} placeholder={t('form.name.placeholder')} data-testid="f-name" /></FormField>
             <FormField label={t('bird.ring')} testid="f-ring-field">
               {rings.map((r, i) => (

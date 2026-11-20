@@ -412,7 +412,7 @@ const guards = {
        + 'record it drops (replacePreview() states the counts first), so the replacement travels instead of '
        + 'being undone by the next pull. Port-only; vanilla is not changed. THE PHOTO SET (RULED 2026-11-16): a '
        + 'replace deletes a photo only with its bird, and an import rejects a media row that carries no bytes '
-       + '(carriesBytes) instead of fetching its address.'],
+       + '(carriesBytes) instead of fetching its address. STAGE 3 (ORDERED 2026-11-20): a MERGE-import gives a media row this device holds WITHOUT bytes the file\'s bytes — bytes only, no op.'],
       ['src/db.js',
        'the facade must re-export exportAllBlob and replacePreview (because src/db/io.js is divergent), '
        + 'ensureCurrentLoft (RF-14) and the example-data module src/example-data.js '
