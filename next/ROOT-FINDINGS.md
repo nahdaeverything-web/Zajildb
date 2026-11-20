@@ -4494,3 +4494,28 @@ the failing run tile 0 was the DOCUMENT's tile (the tiles follow the media ids, 
 fill its tile — the second finding above. The suite now picks a photo's tile; five runs in a row green; the document's
 link fills its tile, pinned by its own check and M-doctiny. Logs: `s3-viewer-diag-*.log`, `stage3-mutants-4.log`
 (the eight viewer mutants re-run on the changed suite, all red).
+
+## TF-13 — the live checks asked the origin to be fast (2026-11-20, ORDERED: robust without relaxing)
+
+deploy12's live verification failed on a `503` that GitHub Pages served as `200` a moment later; run again, it failed on
+the service worker not yet registered after a fixed 3 s; a third run (2026-11-20, ordered) was clean, 44 of 44.
+`tests/e2e/live_deployment.py`, test-only:
+- **the worker** is waited for until it is ACTIVE (`navigator.serviceWorker.ready`), up to 30 s, before its scope and its
+  cache are judged — the cache is written by the worker's install, so it is judged once that has finished. The time it
+  took is printed. On the real origin after this change: active 2.9 s after the first page settled.
+- **a 5xx from the origin under test** is asked for ONCE more: served then, it is a WARNING printed with the URL and both
+  statuses (and listed again above the summary); still 5xx, the check fails as before. A 4xx is never re-asked.
+- two reads that RAISED when the origin served no worker (the precache manifest read, the offline reload and deep route)
+  now fail their checks instead, so such a run ends with a summary line, not a traceback.
+
+Proved against a local Pages stand-in that injects faults (`~/zajil-work/deploy/serve_faults.py`, runner
+`prove_live.sh`; logs `~/zajil-gate-logs/live-proof-*.log`), on the staged stage-2 release:
+
+| condition | the suite before | the suite after |
+|---|---|---|
+| clean | 44 / 0 | 44 / 0 |
+| one 503 on `health/__next._tree.txt` | 43 / 1 at «no failed requests» | 44 / 0, `! WARNING 503 … — asked again: 200` |
+| that file 503 every time | — | 43 / 1 at «no failed requests» (`asked again: 503`) |
+| `sw.js` held 12 s | 43 / 1 at «the cache is EXACTLY …» | 44 / 0 (active 6.4 s after) |
+| `sw.js` 404 every time | — | 37 / 7, first at «service worker registered …», no traceback |
+| the real origin | — | 44 / 0 |
