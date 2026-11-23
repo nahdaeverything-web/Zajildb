@@ -23,9 +23,11 @@ import { buildOp, diffFields, logOp, tombstoneKey, tombstoneRecord } from './opl
  * external. Four call sites used to mint birds independently and only one of
  * them knew this rule, so ancestors created inline arrived as 'stock' and the
  * register mislabelled and misfiltered them.
+ *
+ * A PLACEHOLDER parent (RULED 2026-11-23, src/family.js) is always external: the flag never travels without it.
  */
 export function newBird(partial = {}) {
-  const external = partial.external === true || partial.status === REFERENCE_STATUS;
+  const external = partial.external === true || partial.status === REFERENCE_STATUS || partial.placeholder === true;
   const status = external ? REFERENCE_STATUS : (partial.status || 'stock');
   return stamp({
     id: uuid(),
@@ -151,7 +153,27 @@ async function atomicWrite(stores, fn) {
 
 export async function deleteBird(id) {
   const bird = state.birds.get(id);
-  const media = await idbGetAll('media', 'birdId', id);
+  // RULED 2026-11-23: A PLACEHOLDER PARENT LEFT WITH NO OTHER CHILD GOES WITH THE BIRD — in this same transaction, with
+  // its own operation and tombstone. Nothing lists a placeholder and nothing would point to it, so left behind it is a
+  // record nobody can reach or remove. `going` is the bird and then each such parent, a placeholder's own placeholder
+  // parents included; everything below treats the set as one deletion, and the snapshot carries them for the undo.
+  const going = [id];
+  const gone = new Set(going);
+  for (let i = 0; i < going.length; i++) {
+    const b = state.birds.get(going[i]);
+    for (const pid of b ? [b.sireId, b.damId] : []) {
+      const parent = pid ? state.birds.get(pid) : null;
+      if (!parent || parent.placeholder !== true || gone.has(pid)) continue;
+      let hasOtherChild = false;
+      for (const c of state.birds.values()) {
+        if (!gone.has(c.id) && (c.sireId === pid || c.damId === pid)) { hasOtherChild = true; break; }
+      }
+      if (!hasOtherChild) { gone.add(pid); going.push(pid); }
+    }
+  }
+  const placeholders = going.slice(1).map((pid) => state.birds.get(pid));
+  const media = [];
+  for (const gid of going) media.push(...await idbGetAll('media', 'birdId', gid));
   const affectedOriginals = [];   // offspring whose parent link is cleared
   const removedRaces = [];
   const removedHealth = [];
@@ -160,11 +182,12 @@ export async function deleteBird(id) {
 
   await atomicWrite(['birds', 'pairs', 'raceResults', 'healthEvents', 'media'], async (w) => {   // the whole deletion
     for (const b of state.birds.values()) {
-      if (b.sireId === id || b.damId === id) {
+      if (gone.has(b.id)) continue;                  // going too: there is no link to clear on a record being deleted
+      if (gone.has(b.sireId) || gone.has(b.damId)) {
         affectedOriginals.push({ ...b });
         const copy = { ...b };
-        if (copy.sireId === id) copy.sireId = null;
-        if (copy.damId === id) copy.damId = null;
+        if (gone.has(copy.sireId)) copy.sireId = null;
+        if (gone.has(copy.damId)) copy.damId = null;
         stamp(copy);
         await w.put('birds', copy);
         w.then(() => state.birds.set(copy.id, copy));
@@ -173,7 +196,7 @@ export async function deleteBird(id) {
       }
     }
     for (const r of [...state.raceResults.values()]) {
-      if (r.birdId === id) {
+      if (gone.has(r.birdId)) {
         removedRaces.push({ ...r });
         await w.del('raceResults', r.id); w.then(() => state.raceResults.delete(r.id));
         const seq = await w.log({ origin: 'user', store: 'raceResults', op: 'delete', recordId: r.id, record: r });
@@ -181,7 +204,7 @@ export async function deleteBird(id) {
       }
     }
     for (const e of [...state.healthEvents.values()]) {
-      if (e.birdId === id) {
+      if (gone.has(e.birdId)) {
         removedHealth.push({ ...e });
         await w.del('healthEvents', e.id); w.then(() => state.healthEvents.delete(e.id));
         const seq = await w.log({ origin: 'user', store: 'healthEvents', op: 'delete', recordId: e.id, record: e });
@@ -189,7 +212,7 @@ export async function deleteBird(id) {
       }
     }
     for (const p of [...state.pairs.values()]) {
-      if (p.sireId === id || p.damId === id) {
+      if (gone.has(p.sireId) || gone.has(p.damId)) {
         removedPairs.push(JSON.parse(JSON.stringify(p)));
         await w.del('pairs', p.id);
         w.then(() => state.pairs.delete(p.id));
@@ -198,13 +221,13 @@ export async function deleteBird(id) {
         continue;
       }
       const referencesBird = (p.rounds || []).some((r) =>
-        (r.eggs || []).some((e) => e.chickId === id));
+        (r.eggs || []).some((e) => gone.has(e.chickId)));
       if (referencesBird) {
         affectedPairs.push(JSON.parse(JSON.stringify(p)));   // snapshot BEFORE changing
         const copy = JSON.parse(JSON.stringify(p));           // the mirror's own object is not touched before the commit
         for (const round of copy.rounds || []) {
           for (const egg of round.eggs || []) {
-            if (egg.chickId === id) { egg.chickId = null; egg.ringed = false; }
+            if (gone.has(egg.chickId)) { egg.chickId = null; egg.ringed = false; }
           }
         }
         stamp(copy);
@@ -223,19 +246,22 @@ export async function deleteBird(id) {
       await w.tomb('media', m.id, seq);   // A1: the cascade deletes media directly
     }
     await w.unstore(media);
-    await w.del('birds', id);
-    w.then(() => state.birds.delete(id));
-    const birdSeq = await w.log({ origin: 'user', store: 'birds', op: 'delete', recordId: id, record: bird });
-    await w.tomb('birds', id, birdSeq);
+    for (const gid of going) {                       // the bird, then each placeholder parent that goes with it
+      const rec = state.birds.get(gid);
+      await w.del('birds', gid);
+      w.then(() => state.birds.delete(gid));
+      const birdSeq = await w.log({ origin: 'user', store: 'birds', op: 'delete', recordId: gid, record: rec });
+      await w.tomb('birds', gid, birdSeq);
+    }
   });
   emitChange({ type: 'bird', id });
-  return { bird, media, affectedOriginals, removedRaces, removedHealth, removedPairs, affectedPairs };
+  return { bird, media, affectedOriginals, removedRaces, removedHealth, removedPairs, affectedPairs, placeholders };
 }
 
 /** Undo a deleteBird: puts back the bird AND everything the cascade removed. */
 export async function restoreBird(snapshot) {
   const { bird, media, affectedOriginals, removedRaces, removedHealth,
-          removedPairs, affectedPairs } = snapshot || {};
+          removedPairs, affectedPairs, placeholders } = snapshot || {};
   if (!bird) return;
   // an undo restores exactly what was there; it is not a new edit to re-judge
   await atomicWrite(['birds', 'pairs', 'raceResults', 'healthEvents', 'media'], async (w) => {   // the whole undo
@@ -245,6 +271,7 @@ export async function restoreBird(snapshot) {
       await w.log({ origin: 'restore', store, op: 'put', recordId: rec.id, record: rec });
       await w.untomb(store, rec.id);
     };
+    for (const ph of placeholders || []) await back('birds', 'birds', ph);   // the placeholder parents that went with it (2026-11-23), before the bird that names them
     await back('birds', 'birds', bird);
     for (const orig of affectedOriginals || []) await back('birds', 'birds', orig);
     for (const r of removedRaces || []) await back('raceResults', 'raceResults', r);

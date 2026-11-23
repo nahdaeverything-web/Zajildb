@@ -47,6 +47,17 @@ const Node = ({ slot, g, child, isCommon }: { slot: Slot; g: number; child: Slot
       ? <Link href={`/bird/edit?id=${child.id}`} className={`${s.node} ${size} ${s.unknown}`} aria-label={t('ped.unknown.add')} data-testid="node" data-gen={g} data-known="0">{inner}</Link>
       : <span className={`${s.node} ${size} ${s.unknown}`} data-testid="node" data-gen={g} data-known="0">{inner}</span>;
   }
+  if (g > 0 && db.isPlaceholder(b)) {
+    // RULED 2026-11-23: a PLACEHOLDER parent reads «غير معروف» in the language of the screen — never its stored name, which was
+    // written in whatever language the app was in when the record was made. It is a record all the same: the box opens ITS
+    // edit form, where the fancier can say who it is, and the common-ancestor dot is drawn as for any other bird.
+    const label = <span>{t('ped.unknownAncestor')}</span>;
+    return (
+      <Link href={`/bird/edit?id=${b.id}`} className={`${s.node} ${size} ${s.unknown}`} aria-label={t('ped.unknown.add')} data-testid="node" data-gen={g} data-known="0" data-placeholder="1" data-common={isCommon(b.id) ? '1' : undefined}>
+        {isCommon(b.id) ? <span className={s.ci}><i className={s.dot} />{label}</span> : label}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+      </Link>
+    );
+  }
   const name = <bdi>{b.name || primaryRing(b) || b.id.slice(0, 8)}</bdi>;
   return (
     <Link href={`/bird?id=${b.id}`} className={`${s.node} ${size}`} data-testid={g === 0 ? 'node-subject' : 'node'} data-gen={g} data-known="1" data-common={isCommon(b.id) ? '1' : undefined}>
@@ -87,7 +98,7 @@ export default function PedigreeView() {
 
   // finder (pedigree.js:133) — the same candidate rules as the form's picker
   const rk = ringKey(q); const needle = q.trim().toLowerCase();
-  const cands = needle ? birds.filter((b) => b.id !== id && ((b.name || '').toLowerCase().includes(needle) || (b.strain || '').toLowerCase().includes(needle) || (rk && (b.rings || []).some((r) => ringKey(r as never).includes(rk))))).slice(0, 30) : [];
+  const cands = needle ? birds.filter((b) => b.id !== id && !db.isPlaceholder(b) && ((b.name || '').toLowerCase().includes(needle) || (b.strain || '').toLowerCase().includes(needle) || (rk && (b.rings || []).some((r) => ringKey(r as never).includes(rk))))).slice(0, 30) : [];
   const rel = otherId ? (describeRelationship(getBird, id, otherId, depth) as { key: string; params: Record<string, unknown>; hypotheticalCOI: number }) : null;
   const level = rel ? (pairingWarningLevel(rel.hypotheticalCOI) as string) : null;
 

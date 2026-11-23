@@ -365,7 +365,7 @@ export function RestoreDetail({ snapshots }: { snapshots: Backup[] }) {
         <div className={s.list} data-testid="snap-list">
           {snapshots.map((b) => (
             <div key={b.id} className={`${s.item} ${s.snap}`} data-testid="snap-row" data-id={b.id}>
-              <span><strong>{fmtDate(db.backupMoment(b) as string, { withTime: true })}</strong><div className={s.meta}>{birdsCount((b.payload?.birds || []).length)}</div></span>
+              <span><strong>{fmtDate(db.backupMoment(b) as string, { withTime: true })}</strong><div className={s.meta}>{birdsCount((b.payload?.birds || []).filter((x) => !db.isPlaceholder(x)).length)}</div></span>
               <button type="button" className={s.btn} onClick={() => restore(b)} data-testid="snap-restore">{t('tools.restore.btn')}</button>
             </div>
           ))}

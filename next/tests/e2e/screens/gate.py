@@ -243,6 +243,29 @@ try:
         check('[CLEAR] after export-less clear and sign-in as B the device is through, as B, with B\'s loft', st['gate'] is None and st['h1'] == 'لوفت ب', f"gate={st['gate']} h1={st['h1']}")
         ctx.close()
 
+        # ══ PLACEHOLDER PARENTS (RULED 2026-11-23, src/family.js) are not birds to the gate, or to the CLEAR question ══
+        # The gate asks «does this device hold records?» of the bird count ONLY when no loft on the device answers it: a
+        # loft that any record is filed under is not pristine, and placeholders are filed under the current loft like
+        # every record. So the count decides on a device whose records are filed under a loft that is not on it — built
+        # here, twice: the two records as placeholders, and the same two as ordinary reference birds.
+        TWO = "async (db, flag) => { for (const [n, sex] of [['أب غير معروف', 'cock'], ['أم غير معروفة', 'hen']]) await db.saveBird(db.newBird({ name: n, sex, external: true, loftId: 'a-loft-that-is-not-on-this-device', ...(flag ? { placeholder: true } : {}) })); }"
+        ctx, pg = device(b); run(pg, TWO, True); open_(pg, 'birds/'); st = state(pg); held = census(pg)['counts']['birds']
+        check('[placeholders · M-gate fails here] a device whose only records are two placeholder parents is the EMPTY gate — the two are not birds a fancier holds',
+              st['gate'] == 'empty' and held == 2, f"gate={st['gate']} birds={held}")
+        ctx.close()
+        ctx, pg = device(b); run(pg, TWO, False); open_(pg, 'birds/'); st = state(pg)
+        check('[placeholders] …the same two records WITHOUT the flag are records: the gate stands in front of them — nothing is guessed from a name', st['gate'] == 'records', f"gate={st['gate']}")
+        ctx.close()
+        ctx, pg = device(b); seed(pg); run(pg, "async (db) => { for (const [n, sex] of [['أب غير معروف', 'cock'], ['أم غير معروفة', 'hen']]) await db.saveBird(db.newBird({ name: n, sex, placeholder: true })); await db.signIn('a@zajil.test', 'pw'); await db.syncNow(); await db.signOut(); }")
+        open_(pg, 'birds/'); sign_in(pg, 'b@zajil.test')
+        try: pg.click('[data-testid=dialog-confirm]', timeout=6000); pg.wait_for_timeout(500)
+        except Exception: pass
+        d2 = pg.locator('[data-testid=dialog]').inner_text().replace('\n', ' ') if pg.locator('[data-testid=dialog]').count() else ''; held = census(pg)['counts']['birds']
+        said = re.search(r'سيُحذف من هذا الجهاز (\d+) طيرًا', d2)      # the device also pulled what account A already had on the server
+        check('[placeholders · M-signin fails here] the CLEAR question counts the birds without the two placeholder parents: «سيُحذف من هذا الجهاز {n} طيرًا» says two fewer than the bird records the device holds',
+              bool(said) and held >= 4 and int(said.group(1)) == held - 2, f"birds held={held} · {d2[:110]}")
+        ctx.close()
+
         # ══ outside the gate ════════════════════════════════════════════════════════════
         ctx, pg = device(b, configured=False); seed(pg); open_(pg, 'birds/'); st = state(pg)
         check('[unconfigured] a build with no sync configuration has nothing to sign into and does not gate (raised)', st['gate'] is None and st['birdRows'] == 2 and st['navLinks'] > 0)

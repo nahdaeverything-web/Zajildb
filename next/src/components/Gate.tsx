@@ -41,7 +41,7 @@ export default function Gate({ children }: { children: React.ReactNode }) {
   if ((db.authState() as { signedIn: boolean }).signedIn) return <>{children}</>;
 
   const lofts = [...(db.state.lofts.values() as Iterable<Loft & { id: string }>)];
-  const records = db.state.birds.size + db.state.pairs.size + db.state.raceResults.size + db.state.healthEvents.size;
+  const records = (db.listedBirds() as unknown[]).length + db.state.pairs.size + db.state.raceResults.size + db.state.healthEvents.size;   // RULED 2026-11-23: a placeholder parent is not counted as a bird
   const hasData = records > 0 || lofts.some((l) => !db.isPristineLoft(l));
   const loft = (db.currentLoft() as Loft | null) || lofts[0] || null;
   return <SignInView gate={hasData ? { loft: loft?.name || '', breeder: loft?.breederName || '' } : { empty: true }} />;

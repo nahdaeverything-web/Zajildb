@@ -416,7 +416,8 @@ const guards = {
       ['src/db.js',
        'the facade must re-export exportAllBlob and replacePreview (because src/db/io.js is divergent), '
        + 'ensureCurrentLoft (RF-14) and the example-data module src/example-data.js '
-       + '(RULED 2026-10-14, port-only), and the photo-sync module src/db/photos.js (RULED 2026-11-18, port-only).'],
+       + '(RULED 2026-10-14, port-only), and the photo-sync module src/db/photos.js (RULED 2026-11-18, port-only). '
+       + 'PLACEHOLDER PARENTS (RULED 2026-11-23): it re-exports src/family.js (port-only).'],
       ['src/db/storage.js',
        'RF-14 (RULED 2026-10-14): ensureCurrentLoft() — a stored currentLoftId is validated at boot '
        + 'instead of trusted; a dangling one adopts the single remaining loft or gets a fresh pristine '
@@ -438,7 +439,9 @@ const guards = {
        + 'RF-27 (RULED 2026-11-19): deleteBird(), restoreBird(), the generic remove() and restore(), deleteMedia() and '
        + 'restoreMedia() each write everything they change in ONE transaction (atomicWrite); the mirror follows the commit. '
        + 'PHOTO SYNC, STAGE 2 (RULED 2026-11-19): a deleted media record that was marked stored queues its object for '
-       + 'removal in that same transaction (photoRemovals, a device setting).'],
+       + 'removal in that same transaction (photoRemovals, a device setting). PLACEHOLDER PARENTS (RULED 2026-11-23): newBird() '
+       + 'makes a placeholder external; deleteBird() deletes, in its one transaction, every placeholder parent left with no other '
+       + 'child, and restoreBird() puts them back.'],
       ['src/db/sync.js',
        'the account collision (RF-13): signIn() compares the incoming user with the owner of '
        + 'the data on the device and stops before storing a session that is not the same '

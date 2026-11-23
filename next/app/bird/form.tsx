@@ -24,7 +24,7 @@ import s from './form.module.css';
 // dialog; the duplicate ring shows live in the spec's warnbox.
 type Ring = { raw?: string; type?: string; year?: number | string | null; country?: string };
 type Note = { id?: string; at?: string; text?: string };
-type Bird = { id: string; name?: string; sex?: string; status?: string; hatchDate?: string; colour?: string; strain?: string; eyeSign?: string; breeder?: string; owner?: string; acquiredFrom?: string; acquiredDate?: string; external?: boolean; sireId?: string | null; damId?: string | null; rings?: Ring[]; notes?: Note[] };
+type Bird = { id: string; name?: string; sex?: string; status?: string; hatchDate?: string; colour?: string; strain?: string; eyeSign?: string; breeder?: string; owner?: string; acquiredFrom?: string; acquiredDate?: string; external?: boolean; placeholder?: boolean; sireId?: string | null; damId?: string | null; rings?: Ring[]; notes?: Note[] };
 type Problem = { key: string; params?: Record<string, unknown> };
 type Role = 'sire' | 'dam';
 type Picker = { role: Role; mode: 'pick' | 'create'; q: string } | null;
@@ -299,7 +299,7 @@ export default function BirdForm() {
   /** bird-form.js:140 collect — the record as it would be saved. */
   const collect = (d: Bird = draft!): Bird => {
     const rs = rings.map((r) => { const parsed = parseRing(r.raw || '', r.type || 'national') as Ring; parsed.type = (r.type || 'national') === 'national' && parsed.type === 'FCI' ? 'FCI' : (r.type || 'national'); return parsed; }).filter((r) => r.raw);
-    return { ...d, name: (d.name || '').trim(), colour: (d.colour || '').trim(), strain: (d.strain || '').trim(), eyeSign: (d.eyeSign || '').trim(), breeder: (d.breeder || '').trim(), owner: (d.owner || '').trim(), acquiredFrom: (d.acquiredFrom || '').trim(),
+    const out: Bird = { ...d, name: (d.name || '').trim(), colour: (d.colour || '').trim(), strain: (d.strain || '').trim(), eyeSign: (d.eyeSign || '').trim(), breeder: (d.breeder || '').trim(), owner: (d.owner || '').trim(), acquiredFrom: (d.acquiredFrom || '').trim(),
       // An external bird KEEPS a status that means something for a reference bird; anything
       // else collapses to `reference`, which is what every imported ancestor carries. This
       // used to be an unconditional `d.external ? REFERENCE_STATUS`, so «نافق» could be
@@ -307,6 +307,15 @@ export default function BirdForm() {
       external: !!d.external,
       status: effectiveStatus(!!d.external, d.status as string | undefined),
       rings: rs };
+    // RULED 2026-11-23: A PLACEHOLDER STOPS BEING ONE when this form saves it with at least one ring, or with a name
+    // other than the stored one — the fancier has said who the bird is, and it joins the register like any reference
+    // bird. The key is removed, not set to false: missing means false. (Not ruled, PROPOSED: also when the save makes
+    // it a bird of the loft — the flag never travels without external.)
+    if (out.placeholder) {
+      const stored = getBird(d.id);
+      if (rs.length > 0 || out.name !== ((stored && stored.name) || '') || !out.external) delete out.placeholder;
+    }
+    return out;
   };
   // live duplicate-ring warning (spec's warnbox): the engine's own rule, re-run as the rings change
   const dup = useMemo(() => {
@@ -331,8 +340,8 @@ export default function BirdForm() {
       const before = getBird(bird.id) || null;           // the record as stored before this save (null: a new bird)
       if (siblingOf && !bird.sireId && !bird.damId) {
         // deferred sibling intent: mint the placeholders now, attach them to BOTH birds, only then persist
-        const ps = await db.saveBird(db.newBird({ name: t('bird.unknownSire'), sex: 'cock', external: true })) as Bird;
-        const pd = await db.saveBird(db.newBird({ name: t('bird.unknownDam'), sex: 'hen', external: true })) as Bird;
+        const ps = await db.saveBird(db.newBird({ name: t('bird.unknownSire'), sex: 'cock', external: true, placeholder: true })) as Bird;
+        const pd = await db.saveBird(db.newBird({ name: t('bird.unknownDam'), sex: 'hen', external: true, placeholder: true })) as Bird;
         bird.sireId = ps.id; bird.damId = pd.id;
         await db.saveBird({ ...siblingOf, sireId: ps.id, damId: pd.id }, { allowWarnings: true });
       }

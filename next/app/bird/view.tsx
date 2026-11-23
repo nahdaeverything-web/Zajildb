@@ -63,6 +63,8 @@ const ParentRow = ({ k, b, tid }: { k: string; b: Bird | null | undefined; tid: 
 const Node = ({ slot, size, role }: { slot: Slot; size: 'n1' | 'n2' | 'n3'; role?: string }) => {
   const b = slot?.bird;
   if (!b) return <span className={`${s.node} ${s[size]}`} data-testid="mini-node">{role && <span className={s.role}>{role}</span>}<span className={`${s.nm} ${sh.muted}`}>{t('common.unknown')}</span></span>;
+  // RULED 2026-11-23: a placeholder parent reads «غير معروف» in the language of the screen, never its stored name, and opens its edit form
+  if (size !== 'n1' && db.isPlaceholder(b)) return <Link className={`${s.node} ${s[size]}`} href={`/bird/edit?id=${b.id}`} data-testid="mini-node" data-placeholder="1">{role && <span className={s.role}>{role}</span>}<span className={`${s.nm} ${sh.muted}`}>{t('common.unknown')}</span></Link>;
   const r = primaryRing(b);
   return (
     <Link className={`${s.node} ${s[size]}`} href={`/bird?id=${b.id}`} data-testid="mini-node">

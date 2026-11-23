@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import * as db from '@/src/db.js';
-import { useZajilStore, selectBirds } from '@/src/db/react';
+import { useZajilStore, selectListedBirds } from '@/src/db/react';
 import { t, fmtNum, statusLabel } from '@/src/i18n.ext.js';
 import { ringKey } from '@/src/engine/rings.js';
 import { SyncRow, Empty, toast, primaryRing, seasonLabel, initDB, asset } from '@/src/components';
@@ -58,7 +58,8 @@ export default function BirdsView() {
   // `location.href = '/bird?id='` is not rewritten by basePath and does not resolve on a
   // plain file server, where the document is bird.html (found in the Phase 5 survey)
   const router = useRouter();
-  const birds = useZajilStore(selectBirds) as Bird[];
+  // RULED 2026-11-23: a placeholder parent is not a bird of the loft — no row, and so no part in the count, the years, the filters or the search
+  const birds = useZajilStore(selectListedBirds) as Bird[];
   const version = useZajilStore(() => db.state);          // races change too
   const [q, setQ] = useState(''); const [filter, setFilter] = useState<string>('all'); const [year, setYear] = useState<string | null>(null);
   const [sortK, setSortK] = useState<SortKey>('year'); const [desc, setDesc] = useState(true);

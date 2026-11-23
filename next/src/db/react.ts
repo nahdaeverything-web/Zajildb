@@ -46,6 +46,8 @@ export function useZajilStore<T>(selector: (s: State) => T): T {
 
 // ── selectors over the in-memory mirrors ──
 export const selectBirds    = (s: State) => [...s.birds.values()];
+// the register a fancier reads: without the placeholder parents the app makes for unknown ancestors (RULED 2026-11-23, src/family.js)
+export const selectListedBirds = (s: State) => [...s.birds.values()].filter((b) => !db.isPlaceholder(b));
 export const selectPairs    = (s: State) => [...s.pairs.values()];
 export const selectRaces    = (s: State) => [...s.raceResults.values()];
 export const selectHealth   = (s: State) => [...s.healthEvents.values()];

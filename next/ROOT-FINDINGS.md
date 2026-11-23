@@ -4592,3 +4592,118 @@ photo and tombstone as it is; photos already downloaded stay on the device.
 
 Not deleted (not ordered): `origin/feat/photo-stage-3` (now equal to `feat/react-port`'s deployed commit) and
 `origin/feat/photo-stage-1`.
+
+## 2026-11-23 — placeholder parents (BUILT, NOT DEPLOYED; branch `feat/siblings-clutch`, commit 1 of 2)
+
+Samir ruled a new feature on 23 Nov — on the bird form, «sibling of» and «from the same clutch» for birds whose
+parents are unknown — and, before it, eight rulings on the records the app already makes for unknown parents. This
+commit is those eight. The feature itself is the next commit.
+
+**What was there.** «إضافة شقيق/شقيقة» on a bird with no recorded parents makes two records, a father and a mother,
+and writes them to both birds (`app/bird/form.tsx`). Kinship is derived from shared `sireId` / `damId` and from nothing
+else, so the two records are what makes the birds siblings. They were ordinary reference birds: a row each in the bird
+list, counted, offered by every picker — typing «أب غير معروف» in any parent picker selected the placeholder of
+ANOTHER family, making the two families full siblings without a word (`src/components/picker.ts`, the exact-name
+match) — and printed everywhere under the name they were given in whatever language the app was in that day.
+
+**What is built (items 1–7).**
+
+1. `placeholder: true` on the bird, always with `external: true` (`newBird()` derives it); missing means false. Set
+   where the two records are made. Port-only: `src/family.js` (`isPlaceholder`, `listedBirds`), re-exported by the facade.
+2. Not in the bird list or anything fed by its rows (count line, year groups, filters, search) — `selectListedBirds`;
+   not in the three bird counts: the sign-in gate's «does this device hold records» (`Gate.tsx`), the CLEAR question
+   (`sign-in/view.tsx`), the restore list's «{n} طيرًا» (`tools/parts.tsx`). Statistics: a bird whose parents are BOTH
+   placeholders has no recorded pedigree (`stats/view.tsx`); one placeholder beside a recorded parent still has.
+3. No picker offers, matches or returns one. The rule lives once, in `pickerModel()` and `createFromQuery()`
+   (`pickable()`), which five of the six pickers go through; the relationship finder has its own filter.
+4. The pedigree tree, the profile's mini pedigree, the certificate's sheet and its parent photo boxes read «غير معروف»
+   / "Unknown" from the flag, in the language of the screen. In the tree and the mini pedigree the box is a link to the
+   record's edit form. The common-ancestor dot is drawn as for any bird.
+5. The flag clears when the form saves the record with at least one ring, or under a name other than the stored one.
+   The key is removed, not set to false.
+6. `deleteBird()` deletes, in its one transaction, every placeholder parent left with no other child, each with its own
+   operation and tombstone; the snapshot carries them and `restoreBird()` puts them back.
+7. NOT hidden from the duplicate-ring search or the integrity check. `src/example-data.js` is not changed.
+
+**Chosen without a ruling — each a PROPOSAL.**
+
+- The flag also clears when the form saves the record as a bird of the loft (external switched off): it never stays
+  without `external`.
+- A placeholder box in the tree takes the unknown slot's dashed look and its «+», and carries `data-known="0"`
+  `data-placeholder="1"`; on the certificate `data-recorded="no"`. The certificate's sheet has no links today and none
+  was added. As the SUBJECT of its own pedigree page or profile a placeholder still shows its stored name.
+- Item 6 is transitive (a placeholder's own placeholder parents go too) and runs the whole cascade for each record that
+  goes (its results, health events, pairs, photos). The undo restores the placeholders before the bird that names them.
+- `Gate.tsx:44` is not a number anyone reads: it answers yes or no, and only when no loft on the device answers first —
+  a loft any record is filed under is not pristine, and placeholders are filed under the current loft like every
+  record. Built as ruled; it decides only on a device whose records are filed under a loft that is not on it
+  (`screens/gate.py` builds that device). My own description of this line on 23 Nov, «the record count on the sign-in
+  screen», was wrong.
+
+**Not ruled, NOT built — found while building.**
+
+- **A placeholder whose last child is re-pointed stays, hidden and unreachable.** Item 6 covers deletion. Changing or
+  clearing a parent in the form leaves the placeholder with no child; nothing lists it and nothing points to it.
+- **Where the stored name still shows:** the bird form's parent slot, the profile's «الأب» / «الأم» rows, the
+  placeholder's own profile and pedigree page, the COI breakdown table under the tree, the names in the form's
+  validation messages, the duplicate-ring list.
+- **What still counts a placeholder as a known ancestor** (the engine, unchanged): the tree's «أسلاف» and «أجيال
+  مكتملة» tiles, the profile's pedigree completeness, AVK.
+- **Counts not in the ruling, unchanged:** the import and replace toasts and the replace question («{birds} طيرًا»),
+  the teaching-data loader's toast.
+
+**Item 7, measured (`~/zajil-gate-logs/sib-c1-measure7*.log`; teaching loft of 38, harness build, no backend).**
+The removal deletes through `deleteBird()`, so item 6 applies inside it.
+
+| | before | after the removal |
+|---|---|---|
+| placeholder father and mother whose two children are both teaching birds | 2 records | **both deleted**, each tombstoned — with their last teaching child |
+| placeholder father and mother with one teaching child and one bird of the user's | 2 records | **both kept**, still placeholders; the user's bird still names both; the teaching child deleted |
+| the removal's own count | question: «38 طيرًا» | returned `birds: 38` — it deleted 40 bird records |
+| integrity | — | 0 dangling |
+
+On a first-run device, where the teaching loft is the current loft and the placeholders are therefore filed under it,
+the question also says «لديك 5 من سجلاتك داخل اللوفت التجريبي؛ لا تُحذف، بل تُنقل إلى لوفتك.» — the 5 are the four
+placeholders and the user's one bird — and the removal then moved 3 and **deleted the 2** whose only children were
+teaching birds. The sentence's «لا تُحذف» is not true of those two. Not changed, by order; for a ruling.
+
+**Item 8, measured (`sib-c1-measure8.log`) — legacy placeholders, on a CONSTRUCTED register.** No record made before
+this change set carries the flag, and none is guessed. On a register of 35 bird records built to hold every case, the
+predicate «external, no rings, no hatchDate, name equals `bird.unknownSire` / `bird.unknownDam` in ar or en, parent of
+at least one bird» matches **12**: 10 without the flag (8 under the Arabic names, 2 under the English) and the 2 made
+after this change set. Of the 10, one was typed by hand into a parent picker and is no placeholder by origin. It
+misses 5 records the old menu made: one renamed since, one given a ring, one given a hatch date, and the two parents
+of a family whose children were since deleted.
+
+PROPOSED, not built — a one-time marking step that asks instead of guessing: a row in الأدوات → البيانات, shown only
+while a record matches the predicate and has no `placeholder` key, that lists each match with the birds that name it
+and lets the fancier say which are unknown parents. Yes writes `placeholder: true`; no writes `placeholder: false`, so
+the record is never asked about again and the answer travels with it to his other devices.
+
+**Proof.** New suite `tests/e2e/screens/placeholders.py`, 39 checks at 390 px; `screens/gate.py` 25 → 28 (the gate and
+the CLEAR question need its stub backend). Nineteen mutants, one harness build and one suite each, 300 s limits; every
+one red at the check that names it. M-greedy and M-noundo first ended in a traceback AFTER their named check had
+failed — a later step wrote to a record the mutant had removed; the suite's later steps now read before they write,
+and both were run again (`sib-c1-mutants.log`, `sib-c1-mutants-b.log`).
+
+| item | mutant | what it does | red at |
+|---|---|---|---|
+| 1 | M-noflag | the father is made without the flag | 23 |
+| 2 | M-list | the bird list reads every bird | 4 |
+| 2 | M-backup | the restore list counts every record | 1 |
+| 2 | M-stats | two placeholder parents count as a recorded pedigree | 2 |
+| 2 | M-gate | the gate counts every bird record | 1 |
+| 2 | M-signin | the CLEAR question counts every bird record | 1 |
+| 3 | M-pick | `pickable()` lets everything through | 6 |
+| 3 | M-create | «إنشاء» returns the existing placeholder | 1 |
+| 3 | M-finder | the relationship finder offers placeholders | 1 |
+| 4 | M-ped | the tree prints the stored name | 4 |
+| 4 | M-mini | the mini pedigree prints the stored name | 2 |
+| 4 | M-cert | the certificate prints the stored name | 1 |
+| 4 | M-certbox | the photo box label prints the stored name | 2 |
+| 5 | M-noclear | a ring does not clear the flag | 2 |
+| 5 | M-noclearname | another name does not clear the flag | 2 |
+| 6 | M-noorphan | the orphaned placeholder is left | 2 |
+| 6 | M-greedy | a placeholder goes although another child names it | 7 |
+| 6 | M-noundo | the undo does not restore the placeholders | 6 |
+| 7 | M-dupblind | the duplicate-ring list is blind to placeholders | 1 |

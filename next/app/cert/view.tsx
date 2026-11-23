@@ -294,7 +294,7 @@ function Panel(p: ScreenProps & { slots: SlotMap; urls: Record<string, string> }
                     {url ? <img src={url} alt="" /> : <span>{away ? '' : who}</span>}
                   </div>
                   <div className={s.tx}>
-                    <div className={s.t}>{slot.label} · <bdi>{slot.bird ? birdLabelText(slot.bird) : t('common.unknown')}</bdi></div>
+                    <div className={s.t}>{slot.label} · <bdi data-testid={`who-${who}`}>{slot.bird && !db.isPlaceholder(slot.bird) ? birdLabelText(slot.bird) : t('common.unknown')}</bdi></div>
                     <div className={s.d} data-testid={`d-${who}`}>
                       {away ? <>{AWAY_ICON}{t('cert.photoAway')}</> : slot.media ? t('cert.fromBird') : t('cert.noPhoto')}
                     </div>
@@ -485,23 +485,26 @@ function Sheet(p: ScreenProps & { grid: Slot[][]; slots: SlotMap; urls: Record<s
         return <div key={`${g}-${i}`} className={cx(s.node, s[`n${g}`], s.unknown)} data-testid="sheet-node" data-recorded="no"><span className={s.nm}>{t('common.unknown')}</span></div>;
       }
       const b = slot.bird;
-      const nm = <span className={s.nm}><bdi>{birdLabelText(b)}</bdi></span>;
+      // RULED 2026-11-23: a PLACEHOLDER parent prints «غير معروف» in the certificate's language — never its stored name. The
+      // common-ancestor dot and a parent's photo box are drawn as for any other bird.
+      const ph = db.isPlaceholder(b);
+      const nm = <span className={s.nm}>{ph ? t('common.unknown') : <bdi>{birdLabelText(b)}</bdi>}</span>;
       const name = common(b.id) ? <span className={s.ci}><i className={s.dot} />{nm}</span> : nm;
       if (g === 2) {
         const who = i === 0 ? 'sire' : 'dam';
         const box = photoBox(who);
         const away = !!slots[who].media && !slots[who].media!.hasBlob;
         return (
-          <div key={`${g}-${i}`} className={cx(s.node, s.n2, box && s['has-photo'])} data-testid="sheet-node" data-recorded="yes">
+          <div key={`${g}-${i}`} className={cx(s.node, s.n2, box && s['has-photo'], ph && !box && s.unknown)} data-testid="sheet-node" data-recorded={ph ? 'no' : 'yes'} data-placeholder={ph ? '1' : undefined}>
             {box}
-            <div className={s.tx}>{name}<span className={s.rg}>{primaryRing(b)}</span>
+            <div className={s.tx}>{name}<span className={s.rg}>{ph ? '' : primaryRing(b)}</span>
               {box && away && <span className={s['away-cap']}>{t('cert.photoAway')}</span>}</div>
           </div>
         );
       }
       return (
-        <div key={`${g}-${i}`} className={cx(s.node, s[`n${g}`])} data-testid="sheet-node" data-recorded="yes">
-          {name}<span className={s.rg}>{primaryRing(b)}</span>
+        <div key={`${g}-${i}`} className={cx(s.node, s[`n${g}`], ph && s.unknown)} data-testid="sheet-node" data-recorded={ph ? 'no' : 'yes'} data-placeholder={ph ? '1' : undefined}>
+          {name}<span className={s.rg}>{ph ? '' : primaryRing(b)}</span>
         </div>
       );
     };

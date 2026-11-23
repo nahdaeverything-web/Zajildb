@@ -16,9 +16,17 @@ import { birdLabelText } from './BirdBits';
 //   · creating checks once more for an exact match and selects it instead, so a
 //     double tap cannot mint a duplicate;
 //   · a query carrying digits (either numeral system) is a RING, not a name.
-export type PickerBird = { id: string; name?: string; sex?: string; strain?: string; rings?: Array<{ raw?: string; type?: string; year?: number | string | null }> };
+export type PickerBird = { id: string; name?: string; sex?: string; strain?: string; placeholder?: boolean; rings?: Array<{ raw?: string; type?: string; year?: number | string | null }> };
 
 const hasDigit = (s: string) => /[0-9٠-٩]/.test(s);
+
+/**
+ * RULED 2026-11-23: A PLACEHOLDER PARENT IS NEVER OFFERED, MATCHED OR RETURNED BY A PICKER. It is the record the app
+ * makes for an unknown parent (src/family.js); choosing one for a second family would make that family full siblings
+ * of the first, silently — and it could be reached by typing its stored name, «أب غير معروف», which exactMatch()
+ * compares. Every picker goes through pickerModel() and createFromQuery(), so the rule lives here once.
+ */
+export const pickable = <T extends { placeholder?: boolean }>(list: T[]): T[] => list.filter((b) => b.placeholder !== true);
 
 /** Every bird whose name, strain or normalised ring contains the query (capped, as vanilla). */
 export function candidates(pool: PickerBird[], q: string, limit = 30): PickerBird[] {
@@ -48,9 +56,10 @@ export function exactMatch(list: PickerBird[], q: string): PickerBird | null {
 export function pickerModel({ all, pool, q, allowCreate = false, selected = null }:
   { all: PickerBird[]; pool: PickerBird[]; q: string; allowCreate?: boolean; selected?: string | null }) {
   const needle = q.trim();
-  const cands = candidates(pool, q);
-  const clash = needle ? exactMatch(all, q) : null;
-  const blocked = clash && !exactMatch(pool, q) ? clash : null;
+  const everyone = pickable(all), offered = pickable(pool);
+  const cands = candidates(offered, q);
+  const clash = needle ? exactMatch(everyone, q) : null;
+  const blocked = clash && !exactMatch(offered, q) ? clash : null;
   return { cands, blocked, canCreate: !!(allowCreate && needle && !selected && !clash), clash };
 }
 
@@ -60,7 +69,7 @@ export function pickerModel({ all, pool, q, allowCreate = false, selected = null
  * A query with digits (either numeral system) is filed as a ring, not a name.
  */
 export async function createFromQuery(q: string, sex: 'cock' | 'hen' | 'unknown' = 'unknown'): Promise<PickerBird> {
-  const all = [...(db.state.birds.values() as Iterable<PickerBird>)];
+  const all = pickable([...(db.state.birds.values() as Iterable<PickerBird>)]);   // a placeholder is never the existing bird a query names
   const dupe = exactMatch(all, q);
   if (dupe) return dupe;
   const digits = hasDigit(q);

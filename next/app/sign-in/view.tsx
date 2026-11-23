@@ -98,7 +98,7 @@ export default function SignInView({ gate }: { gate?: GateInfo } = {}) {
       const sure = await confirmDialog({
         title: t('signin.owner.confirmTitle'),
         // RF-19: the clear wipes the op log with everything else — unsent edits of the previous account are lost, and the question says so
-        body: t('signin.owner.confirmBody', { n: fmtNum(db.allBirds().length) }) + (((await db.unsentChanges()) as number) > 0 ? ' ' + t('confirm.unsent.clear') : ''),
+        body: t('signin.owner.confirmBody', { n: fmtNum((db.listedBirds() as unknown[]).length) }) + (((await db.unsentChanges()) as number) > 0 ? ' ' + t('confirm.unsent.clear') : ''),
         cancelLabel: t('act.cancel'), confirmLabel: t('signin.owner.confirmGo'), confirmKind: 'danger',
       });
       if (sure) { await attempt(true); return; }
