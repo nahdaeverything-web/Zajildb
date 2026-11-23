@@ -167,3 +167,19 @@
 .plate .no{ color:#fff; font-family:var(--f-mono); font-weight:600; font-size:12px; letter-spacing:1px; padding:6px 10px; white-space:nowrap; }
 .prow .act + .act{ margin-inline-start:6px; }
 .linkbtn{ display:inline-block; }
+/* THE SIBLING LINK (RULED 2026-11-23) — PROPOSED styling, the design chat's to change. The panel is the empty parent slot's card and
+   its two buttons, value for value (.pempty above), holding the slot's own rows and the form's own segment; only the spacing and the
+   «من نفس البطن» checkbox row are new. Its own class, not .pempty: that card greys every name and avatar inside it. */
+.sib{ background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:16px; margin-top:12px; margin-bottom:10px; }
+.sib .picker{ margin-top:0; }
+.sib .field{ margin-top:0; }
+.sib .prow{ margin-bottom:0; }
+.sib .seg{ margin-top:14px; }
+.sib .seg button:disabled{ opacity:.55; cursor:default; }
+.sib .btns{ display:flex; gap:8px; margin-top:14px; }
+.sib .btns button{ flex:1; border-radius:var(--r-btn); padding:14px 8px; font-family:var(--f); font-size:15px; font-weight:800; cursor:pointer; min-height:50px; }
+.sib .primary{ border:2px solid var(--ink); background:transparent; color:var(--ink); }
+.sib .primary:disabled{ opacity:.45; cursor:default; }
+.sib .ghost{ border:1px solid var(--line); background:var(--page); color:var(--ink-2); }
+.check{ display:flex; align-items:center; gap:12px; min-height:52px; margin-top:8px; font-size:15px; font-weight:700; color:var(--ink); cursor:pointer; }
+.check input{ flex:none; width:24px; height:24px; accent-color:var(--ink); }

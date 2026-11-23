@@ -225,6 +225,12 @@ export default function BirdView() {
   }
 
   // ── pedigree tab data ──
+  // RULED 2026-11-23: full siblings, half siblings and clutch-mates, each a plain list of links (src/family.js). Kinship
+  // is derived from shared parents — placeholder parents included, which is what they are for — and a clutch from a
+  // shared clutchId or the same round of a pair. A placeholder is never listed.
+  const sibs = db.siblingsOf(bird) as { full: Bird[]; half: Bird[] };
+  const kin: Array<['full' | 'half' | 'clutch', string, Bird[]]> = [['full', t('rel.fullSiblings'), sibs.full], ['half', t('rel.halfSiblings'), sibs.half],
+    ['clutch', t('sib.sameClutch'), (db.clutchMates(bird) as Bird[]).filter((b) => !db.isPlaceholder(b))]];
   const gens = pedigreeGrid(getBird, id, 2) as Slot[][];
   const desc = descendantDepths(() => st.birds.values(), id) as Map<string, number>;
   // bird-detail.js:263-294 progenyAnalysis, verbatim in logic
@@ -393,6 +399,23 @@ export default function BirdView() {
             </div>
             <Link href={`/pedigree?id=${id}`} className={s.pbtn} data-testid="full-tree-link">{t('profile.fullTree')}<Chev /></Link>
           </div>
+          {/* PROPOSED placement and styling (the design chat owns both): a card under the mini pedigree, drawn with the
+              overview's own rows; absent when the bird has no sibling and no clutch-mate */}
+          {kin.some(([, , list]) => list.length > 0) && (
+            <div className={s.card} data-testid="siblings-card">
+              <h2>{t('profile.siblings.title')}</h2>
+              {kin.filter(([, , list]) => list.length > 0).map(([k, label, list]) => (
+                <div key={k} data-testid={`siblings-${k}`}>
+                  <p className={s.pnote} style={{ marginTop: 14 }}>{label}</p>
+                  <div className={s.rows}>
+                    {list.map((b) => (
+                      <div key={b.id} className={s.row}><Link className={`${s.v} ${s.link}`} href={`/bird?id=${b.id}`} data-testid="sibling-link"><bdi>{b.name || primaryRing(b) || b.id.slice(0, 8)}</bdi><Chev /></Link></div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <div className={s.card} data-testid="progeny">
             <h2>{t('prog.title')}</h2>
             {!desc.size ? <p className={sh.muted}>{t('prog.noProgeny')}</p> : (

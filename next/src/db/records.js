@@ -80,7 +80,21 @@ export class ValidationError extends Error {
  * implementation saveBird enforces — not a second copy of the rules.
  */
 export function checkBird(bird, opts = {}) {
-  return classifySave(bird, getBird, allBirds(), opts);
+  return classifySave(bird, getBird, allBirds(), { ...opts, pairs: state.pairs.values() });
+}
+
+/**
+ * The same pre-flight for SEVERAL birds that will be written together (saveBirds): each is judged against the flock
+ * AS IT WILL BE once all of them are written, so a parent made in the same save is seen by the child that names it.
+ * Returns one verdict per bird, in order.
+ */
+export function checkBirds(birds, opts = {}) {
+  const view = together(birds);
+  return birds.map((bird) => classifySave(bird, view.get, view.all, { ...opts, pairs: state.pairs.values() }));
+}
+function together(birds) {
+  const next = new Map(birds.map((b) => [b.id, b]));
+  return { get: (id) => next.get(id) || getBird(id), all: [...allBirds().filter((b) => !next.has(b.id)), ...next.values()] };
 }
 
 /**
@@ -93,7 +107,7 @@ export function checkBird(bird, opts = {}) {
  * @throws {ValidationError}
  */
 export async function saveBird(bird, { allowWarnings = false, force = false } = {}) {
-  const verdict = classifySave(bird, getBird, allBirds(), { allowWarnings, force });
+  const verdict = classifySave(bird, getBird, allBirds(), { allowWarnings, force, pairs: state.pairs.values() });
   if (!verdict.ok) throw new ValidationError(verdict.errors, verdict.warnings);
   const previous = state.birds.get(bird.id) || null;
   stamp(bird);
@@ -103,6 +117,36 @@ export async function saveBird(bird, { allowWarnings = false, force = false } = 
                 record: bird, changed: diffFields(previous, bird) });
   emitChange({ type: 'bird', id: bird.id });
   return bird;
+}
+
+/**
+ * SEVERAL BIRDS, ONE TRANSACTION (RULED 2026-11-23, the sibling link). Recording a bird as the sibling of another
+ * writes up to four records — the bird, the other bird, and a placeholder for each parent neither of them has. Written
+ * one after another, a failure or a closed tab in between left a bird naming a parent that was never stored, or one
+ * sibling linked and the other not. Here every record, and its operation, is written together or not at all.
+ *
+ * Each entry is `{ bird, allowWarnings }`. All are validated FIRST, against the flock as it will be (checkBirds), and
+ * one that fails stops the whole save before anything is written. Strict by default, as saveBird.
+ * @throws {ValidationError}
+ */
+export async function saveBirds(entries) {
+  const view = together(entries.map((e) => e.bird));
+  for (const { bird, allowWarnings = false } of entries) {
+    const verdict = classifySave(bird, view.get, view.all, { allowWarnings, pairs: state.pairs.values() });
+    if (!verdict.ok) throw new ValidationError(verdict.errors, verdict.warnings);
+  }
+  await atomicWrite(['birds'], async (w) => {
+    for (const { bird } of entries) {
+      const previous = state.birds.get(bird.id) || null;
+      stamp(bird);
+      await w.put('birds', bird);
+      w.then(() => state.birds.set(bird.id, bird));
+      await w.log({ origin: 'user', store: 'birds', op: 'put', recordId: bird.id,
+                    record: bird, changed: diffFields(previous, bird) });
+    }
+  });
+  for (const { bird } of entries) emitChange({ type: 'bird', id: bird.id });
+  return entries.map((e) => e.bird);
 }
 
 /**
@@ -521,7 +565,7 @@ export async function applySyncPut(store, record, at, recordId, ctx = {}) {
   // awaited inside it.
   let invalid = null;
   if (store === 'birds') {
-    const verdict = classifySave(body, getBird, allBirds(), {});
+    const verdict = classifySave(body, getBird, allBirds(), { pairs: state.pairs.values() });
     if (!verdict.ok) {
       invalid = {
         reason: 'validation',

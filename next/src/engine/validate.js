@@ -2,15 +2,17 @@
 
 import { wouldCreateCycle } from './pedigree.js';
 import { ringKey, formatRing } from './rings.js';
+import { clutchMates } from './clutch.js';
 
 /**
  * Validate a bird record against the rest of the flock before save.
  * `bird` is the record as it would be saved; `getBird` resolves ids;
  * `allBirds` iterable for duplicate ring detection.
+ * `pairs` iterable of the pairs, for the clutch-mates their rounds record (optional).
  * Returns { errors: [...], warnings: [...] }, each { key, params }.
  * Errors block the save; warnings need user confirmation.
  */
-export function validateBird(bird, getBird, allBirds) {
+export function validateBird(bird, getBird, allBirds, pairs) {
   const errors = [];
   const warnings = [];
 
@@ -70,6 +72,15 @@ export function validateBird(bird, getBird, allBirds) {
     }
   }
 
+  // Clutch-mates (RULED 2026-11-23, engine/clutch.js) — birds recorded as hatched from the same clutch have one
+  // father and one mother. A mate recorded with another sire or dam, or with one where this bird has none, is a
+  // warning: the fancier may be half way through correcting both records, so it never blocks.
+  for (const mate of clutchMates(bird, allBirds, pairs, getBird)) {
+    if ((mate.sireId || null) !== (bird.sireId || null) || (mate.damId || null) !== (bird.damId || null)) {
+      warnings.push({ key: 'val.clutchParents', params: { otherId: mate.id, otherName: mate.name || '' } });
+    }
+  }
+
   return { errors, warnings };
 }
 
@@ -98,9 +109,9 @@ export function validatePairSexes(sire, dam) {
  *
  * @returns {{ok: boolean, errors: Array, warnings: Array}} i18n keys + params
  */
-export function classifySave(bird, getBird, allBirds, { allowWarnings = false, force = false } = {}) {
+export function classifySave(bird, getBird, allBirds, { allowWarnings = false, force = false, pairs } = {}) {
   if (force) return { ok: true, errors: [], warnings: [] };
-  const { errors, warnings } = validateBird(bird, getBird, allBirds);
+  const { errors, warnings } = validateBird(bird, getBird, allBirds, pairs);
   const ok = errors.length === 0 && (allowWarnings || warnings.length === 0);
   return { ok, errors, warnings };
 }

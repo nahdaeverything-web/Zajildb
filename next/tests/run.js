@@ -4,6 +4,7 @@
 import './engine.test.js';
 import './sample.test.js';
 import './example-large.test.js';
+import './clutch.test.js';   // port-only: the clutch (RULED 2026-11-23)
 import { runAll } from './harness.js';
 
 const { passed, failed, results } = await runAll();

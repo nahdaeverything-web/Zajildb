@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds, useMediaForBird } from '@/src/db/react';
-import { t, statusLabel } from '@/src/i18n.ext.js';
+import { t, fmtDate, statusLabel } from '@/src/i18n.ext.js';
 import { parseRing, RING_TYPES } from '@/src/engine/rings.js';
 import { Loading, PhotoViewer, toast, confirmDialog, choiceDialog, downscaleImage, storedName, primaryRing, birdLabelText, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
 import s from './form.module.css';
@@ -24,13 +24,21 @@ import s from './form.module.css';
 // dialog; the duplicate ring shows live in the spec's warnbox.
 type Ring = { raw?: string; type?: string; year?: number | string | null; country?: string };
 type Note = { id?: string; at?: string; text?: string };
-type Bird = { id: string; name?: string; sex?: string; status?: string; hatchDate?: string; colour?: string; strain?: string; eyeSign?: string; breeder?: string; owner?: string; acquiredFrom?: string; acquiredDate?: string; external?: boolean; placeholder?: boolean; sireId?: string | null; damId?: string | null; rings?: Ring[]; notes?: Note[] };
+type Bird = { id: string; name?: string; sex?: string; status?: string; hatchDate?: string; colour?: string; strain?: string; eyeSign?: string; breeder?: string; owner?: string; acquiredFrom?: string; acquiredDate?: string; external?: boolean; placeholder?: boolean; clutchId?: string; sireId?: string | null; damId?: string | null; rings?: Ring[]; notes?: Note[] };
 type Problem = { key: string; params?: Record<string, unknown> };
 type Role = 'sire' | 'dam';
 type Picker = { role: Role; mode: 'pick' | 'create'; q: string } | null;
 type Pending = { kind: 'photo' | 'document'; subtype: string; file: File };
+// THE SIBLING LINK (RULED 2026-11-23, src/family.js): what the fancier chose, held until the form is saved
+type Choice = { sire: boolean; dam: boolean; clutch: boolean };
+type Link = Choice & { xId: string; from: 'menu' | 'form' };
+type SibPanel = { q: string; xId: string | null; which: 'both' | 'sire' | 'dam'; clutch: boolean; err?: string };
+type Plan = { reject: string | null; conflicts: unknown[]; bird: Bird; x: Bird | null; placeholders: Bird[]; warnings: Problem[] };
+type Verdict = { errors: Problem[]; warnings: Problem[] };
 const getBird = (id: string) => db.getBird(id) as Bird | undefined;
 const REFERENCE_STATUS = db.REFERENCE_STATUS as string;
+/** A bird named in a question or a notice: a placeholder parent reads «غير معروف», never its stored name. */
+const nameOf = (b: Bird | null | undefined) => (b && !db.isPlaceholder(b) ? birdLabelText(b) : t('common.unknown'));
 
 /**
  * What a REFERENCE bird's status may be — RULED 2026-10-03.
@@ -78,7 +86,8 @@ function problemText(p: Problem): string {
   const params: Record<string, unknown> = { ...(p.params || {}) };
   if (typeof params.role === 'string') params.role = t('bird.' + params.role);
   if (Array.isArray(params.path)) params.path = (params.path as string[]).map((id) => { const b = getBird(id); return b ? (b.name || (b.rings && b.rings[0] && b.rings[0].raw) || id.slice(0, 6)) : id.slice(0, 6); }).join(' ← ');
-  if (params.otherId && !params.otherName) { const ob = getBird(params.otherId as string); params.otherName = ob ? (ob.name || '') : ''; }
+  if (params.otherId && !params.otherName) { const ob = getBird(params.otherId as string); params.otherName = ob ? (ob.name || primaryRing(ob) || '') : ''; }
+  if (p.key === 'sib.warn.hatchDiffers') { params.mine = fmtDate(params.mine as string); params.theirs = fmtDate(params.theirs as string); }
   return t(p.key, params);
 }
 /** Which field an engine problem belongs to — for the .err state and the dialog's field column. */
@@ -207,6 +216,10 @@ export default function BirdForm() {
   const [picker, setPicker] = useState<Picker>(null);
   const [errs, setErrs] = useState<Partial<Record<'ring' | 'sire' | 'dam', string>>>({});
   const [busy, setBusy] = useState(false);
+  // THE SIBLING LINK (RULED 2026-11-23): `link` is the choice that will be written with the save — nothing before it;
+  // `sib` is the open panel where it is made. The menu's «إضافة شقيق/شقيقة» arrives as ?siblingOf= and is the same thing.
+  const [link, setLink] = useState<Link | null>(null);
+  const [sib, setSib] = useState<SibPanel | null>(null);
   const firstRing = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
   const photoIn = useRef<HTMLInputElement>(null); const docIn = useRef<HTMLInputElement>(null);
@@ -283,8 +296,8 @@ export default function BirdForm() {
     // The source is an external system and `seeded` makes this run exactly once per mount,
     // so this is a one-time synchronisation rather than the cascade the rule is about.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDraft(d); setRings(d.rings && d.rings.length ? d.rings.map((r) => ({ ...r })) : [{}]);
-  }, [booted, editId, params, router]);
+    setDraft(d); setRings(d.rings && d.rings.length ? d.rings.map((r) => ({ ...r })) : [{}]); if (!existing && siblingOfId && getBird(siblingOfId) && !db.isPlaceholder(getBird(siblingOfId))) setLink({ xId: siblingOfId, sire: true, dam: true, clutch: false, from: 'menu' });
+  }, [booted, editId, params, router, siblingOfId]);
 
   // the picker closes on an outside click (ui.js:352) — abandoning a search never touches the committed parent
   useEffect(() => {
@@ -293,7 +306,7 @@ export default function BirdForm() {
     document.addEventListener('mousedown', onDoc); return () => document.removeEventListener('mousedown', onDoc);
   }, [picker]);
 
-  const siblingOf = siblingOfId ? getBird(siblingOfId) : null;
+  const linkX = link ? (getBird(link.xId) || null) : null;
   const statuses = useMemo(() => (booted ? (db.loftStatuses() as string[]) : []), [booted]);
 
   /** bird-form.js:140 collect — the record as it would be saved. */
@@ -334,19 +347,15 @@ export default function BirdForm() {
   const ringYear = rings.map((r) => (parseRing(r.raw || '', r.type || 'national') as Ring).year).find(Boolean);
 
   // ── save (bird-form.js:178-246) ──
-  async function doSave(bird: Bird, andNew: boolean, opts: { allowWarnings?: boolean } = {}) {
+  async function doSave(bird: Bird, andNew: boolean, opts: { allowWarnings?: boolean } = {}, plan: Plan | null = null) {
     setBusy(true);
     try {
       const before = getBird(bird.id) || null;           // the record as stored before this save (null: a new bird)
-      if (siblingOf && !bird.sireId && !bird.damId) {
-        // deferred sibling intent: mint the placeholders now, attach them to BOTH birds, only then persist
-        const ps = await db.saveBird(db.newBird({ name: t('bird.unknownSire'), sex: 'cock', external: true, placeholder: true })) as Bird;
-        const pd = await db.saveBird(db.newBird({ name: t('bird.unknownDam'), sex: 'hen', external: true, placeholder: true })) as Bird;
-        bird.sireId = ps.id; bird.damId = pd.id;
-        await db.saveBird({ ...siblingOf, sireId: ps.id, damId: pd.id }, { allowWarnings: true });
-      }
       if (notes.trim()) bird.notes = [...(bird.notes || []), { id: db.uuid(), at: db.nowISO(), text: notes.trim() }];
-      await db.saveBird(bird, opts);
+      // THE SIBLING LINK (RULED 2026-11-23): the placeholders it makes, the other bird and this one are written in ONE
+      // transaction (saveBirds) — all of it or none. The other bird's own older warnings are not this save's to judge.
+      if (plan) await db.saveBirds([...plan.placeholders.map((b) => ({ bird: b })), ...(plan.x ? [{ bird: plan.x, allowWarnings: true }] : []), { bird, allowWarnings: !!opts.allowWarnings }]);
+      else await db.saveBird(bird, opts);
       // downscaled on the way in — see src/components/media.ts for the measured reason
       for (const m of pending) { const out = await downscaleImage(m.file); await db.addMedia(bird.id, m.kind, m.subtype, storedName(m.file, out), out); }
       const offer = pairToOffer(bird, before);
@@ -365,7 +374,7 @@ export default function BirdForm() {
         const r0 = bird.rings && bird.rings[0];
         setDraft(db.newBird({ strain: bird.strain, colour: bird.colour, status: bird.status, breeder: bird.breeder, owner: bird.owner, external: bird.external }) as Bird);
         setRings([{ raw: r0 && r0.country && r0.year ? `${r0.country}-${r0.year}-` : '', type: r0 ? r0.type : 'national' }]);
-        setNotes(''); setPending([]); setErrs({}); setPicker(null);
+        setNotes(''); setPending([]); setErrs({}); setPicker(null); setLink(null); setSib(null);
         setTimeout(() => { const el = firstRing.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 0);
         return;
       }
@@ -394,21 +403,79 @@ export default function BirdForm() {
         loadedAt.current = now ? (now.updatedAt || null) : null;   // answered: not asked again for the same change
       }
     }
-    const bird = collect();
-    const { errors, warnings } = db.checkBird(bird) as { errors: Problem[]; warnings: Problem[] };
+    let bird = collect();
+    // ── THE SIBLING LINK (RULED 2026-11-23) ──
+    // The choice is settled against the two records AS THEY ARE NOW — the other bird may have changed since it was
+    // chosen, and so may this form — then planned (src/family.js, which writes nothing) and judged as one set.
+    let plan: Plan | null = null;
+    if (link) {
+      const x = getBird(link.xId);
+      if (x && !db.isPlaceholder(x)) {
+        const r = await resolveLink(bird, x, link);
+        if (r.error) { await confirmDialog({ title: t('val.cannotSave'), list: { kind: 'errs', items: [{ field: t('tab.pedigree'), text: r.error }] }, cancelLabel: t('val.backToForm'), confirmLabel: null, confirmKind: 'primary' }); return; }
+        if (!r.bird) return;                                  // the question was declined: back to the form, nothing written
+        plan = db.planSiblingLink(r.bird, x, link, { sire: t('bird.unknownSire'), dam: t('bird.unknownDam') }) as Plan;
+        if (plan.reject || plan.conflicts.length) return;     // settled above; a plan that is not clean is never written
+        bird = plan.bird;
+      }
+    }
+    const set = plan ? [...plan.placeholders, ...(plan.x ? [plan.x] : []), bird] : [bird];
+    const verdicts = (plan ? db.checkBirds(set) : [db.checkBird(bird)]) as Verdict[];
+    const errors = verdicts[verdicts.length - 1].errors;
+    const warnings = [...verdicts[verdicts.length - 1].warnings, ...(plan ? plan.warnings : [])];
+    // the other bird: every error it would have stops the save; of its warnings, only those this link brings are asked about
+    const other = plan && plan.x ? plan.x : null;
+    const otherV = other ? verdicts[plan!.placeholders.length] : null;
+    const otherWas = other ? (db.checkBird(getBird(other.id)) as Verdict) : null;
+    const otherErrors = otherV ? otherV.errors : [];
+    const otherWarnings = otherV ? otherV.warnings.filter((p) => !otherWas!.warnings.some((o) => o.key === p.key && JSON.stringify(o.params) === JSON.stringify(p.params))) : [];
+    const items = (mine: Problem[], theirs: Problem[]) => [...mine.map((p) => ({ field: t(fieldLabel[fieldOf(p)]), text: problemText(p) })), ...theirs.map((p) => ({ field: nameOf(other), text: problemText(p) }))];
     const fe: typeof errs = {};
     for (const p of errors) { const f = fieldOf(p); if (f !== 'form' && !fe[f]) fe[f] = problemText(p); }
     setErrs(fe);
-    if (errors.length) {
-      await confirmDialog({ title: t('val.cannotSave'), body: t('val.fieldsNeedFix', { n: errors.length }), list: { kind: 'errs', items: errors.map((p) => ({ field: t(fieldLabel[fieldOf(p)]), text: problemText(p) })) }, cancelLabel: t('val.backToForm'), confirmLabel: null, confirmKind: 'primary' });
+    if (errors.length || otherErrors.length) {
+      await confirmDialog({ title: t('val.cannotSave'), body: t('val.fieldsNeedFix', { n: errors.length + otherErrors.length }), list: { kind: 'errs', items: items(errors, otherErrors) }, cancelLabel: t('val.backToForm'), confirmLabel: null, confirmKind: 'primary' });
       return;
     }
-    if (warnings.length) {
-      const ok = await confirmDialog({ title: t('val.warningsTitle'), list: { kind: 'warns', items: warnings.map((p) => ({ field: t(fieldLabel[fieldOf(p)]), text: problemText(p) })) }, cancelLabel: t('act.cancel'), confirmLabel: t('act.saveAnyway'), confirmKind: 'primary' });
+    if (warnings.length || otherWarnings.length) {
+      const ok = await confirmDialog({ title: t('val.warningsTitle'), list: { kind: 'warns', items: items(warnings, otherWarnings) }, cancelLabel: t('act.cancel'), confirmLabel: t('act.saveAnyway'), confirmKind: 'primary' });
       if (!ok) return;
-      await doSave(bird, andNew, { allowWarnings: true }); return;
+      await doSave(bird, andNew, { allowWarnings: true }, plan); return;
     }
-    await doSave(bird, andNew);
+    await doSave(bird, andNew, {}, plan);
+  }
+  /**
+   * The two things a sibling link must settle before it can be planned, asked the same way when it is chosen and again
+   * when it is saved. X an ancestor or a descendant of this bird: refused, with the reason. A parent of THIS bird that
+   * is not X's: the fancier is asked, both named, and nothing is replaced without the answer. Returns the bird with
+   * X's parents taken where X has them, `{}` when the question was declined, or `{ error }`.
+   */
+  async function resolveLink(bird: Bird, x: Bird, choice: Choice): Promise<{ error?: string; bird?: Bird }> {
+    if (db.lineageBetween(bird, x)) return { error: t('sib.reject.lineage', { name: nameOf(x) }) };
+    const next = { ...bird };
+    for (const [role, key] of [['sire', 'sireId'], ['dam', 'damId']] as const) {
+      if (!(choice[role] || choice.clutch)) continue;
+      const mine = next[key] || null, theirs = x[key] || null;
+      if (!theirs || mine === theirs) continue;
+      if (mine) {
+        const ok = await confirmDialog({ title: t('sib.conflict.title'), body: t('sib.conflict.' + role, { mine: nameOf(getBird(mine)), theirs: nameOf(getBird(theirs)), name: nameOf(x) }),
+          cancelLabel: t('act.cancel'), confirmLabel: t('sib.conflict.replace'), confirmKind: 'danger' });
+        if (!ok) return {};
+      }
+      next[key] = theirs;
+    }
+    if (choice.clutch && !next.hatchDate && x.hatchDate) next.hatchDate = x.hatchDate;
+    return { bird: next };
+  }
+  /** «ربط» in the panel: settle, show X's parents in the slots, and hold the choice for the save. Nothing is written. */
+  async function applySib() {
+    if (!sib || !sib.xId || !draft) return;
+    const x = getBird(sib.xId); if (!x) return;
+    const choice: Choice = { sire: sib.clutch || sib.which !== 'dam', dam: sib.clutch || sib.which !== 'sire', clutch: sib.clutch };
+    const r = await resolveLink(draft, x, choice);
+    if (r.error) { setSib({ ...sib, err: r.error }); return; }
+    if (!r.bird) return;                                      // declined: the panel stays open, the form is as it was
+    setDraft(r.bird); setLink({ xId: x.id, ...choice, from: 'form' }); setSib(null); setErrs({});
   }
   const cancel = () => { if (window.history.length > 1) router.back(); else router.push('/birds'); };
   // Enter must never save a half-entered bird — advance focus instead (bird-form.js:249)
@@ -429,6 +496,21 @@ export default function BirdForm() {
   }
   const clearParent = (role: Role) => { set(role === 'sire' ? { sireId: null } : { damId: null }); setPicker(null); };
 
+  // ── the sibling link: what the notice says, and the panel's candidates ──
+  const makes = link && linkX ? (['sire', 'dam'] as const).filter((r) => (link[r] || link.clutch) && !(r === 'sire' ? draft.sireId : draft.damId) && !(r === 'sire' ? linkX.sireId : linkX.damId)).length : 0;
+  const linkKind = link ? (link.clutch ? 'clutch' : link.sire && link.dam ? 'both' : link.sire ? 'sire' : 'dam') : '';
+  // the menu's intent in the one case its own sentence describes — both parents unknown on both birds — keeps that sentence
+  const asMenu = !!link && link.from === 'menu' && linkKind === 'both' && makes === 2;
+  const notice = link && linkX ? (
+    <div className={s.warnbox} data-testid="sibling-notice" data-link={linkKind}>
+      {asMenu ? <div className={s.t}>{t('bird.siblingOfNotice', { name: linkX.name || primaryRing(linkX) || '' })}</div>
+        : <><div className={s.t}>{t('sib.notice.title', { name: nameOf(linkX) })}</div><p>{t('sib.notice.' + linkKind)}{makes > 0 ? ' ' + t('sib.notice.unknown') : ''}</p></>}
+      {link.from === 'form' && <button type="button" onClick={() => setLink(null)} data-testid="sib-remove">{t('sib.remove')}</button>}
+    </div>
+  ) : null;
+  const sibX = sib && sib.xId ? (getBird(sib.xId) || null) : null;
+  const sibCands = sib && !sibX ? (pickerModel({ all: birds, pool: birds.filter((b) => b.id !== draft.id), q: sib.q }).cands as Bird[]) : [];
+
   return (
     <section className={s.screen}>
       <div className={s.col}>
@@ -441,7 +523,7 @@ export default function BirdForm() {
           <p>{loft?.name || t('loft.unnamed')} · {seasonLabel()}</p>
         </header>
         <form className={s.body} noValidate onSubmit={(e) => { e.preventDefault(); submit(false); }} onKeyDown={onKeyDown} data-testid="bird-form">
-          {siblingOf && <div className={s.warnbox} data-testid="sibling-notice"><div className={s.t}>{t('bird.siblingOfNotice', { name: siblingOf.name || primaryRing(siblingOf) || '' })}</div></div>}
+          {link && link.from === 'menu' && notice}
           <div className={s.seclbl}>{t('form.sec.basics')}</div>
           <div className={s.card}>
             <div className={s.photo}>
@@ -535,6 +617,42 @@ export default function BirdForm() {
           <div className={s.seclbl}>{t('tab.pedigree')}</div>
           <Slot role="sire" b={sire} pool={pool('sire')} err={errs.sire} picker={picker} setPicker={setPicker} all={birds} pickerRef={pickerRef} onPick={pick} onQuickCreate={quickCreate} onClear={clearParent} />
           <Slot role="dam" b={dam} pool={pool('dam')} err={errs.dam} picker={picker} setPicker={setPicker} all={birds} pickerRef={pickerRef} onPick={pick} onQuickCreate={quickCreate} onClear={clearParent} />
+          {/* THE SIBLING LINK (RULED 2026-11-23). The panel is drawn in the parent slot's own grammar; its placement here, under
+              the two slots, and the checkbox row are PROPOSED — the design chat owns both. */}
+          {link && link.from === 'form' && notice}
+          <button type="button" className={s.linkbtn} onClick={() => setSib(sib ? null : { q: '', xId: link ? link.xId : null, which: link && !link.dam ? 'sire' : link && !link.sire ? 'dam' : 'both', clutch: !!link && link.clutch })} aria-expanded={!!sib} data-testid="sib-open">{t('sib.action')}</button>
+          {sib && (
+            <div className={s.sib} data-testid="sib-panel">
+              {sibX ? (
+                <div className={s.prow} data-testid="sib-chosen">
+                  <Dot sex={sibX.sex} /><span className={s.mid}><span className={s.nm}><bdi>{sibX.name || primaryRing(sibX) || sibX.id.slice(0, 8)}</bdi></span><Plate b={sibX} /></span>
+                  <button type="button" className={s.act} onClick={() => setSib({ ...sib, xId: null, q: '', err: undefined })} data-testid="sib-change">{t('act.change')}</button>
+                </div>
+              ) : (
+                <div className={s.picker}>
+                  <div className={s.field}><input autoFocus value={sib.q} onChange={(e) => setSib({ ...sib, q: e.target.value })} placeholder={t('bird.chooseBird')} aria-label={t('sib.action')} data-testid="sib-input" /></div>
+                  <div className={s.list}>
+                    {sibCands.map((c) => (
+                      <button key={c.id} type="button" className={s.prow} onClick={() => setSib({ ...sib, xId: c.id, err: undefined })} data-testid="sib-item">
+                        <Dot sex={c.sex} /><span className={s.mid}><span className={s.nm}><bdi>{c.name || primaryRing(c) || c.id.slice(0, 8)}</bdi></span><Plate b={c} /></span><SexChip sex={c.sex} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className={s.seg} role="group" data-testid="sib-which">
+                {(['both', 'sire', 'dam'] as const).map((w) => (
+                  <button key={w} type="button" disabled={sib.clutch} aria-pressed={(sib.clutch ? 'both' : sib.which) === w} onClick={() => setSib({ ...sib, which: w })} data-testid="sib-which-btn" data-which={w}>{t(w === 'both' ? 'sib.both' : w === 'sire' ? 'sib.sireOnly' : 'sib.damOnly')}</button>
+                ))}
+              </div>
+              <label className={s.check}><input type="checkbox" checked={sib.clutch} onChange={(e) => setSib({ ...sib, clutch: e.target.checked })} data-testid="sib-clutch" /><span>{t('sib.sameClutch')}</span></label>
+              {sib.err && <div className={s['err-msg']} role="alert" data-testid="sib-error">{sib.err}</div>}
+              <div className={s.btns}>
+                <button type="button" className={s.ghost} onClick={() => setSib(null)} data-testid="sib-cancel">{t('act.cancel')}</button>
+                <button type="button" className={s.primary} disabled={!sib.xId} onClick={applySib} data-testid="sib-apply">{t('act.confirm')}</button>
+              </div>
+            </div>
+          )}
           <div className={s['toggle-card']} data-testid="external-card">
             <div className={s.mid}><div className={s.t}>{t('form.external.title')}</div><p>{t('form.external.body')}</p></div>
             <button type="button" className={s.switch} role="switch" aria-checked={!!draft.external} aria-label={t('form.external.title')} onClick={() => set({ external: !draft.external })} data-testid="external-switch"><span /></button>

@@ -585,6 +585,30 @@ export const EXT = {
   // number would then need explaining.
   'stats.excludesReference': { ar: 'لا تشمل طيور المرجع', en: 'Excludes reference birds' },
 
+  // ── THE SIBLING LINK AND THE CLUTCH (RULED 2026-11-23) — every string below is PROPOSED wording, awaiting Samir's review ──
+  // «أخ/أخت لطير مسجَّل…» and «من نفس البطن» are the order's own words.
+  'sib.action':               { ar: 'أخ/أخت لطير مسجَّل…', en: 'Sibling of a recorded bird…' },
+  'sib.both':                 { ar: 'الأبوان معًا', en: 'Both parents' },
+  'sib.sireOnly':             { ar: 'الأب فقط', en: 'Father only' },
+  'sib.damOnly':              { ar: 'الأم فقط', en: 'Mother only' },
+  'sib.sameClutch':           { ar: 'من نفس البطن', en: 'From the same clutch' },
+  'sib.notice.title':         { ar: 'أخ/أخت لـ «{name}»', en: 'Sibling of “{name}”' },
+  'sib.notice.both':          { ar: 'عند الحفظ يُسجَّل للطيرين الأب نفسه والأم نفسها. لن يُكتب شيء إن ألغيت.', en: 'On save, both birds are recorded with the same father and the same mother. Nothing is written if you cancel.' },
+  'sib.notice.sire':          { ar: 'عند الحفظ يُسجَّل للطيرين الأب نفسه. لن يُكتب شيء إن ألغيت.', en: 'On save, both birds are recorded with the same father. Nothing is written if you cancel.' },
+  'sib.notice.dam':           { ar: 'عند الحفظ تُسجَّل للطيرين الأم نفسها. لن يُكتب شيء إن ألغيت.', en: 'On save, both birds are recorded with the same mother. Nothing is written if you cancel.' },
+  'sib.notice.clutch':        { ar: 'عند الحفظ يُسجَّل الطيران من البطن نفسه، بالأب نفسه والأم نفسها. لن يُكتب شيء إن ألغيت.', en: 'On save, both birds are recorded as hatched from the same clutch, with the same father and the same mother. Nothing is written if you cancel.' },
+  'sib.notice.unknown':       { ar: 'الأب أو الأم غير المسجَّل يُنشأ له سجلّ «غير معروف» ويُربط بالطيرين معًا.', en: 'A father or mother that is not recorded gets an “unknown” record, linked to both birds.' },
+  'sib.remove':               { ar: 'إلغاء الربط', en: 'Remove the link' },
+  'sib.conflict.title':       { ar: 'اختلاف في الأبوين', en: 'The parents differ' },
+  'sib.conflict.sire':        { ar: 'أب هذا الطير المسجَّل هو «{mine}»، وأب «{name}» هو «{theirs}». هل تريد استبدال «{mine}» بـ «{theirs}» أبًا لهذا الطير؟', en: 'This bird’s recorded father is “{mine}”, and the father of “{name}” is “{theirs}”. Replace “{mine}” with “{theirs}” as this bird’s father?' },
+  'sib.conflict.dam':         { ar: 'أم هذا الطير المسجَّلة هي «{mine}»، وأم «{name}» هي «{theirs}». هل تريد استبدال «{mine}» بـ «{theirs}» أمًّا لهذا الطير؟', en: 'This bird’s recorded mother is “{mine}”, and the mother of “{name}” is “{theirs}”. Replace “{mine}” with “{theirs}” as this bird’s mother?' },
+  'sib.conflict.replace':     { ar: 'استبدال', en: 'Replace' },
+  'sib.reject.lineage':       { ar: 'لا يمكن تسجيل «{name}» أخًا أو أختًا لهذا الطير: أحدهما من أسلاف الآخر.', en: '“{name}” cannot be recorded as this bird’s sibling: one of them is an ancestor of the other.' },
+  'sib.warn.clutchSize':      { ar: 'سيصير في هذا البطن {n} طيور، والبطن في العادة بيضتان.', en: 'This clutch would hold {n} birds; a clutch is normally two eggs.' },
+  'sib.warn.hatchDiffers':    { ar: 'تاريخ فقس هذا الطير ({mine}) يختلف عن تاريخ فقس «{otherName}» ({theirs})، وهما من البطن نفسه.', en: 'This bird’s hatch date ({mine}) differs from that of “{otherName}” ({theirs}), and they are from the same clutch.' },
+  'val.clutchParents':        { ar: 'هذا الطير و«{otherName}» من البطن نفسه، لكن أبويهما المسجَّلين مختلفان.', en: 'This bird and “{otherName}” are from the same clutch, but their recorded parents differ.' },
+  'profile.siblings.title':   { ar: 'الإخوة', en: 'Siblings' },
+
 };
 
 function interpolate(s, params) {

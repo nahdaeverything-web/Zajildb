@@ -272,7 +272,7 @@ const guards = {
   'allow-warnings-bounded'() {
     const ALLOWED = new Map([
       ['src/example-data.js', 1],        // const INTERNAL = Object.freeze({ allowWarnings: true }) — the removal's reference flips and re-files
-      ['app/bird/form.tsx', 2],          // the save after the fancier confirmed the warnings dialog; the sibling-of save
+      ['app/bird/form.tsx', 3],          // the save after the fancier confirmed the warnings dialog; and, in the sibling link's one saveBirds() call (RULED 2026-11-23), the other bird (its own older warnings are not this save's to judge) and this bird (the same confirmed answer, passed on)
       ['app/bird/view.tsx', 1],          // «اجعله مرجعًا»: a bird in pairs or races raises warnings none of which apply to a reference
       ['app/breeding/shared.tsx', 4],    // chick saves from the breeding screen (ringing, hatch date, parents)
       ['src/db/records.js', 1],          // a doc comment on saveBird ("Pass { allowWarnings: true } once the user has confirmed"), not a use
@@ -417,7 +417,7 @@ const guards = {
        'the facade must re-export exportAllBlob and replacePreview (because src/db/io.js is divergent), '
        + 'ensureCurrentLoft (RF-14) and the example-data module src/example-data.js '
        + '(RULED 2026-10-14, port-only), and the photo-sync module src/db/photos.js (RULED 2026-11-18, port-only). '
-       + 'PLACEHOLDER PARENTS (RULED 2026-11-23): it re-exports src/family.js (port-only).'],
+       + 'PLACEHOLDER PARENTS AND THE SIBLING LINK (RULED 2026-11-23): it re-exports src/family.js (port-only) and checkBirds / saveBirds.'],
       ['src/db/storage.js',
        'RF-14 (RULED 2026-10-14): ensureCurrentLoft() — a stored currentLoftId is validated at boot '
        + 'instead of trusted; a dangling one adopts the single remaining loft or gets a fresh pristine '
@@ -441,7 +441,8 @@ const guards = {
        + 'PHOTO SYNC, STAGE 2 (RULED 2026-11-19): a deleted media record that was marked stored queues its object for '
        + 'removal in that same transaction (photoRemovals, a device setting). PLACEHOLDER PARENTS (RULED 2026-11-23): newBird() '
        + 'makes a placeholder external; deleteBird() deletes, in its one transaction, every placeholder parent left with no other '
-       + 'child, and restoreBird() puts them back.'],
+       + 'child, and restoreBird() puts them back. THE SIBLING LINK (RULED 2026-11-23): saveBirds() writes several birds and their '
+       + 'operations in one transaction, checkBirds() judges them as one set; every validation is handed the pairs, for the clutch warning.'],
       ['src/db/sync.js',
        'the account collision (RF-13): signIn() compares the incoming user with the owner of '
        + 'the data on the device and stops before storing a session that is not the same '
@@ -460,6 +461,11 @@ const guards = {
        + 'PHOTO SYNC, STAGE 1 (RULED 2026-11-18): after a cycle that succeeded the coordinator starts the upload pass of '
        + 'src/db/photos.js (port-only, no vanilla counterpart) and does not wait for it. STAGE 2 (RULED 2026-11-19): syncStatus() carries photosWaiting and storageFull, counted with the op log. RF-26 (RULED 2026-11-18): applyPage() hands each row\'s last-write-wins decision to records.js, where it runs in the transaction that writes.'],
     ]);
+    // src/engine/validate.js is the first ENGINE file the port owns (RULED 2026-11-23, item 12) — its reason beside the others
+    DIVERGENT.set('src/engine/validate.js',
+      'THE CLUTCH WARNING (RULED 2026-11-23): validateBird() warns (val.clutchParents) when a bird recorded as hatched from the same clutch '
+      + 'as another — a shared clutchId, or the same round of a pair (src/engine/clutch.js, port-only) — does not share its sire and dam; '
+      + 'validateBird() and classifySave() take the pairs for it. Vanilla has no clutchId and is NOT changed.');
     const FILES = [
       'src/db.js', 'src/db/storage.js', 'src/db/oplog.js', 'src/db/records.js',
       'src/db/io.js', 'src/db/sync.js', 'src/dates.js', 'src/i18n.js', 'src/sync-config.js',

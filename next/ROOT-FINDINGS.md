@@ -4707,3 +4707,120 @@ and both were run again (`sib-c1-mutants.log`, `sib-c1-mutants-b.log`).
 | 6 | M-greedy | a placeholder goes although another child names it | 7 |
 | 6 | M-noundo | the undo does not restore the placeholders | 6 |
 | 7 | M-dupblind | the duplicate-ring list is blind to placeholders | 1 |
+
+## 2026-11-23 — sibling of / same clutch, for new and existing birds (BUILT, NOT DEPLOYED; branch `feat/siblings-clutch`, commit 2 of 2)
+
+Ruled items 9–15. Until now the only way to record two birds as siblings without knowing their parents was the
+profile's «إضافة شقيق/شقيقة», which makes a NEW bird; two birds already in the register could not be linked, and
+nothing could say that two birds hatched from the same clutch unless a pair record with a round held them both.
+
+**What is built.**
+
+- **Item 9 — `clutchId`** on the bird: a group id (a uuid). It points at no record, so there is nothing for the
+  integrity check to follow and nothing for a delete to cascade over.
+- **Item 10 — `clutchMates(bird)`**, one implementation (`src/engine/clutch.js`, pure and port-only; bound to the
+  register by `src/family.js`): the birds sharing its `clutchId`, plus the birds whose ids are `chickId` in the same
+  round of a pair. Nothing writes `clutchId` when a chick is ringed — the round is that record.
+- **Item 11 — «أخ/أخت لطير مسجَّل…»** on the bird form, new and existing birds alike. A panel under the two parent
+  slots: pick a bird (never this one, never a placeholder), then «الأبوان معًا» / «الأب فقط» / «الأم فقط», and the
+  checkbox «من نفس البطن», which presses «الأبوان معًا» and locks the three. «تأكيد» settles the choice and holds it:
+  the slots show the parents taken from the other bird, a notice says what the save will do, and NOTHING IS WRITTEN.
+  The save plans it (`planSiblingLink()`, which writes nothing) and writes the placeholders it makes, the other bird
+  and this one in ONE transaction (`saveBirds()` in `src/db/records.js`), judged first as one set (`checkBirds()`).
+  - the other bird has the parent → its id is copied;
+  - neither has it → a placeholder is made and written to both;
+  - this bird has a DIFFERENT parent → the form stops and asks, naming both and the other bird, «استبدال» / «إلغاء»;
+    asked when the choice is made, and again at the save if either record changed in between;
+  - same clutch → the other bird's `clutchId` is copied, or a new one written to both; an empty hatch date takes the
+    other bird's; two different hatch dates warn; a clutch of more than two warns; neither blocks;
+  - the other bird is this bird's ancestor or descendant → refused, with the reason, and no choice is held.
+- **Item 12 — `src/engine/validate.js`:** `val.clutchParents`, a warning, when a clutch-mate does not share this bird's
+  sire and dam. For the round's mates it needs the pairs, so `validateBird()` and `classifySave()` take them, and
+  `records.js` hands them over at every validation — the form's check, the save, and the diagnosis of a pulled row.
+  **`validate.js` is now declared DIVERGENT — the first engine file the port owns** (guard `data-layer-identity`,
+  PORT-COMPLETE). Called with three arguments, as the vanilla suite calls it, it behaves as before.
+- **Item 13 — the profile**, النسب tab: a card «الإخوة» with up to three plain lists of links — full siblings, half
+  siblings, clutch-mates — under the mini pedigree; absent when there is nothing to list. **Placement and styling are
+  PROPOSED**, as is the panel's place and its checkbox row; both are drawn with classes the two screens already have.
+- **Item 14 —** the menu's «إضافة شقيق/شقيقة» is the same link, arriving as `?siblingOf=`; it sets the flag and is now
+  written in one transaction too.
+
+**Chosen without a ruling — each a PROPOSAL.**
+
+1. **The other bird lacks the parent and THIS bird has it → the other bird is given this bird's.** The ruling says a
+   placeholder is made and written to both; doing that here would replace a recorded parent of this bird with an
+   unknown one. Nothing of either bird is replaced this way, and no placeholder is made.
+2. The choice is held by the form and written with the save — that is what makes «nothing written on cancel» true for
+   a bird that does not exist yet, and one rule for both.
+3. The conflict question has two answers, «استبدال» and «إلغاء»; declining leaves the form as it was.
+4. Clutch ids: the other bird's wins; if it has none and this bird has one, the other bird joins this bird's; if both
+   have one and they differ, this bird moves to the other's and its former mates keep theirs.
+5. Only this bird's empty hatch date is filled; the other bird's is never written.
+6. The clutch warnings and the validation warnings are asked in the form's existing warnings dialog, at the save. The
+   other bird's warnings are shown only where this link brings them (under its name); an error it would have stops the
+   whole save. Its own older warnings are not this save's to judge (`allowWarnings`, pinned: `allow-warnings-bounded`
+   2 → 3 for `app/bird/form.tsx`).
+7. Item 12 covers both kinds of clutch-mate (item 10's definition), not only the `clutchId` group.
+8. Siblings are listed as the engine derives them: a missing mother is not a shared mother, so two birds with the same
+   father and no recorded mother are half siblings. A placeholder is never listed. The lists reuse two existing
+   strings for their headings (`rel.fullSiblings`, `rel.halfSiblings`).
+9. The menu's intent keeps its own sentence only where it is true — both parents unknown on both birds; if the new
+   bird was given a parent in the form, the intent is now honoured (it used to be dropped without a word) and the
+   notice says the general thing.
+10. Notes and picked photos are written after the transaction, as before.
+
+**Not built, for rulings.** A link whose other bird was deleted before the save is dropped without a word (the notice
+disappears with it). Offline, two devices that put the same bird in different clutches each keep their own write
+until last-write-wins picks one per record, which can leave a clutch of one.
+
+**New strings — twenty-one, all PROPOSED, all through the typography scan** («أخ/أخت لطير مسجَّل…» and «من نفس
+البطن» are the order's own words):
+
+| key | Arabic | English |
+|---|---|---|
+| `sib.action` | «أخ/أخت لطير مسجَّل…» | Sibling of a recorded bird… |
+| `sib.both` | «الأبوان معًا» | Both parents |
+| `sib.sireOnly` | «الأب فقط» | Father only |
+| `sib.damOnly` | «الأم فقط» | Mother only |
+| `sib.sameClutch` | «من نفس البطن» | From the same clutch |
+| `sib.notice.title` | «أخ/أخت لـ «{name}»» | Sibling of “{name}” |
+| `sib.notice.both` | «عند الحفظ يُسجَّل للطيرين الأب نفسه والأم نفسها. لن يُكتب شيء إن ألغيت.» | On save, both birds are recorded with the same father and the same mother. Nothing is written if you cancel. |
+| `sib.notice.sire` | «عند الحفظ يُسجَّل للطيرين الأب نفسه. لن يُكتب شيء إن ألغيت.» | On save, both birds are recorded with the same father. Nothing is written if you cancel. |
+| `sib.notice.dam` | «عند الحفظ تُسجَّل للطيرين الأم نفسها. لن يُكتب شيء إن ألغيت.» | On save, both birds are recorded with the same mother. Nothing is written if you cancel. |
+| `sib.notice.clutch` | «عند الحفظ يُسجَّل الطيران من البطن نفسه، بالأب نفسه والأم نفسها. لن يُكتب شيء إن ألغيت.» | On save, both birds are recorded as hatched from the same clutch, with the same father and the same mother. Nothing is written if you cancel. |
+| `sib.notice.unknown` | «الأب أو الأم غير المسجَّل يُنشأ له سجلّ «غير معروف» ويُربط بالطيرين معًا.» | A father or mother that is not recorded gets an “unknown” record, linked to both birds. |
+| `sib.remove` | «إلغاء الربط» | Remove the link |
+| `sib.conflict.title` | «اختلاف في الأبوين» | The parents differ |
+| `sib.conflict.sire` | «أب هذا الطير المسجَّل هو «{mine}»، وأب «{name}» هو «{theirs}». هل تريد استبدال «{mine}» بـ «{theirs}» أبًا لهذا الطير؟» | This bird’s recorded father is “{mine}”, and the father of “{name}” is “{theirs}”. Replace “{mine}” with “{theirs}” as this bird’s father? |
+| `sib.conflict.dam` | «أم هذا الطير المسجَّلة هي «{mine}»، وأم «{name}» هي «{theirs}». هل تريد استبدال «{mine}» بـ «{theirs}» أمًّا لهذا الطير؟» | This bird’s recorded mother is “{mine}”, and the mother of “{name}” is “{theirs}”. Replace “{mine}” with “{theirs}” as this bird’s mother? |
+| `sib.conflict.replace` | «استبدال» | Replace |
+| `sib.reject.lineage` | «لا يمكن تسجيل «{name}» أخًا أو أختًا لهذا الطير: أحدهما من أسلاف الآخر.» | “{name}” cannot be recorded as this bird’s sibling: one of them is an ancestor of the other. |
+| `sib.warn.clutchSize` | «سيصير في هذا البطن {n} طيور، والبطن في العادة بيضتان.» | This clutch would hold {n} birds; a clutch is normally two eggs. |
+| `sib.warn.hatchDiffers` | «تاريخ فقس هذا الطير ({mine}) يختلف عن تاريخ فقس «{otherName}» ({theirs})، وهما من البطن نفسه.» | This bird’s hatch date ({mine}) differs from that of “{otherName}” ({theirs}), and they are from the same clutch. |
+| `val.clutchParents` | «هذا الطير و«{otherName}» من البطن نفسه، لكن أبويهما المسجَّلين مختلفان.» | This bird and “{otherName}” are from the same clutch, but their recorded parents differ. |
+| `profile.siblings.title` | «الإخوة» | Siblings |
+
+**Proof.** New suite `tests/e2e/screens/siblings_clutch.py`, 48 checks at 390 px through the form itself; two engine
+tests in the port-only `tests/clutch.test.js` (the node suite 33 → 35). «One transaction» is proven by failure: a
+`saveBirds()` whose second record storage cannot take leaves the first out of memory, out of storage and out of the op
+log. Seventeen mutants, one harness build and one suite each, 300 s limits (`sib-c2-mutants.log`):
+
+| item | mutant | what it does | red at |
+|---|---|---|---|
+| 11 | M-clutchboth | «من نفس البطن» alone no longer asks for both parents in the plan | 1 |
+| 11 | M-planhatch | the plan does not take the other bird's hatch date | 1 |
+| 9 | M-noclutchid | this bird is not given the clutchId | 11 |
+| 11 | M-eager | «تأكيد» writes to the other bird at once | 15 |
+| 11 | M-noother | the placeholder is not written to the other bird | 16 |
+| 10 | M-nogroup | clutchMates() ignores the clutchId group | 8 |
+| 10, 12 | M-noround | clutchMates() ignores the rounds | 3 |
+| 12 | M-noclutchwarn | no warning when clutch-mates' parents differ | 6 |
+| 11 | M-nocopy | the other bird's parents are not taken into the form | 4 |
+| 11 | M-noask | a different parent is replaced without asking | 4 |
+| 11 (proposed) | M-give | the other bird is not given this bird's parent (a placeholder replaces it) | 3 |
+| 11 | M-nowarnsize | no warning for a clutch of more than two | 1 |
+| 11 | M-nowarnhatch | no warning for two hatch dates | 1 |
+| 11 | M-nolineage | an ancestor or descendant is accepted | 1 |
+| 11 | M-notx | saveBirds() writes each bird in its own transaction | 1 |
+| 11 | M-partial | saveBirds() writes a record that failed validation | 1 |
+| 13 | M-nolists | the profile draws no sibling lists | 3 |
