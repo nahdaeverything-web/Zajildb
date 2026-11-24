@@ -183,7 +183,8 @@ async function atomicWrite(stores, fn) {
       await h.put('oplog', op);
       return op.seq;
     },
-    tomb: (store, id, seq) => h.put('tombstones', tombstoneRecord(store, id, seq)),
+    // `rec` is the record being deleted; it is kept in the tombstone only when it is a placeholder parent (C1, keptOf)
+    tomb: (store, id, seq, rec) => h.put('tombstones', tombstoneRecord(store, id, seq, undefined, keptOf(store, rec))),
     untomb: (store, id) => h.del('tombstones', tombstoneKey(store, id)),
     then: (f) => { after.push(f); },
     // PHOTO SYNC, STAGE 2 (RULED 2026-11-19): a deleted media record that was marked stored has an object on the
@@ -292,13 +293,71 @@ async function placeholdersLeft(candidates, gone, next) {
   return { going, freed };
 }
 
+// ── C1 (RULED 2026-11-24): NO BIRD MAY BE LEFT NAMING A PLACEHOLDER THAT NO DEVICE HOLDS ──
+// Sync is per record. One device deletes a placeholder parent that has no child left THERE (item 6, B4) while another,
+// offline, has given it a second child: after both sync, that child named a father no device held (measured
+// 2026-11-24). So a placeholder that is deleted is KEPT IN ITS TOMBSTONE — the record itself, as this device held it —
+// and after every pull the device looks for a bird that names an id it holds no record for. Where the tombstone of
+// that id keeps a placeholder, the placeholder is put back: the same record, the same id, the flag set, with an
+// operation of its own so that it is pushed and every device gets it back.
+//
+// HOW THE CODE KNOWS THE DELETED RECORD WAS A PLACEHOLDER: only a record carrying `placeholder: true` is ever kept
+// (keptOf), and it is read from the record itself at the moment it is deleted — by this device's own deletion
+// (atomicWrite's tomb) or by a pulled one (applySyncDelete, from the copy this device held). The tombstone of an
+// ordinary bird keeps nothing, so a fancier's deliberate deletion of a bird is never undone by this.
+// NOTHING IS GUESSED: a tombstone that keeps no record — an ordinary bird's, or one written before this rule — is
+// left alone, and the bird that names it stays as it is, as before. The placeholder is then put back by the device
+// that does hold it, when the deletion reaches it.
+
+/** The record a tombstone keeps: the record itself when it is a placeholder parent, nothing otherwise. */
+const keptOf = (store, rec) => (store === 'birds' && rec && rec.placeholder === true ? rec : null);
+
+/**
+ * Put back every placeholder parent that a bird on this device names and this device has deleted. Called after a
+ * pull, before the push of the same cycle (sync.js syncOnce), so the record travels at once. Follows the chain: a
+ * placeholder put back may itself name a placeholder parent that went with it.
+ *
+ * The record is put back VERBATIM — as restoreBird puts a record back — so two devices that both put it back hold the
+ * same record; the operation is what carries the time. A pulled copy of the same record then applies without logging
+ * anything, which is why this cannot go back and forth between devices.
+ *
+ * @returns {Promise<number>} how many were put back
+ */
+export async function keepNamedPlaceholders() {
+  let restored = 0;
+  for (;;) {
+    const wanted = new Set();
+    for (const b of state.birds.values()) {
+      for (const pid of [b.sireId, b.damId]) if (pid && !state.birds.has(pid)) wanted.add(pid);
+    }
+    const back = [];
+    for (const pid of wanted) {
+      const tomb = await idbGet('tombstones', tombstoneKey('birds', pid));
+      const rec = tomb && tomb.kept;
+      if (rec && rec.id === pid && rec.placeholder === true) back.push(rec);
+    }
+    if (!back.length) break;
+    await atomicWrite(['birds'], async (w) => {
+      for (const rec of back) {
+        await w.put('birds', rec);
+        w.then(() => state.birds.set(rec.id, rec));
+        await w.log({ origin: 'restore', store: 'birds', op: 'put', recordId: rec.id, record: rec });
+        await w.untomb('birds', rec.id);
+      }
+    });
+    restored += back.length;
+  }
+  if (restored) emitChange({ type: 'sync', store: 'birds' });
+  return restored;
+}
+
 /** Inside a transaction: delete the placeholders that go, each with its operation and tombstone; clear the flag of those that stay (B5). */
 async function settlePlaceholders(w, left) {
   for (const p of left.going) {
     await w.del('birds', p.id);
     w.then(() => state.birds.delete(p.id));
     const seq = await w.log({ origin: 'user', store: 'birds', op: 'delete', recordId: p.id, record: p });
-    await w.tomb('birds', p.id, seq);
+    await w.tomb('birds', p.id, seq, p);
   }
   for (const p of left.freed) {
     const kept = { ...p };
@@ -414,7 +473,7 @@ export async function deleteBird(id) {
     await w.del('birds', id);                        // the bird…
     w.then(() => state.birds.delete(id));
     const birdSeq = await w.log({ origin: 'user', store: 'birds', op: 'delete', recordId: id, record: bird });
-    await w.tomb('birds', id, birdSeq);
+    await w.tomb('birds', id, birdSeq, bird);
     await settlePlaceholders(w, left);               // …then each placeholder parent that goes with it, or is freed (B5)
   });
   emitChange({ type: 'bird', id });
@@ -752,7 +811,9 @@ export async function applySyncDelete(store, recordId, at, ctx = {}) {
     await h.del(store, recordId);
     // seq is null: there is no local op behind this deletion. `at` is the remote
     // operation time, so the tombstone claims the moment the delete happened.
-    await h.put('tombstones', tombstoneRecord(store, recordId, null, at));
+    // C1: a placeholder parent this device held is kept in its tombstone, so it can be put back if a bird still names it
+    // (keepNamedPlaceholders). One kept by an earlier deletion of the same id is not lost.
+    await h.put('tombstones', tombstoneRecord(store, recordId, null, at, keptOf(store, d.have) || (d.tomb && d.tomb.kept) || null));
     return { skipped: null, lost: d.lost };
   });
   if (done.skipped) return { applied: false, skipped: done.skipped, anomaly: null, superseded: 0 };

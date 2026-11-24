@@ -4988,3 +4988,108 @@ Two reversals. M-b2-label was first red at one check, not two: the fixture for t
 stored name, so that check could not tell the helper from the record. The fixture was given an English one. My first
 edit of it commented out the rest of its line, and the re-run ended in a traceback, which is not proof; the line was
 repaired and the mutant run again — red at two named checks. No other mutant's checks read that fixture's name.
+
+---
+
+## 2026-11-24 (later) — placeholder parents: C1–C3 (BUILT, NOT DEPLOYED; branch `feat/siblings-clutch`, commit 4)
+
+**Rulings on the report of commit 3.** Accepted, with every listed proposal, AVK left as it is, and `sib.gone`. The
+teaching loader's loft name in its toast goes to the backlog, untouched.
+
+**C1 — no bird may be left naming a placeholder that no device holds** (`src/db/records.js`: `keptOf()`,
+`keepNamedPlaceholders()`; `src/db/oplog.js`: `tombstoneRecord(…, kept)`; `src/db/sync.js`: `syncOnce()`).
+A placeholder parent that is deleted is KEPT IN ITS TOMBSTONE — the record itself, as the device held it — by the
+device's own deletion (item 6, B4, or the fancier's) and by a pulled one. After every pull that completed, the device
+looks for a bird that names an id it holds no record for; where the tombstone of that id keeps a placeholder, the
+placeholder is put back: the same record, the same id, the flag set, with an operation of its own. In the steady state
+that happens before the push, so it travels in the same cycle. A placeholder's own placeholder parent that went with
+it comes back with it.
+
+- **How the code knows the deleted record was a placeholder:** only a record carrying `placeholder: true` is ever kept,
+  and the flag is read from the record itself at the moment it is deleted. The tombstone of an ordinary bird keeps
+  nothing, so there is nothing to put back: a fancier's deliberate deletion of a bird is never undone by this.
+- **Nothing is guessed:** the record put back is the one the device held, verbatim. A device that never held it puts
+  nothing back; the device that does hold it will, when the deletion reaches it.
+- **Why it cannot go back and forth:** the record is put back as it was (as an undo puts one back), so two devices
+  that both put it back hold the same record; a pulled copy is applied without logging an operation.
+
+**C2 — the removal says what of the fancier's own goes with teaching birds** (`src/example-data.js`,
+`app/tools/parts.tsx`). `examplePresence()` counts his results, health events and pairs that name a teaching bird the
+removal deletes (`ownGoes`), wherever they are filed; `removeExampleData()` returns what was actually removed
+(`ownGone`). The question and the result toast state them in a sentence of their own, only when there are any. The
+counts beside «سيُحذف» stay the datasets' own records.
+
+**C3 — a placeholder's own edit form** (`app/bird/form.tsx`: `draftOf()`, `collect()`). The name field shows empty with
+the display label as its hint. Any name typed, or a ring, clears the flag on save. Saved with the field still empty and
+no ring it stays a placeholder and its record keeps the name it held.
+
+**Chosen without a ruling — PROPOSED:**
+
+1. **C1, where the record is kept:** inside the tombstone, as a field `kept`, and it travels in export files with the
+   tombstone. It survives the device pulling back its own deletion.
+2. **C1, when the check runs:** once after each pull that completed. On a first sign-in the cycle has pushed before it
+   pulls, so what is put back travels with the next cycle. [read from code]
+3. **C1, the fancier's own deletion of a placeholder** (from its own profile) is undone in the same way when another
+   device's bird still names it: the rule is about placeholders, whatever deleted them. [read from code; not in a suite]
+4. **C1, not covered:** a replace-import or a restore that drops a placeholder writes a tombstone that keeps nothing
+   (`src/db/io.js`). The other device, which holds the record, still puts it back when that deletion reaches it; the
+   importing device cannot. [read from code]
+5. **C2, two strings, not one:** the sentence in the question's tense and in the toast's. All three counts are printed
+   even when one is zero, in the order of the sentence before it (pairs, results, health records). Its place in the
+   question is before «لديك … تُنقل إلى لوفتك». The toast stays 12 s instead of 9 when it carries the sentence.
+6. **C3, a ring and no name:** the bird is saved as the form showed it — the ring, and no name. Before C3 it kept the
+   stored label as its name; two expectations in `screens/placeholders.py` were changed with the rule, deliberately.
+7. **C3 and «خارجي»:** a placeholder saved with «خارجي» switched off still loses the flag (the accepted proposal of
+   commit 1), even with the name empty and no ring — so that save gives a bird of the loft with neither. This is the
+   one case where "saved with the field still empty it stays a placeholder" does not hold. **Needs a ruling.**
+8. **C3:** typing the very label the app shows is typing a name. The hint follows the sex chosen on the form.
+
+**Found while building — not built, for rulings:**
+
+- **A photo or a document the fancier added to a teaching bird is deleted with it, and the question does not say so.**
+  Measured: one photo on a teaching bird, `media: 1` in the removal's own count, the question as for a device with
+  none, and no media row left afterwards. The shipped datasets carry no media, so every such file is the fancier's.
+- **An ordinary bird deleted on one device while another device's offline bird names it** leaves that bird naming
+  nothing, as before. C1 does not touch it, as ruled.
+
+**New strings — two, PROPOSED, through the typography scan:**
+
+| key | Arabic | English |
+|---|---|---|
+| `example.remove.ownGoes` | «يُحذف مع الطيور التجريبية ما سجّلتَه أنت عليها: {pairs} زوجًا و{races} نتيجة و{health} سجلًا صحيًا.» | What you recorded yourself on sample birds is deleted with them: {pairs} pairs, {races} results and {health} health records. |
+| `example.remove.doneOwn` | « وحُذف معها ما كنتَ سجّلتَه أنت عليها: {pairs} زوجًا و{races} نتيجة و{health} سجلًا صحيًا.» | What you had recorded on them yourself was deleted with them: {pairs} pairs, {races} results, {health} health records. |
+
+No existing string was changed. The name field's hint for a placeholder is «أب غير معروف» / «أم غير معروفة» /
+«غير معروف», the strings B2 already prints.
+
+**Proof.** New suite `tests/e2e/screens/placeholder_devices.py` (C1, 30 checks: both causes, both arrival orders, the
+chain, convergence, three quiet rounds, and the ordinary bird). `screens/placeholder_counts.py` 17 → 22 (C2) and
+`screens/placeholder_rulings.py` 48 → 55 (C3). Seventeen mutants, one harness build and one suite each, 300 s limits,
+every one red at the check that names it, none with a traceback (`sib-c4-mutants.log`, `sib-c4-mutants-b.log`):
+
+| ruling | mutant | what it does | red at |
+|---|---|---|---|
+| C1 · the deletion arrives | M-c1-x | a pulled deletion does not keep the copy the device held | 3 |
+| C1 · the bird arrives | M-c1-y | the device's own deletion keeps nothing | 9 |
+| C1 | M-c1-echo | the kept record is lost when the device pulls back its own deletion | 2 |
+| C1 | M-c1-off | nothing is put back after a pull | 14 |
+| C1 · placeholders only | M-c1-all | an ordinary bird's tombstone keeps its record too | 4 |
+| C1 · the chain | M-c1-chain | only the first placeholder is put back in a cycle | 4 |
+| C1 · no ping-pong | M-c1-loop | every placeholder is logged again on every cycle (a fault put in, not a line taken out) | 4 |
+| C2 | M-c2-question | the question does not carry the sentence | 2 |
+| C2 | M-c2-toast | the toast does not carry the sentence | 2 |
+| C2 | M-c2-zero | the sentence is shown when the count is zero | 1 |
+| C2 | M-c2-count | every result of the fancier's is counted, not only those that go | 1 |
+| C2 | M-c2-where | only records filed in the teaching loft are counted | 1 |
+| C3 | M-c3-field | the field shows the stored name | 5 |
+| C3 | M-c3-hint | the hint is the ordinary one | 2 |
+| C3 | M-c3-keepname | a save with the field empty stores an empty name | 2 |
+| C3 | M-c3-noname | a typed name does not clear the flag | 2 |
+| C3 | M-c3-any | a typed name equal to the stored one does not clear the flag | 1 |
+
+One reversal. On the first run of the six C1 mutants, M-c1-chain went red at an arrival-order check and not at the
+check that names it, and M-c1-x removed more than its name says (it also wiped the kept record on the device's own
+echo). The cause of the first: the coordinator runs a cycle of its own when a device comes online, so "one cycle" in
+the suite was two. The suite now switches the coordinator's own triggers off (the harness's test-only switch) and has
+a check for the echo; M-c1-x was narrowed and M-c1-echo added. All seven C1 mutants were run again on the suite as
+committed, and those are the results above. The C2 and C3 mutants ran once.

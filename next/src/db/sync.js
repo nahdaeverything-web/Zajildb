@@ -33,7 +33,7 @@ import { toISO } from '../dates.js';
 import { getOpsSinceSeq, logOp } from './oplog.js';
 import { photoStatus, refreshPhotoWaiting, runPhotoPass } from './photos.js';
 import {
-  applySyncPut, applySyncDelete, remoteWins, isPristineLoft, dropPristineLoft,
+  applySyncPut, applySyncDelete, keepNamedPlaceholders, remoteWins, isPristineLoft, dropPristineLoft,
 } from './records.js';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../sync-config.js';
 
@@ -1062,6 +1062,9 @@ export async function syncOnce() {
     }
     const push = await pushAll();
     const pull = await pullAll();
+    // C1 (RULED 2026-11-24): a placeholder parent a bird here still names is put back (records.js). Its operation goes
+    // with the next cycle: this one has already pushed.
+    if (pull.ok) await keepNamedPlaceholders();
     // AFTER the pull, never before: the decision depends on what arrived.
     const adopted = await adoptRemoteLoftIfPristine();
     const duplicates = duplicateRingCount();
@@ -1072,6 +1075,10 @@ export async function syncOnce() {
   }
 
   const pull = await pullAll();
+  // C1 (RULED 2026-11-24): once the pull has applied everything it brought, a placeholder parent that a bird here names
+  // and this device has deleted is put back (records.js keepNamedPlaceholders) — BEFORE the push, so it travels in this
+  // same cycle. Only after a pull that completed: a pull stopped half way has not said everything yet.
+  if (pull.ok) await keepNamedPlaceholders();
   const push = await pushAll();
   emitChange({ type: 'sync-complete', firstLogin: false, duplicates: 0 });
   return { ok: Boolean(pull.ok && push.ok), firstLogin: false, push, pull };

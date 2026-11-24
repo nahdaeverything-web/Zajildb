@@ -11,6 +11,8 @@
   B5  a placeholder that holds anything of its own is never deleted that way (nor by a deletion): its flag is cleared
       and it stays, a reference bird the register lists
   B6  a held sibling link whose other bird no longer exists stops the save, names the bird, and writes nothing
+  C3  (RULED 2026-11-24, later) a placeholder's own edit form: the name field shows empty with the display label as its
+      hint; any name typed, or a ring, clears the flag on save; saved with the field still empty it stays a placeholder
 
 B1 and B7 — the counts of the teaching-data removal, the import, the replace and the loaders — are in
 screens/placeholder_counts.py. Fixture names are invented; nothing is configured, so nothing leaves the page.
@@ -323,6 +325,31 @@ try:
         click(pg, '[data-testid=dialog-cancel]'); pg.wait_for_timeout(250); removed = click(pg, '[data-testid=sib-remove]', 3000); pg.wait_for_timeout(250); s7 = save(); end = run(pg, HOLD, {'alif': g['alif']})
         check('[B6 · the way out] «إلغاء الربط», then save: ألف is saved on its own — no parents, and no placeholder made',
               removed and s7[0] == 'page' and end['alif']['sire'] is None and end['alif']['dam'] is None and end['birds'] == mid['birds'] and end['alif']['at'] != mid['alif']['at'], (removed, s7, end['alif'], (mid['birds'], end['birds'])))
+
+        # ══ C3 — A PLACEHOLDER'S OWN EDIT FORM: the name field ══
+        REC = """async (db, id) => { const b = db.getBird(id); return b ? { name: b.name, flag: b.placeholder === true, hasKey: Object.prototype.hasOwnProperty.call(b, 'placeholder'), colour: b.colour || '', rings: (b.rings || []).map(r => r.raw), external: b.external } : null; }"""
+        def name_field(): return [pg.input_value('[data-testid=f-name]'), pg.get_attribute('[data-testid=f-name]', 'placeholder')] if pg.locator('[data-testid=f-name]').count() else None
+        go(f"bird/edit/?id={ids['ps']}", '[data-testid=bird-form]'); shown = name_field(); held = run(pg, REC, ids['ps'])
+        check('[C3 · the field · M-c3-field and M-c3-hint fail here] the edit form of the father\'s placeholder — its record holds "Unknown sire" — shows the name field EMPTY, with «أب غير معروف» as its hint',
+              shown == ['', SIRE] and bool(held) and held['name'] == 'Unknown sire' and held['flag'] is True, (shown, held))
+        s8 = save(); kept = run(pg, REC, ids['ps'])
+        check('[C3 · saved empty · M-c3-keepname fails here] saved with the field still empty it stays a placeholder — and its record keeps the name it held',
+              s8[0] == 'page' and bool(kept) and kept['flag'] is True and kept['name'] == 'Unknown sire', (s8, kept))
+        run(pg, "async (db) => { await db.setSetting('lang', 'en'); }")
+        go(f"bird/edit/?id={ids['pd']}", '[data-testid=bird-form]'); shown_en = name_field()
+        run(pg, "async (db) => { await db.setSetting('lang', 'ar'); }")
+        check('[C3 · language] in English the mother\'s placeholder — its record holds «أم غير معروفة» — shows the field empty with "Unknown dam" as its hint', shown_en == ['', 'Unknown dam'], shown_en)
+        go(f"bird/edit/?id={ids['pd']}", '[data-testid=bird-form]'); fill(pg, '[data-testid=f-colour]', 'رمادي'); s9 = save(); col = run(pg, REC, ids['pd'])
+        check('[C3 · another field] a colour given and the name left empty: still a placeholder, the colour saved, the stored name untouched',
+              s9[0] == 'page' and bool(col) and col['flag'] is True and col['colour'] == 'رمادي' and col['name'] == DAM, (s9, col))
+        go(f"bird/edit/?id={ids['pd']}", '[data-testid=bird-form]'); fill(pg, '[data-testid=f-name]', 'أم نجم'); s10 = save(); named = run(pg, REC, ids['pd'])
+        check('[C3 · a name typed · M-c3-noname fails here] a name typed: the flag is cleared on save and the bird carries that name', s10[0] == 'page' and bool(named) and named['hasKey'] is False and named['name'] == 'أم نجم' and named['external'] is True, (s10, named))
+        # typing the very label the app shows is typing a name: the fancier has said what the bird is called
+        go(f"bird/edit/?id={ids['pg1']}", '[data-testid=bird-form]'); fill(pg, '[data-testid=f-name]', SIRE); s11 = save(); same = run(pg, REC, ids['pg1'])
+        check('[C3 · any name · M-c3-any fails here] typing «أب غير معروف» itself — the name its record already holds — is a name typed: the flag is cleared', s11[0] == 'page' and bool(same) and same['hasKey'] is False and same['name'] == SIRE, (s11, same))
+        go(f"bird/edit/?id={ids['ps']}", '[data-testid=bird-form]'); fill(pg, '[data-testid=ring-input] >> nth=0', 'JO-2019-333001'); s12 = save(); ringed = run(pg, REC, ids['ps'])
+        check('[C3 · a ring · PROPOSED for the name] a ring added and the name left empty: the flag is cleared, and the bird is saved as the form showed it — the ring, and no name',
+              s12[0] == 'page' and bool(ringed) and ringed['hasKey'] is False and ringed['rings'] == ['JO-2019-333001'] and ringed['name'] == '', (s12, ringed))
 
         check('zero page errors overall', not errs, '; '.join(errs[:2]))
         b.close()

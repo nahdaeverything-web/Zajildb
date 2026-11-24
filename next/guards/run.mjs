@@ -430,7 +430,8 @@ const guards = {
       ['src/db/oplog.js',
        'RF-27 (RULED 2026-11-19): buildOp(), tombstoneRecord() and tombstoneKey() — the op and the tombstone as values, '
        + 'so a local delete or undo can write its record change, its operation and its tombstone in ONE transaction '
-       + '(records.js). logOp() and the rest are unchanged. Vanilla has the same windows and is NOT changed.'],
+       + '(records.js). logOp() and the rest are unchanged. Vanilla has the same windows and is NOT changed. '
+       + 'C1 (RULED 2026-11-24): tombstoneRecord() can keep the record it stands for (`kept`) — passed only for a placeholder parent, by records.js.'],
       ['src/db/records.js',
        'RF-14 (RULED 2026-10-14): the generic remove() and applySyncDelete() call ensureCurrentLoft() '
        + 'after a loft goes, locally or by a pulled tombstone. Port-only, as storage.js. RF-23 (RULED 2026-11-16): '
@@ -446,7 +447,9 @@ const guards = {
        + 'child, and restoreBird() puts them back. THE SIBLING LINK (RULED 2026-11-23): saveBirds() writes several birds and their '
        + 'operations in one transaction, checkBirds() judges them as one set; every validation is handed the pairs, for the clutch warning. '
        + 'B4 AND B5 (RULED 2026-11-24): saveBird() and saveBirds() delete, in the save\'s own transaction, a placeholder parent the save leaves with no child '
-       + '(placeholdersLeft); neither they nor deleteBird() delete one that holds anything of its own (holdsOwn) — its flag is cleared instead, and restoreBird() puts it back.'],
+       + '(placeholdersLeft); neither they nor deleteBird() delete one that holds anything of its own (holdsOwn) — its flag is cleared instead, and restoreBird() puts it back. '
+       + 'C1 (RULED 2026-11-24): a deleted placeholder parent is kept in its tombstone (keptOf), by a local deletion and by a pulled one; '
+       + 'keepNamedPlaceholders() puts back, verbatim and with an operation, one that a bird on the device still names.'],
       ['src/db/sync.js',
        'the account collision (RF-13): signIn() compares the incoming user with the owner of '
        + 'the data on the device and stops before storing a session that is not the same '
@@ -463,7 +466,8 @@ const guards = {
        + '(RULED 2026-11-13, RF-19): syncStatus() answers unknown until the op log is counted after a load and '
        + 'never synced inside an error window; pendingSince; unsentChanges() for the destructive questions. '
        + 'PHOTO SYNC, STAGE 1 (RULED 2026-11-18): after a cycle that succeeded the coordinator starts the upload pass of '
-       + 'src/db/photos.js (port-only, no vanilla counterpart) and does not wait for it. STAGE 2 (RULED 2026-11-19): syncStatus() carries photosWaiting and storageFull, counted with the op log. RF-26 (RULED 2026-11-18): applyPage() hands each row\'s last-write-wins decision to records.js, where it runs in the transaction that writes.'],
+       + 'src/db/photos.js (port-only, no vanilla counterpart) and does not wait for it. STAGE 2 (RULED 2026-11-19): syncStatus() carries photosWaiting and storageFull, counted with the op log. RF-26 (RULED 2026-11-18): applyPage() hands each row\'s last-write-wins decision to records.js, where it runs in the transaction that writes. '
+       + 'C1 (RULED 2026-11-24): syncOnce() calls keepNamedPlaceholders() after a pull that completed — before the push in the steady state — so no bird is left naming a placeholder no device holds.'],
     ]);
     // src/engine/validate.js is the first ENGINE file the port owns (RULED 2026-11-23, item 12) — its reason beside the others
     DIVERGENT.set('src/engine/validate.js',

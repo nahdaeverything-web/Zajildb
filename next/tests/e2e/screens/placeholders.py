@@ -263,8 +263,11 @@ try:
         check('[item 5] saved through the form with nothing changed, a placeholder stays one', r0 and r0['placeholder'] is True and r0['name'] == SIRE, r0)
         r1 = edit_save(ids['ps'], lambda: fill(pg, '[data-testid=ring-input] >> nth=0', 'JO-2020-555001'))
         go('birds/', '[data-testid=bird-row]'); pg.wait_for_timeout(300); rows = texts(pg, '[data-testid=row-name]')
-        check('[item 5 · a ring · M-noclear fails here] saved through the form with a ring, it is no longer a placeholder: the key is gone, it is still a reference bird, and the bird list has its row',
-              r1 and r1['hasKey'] is False and r1['rings'] == ['JO-2020-555001'] and r1['external'] is True and r1['status'] == 'reference' and SIRE in rows, (r1, rows))
+        # C3 (RULED 2026-11-24): the name field of a placeholder's form shows empty, and the form saves what it shows — so a
+        # ring added with no name typed gives a bird with that ring and no name. This check expected the stored label
+        # «أب غير معروف» as the row's name until then; the expectation was changed with the rule, deliberately.
+        check('[item 5 · a ring · M-noclear fails here] saved through the form with a ring, it is no longer a placeholder: the key is gone, it is still a reference bird, and the bird list has its row — under its ring, for no name was typed',
+              r1 and r1['hasKey'] is False and r1['rings'] == ['JO-2020-555001'] and r1['external'] is True and r1['status'] == 'reference' and r1['name'] == '' and 'JO-2020-555001' in rows and SIRE not in rows, (r1, rows))
         r2 = edit_save(ids['pd'], lambda: fill(pg, '[data-testid=f-name]', 'أم نجم'))
         check('[item 5 · another name · M-noclearname fails here] saved through the form under another name, it is no longer a placeholder', r2 and r2['hasKey'] is False and r2['name'] == 'أم نجم' and r2['external'] is True, r2)
         r3 = edit_save(fam2['p4'], lambda: click(pg, '[data-testid=external-switch]'))
@@ -273,7 +276,7 @@ try:
         go(f"pedigree/?id={ids['sahaba']}", '[data-testid=chart]'); pg.wait_for_timeout(300)
         g1 = [(n['text'], n['known'], n['href']) for n in pg.evaluate(NODES) if n['gen'] == '1']
         check('[item 5] …and the pedigree now prints them as the recorded birds they are, linked to their profiles',
-              [x[1] for x in g1] == ['1', '1'] and SIRE in g1[0][0] and 'أم نجم' in g1[1][0] and g1[0][2] == f"/bird/?id={ids['ps']}", g1)
+              [x[1] for x in g1] == ['1', '1'] and 'JO-2020-555001' in g1[0][0] and 'أم نجم' in g1[1][0] and g1[0][2] == f"/bird/?id={ids['ps']}", g1)
 
         check('zero page errors overall', not errs, '; '.join(errs[:2]))
         b.close()

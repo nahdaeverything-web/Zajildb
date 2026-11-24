@@ -171,9 +171,17 @@ const tombstoneId = (store, recordId) => `${store}:${recordId}`;
  *   happened. Same reasoning as §2a's timestamp rule, reached from the other
  *   side. `seq` is null for a sync-applied delete — there is no local op.
  */
-/** RF-27: the tombstone as a value, and its key — for a writer that puts or clears it inside its own transaction. PORT-ONLY. */
-export function tombstoneRecord(store, recordId, seq, at = nowISO()) {
-  return { id: tombstoneId(store, recordId), store, recordId, at, deviceId: state.settings.deviceId || null, seq };
+/**
+ * RF-27: the tombstone as a value, and its key — for a writer that puts or clears it inside its own transaction. PORT-ONLY.
+ *
+ * `kept` (C1, RULED 2026-11-24): the record itself, kept ONLY for a placeholder parent — the write boundary decides
+ * (records.js keptOf) and nothing else passes it. It is what lets a device put a placeholder back, exactly as it was,
+ * when a bird turns out to name it still. A tombstone without it says nothing about what the record was.
+ */
+export function tombstoneRecord(store, recordId, seq, at = nowISO(), kept = null) {
+  const tomb = { id: tombstoneId(store, recordId), store, recordId, at, deviceId: state.settings.deviceId || null, seq };
+  if (kept) tomb.kept = kept;
+  return tomb;
 }
 export function tombstoneKey(store, recordId) { return tombstoneId(store, recordId); }
 

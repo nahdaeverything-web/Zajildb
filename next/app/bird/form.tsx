@@ -6,7 +6,7 @@ import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds, useMediaForBird } from '@/src/db/react';
 import { t, fmtDate, statusLabel } from '@/src/i18n.ext.js';
 import { parseRing, RING_TYPES } from '@/src/engine/rings.js';
-import { Loading, PhotoViewer, toast, confirmDialog, choiceDialog, downscaleImage, storedName, primaryRing, birdLabelText, birdName, problemParams, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
+import { Loading, PhotoViewer, toast, confirmDialog, choiceDialog, downscaleImage, storedName, primaryRing, birdLabelText, birdName, placeholderName, problemParams, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
 import s from './form.module.css';
 
 // Add / edit bird — design/approved/add-edit-bird-v2.html, behaviour from
@@ -37,6 +37,12 @@ type Plan = { reject: string | null; conflicts: unknown[]; bird: Bird; x: Bird |
 type Verdict = { errors: Problem[]; warnings: Problem[] };
 const getBird = (id: string) => db.getBird(id) as Bird | undefined;
 const REFERENCE_STATUS = db.REFERENCE_STATUS as string;
+/**
+ * The copy of a stored record the form edits. C3 (RULED 2026-11-24): A PLACEHOLDER'S NAME FIELD STARTS EMPTY. The name
+ * stored on a placeholder is the label the app gave it, in whatever language it was in that day, and is never shown
+ * (B2); the field shows the label as its hint instead, and anything typed there is the fancier saying who the bird is.
+ */
+const draftOf = (stored: Bird): Bird => { const d = JSON.parse(JSON.stringify(stored)) as Bird; if (db.isPlaceholder(d)) d.name = ''; return d; };
 /** A bird named in a question or a notice. A placeholder parent reads «أب غير معروف» / «أم غير معروفة», never its stored name (B2: placeholderName, through birdLabelText). */
 const nameOf = (b: Bird | null | undefined) => birdLabelText(b);
 
@@ -285,7 +291,7 @@ export default function BirdForm() {
     if (!booted || seeded.current) return;
     const existing = editId ? getBird(editId) : null;
     if (editId && !existing) { router.replace('/birds'); return; }
-    const d: Bird = existing ? JSON.parse(JSON.stringify(existing)) : (db.newBird({}) as Bird);
+    const d: Bird = existing ? draftOf(existing) : (db.newBird({}) as Bird);
     if (!existing) {
       const qs = params.get('sire'), qd = params.get('dam');
       if (qs && getBird(qs)) d.sireId = qs;
@@ -324,13 +330,14 @@ export default function BirdForm() {
       external: !!d.external,
       status: effectiveStatus(!!d.external, d.status as string | undefined),
       rings: rs };
-    // RULED 2026-11-23: A PLACEHOLDER STOPS BEING ONE when this form saves it with at least one ring, or with a name
-    // other than the stored one — the fancier has said who the bird is, and it joins the register like any reference
-    // bird. The key is removed, not set to false: missing means false. (Not ruled, PROPOSED: also when the save makes
-    // it a bird of the loft — the flag never travels without external.)
+    // RULED 2026-11-23, 2026-11-24 (C3): A PLACEHOLDER STOPS BEING ONE when this form saves it with at least one ring, or
+    // with ANY name typed — the fancier has said who the bird is, and it joins the register like any reference bird. The
+    // key is removed, not set to false: missing means false. (Accepted proposal: also when the save makes it a bird of
+    // the loft — the flag never travels without external.) Saved with the name field still empty and no ring, it stays a
+    // placeholder, and keeps the name its record holds: the empty field is how the form shows it (draftOf), not an edit.
     if (out.placeholder) {
-      const stored = getBird(d.id);
-      if (rs.length > 0 || out.name !== ((stored && stored.name) || '') || !out.external) delete out.placeholder;
+      if (rs.length > 0 || out.name !== '' || !out.external) delete out.placeholder;
+      else { const stored = getBird(d.id); out.name = (stored && stored.name) || ''; }
     }
     return out;
   };
@@ -399,7 +406,7 @@ export default function BirdForm() {
           altLabel: t('form.changed.reload'), altKind: 'primary', confirmLabel: t('act.saveAnyway'), confirmKind: 'danger' });
         if (choice === 'alt') {
           if (!now) { router.replace('/birds'); return; }
-          const d = JSON.parse(JSON.stringify(now)) as Bird;
+          const d = draftOf(now);
           setDraft(d); setRings(d.rings && d.rings.length ? d.rings.map((r) => ({ ...r })) : [{}]); setErrs({});
           loadedAt.current = now.updatedAt || null;
           return;
@@ -566,7 +573,7 @@ export default function BirdForm() {
               </div>
             )}
             {viewing !== null && viewing >= 0 && viewItems.length > 0 && <PhotoViewer items={viewItems} start={viewing} onClose={() => setViewing(null)} />}
-            <FormField label={t('bird.name')}><input value={draft.name || ''} onChange={(e) => set({ name: e.target.value })} placeholder={t('form.name.placeholder')} data-testid="f-name" /></FormField>
+            <FormField label={t('bird.name')}><input value={draft.name || ''} onChange={(e) => set({ name: e.target.value })} placeholder={draft.placeholder ? placeholderName(draft) : t('form.name.placeholder')} data-testid="f-name" /></FormField>
             <FormField label={t('bird.ring')} testid="f-ring-field">
               {rings.map((r, i) => (
                 <div key={i} className={i === 0 ? undefined : s.ringrow} data-testid="ring-row">

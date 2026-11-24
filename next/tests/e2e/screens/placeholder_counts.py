@@ -7,6 +7,8 @@
       said 5 of a device that held one bird of the fancier's and four placeholders; 3 were moved and 2 were deleted.
   B7  the import toast, the replace question, the restore question and its toast, and the two teaching loaders'
       toast count real birds only.
+  C2  (RULED 2026-11-24, later) the removal's question and its result toast also state the fancier's own results,
+      health events and pairs that are deleted with teaching birds, with their real counts, only when there are any.
 
 Each scenario is its own device (its own browser context). Fixture names are invented; nothing is configured, so
 nothing leaves the page — the two loader scenarios answer the dataset file themselves, from the build's own copy.
@@ -112,26 +114,51 @@ try:
         check('[B1] …three bird records are left, one of them a bird a fancier counts, and the register is referentially clean', left == {'records': 3, 'listed': ['طيري']} and d1.evaluate(INTEGRITY) == 0, (left, d1.evaluate(INTEGRITY)))
         c1.close()
 
-        # ══ B1 — «لا تُحذف» AND THE FANCIER'S OWN RESULTS, HEALTH EVENTS AND PAIRS (not placeholders: found while building B1) ══
+        # ══ B1, C2 — THE FANCIER'S OWN RESULTS, HEALTH EVENTS AND PAIRS FOR TEACHING BIRDS (not placeholders) ══
+        # B1: «لا تُحذف» must be true of every record it counts, and these go with the teaching bird they name.
+        # C2 (RULED 2026-11-24): the question and the result toast say so, with their real counts, in a sentence of their own.
+        OWN_Q = 'يُحذف مع الطيور التجريبية ما سجّلتَه أنت عليها: 1 زوجًا و2 نتيجة و3 سجلًا صحيًا.'
+        OWN_T = 'وحُذف معها ما كنتَ سجّلتَه أنت عليها: 1 زوجًا و2 نتيجة و3 سجلًا صحيًا.'
+        check('[C2 · none · M-c2-zero fails here] the first device above had no such record: its question said nothing about records of the fancier\'s being deleted', 'ما سجّلتَه أنت عليها' not in asked, asked)
         c2, d2 = device(); run(d2, LOAD)
         s2 = run(d2, """async (db) => { const IDS = await db.exampleIds(); const loftId = db.currentLoft().id;
             const child = new Set(); for (const x of db.allBirds()) { child.add(x.sireId); child.add(x.damId); }
             const leaf = db.allBirds().filter(x => IDS.birds.has(x.id) && !child.has(x.id)).sort((x, y) => x.id.localeCompare(y.id));     // teaching birds no bird descends from: the removal deletes them
-            const t1 = leaf.find(x => x.sex === 'cock'), t2 = leaf.find(x => x.sex === 'hen');
+            const t1 = leaf.find(x => x.sex === 'cock'), t2 = leaf.find(x => x.sex === 'hen'), t3 = leaf.find(x => x.sex === 'hen' && x.id !== t2.id);
             const mine = await db.saveBird(db.newBird({ name: 'طيرتي', sex: 'hen' }));
             const race = (birdId) => db.Races.save({ id: db.uuid(), birdId, loftId, date: '2026-04-01', raceName: 'سباق', raceType: 'race', distanceKm: 100, velocity: 1000, position: 1, birdsEntered: 10 });
-            const r1 = await race(mine.id), r2 = await race(t2.id);
-            const h2 = await db.Health.save({ id: db.uuid(), eventType: 'check', wholeLoft: false, birdId: t2.id, loftId, date: '2026-02-01', medication: '', notes: '' });
-            const p2 = await db.Pairs.save({ sireId: t1.id, damId: mine.id, season: '2026', nestBox: '1', status: 'active', loftId, rounds: [] });
-            return { mine: mine.id, r1: r1.id, r2: r2.id, h2: h2.id, p2: p2.id, own: (await db.examplePresence()).own }; }""")
-        mine2 = run(d2, MINE); asked2 = removal_question(d2); click(d2, '[data-testid=dialog-cancel]'); d2.wait_for_timeout(300)
-        run(d2, "async (db) => { await db.removeExampleData(); }")
-        kept2 = run(d2, "async (db, s) => ({ mine: !!db.getBird(s.mine), r1: db.state.raceResults.has(s.r1), r2: db.state.raceResults.has(s.r2), h2: db.state.healthEvents.has(s.h2), p2: db.state.pairs.has(s.p2) })", s2)
-        check('[B1 · «لا تُحذف» is true of every record counted · M-b1-cascade fails here] a bird of the fancier\'s with a result, and — for teaching birds the removal deletes — a result, a health event and a pair with his hen: five records of his in the teaching loft, of which the question counts the TWO it does not delete',
-              s2['own'] == 2 and 'لديك 2 من سجلاتك داخل اللوفت التجريبي' in asked2 and sum(len(v) for v in mine2.values()) == 5, (s2['own'], asked2, {k: len(v) for k, v in mine2.items()}))
-        check('[B1] …and those two are what is left: his bird and its result; the three that named a deleted teaching bird went with it, as deleteBird has always done',
-              kept2 == {'mine': True, 'r1': True, 'r2': False, 'h2': False, 'p2': False}, kept2)
+            const health = (birdId) => db.Health.save({ id: db.uuid(), eventType: 'check', wholeLoft: false, birdId, loftId, date: '2026-02-01', medication: '', notes: '' });
+            const r1 = await race(mine.id); const gone = [(await race(t2.id)).id, (await race(t3.id)).id];                                  // two results for teaching birds
+            const sick = [(await health(t2.id)).id, (await health(t2.id)).id, (await health(t3.id)).id];                                  // three health events for teaching birds
+            const p2 = await db.Pairs.save({ sireId: t1.id, damId: mine.id, season: '2026', nestBox: '1', status: 'active', loftId, rounds: [] });   // one pair with a teaching cock
+            const pr = await db.examplePresence();
+            return { mine: mine.id, r1: r1.id, gone, sick, p2: p2.id, own: pr.own, ownGoes: pr.ownGoes, dataset: [pr.pairs, pr.races, pr.health] }; }""")
+        mine2 = run(d2, MINE); asked2 = removal_question(d2); ty2 = faces(d2)
+        check('[B1 · «لا تُحذف» is true of every record counted · M-b1-cascade fails here] a bird of the fancier\'s with a result, and — for teaching birds the removal deletes — two results, three health events and a pair with his hen: eight records of his in the teaching loft, of which «لديك …» counts the TWO it does not delete',
+              s2['own'] == 2 and 'لديك 2 من سجلاتك داخل اللوفت التجريبي' in asked2 and sum(len(v) for v in mine2.values()) == 8, (s2['own'], asked2, {k: len(v) for k, v in mine2.items()}))
+        check('[C2 · the question · M-c2-question and M-c2-count fail here] the question states the six that go, by kind: «يُحذف مع الطيور التجريبية ما سجّلتَه أنت عليها: 1 زوجًا و2 نتيجة و3 سجلًا صحيًا.» — beside the datasets\' own «5 زوجًا و17 نتيجة و7 سجلًا صحيًا», in a face that has Arabic',
+              OWN_Q in asked2 and 'و5 زوجًا و17 نتيجة و7 سجلًا صحيًا' in asked2 and s2['ownGoes'] == {'pairs': 1, 'races': 2, 'health': 3, 'total': 6} and s2['dataset'] == [5, 17, 7] and not ty2, (asked2, s2['ownGoes'], ty2[:2]))
+        click(d2, '[data-testid=dialog-confirm]'); told2 = toast_with(d2, 'أُزيلت', 60000); ty2t = faces(d2)
+        check('[C2 · the toast · M-c2-toast fails here] …and so does the result: «أُزيلت البيانات التجريبية: 38 طيرًا و5 زوجًا و17 نتيجة و7 سجلًا صحيًا. وحُذف معها ما كنتَ سجّلتَه أنت عليها: 1 زوجًا و2 نتيجة و3 سجلًا صحيًا.»',
+              told2 == 'أُزيلت البيانات التجريبية: 38 طيرًا و5 زوجًا و17 نتيجة و7 سجلًا صحيًا. ' + OWN_T and not ty2t, (told2, ty2t[:2]))
+        kept2 = run(d2, "async (db, s) => ({ mine: !!db.getBird(s.mine), r1: db.state.raceResults.has(s.r1), results: s.gone.filter(id => db.state.raceResults.has(id)).length, health: s.sick.filter(id => db.state.healthEvents.has(id)).length, p2: db.state.pairs.has(s.p2) })", s2)
+        check('[B1 · C2] …and that is what happened: his bird and its result are what is left; the six that named a deleted teaching bird went with it, as deleteBird has always done',
+              kept2 == {'mine': True, 'r1': True, 'results': 0, 'health': 0, 'p2': False}, kept2)
         c2.close()
+        # a fancier with a loft of his own: his result for a teaching bird is filed under HIS loft, and goes all the same
+        c7, d7 = device(); run(d7, "async (db) => { await db.Lofts.save({ ...db.currentLoft(), name: 'لوفتي' }); }"); run(d7, LOAD)
+        s7 = run(d7, """async (db) => { const IDS = await db.exampleIds(); const loftId = db.currentLoft().id;
+            const child = new Set(); for (const x of db.allBirds()) { child.add(x.sireId); child.add(x.damId); }
+            const leaf = db.allBirds().filter(x => IDS.birds.has(x.id) && !child.has(x.id)).sort((x, y) => x.id.localeCompare(y.id))[0];
+            const r = await db.Races.save({ id: db.uuid(), birdId: leaf.id, loftId, date: '2026-04-01', raceName: 'سباق', raceType: 'race', distanceKm: 100, velocity: 1000, position: 1, birdsEntered: 10 });
+            const pr = await db.examplePresence(); return { r: r.id, filedUnderHisLoft: r.loftId === loftId && db.currentLoft().name === 'لوفتي' && !(await db.exampleLoftIds()).includes(loftId), own: pr.own, ownGoes: pr.ownGoes }; }""")
+        asked7 = removal_question(d7)
+        check('[C2 · wherever it is filed · M-c2-where fails here] a result for a teaching bird filed under the fancier\'s OWN loft is no record «داخل اللوفت التجريبي» — and the question still says it goes: «… 0 زوجًا و1 نتيجة و0 سجلًا صحيًا.»',
+              s7['filedUnderHisLoft'] and s7['own'] == 0 and 'لديك' not in asked7 and 'يُحذف مع الطيور التجريبية ما سجّلتَه أنت عليها: 0 زوجًا و1 نتيجة و0 سجلًا صحيًا.' in asked7, (s7, asked7))
+        click(d7, '[data-testid=dialog-confirm]'); told7 = toast_with(d7, 'أُزيلت', 60000); left7 = run(d7, "async (db, id) => db.state.raceResults.has(id)", s7['r'])
+        check('[C2 · wherever it is filed] …and the result says «… وحُذف معها ما كنتَ سجّلتَه أنت عليها: 0 زوجًا و1 نتيجة و0 سجلًا صحيًا.» — the record is gone',
+              told7.endswith('وحُذف معها ما كنتَ سجّلتَه أنت عليها: 0 زوجًا و1 نتيجة و0 سجلًا صحيًا.') and left7 is False, (told7, left7))
+        c7.close()
 
         # ══ B7 — the source: three birds a fancier counts, two placeholder parents ══
         c3, d3 = device()

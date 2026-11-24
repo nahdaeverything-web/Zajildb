@@ -81,8 +81,11 @@ export const BECAUSE_SHOWN = 5;
  *   · placeholder parents (src/family.js): they are not birds a fancier counts, and one whose children are all
  *     teaching birds goes with the last of them (deleteBird);
  *   · a result, a health event or a pair of the fancier's that names a teaching bird this removal deletes: deleteBird
- *     removes it with that bird. (It was counted here, and then deleted, before this ruling. It is still not among the
- *     question's deleted counts, which are the datasets' own records — reported, for a ruling.)
+ *     removes it with that bird. (It was counted here, and then deleted, before this ruling.)
+ *
+ * C2 (RULED 2026-11-24): `ownGoes` IS THOSE RECORDS, COUNTED — every result, health event and pair that is not a
+ * dataset record and names a teaching bird this removal deletes, WHEREVER it is filed. The question states them in a
+ * sentence of their own; the counts beside «سيُحذف» stay the datasets' own records.
  */
 export async function examplePresence() {
   const IDS = await exampleIds();
@@ -119,6 +122,12 @@ export async function examplePresence() {
   const STILL = new Set(still);
   // B1: only what the removal leaves in place — see the note above
   const goes = (id) => example.has(id) && !keep.has(id);                 // a teaching bird this removal deletes
+  // C2: the fancier's own records that go with one, wherever they are filed
+  const mine = (map, store) => [...map.values()].filter((r) => !IDS[store].has(r.id));
+  const ownGoes = { pairs: mine(state.pairs, 'pairs').filter((r) => goes(r.sireId) || goes(r.damId)).length,
+                    races: mine(state.raceResults, 'raceResults').filter((r) => goes(r.birdId)).length,
+                    health: mine(state.healthEvents, 'healthEvents').filter((r) => goes(r.birdId)).length };
+  ownGoes.total = ownGoes.pairs + ownGoes.races + ownGoes.health;
   const ownBirds = birds.own.filter((b) => !isPlaceholder(b)).length;
   const own = ownBirds + pairs.own.filter((r) => !goes(r.sireId) && !goes(r.damId)).length
     + races.own.filter((r) => !goes(r.birdId)).length + health.own.filter((r) => !goes(r.birdId)).length;
@@ -132,7 +141,7 @@ export async function examplePresence() {
     // there is one, the question names no loft at all — naming one would claim a place that is not the whole truth.
     outside: [birds, pairs, races, health].reduce((n, k) => n + k.ex.filter((r) => !STILL.has(r.loftId)).length, 0),
     birds: birds.ex.length - keep.size, pairs: pairs.ex.length, races: races.ex.length, health: health.ex.length, media: media.length,
-    kept: keep.size, keep, because, own, ownBirds,
+    kept: keep.size, keep, because, own, ownBirds, ownGoes,
     current: SET.has(state.currentLoftId),
   };
 }
@@ -165,9 +174,17 @@ export async function removeExampleData() {
   const SET = new Set(p.ids);
   for (const id of p.keep) await resave(id, { external: true, status: REFERENCE_STATUS });   // kept ancestors first, so nothing below can touch them
   let birds = 0;
+  // C2 (RULED 2026-11-24): what deleteBird() took with each teaching bird that was NOT a dataset record — the fancier's
+  // own pairs, results and health events for it. Counted from what was actually removed, for the toast to state.
+  const ownGone = { pairs: 0, races: 0, health: 0, total: 0 };
+  const notDataset = (list, store) => (list || []).filter((r) => !IDS[store].has(r.id)).length;
   for (const b of [...state.birds.values()]) {
-    if (IDS.birds.has(b.id) && !p.keep.has(b.id)) { await deleteBird(b.id); birds++; }
+    if (IDS.birds.has(b.id) && !p.keep.has(b.id)) {
+      const gone = await deleteBird(b.id); birds++;
+      ownGone.pairs += notDataset(gone.removedPairs, 'pairs'); ownGone.races += notDataset(gone.removedRaces, 'raceResults'); ownGone.health += notDataset(gone.removedHealth, 'healthEvents');
+    }
   }
+  ownGone.total = ownGone.pairs + ownGone.races + ownGone.health;
   const sweep = async (map, api, store) => { let n = 0; for (const r of [...map.values()]) { if (IDS[store].has(r.id)) { await api.remove(r.id); n++; } } return n; };
   const pairs = await sweep(state.pairs, Pairs, 'pairs'), races = await sweep(state.raceResults, Races, 'raceResults'), health = await sweep(state.healthEvents, Health, 'healthEvents');
   for (const id of p.ids) await Lofts.remove(id);          // RF-14: remove() re-points currentLoftId if it was one of these
@@ -182,7 +199,7 @@ export async function removeExampleData() {
   await refile(state.pairs, Pairs); await refile(state.raceResults, Races); await refile(state.healthEvents, Health);
   emitChange({ type: 'import' });
   // what was removed in all — the presence counts; the sweep only catches what deleteBird's cascade did not reach
-  return { lofts: p.ids.length, birds, pairs: p.pairs, races: p.races, health: p.health, swept: { pairs, races, health }, kept: p.kept, moved, target };
+  return { lofts: p.ids.length, birds, pairs: p.pairs, races: p.races, health: p.health, swept: { pairs, races, health }, kept: p.kept, moved, target, ownGone };
 }
 
 /** The stores a dataset file carries records for. */

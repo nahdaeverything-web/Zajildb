@@ -432,7 +432,7 @@ export const failedAction = (what: string) => (reason: string) => t('tools.faile
  */
 type Presence = { ids: string[]; lofts: Array<{ id: string; name: string; birds: number; pairs: number; races: number; health: number }>;
   birds: number; pairs: number; races: number; health: number; media: number; kept: number; own: number; ownBirds: number; current: boolean;
-  elsewhere: number; outside: number; because: Array<{ id: string; name: string; ring: string }> };
+  elsewhere: number; outside: number; because: Array<{ id: string; name: string; ring: string }>; ownGoes: { pairs: number; races: number; health: number; total: number } };
 export function ExampleRemoveRow() {
   const [p, setP] = useState<Presence | null>(null);
   const [busy, setBusy] = useState(false);
@@ -460,6 +460,9 @@ export function ExampleRemoveRow() {
     // RULED 2026-11-17: with a record filed outside the named lofts the question names none — but a dataset loft that is present IS removed, and it says so
     const body = (p.lofts.length && !p.outside ? t('example.remove.body', { ...counts, lofts }) : p.lofts.length ? t('example.remove.bodyOutside', counts) : t('example.remove.bodyNoLoft', counts))
       + (p.kept ? ' ' + t('example.remove.kept', { k: fmtNum(p.kept) }) + (p.because.length ? ' ' + t('example.remove.because', { names }) : '') : '')
+      // C2 (RULED 2026-11-24): the fancier's own pairs, results and health events for teaching birds go with them — said,
+      // with their counts, only when there are any. Its place in the question, before the records that are moved, is PROPOSED.
+      + (p.ownGoes.total ? ' ' + t('example.remove.ownGoes', { pairs: fmtNum(p.ownGoes.pairs), races: fmtNum(p.ownGoes.races), health: fmtNum(p.ownGoes.health) }) : '')
       + (p.own ? ' ' + t('example.remove.own', { m: fmtNum(p.own) }) : '')
       + ((await db.unsentChanges()) as number > 0 ? ' ' + t('confirm.unsent') : '');
     const ok = await confirmDialog({ title: t('example.remove.title'), body, cancelLabel: t('act.cancel'), confirmLabel: t('example.remove.go'), confirmKind: 'danger' });
@@ -467,8 +470,9 @@ export function ExampleRemoveRow() {
     setBusy(true);
     try {
       await destructive(async () => {
-        const r = await db.removeExampleData() as { birds: number; pairs: number; races: number; health: number; kept: number } | null;
-        if (r) toast(t('example.remove.done', { birds: fmtNum(r.birds), pairs: fmtNum(r.pairs), races: fmtNum(r.races), health: fmtNum(r.health) }) + (r.kept ? t('example.remove.doneKept', { k: fmtNum(r.kept) }) : ''), { timeout: 9000, kind: 'success' });
+        const r = await db.removeExampleData() as { birds: number; pairs: number; races: number; health: number; kept: number; ownGone: { pairs: number; races: number; health: number; total: number } } | null;
+        if (r) toast(t('example.remove.done', { birds: fmtNum(r.birds), pairs: fmtNum(r.pairs), races: fmtNum(r.races), health: fmtNum(r.health) }) + (r.kept ? t('example.remove.doneKept', { k: fmtNum(r.kept) }) : '')
+          + (r.ownGone.total ? t('example.remove.doneOwn', { pairs: fmtNum(r.ownGone.pairs), races: fmtNum(r.ownGone.races), health: fmtNum(r.ownGone.health) }) : ''), { timeout: r.ownGone.total ? 12000 : 9000, kind: 'success' });
       }, (reason) => t('example.remove.failed', { reason }));
     } finally { setBusy(false); }
   }
