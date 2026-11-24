@@ -6,7 +6,7 @@ import * as db from '@/src/db.js';
 import { useZajilStore, selectHealth, selectBirds } from '@/src/db/react';
 import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { todayISO } from '@/src/dates.js';
-import { SyncRow, Loading, toast, undoToast, primaryRing, seasonLabel, pickerModel, SexChip, Tpl, initDB, useScrim, useScrollLock } from '@/src/components';
+import { SyncRow, Loading, toast, undoToast, primaryRing, birdName, seasonLabel, pickerModel, SexChip, Tpl, initDB, useScrim, useScrollLock } from '@/src/components';
 import s from './health.module.css';
 
 // Health — design/approved/health-v1.html, behaviour from js/views/health.js.
@@ -28,7 +28,7 @@ const EVENT_TYPES = ['vaccination', 'treatment', 'illness', 'check'];
 const DOT: Record<string, string> = { vaccination: 'vac', treatment: 'trt', illness: 'ill', check: 'chk' };
 const Health = db.Health as { save: (e: Ev) => Promise<Ev>; remove: (id: string) => Promise<Ev>; restore: (e: Ev) => Promise<void> };
 const getBird = (id: string) => db.getBird(id) as Bird | undefined;
-const nameOf = (b?: Bird) => (b ? (b.name || primaryRing(b) || b.id.slice(0, 8)) : '—');
+const nameOf = (b?: Bird) => (b ? birdName(b) : '—');   // B2: a placeholder parent by placeholderName()
 const plus365 = (iso: string) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + 365); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const daysBetween = (a: string, b: string) => Math.round((new Date(b + 'T00:00:00').getTime() - new Date(a + 'T00:00:00').getTime()) / 86400000);
 const Plus = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>;

@@ -85,7 +85,7 @@ export {
 export { BECAUSE_SHOWN, EXAMPLE_KEYS, ID_NAMESPACE, exampleIds, exampleLoftIds, examplePresence, loadExampleDataset, removeExampleData, uuid5 } from './example-data.js';
 
 // placeholder parents, clutches and the sibling link (RULED 2026-11-23; port-only, src/family.js)
-export { clutchMates, isPlaceholder, lineageBetween, listedBirds, planSiblingLink, siblingsOf } from './family.js';
+export { birdsImported, clutchMates, isPlaceholder, knownAncestors, lineageBetween, listedBirds, planSiblingLink, siblingsOf } from './family.js';
 
 // photo sync, stage 1 (RULED 2026-11-18; port-only, src/db/photos.js)
 export { PHOTO_BUCKET, PHOTO_DOWNLOAD_TIMEOUT_MS, PHOTO_MAX_BYTES, PHOTO_REMOVE_GRACE_MS, PHOTO_TYPES, fetchPhotoBytes, photoSyncState, photosAwaitingDownload, photosAwaitingUpload, runPhotoPass } from './db/photos.js';

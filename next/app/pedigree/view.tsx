@@ -9,7 +9,7 @@ import { pedigreeGrid } from '@/src/engine/pedigree.js';
 import { inbreeding, ancestorLoss, coiBreakdown } from '@/src/engine/coi.js';
 import { describeRelationship, pairingWarningLevel } from '@/src/engine/relationship.js';
 import { ringKey } from '@/src/engine/rings.js';
-import { SyncRow, Loading, COIValue, BirdLabel, SexChip, primaryRing, birdLabelText, seasonLabel, toast, downloadJSON, initDB } from '@/src/components';
+import { SyncRow, Loading, COIValue, BirdLabel, SexChip, primaryRing, birdLabelText, birdName, placeholderName, seasonLabel, toast, downloadJSON, initDB } from '@/src/components';
 import s from './pedigree.module.css';
 
 // Pedigree tree — design/approved/pedigree-tree-v1.html, behaviour from
@@ -51,14 +51,14 @@ const Node = ({ slot, g, child, isCommon }: { slot: Slot; g: number; child: Slot
     // RULED 2026-11-23: a PLACEHOLDER parent reads «غير معروف» in the language of the screen — never its stored name, which was
     // written in whatever language the app was in when the record was made. It is a record all the same: the box opens ITS
     // edit form, where the fancier can say who it is, and the common-ancestor dot is drawn as for any other bird.
-    const label = <span>{t('ped.unknownAncestor')}</span>;
+    const label = <span>{placeholderName(b, 'box')}</span>;
     return (
       <Link href={`/bird/edit?id=${b.id}`} className={`${s.node} ${size} ${s.unknown}`} aria-label={t('ped.unknown.add')} data-testid="node" data-gen={g} data-known="0" data-placeholder="1" data-common={isCommon(b.id) ? '1' : undefined}>
         {isCommon(b.id) ? <span className={s.ci}><i className={s.dot} />{label}</span> : label}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
       </Link>
     );
   }
-  const name = <bdi>{b.name || primaryRing(b) || b.id.slice(0, 8)}</bdi>;
+  const name = <bdi>{birdName(b)}</bdi>;
   return (
     <Link href={`/bird?id=${b.id}`} className={`${s.node} ${size}`} data-testid={g === 0 ? 'node-subject' : 'node'} data-gen={g} data-known="1" data-common={isCommon(b.id) ? '1' : undefined}>
       {g === 0 ? <><span className={s.nm}>{name}</span><Plate b={b} />{b.hatchDate && <span className={s.dt}>{fmtDate(b.hatchDate)}</span>}</>
@@ -83,11 +83,12 @@ export default function PedigreeView() {
 
   const depth = +((st.settings as Record<string, unknown>).coiDepth || 10);
   const grid = pedigreeGrid(getBird, id, gens) as Slot[][];
-  const grid4 = pedigreeGrid(getBird, id, 4) as Slot[][];
   const coi = (inbreeding(getBird, id, depth) as { coi: number }).coi;
-  const loss4 = ancestorLoss(getBird, id, 4) as { filled: number; total: number };
-  const avk = ancestorLoss(getBird, id, 5) as { avk: number; completeness: number };
-  let complete = 0; for (let g = 1; g < grid4.length; g++) { if (grid4[g].every((x) => x && x.bird)) complete = g; else break; }
+  // B3 (RULED 2026-11-24): a placeholder parent is a record, not a known ancestor — the two tiles, and the completeness
+  // beside AVK, count without them (src/family.js knownAncestors). The coefficient and AVK itself are not changed.
+  const known4 = db.knownAncestors(id, 4) as { filled: number; total: number; complete: number };
+  const known5 = db.knownAncestors(id, 5) as { completeness: number };
+  const avk = ancestorLoss(getBird, id, 5) as { avk: number };
   const seen = new Map<string, number>(); for (let g = 1; g < grid.length; g++) for (const x of grid[g]) if (x) seen.set(x.id, (seen.get(x.id) || 0) + 1);
   const isCommon = (bid: string) => (seen.get(bid) || 0) > 1;
   const br = bird.sireId && bird.damId ? (coiBreakdown(getBird, bird.sireId, bird.damId, depth) as { coi: number; contributions: Contribution[]; truncated?: boolean }) : null;
@@ -106,7 +107,7 @@ export default function PedigreeView() {
     <section className={s.screen}>
       <div className={s.top}><div className={s.bar}>
         <Link href={`/bird?id=${id}`} className={s['icon-btn']} aria-label={t('act.back')} data-testid="back-link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></Link>
-        <span className={s.crumb} data-testid="crumb"><bdi>{bird.name || primaryRing(bird) || id.slice(0, 8)}</bdi></span>
+        <span className={s.crumb} data-testid="crumb"><bdi>{birdName(bird)}</bdi></span>
         <div className={s.topicons}>
           <button type="button" className={s['icon-btn']} aria-label={t('act.share')} onClick={share} data-testid="share-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg></button>
           <button type="button" className={s['icon-btn']} aria-label={t('act.print')} onClick={() => window.print()} data-testid="print-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="7" /></svg></button>
@@ -116,12 +117,12 @@ export default function PedigreeView() {
         <div>
           <div className={s.eyebrow}>{loft?.name || t('loft.unnamed')} · {seasonLabel()}</div>
           <h1>{t('ped.title')}</h1>
-          <div className={s.subject} data-testid="subject"><span className={s.nm}><bdi>{bird.name || primaryRing(bird) || id.slice(0, 8)}</bdi></span><Plate b={bird} /><span className={s.sex}>{t('sex.' + (bird.sex || 'unknown'))}</span></div>
+          <div className={s.subject} data-testid="subject"><span className={s.nm}><bdi>{birdName(bird)}</bdi></span><Plate b={bird} /><span className={s.sex}>{t('sex.' + (bird.sex || 'unknown'))}</span></div>
         </div>
         <div className={s.tiles}>
           <div className={s.tile} data-testid="tile-coi"><div className={s.n}><COIValue coi={coi} mono={false} /></div><div className={s.l}>{t('tile.coi')}</div></div>
-          <div className={s.tile} data-testid="tile-ancestors"><div className={s.n}>{fmtNum(loss4.filled)}</div><div className={s.l}>{t('ped.tile.ancestors', { total: fmtNum(loss4.total) })}</div></div>
-          <div className={s.tile} data-testid="tile-complete"><div className={s.n}>{fmtNum(complete)}</div><div className={s.l}>{t('ped.tile.complete')}</div></div>
+          <div className={s.tile} data-testid="tile-ancestors"><div className={s.n}>{fmtNum(known4.filled)}</div><div className={s.l}>{t('ped.tile.ancestors', { total: fmtNum(known4.total) })}</div></div>
+          <div className={s.tile} data-testid="tile-complete"><div className={s.n}>{fmtNum(known4.complete)}</div><div className={s.l}>{t('ped.tile.complete')}</div></div>
         </div>
         <div className={s.actions}>
           <button type="button" className={`${s.btn} ${s['btn-outline']}`} onClick={() => window.print()}>{t('act.print')}</button>
@@ -157,7 +158,7 @@ export default function PedigreeView() {
               <>
                 <p data-testid="coi-headline">{t('ped.coiAtN', { n: fmtNum(depth) })}: <COIValue coi={br.coi} /></p>
                 <p className={s.muted}>{t('ped.coiCaveat')}</p>
-                <p><b>{t('ped.avk')}:</b> {fmtPercent(avk.avk / 100, 1)} <span className={s.muted}>({t('ped.completeness')}: {fmtPercent(avk.completeness / 100, 0)})</span></p>
+                <p><b>{t('ped.avk')}:</b> {fmtPercent(avk.avk / 100, 1)} <span className={s.muted} data-testid="avk-completeness">({t('ped.completeness')}: {fmtPercent(known5.completeness / 100, 0)})</span></p>
                 <p className={s.muted}>{t('ped.avkHint')}</p>
                 {br.truncated && <p>{t('ped.breakdownTruncated')}</p>}
                 {br.contributions.length ? (

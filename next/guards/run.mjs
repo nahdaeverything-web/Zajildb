@@ -412,12 +412,14 @@ const guards = {
        + 'record it drops (replacePreview() states the counts first), so the replacement travels instead of '
        + 'being undone by the next pull. Port-only; vanilla is not changed. THE PHOTO SET (RULED 2026-11-16): a '
        + 'replace deletes a photo only with its bird, and an import rejects a media row that carries no bytes '
-       + '(carriesBytes) instead of fetching its address. STAGE 3 (ORDERED 2026-11-20): a MERGE-import gives a media row this device holds WITHOUT bytes the file\'s bytes — bytes only, no op.'],
+       + '(carriesBytes) instead of fetching its address. STAGE 3 (ORDERED 2026-11-20): a MERGE-import gives a media row this device holds WITHOUT bytes the file\'s bytes — bytes only, no op. '
+       + 'REAL BIRDS ONLY (RULED 2026-11-24, B7): importAll() counts the placeholder parents among the birds it wrote apart (counts.placeholders), and '
+       + 'replacePreview() counts a dropped placeholder among the other records and never names one as a bird that comes back.'],
       ['src/db.js',
        'the facade must re-export exportAllBlob and replacePreview (because src/db/io.js is divergent), '
        + 'ensureCurrentLoft (RF-14) and the example-data module src/example-data.js '
        + '(RULED 2026-10-14, port-only), and the photo-sync module src/db/photos.js (RULED 2026-11-18, port-only). '
-       + 'PLACEHOLDER PARENTS AND THE SIBLING LINK (RULED 2026-11-23): it re-exports src/family.js (port-only) and checkBirds / saveBirds.'],
+       + 'PLACEHOLDER PARENTS AND THE SIBLING LINK (RULED 2026-11-23, 2026-11-24): it re-exports src/family.js (port-only) and checkBirds / saveBirds.'],
       ['src/db/storage.js',
        'RF-14 (RULED 2026-10-14): ensureCurrentLoft() — a stored currentLoftId is validated at boot '
        + 'instead of trusted; a dangling one adopts the single remaining loft or gets a fresh pristine '
@@ -442,7 +444,9 @@ const guards = {
        + 'removal in that same transaction (photoRemovals, a device setting). PLACEHOLDER PARENTS (RULED 2026-11-23): newBird() '
        + 'makes a placeholder external; deleteBird() deletes, in its one transaction, every placeholder parent left with no other '
        + 'child, and restoreBird() puts them back. THE SIBLING LINK (RULED 2026-11-23): saveBirds() writes several birds and their '
-       + 'operations in one transaction, checkBirds() judges them as one set; every validation is handed the pairs, for the clutch warning.'],
+       + 'operations in one transaction, checkBirds() judges them as one set; every validation is handed the pairs, for the clutch warning. '
+       + 'B4 AND B5 (RULED 2026-11-24): saveBird() and saveBirds() delete, in the save\'s own transaction, a placeholder parent the save leaves with no child '
+       + '(placeholdersLeft); neither they nor deleteBird() delete one that holds anything of its own (holdsOwn) — its flag is cleared instead, and restoreBird() puts it back.'],
       ['src/db/sync.js',
        'the account collision (RF-13): signIn() compares the incoming user with the owner of '
        + 'the data on the device and stops before storing a session that is not the same '

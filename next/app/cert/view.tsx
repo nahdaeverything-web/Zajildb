@@ -6,8 +6,8 @@ import { useZajilStore, selectBird, useMediaForBird } from '@/src/db/react';
 import { t, fmtDate, fmtNum, fmtPercent, getLang, configure } from '@/src/i18n.ext.js';
 import { pedigreeGrid } from '@/src/engine/pedigree.js';
 import { todayISO } from '@/src/dates.js';
-import { inbreeding, ancestorLoss } from '@/src/engine/coi.js';
-import { Loading, toast, downloadJSON, downscaleImage, storedName, primaryRing, birdLabelText, initDB } from '@/src/components';
+import { inbreeding } from '@/src/engine/coi.js';
+import { Loading, toast, downloadJSON, downscaleImage, storedName, primaryRing, birdLabelText, placeholderName, initDB } from '@/src/components';
 import s from './cert.module.css';
 
 // Certificate — design/approved/certificate-v1.html, wiring from js/views/cert.js.
@@ -294,7 +294,7 @@ function Panel(p: ScreenProps & { slots: SlotMap; urls: Record<string, string> }
                     {url ? <img src={url} alt="" /> : <span>{away ? '' : who}</span>}
                   </div>
                   <div className={s.tx}>
-                    <div className={s.t}>{slot.label} · <bdi data-testid={`who-${who}`}>{slot.bird && !db.isPlaceholder(slot.bird) ? birdLabelText(slot.bird) : t('common.unknown')}</bdi></div>
+                    <div className={s.t}>{slot.label} · <bdi data-testid={`who-${who}`}>{!slot.bird ? t('common.unknown') : db.isPlaceholder(slot.bird) ? placeholderName(slot.bird, who === 'bird' ? 'text' : 'box') : birdLabelText(slot.bird)}</bdi></div>
                     <div className={s.d} data-testid={`d-${who}`}>
                       {away ? <>{AWAY_ICON}{t('cert.photoAway')}</> : slot.media ? t('cert.fromBird') : t('cert.noPhoto')}
                     </div>
@@ -462,7 +462,8 @@ function Sheet(p: ScreenProps & { grid: Slot[][]; slots: SlotMap; urls: Record<s
     // generations of ancestors (the spec's own 5 generations · 30 ancestors).
     const anc = depth - 1;
     const { coi } = inbreeding(db.getBird, bird.id, anc) as { coi: number };
-    const loss = ancestorLoss(db.getBird, bird.id, anc) as { filled: number; total: number };
+    // B3 (RULED 2026-11-24) — applied here too, PROPOSED: a placeholder parent is not one of the «{f} من {tot} سلفًا»
+    const loss = db.knownAncestors(bird.id, anc) as { filled: number; total: number };
     // the LOCAL calendar date: a certificate printed at 01:00 in Jordan must carry
     // today's date, not yesterday's (src/dates.js, and the no-utc-date guard)
     const today = todayISO();
@@ -488,7 +489,7 @@ function Sheet(p: ScreenProps & { grid: Slot[][]; slots: SlotMap; urls: Record<s
       // RULED 2026-11-23: a PLACEHOLDER parent prints «غير معروف» in the certificate's language — never its stored name. The
       // common-ancestor dot and a parent's photo box are drawn as for any other bird.
       const ph = db.isPlaceholder(b);
-      const nm = <span className={s.nm}>{ph ? t('common.unknown') : <bdi>{birdLabelText(b)}</bdi>}</span>;
+      const nm = <span className={s.nm}>{ph ? placeholderName(b, 'box') : <bdi>{birdLabelText(b)}</bdi>}</span>;
       const name = common(b.id) ? <span className={s.ci}><i className={s.dot} />{nm}</span> : nm;
       if (g === 2) {
         const who = i === 0 ? 'sire' : 'dam';

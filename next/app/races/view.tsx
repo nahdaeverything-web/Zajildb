@@ -7,7 +7,7 @@ import { useZajilStore, selectRaces, selectBirds } from '@/src/db/react';
 import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { resultQualifies, birdEligibility, FCI_MIN_FANCIERS, FCI_MIN_BIRDS } from '@/src/engine/fci.js';
 import { velocityMPM, haversineMetres } from '@/src/engine/velocity.js';
-import { SyncRow, Loading, toast, undoToast, primaryRing, seasonLabel, seasonStart, pickerModel, SexChip, Tpl, initDB, useScrim, useScrollLock } from '@/src/components';
+import { SyncRow, Loading, toast, undoToast, primaryRing, birdName, seasonLabel, seasonStart, pickerModel, SexChip, Tpl, initDB, useScrim, useScrollLock } from '@/src/components';
 import s from './races.module.css';
 
 // Races — design/approved/races-v1.html, behaviour from js/views/races.js.
@@ -32,7 +32,7 @@ type Race = { id: string; birdId: string; date?: string; raceName?: string; race
 const RACE_TYPES = ['training', 'club', 'federation', 'national', 'one-loft', 'international'];
 const Races = db.Races as { save: (r: Race) => Promise<Race>; remove: (id: string) => Promise<Race>; restore: (r: Race) => Promise<void> };
 const getBird = (id: string) => db.getBird(id) as Bird | undefined;
-const nameOf = (b?: Bird) => (b ? (b.name || primaryRing(b) || b.id.slice(0, 8)) : '—');
+const nameOf = (b?: Bird) => (b ? birdName(b) : '—');   // B2: a placeholder parent by placeholderName()
 const yy = (b: Bird) => { const r = (b.rings || []).find((x) => x.type === 'FCI') || (b.rings || [])[0]; return r && r.year ? String(r.year).slice(-2) : ''; };
 /** races.js:135 parseCoords — two numbers, any separator. */
 const parseCoords = (v: string) => { const m = String(v || '').trim().match(/(-?\d+(?:\.\d+)?)[\s,،;]+(-?\d+(?:\.\d+)?)/); return m && Math.abs(+m[1]) <= 90 && Math.abs(+m[2]) <= 180 ? { lat: +m[1], lon: +m[2] } : null; };

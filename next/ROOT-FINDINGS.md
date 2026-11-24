@@ -4824,3 +4824,167 @@ log. Seventeen mutants, one harness build and one suite each, 300 s limits (`sib
 | 11 | M-notx | saveBirds() writes each bird in its own transaction | 1 |
 | 11 | M-partial | saveBirds() writes a record that failed validation | 1 |
 | 13 | M-nolists | the profile draws no sibling lists | 3 |
+
+---
+
+## 2026-11-24 — placeholder parents: the rulings on the report, B1–B8 (BUILT, NOT DEPLOYED; branch `feat/siblings-clutch`, commit 3)
+
+**Rulings on the report of 2026-11-23.** Both commits accepted. Commit 2's first proposal — where the other bird lacks a
+parent this bird has, the other bird is given this bird's — is accepted and replaces the wording of item 11.
+`src/engine/validate.js` as a declared divergent file is accepted. Every other listed proposal is accepted except where
+B1–B8 change it. The one-time marking of legacy placeholders is deferred and is not in this commit.
+
+**B1 — the teaching-data removal counts real birds, and «لا تُحذف» is true of what it counts** (`src/example-data.js`).
+`own` and `ownBirds` leave out placeholder parents; `moved` counts real birds only (a placeholder that is still here is
+re-filed and not counted). On the first-run device measured on 2026-11-23 — the teaching loft current, one bird of the
+fancier's and four placeholder parents filed in it — the question said 5 and the removal moved 3 and deleted 2; it now
+says 1, moves 1, and the record it counts is the one that stays.
+
+**B2 — one name** (`src/components/BirdBits.tsx`: `placeholderName()`, with `birdName()`, `birdLabelText()`,
+`BirdLabel` and `problemParams()` going through it). A box of the tree, the mini pedigree or the certificate reads
+«غير معروف»; everywhere else that prints a bird's name reads «أب غير معروف» / «أم غير معروفة» by sex, in the language
+of the screen, whatever the record's stored name is: the form's parent slots, the profile's «الأب» / «الأم» rows, the
+record's own profile, pedigree page and certificate, the COI breakdown table, validation messages, the duplicate-ring
+list and its delete question, the sibling link's questions.
+
+**B3 — a placeholder is not a known ancestor** (`src/family.js`: `knownAncestors()`). The pedigree's «{n} سلف من 30» and
+«أجيال مكتملة» tiles and the profile's «اكتمال الشجرة» count without placeholders. The coefficient of inbreeding and AVK
+are not changed, and no engine file was touched.
+
+**B4 — a save that leaves a placeholder with no child** (`src/db/records.js`: `parentsDropped()`,
+`placeholdersLeft()`, `settlePlaceholders()`, `writeBirds()`). When `saveBird()` or `saveBirds()` changes or clears a
+parent and a placeholder is left with no child, it is deleted in that save's own transaction, with its operation and
+tombstone, and so is a placeholder parent of its own left childless in turn. A save that drops no placeholder is
+written exactly as before. `deleteBird()` now uses the same rule (it was item 6's own loop).
+
+**B5 — one that holds anything of its own is never deleted that way** (`holdsOwn()`). Not by item 6 and not by B4: its
+flag is cleared in the same transaction and it stays, a reference bird the register lists. The undo of a deletion puts
+the flag back. This replaces commit 1's seventh proposal (a placeholder that goes took its own results, health events,
+pairs and photos with it): one that goes now holds none.
+
+**B6 — a held sibling link whose other bird is gone** (`app/bird/form.tsx`). The save stops, names the bird, and writes
+nothing; the notice on the form says the same as soon as the bird goes, and offers «إلغاء الربط».
+
+**B7 — the other counts** (`src/db/io.js`, `app/tools/parts.tsx`, `app/birds/view.tsx`). The import toast, the restore
+toast and the two teaching loaders' toast count real birds (`counts.placeholders`, `birdsImported()`); the replace
+question counts a dropped placeholder among the other records, never among the birds; the restore question neither
+counts nor names a placeholder among the birds that come back.
+
+**B8.** The comment in `app/bird/form.tsx` names the button it is («تأكيد»). The introduction of `PORT-COMPLETE.md`
+states seven declared exceptions and ten identical files of seventeen, measured with `cmp` over the guard's own list.
+
+**Chosen without a ruling — PROPOSED:**
+
+1. **B1, beyond placeholders.** `own` also leaves out a result, a health event or a pair of the fancier's that names a
+   teaching bird the removal deletes: `deleteBird()` removes it with that bird, so «لا تُحذف» was false of it. Measured
+   by M-b1-cascade: of five such records in the teaching loft the question counted 5 and 3 were deleted; it now counts
+   the 2 that stay. **Not built:** those three are still not among the question's deleted counts, which are the
+   datasets' own records.
+2. **B1.** A placeholder that B5 frees during the removal is a real bird by the time it is re-filed, and is counted in
+   `moved`. [read from code]
+3. **B2.** A placeholder whose sex is not recorded reads «غير معروف». The certificate's parent photo rows are boxes;
+   the row and the heading of the certificate's own subject read by sex.
+4. **B2.** The same helper now also names a bird on the races, health, statistics, breeding and pair screens, in the
+   delete questions, and in the removal's «بسبب» list. No picker offers a placeholder, so none is reachable there by
+   the form; a record arriving by import or sync is. [read from code; not in a suite]
+5. **B3.** Also applied to the completeness figure beside AVK on the pedigree page, and to the certificate's
+   «{f} من {tot} سلفًا» — neither is named in the ruling. An ancestor recorded BEHIND a placeholder counts as known.
+6. **B4.** Applies to every save through the boundary — the breeding screen's «ربط طير مسجَّل» included — and not to an
+   import or a pulled row, which apply records as they are.
+7. **B5, what "its own" compares.** Every field of the record except its identity and bookkeeping (`id`, `loftId`,
+   `createdAt`, `updatedAt`, `deviceId`, `provenance`), `name` and `sex`: any that is not empty, or not what a
+   placeholder is made with (a status other than `reference`, for one). `name` and `sex` are not compared — the record
+   does not keep what it was made with, and a rename through the form already clears the flag. A parent that is itself
+   a placeholder is not something it holds (so item 6's chain still goes together); a recorded parent is. An egg that
+   names it as its chick counts as a pair.
+8. **B5.** The record that stays keeps the name stored on it, which is now shown: «أب غير معروف», or "Unknown sire"
+   if it was made in English.
+9. **B6.** The notice changes while the form is open and carries «إلغاء الربط» for the menu's link too (it had none);
+   a link whose other bird has become a placeholder is treated as gone; the check is made again just before the write.
+10. **B7.** `counts.birds` is unchanged and `counts.placeholders` is added. The restore's «يُحذف {n} سجلًا» counts
+    records, placeholders included.
+
+**AVK — what it does with placeholders (not changed, as ruled).** [read from code, measured] `ancestorLoss()` counts a
+place as filled when the child names an id there, and counts the different ids; a placeholder is an id like any other.
+Measured: a bird with two placeholder parents and nothing else has 2 filled places of 62 and 2 different ancestors, AVK
+100.0%; a youngster of two full siblings who share two placeholder parents has 6 filled and 4 different, AVK 66.7%.
+Without the placeholders that youngster would read 100.0% beside a coefficient of 25.0%. **Proposed: leave it.** AVK
+measures repeats among the ancestors recorded, and "the same unknown father, twice" is exactly what a shared placeholder
+records — the reason the coefficient was left alone. The one oddity is 100.0% on a bird with no known ancestor, which is
+what any bird with no parents reads today.
+
+**Found while building — not built, for rulings:**
+
+- **Across devices, B4 and item 6 can leave a link to nothing.** Measured with two devices of one account: device 2,
+  offline, recorded a second child for a placeholder father; device 1 cleared the first child's father, which deleted
+  the placeholder there; after both synced, the second child names a father no device holds
+  (`integrity.birdParent` on both). Sync is per record, and a pulled deletion does not look at who names the record.
+  The same was already possible through item 6 (delete the last child on one device). Proposal: the device that pulls
+  the deletion of a placeholder while a bird of its own names it puts the placeholder back.
+- **The name field of a placeholder's own edit form** still holds the stored name — it is the value being edited, and
+  item 5 compares against it. Typing the label the app shows («أب غير معروف» over a stored "Unknown sire") counts as a
+  new name and clears the flag. Proposal: show the field empty for a placeholder, the label as its hint, and clear the
+  flag when anything is typed.
+- **Not covered by B4:** a parent changed by an import or by a pulled row leaves the placeholder where it is.
+
+**New string — one, PROPOSED, through the typography scan:**
+
+| key | Arabic | English |
+|---|---|---|
+| `sib.gone` | «لم يعد «{name}» مسجَّلًا، فلا يمكن حفظ هذا الطير أخًا أو أختًا له. ألغِ الربط أو اختر طيرًا آخر.» | “{name}” is no longer recorded, so this bird cannot be saved as its sibling. Remove the link or choose another bird. |
+
+No existing string was changed. `bird.unknownSire`, `bird.unknownDam` and `common.unknown` are now printed in more
+places (B2); their texts are as they were.
+
+**Proof.** Two new suites at 390 px: `tests/e2e/screens/placeholder_rulings.py` (B2–B6, 48 checks) and
+`tests/e2e/screens/placeholder_counts.py` (B1 and B7, 17 checks). «One transaction» is measured directly: every put and
+delete is tagged with the IndexedDB transaction it ran in, and the bird's record, the placeholder's deletion and its
+tombstone carry the same one. Thirty-nine mutants, one harness build and one suite each, 300 s limits, every one red at
+the check that names it, none with a traceback (`sib-c3-mutants.log`, `sib-c3-mutants-b.log`):
+
+| ruling | mutant | what it does | red at |
+|---|---|---|---|
+| B1 | M-b1-own | the removal counts placeholder parents among the fancier's records | 2 |
+| B1 | M-b1-moved | `moved` counts the placeholders it re-files | 1 |
+| B1 | M-b1-cascade | `own` counts records the removal deletes with a teaching bird | 1 |
+| B2 | M-b2-name | `birdName()` ignores the flag | 8 |
+| B2 | M-b2-slot | the form's parent slot prints the stored name | 2 |
+| B2 | M-b2-row | the profile's parent rows print the stored name | 1 |
+| B2 | M-b2-title | the profile's heading prints the stored name | 2 |
+| B2 | M-b2-pedpage | the pedigree page's bar prints the stored name | 1 |
+| B2 | M-b2-box | a box reads by sex instead of «غير معروف» | 4 |
+| B2 | M-b2-label | `birdLabelText()` ignores the flag (the certificate's heading, the questions) | 2 |
+| B2 | M-b2-biglabel | `BirdLabel` ignores the flag (the COI breakdown table) | 1 |
+| B2 | M-b2-val | a validation message keeps the stored name | 1 |
+| B2 | M-b2-dup | the duplicate-ring list prints the stored name | 1 |
+| B3 | M-b3-known | `knownAncestors()` counts placeholders | 6 |
+| B3 | M-b3-tiles | the pedigree's tile reads the engine's count | 3 |
+| B3 | M-b3-profile | the profile's completeness reads the engine's count | 2 |
+| B3 (proposed) | M-b3-cert | the certificate reads the engine's count | 1 |
+| B4 | M-b4-off | a save never looks for a placeholder it drops | 8 |
+| B4 | M-b4-greedy | a placeholder another bird still names is taken as childless | 2 |
+| B4 | M-b4-chain | its own placeholder parents are not followed | 1 |
+| B4 | M-b4-split | the placeholder is deleted in a second transaction | 3 |
+| B4 | M-b4-link | `saveBirds()` (the sibling link) does not apply the rule | 1 |
+| B5 | M-b5-off | nothing counts as its own | 10 |
+| B5 | M-b5-fields | its fields are not looked at | 7 |
+| B5 | M-b5-media | its photos and documents are not looked at | 2 |
+| B5 | M-b5-records | its results, health events and pairs are not looked at | 2 |
+| B5 | M-b5-parent | a recorded parent of its own is not looked at | 2 |
+| B5 | M-b5-keepflag | it stays, but keeps the flag | 8 |
+| B5 | M-b5-undo | the undo does not put the flag back | 1 |
+| B6 | M-b6-drop | the link is dropped and the bird saved without it | 3 |
+| B6 | M-b6-notice | the notice does not change when the bird goes | 2 |
+| B7 | M-b7-toast | `birdsImported()` returns every bird record | 4 |
+| B7 | M-b7-count | the import does not count placeholders apart | 4 |
+| B7 | M-b7-replace | the replace question counts placeholders as birds | 1 |
+| B7 | M-b7-returning | the restore question lists placeholders as birds that come back | 1 |
+| B7 | M-b7-site-import | the import toast prints every bird record | 1 |
+| B7 | M-b7-site-restore | the restore toast prints every bird record | 1 |
+| B7 | M-b7-site-loader | the loader's toast in الأدوات prints every bird record | 1 |
+| B7 | M-b7-site-empty | the loader's toast on the empty register prints every bird record | 1 |
+
+Two reversals. M-b2-label was first red at one check, not two: the fixture for the sibling question held an Arabic
+stored name, so that check could not tell the helper from the record. The fixture was given an English one. My first
+edit of it commented out the rest of its line, and the re-run ended in a traceback, which is not proof; the line was
+repaired and the mutant run again — red at two named checks. No other mutant's checks read that fixture's name.

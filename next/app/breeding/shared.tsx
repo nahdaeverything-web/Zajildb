@@ -7,7 +7,7 @@ import { validatePairSexes } from '@/src/engine/validate.js';
 import { describeRelationship, pairingWarningLevel } from '@/src/engine/relationship.js';
 import { parseRing } from '@/src/engine/rings.js';
 import { todayISO } from '@/src/dates.js';
-import { toast, undoToast, primaryRing, birdLabelText, COIValue, SexChip, pickerModel, createFromQuery, useScrim, useScrollLock } from '@/src/components';
+import { toast, undoToast, primaryRing, birdLabelText, birdName, problemParams, COIValue, SexChip, pickerModel, createFromQuery, useScrim, useScrollLock } from '@/src/components';
 import s from './breeding.module.css';
 
 // Breeding — design/approved/breeding-v1.html, behaviour from js/views/breeding.js.
@@ -24,7 +24,7 @@ export const getBird = (id: string | null | undefined) => (id ? (db.getBird(id) 
 const Pairs = db.Pairs as { save: (p: Pair) => Promise<Pair>; remove: (id: string) => Promise<Pair>; restore: (p: Pair) => Promise<void> };
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 const yy = (b: Bird) => { const r = (b.rings || []).find((x) => x.type === 'FCI') || (b.rings || [])[0]; return r && r.year ? String(r.year).slice(-2) : ''; };
-export const nameOf = (b?: Bird) => (b ? (b.name || primaryRing(b) || b.id.slice(0, 8)) : t('common.unknown'));
+export const nameOf = (b?: Bird) => (b ? birdName(b) : t('common.unknown'));   // B2: a placeholder parent by placeholderName()
 
 export const Plate = ({ b }: { b?: Bird }) => { const raw = b ? primaryRing(b) : ''; return raw ? <span className={s.plate}><span className={s.yr}>{yy(b!)}</span><span className={s.no}>{raw}</span></span> : null; };
 export const Chev = () => <svg className={s.chev} viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>;
@@ -210,7 +210,7 @@ export function RingSheet({ pair, roundIndex, egg, onClose, onDone }: { pair: Pa
   const build = () => { const chick = db.newBird({ name: name.trim(), sex, hatchDate: egg.hatchDate || '', status: 'young bird', sireId: pair.sireId, damId: pair.damId, rings: ring.trim() ? [parseRing(ring.trim())] : [] }) as Bird; if (sire && sire.strain) chick.strain = sire.strain; return chick; };
   const warns: string[] = [];
   if (ring.trim()) {
-    for (const w of (db.checkBird(build()) as { warnings: Problem[] }).warnings) { const p = { ...(w.params || {}) } as Record<string, unknown>; if (p.otherId && !p.otherName) { const ob = getBird(p.otherId as string); p.otherName = ob ? ob.name || '' : ''; } warns.push(t(w.key, p)); }
+    for (const w of (db.checkBird(build()) as { warnings: Problem[] }).warnings) { const p = problemParams(w.params, getBird); if (p.otherId && !p.otherName) { const ob = getBird(p.otherId as string); p.otherName = ob ? ob.name || '' : ''; } warns.push(t(w.key, p)); }
     const ry = (parseRing(ring.trim()) as { year?: number | null }).year; const hy = egg.hatchDate ? +egg.hatchDate.slice(0, 4) : null;
     if (ry && hy && ry !== hy) warns.push(t('br.warn.ringYear', { y: String(ry), h: String(hy) }));   // spec's ring-year check
   }

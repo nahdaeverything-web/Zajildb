@@ -13,7 +13,7 @@
 // computed from the two keys and the one namespace. A wrong derivation finds nothing to remove; it
 // never removes the wrong thing.
 import {
-  Health, Lofts, Pairs, Races, REFERENCE_STATUS, deleteBird, emitChange, idbGetAll, nowISO, saveBird, state,
+  Health, Lofts, Pairs, Races, REFERENCE_STATUS, deleteBird, emitChange, idbGetAll, isPlaceholder, nowISO, saveBird, state,
 } from './db.js';
 import { EXAMPLE_ID_KEYS } from './example-ids.js';
 import { clearTombstone, getTombstone } from './db/oplog.js';
@@ -75,6 +75,14 @@ export const BECAUSE_SHOWN = 5;
  * `because` is the birds that cause it: every bird that is not example data and has an example bird as a parent.
  * `own` is everything filed under a dataset loft that is NOT a dataset record: the fancier's records, re-filed to the
  * loft that is current once the dataset lofts are gone (RF-14's recovery decides which), never deleted.
+ *
+ * B1 (RULED 2026-11-24): `own` AND `ownBirds` COUNT WHAT THE QUESTION PROMISES — «لا تُحذف، بل تُنقل إلى لوفتك» must be
+ * true of every record they count. So they leave out:
+ *   · placeholder parents (src/family.js): they are not birds a fancier counts, and one whose children are all
+ *     teaching birds goes with the last of them (deleteBird);
+ *   · a result, a health event or a pair of the fancier's that names a teaching bird this removal deletes: deleteBird
+ *     removes it with that bird. (It was counted here, and then deleted, before this ruling. It is still not among the
+ *     question's deleted counts, which are the datasets' own records — reported, for a ruling.)
  */
 export async function examplePresence() {
   const IDS = await exampleIds();
@@ -109,7 +117,11 @@ export async function examplePresence() {
   const still = present.filter((id) => state.lofts.has(id));
   if (present.length && !still.length) return null;
   const STILL = new Set(still);
-  const own = birds.own.length + pairs.own.length + races.own.length + health.own.length;
+  // B1: only what the removal leaves in place — see the note above
+  const goes = (id) => example.has(id) && !keep.has(id);                 // a teaching bird this removal deletes
+  const ownBirds = birds.own.filter((b) => !isPlaceholder(b)).length;
+  const own = ownBirds + pairs.own.filter((r) => !goes(r.sireId) && !goes(r.damId)).length
+    + races.own.filter((r) => !goes(r.birdId)).length + health.own.filter((r) => !goes(r.birdId)).length;
   return {
     ids: still,
     lofts: still.map((id) => ({ id, name: state.lofts.get(id).name || '',
@@ -120,7 +132,7 @@ export async function examplePresence() {
     // there is one, the question names no loft at all — naming one would claim a place that is not the whole truth.
     outside: [birds, pairs, races, health].reduce((n, k) => n + k.ex.filter((r) => !STILL.has(r.loftId)).length, 0),
     birds: birds.ex.length - keep.size, pairs: pairs.ex.length, races: races.ex.length, health: health.ex.length, media: media.length,
-    kept: keep.size, keep, because, own, ownBirds: birds.own.length,
+    kept: keep.size, keep, because, own, ownBirds,
     current: SET.has(state.currentLoftId),
   };
 }
@@ -164,7 +176,9 @@ export async function removeExampleData() {
   const target = state.currentLoftId;
   let moved = 0;
   const refile = async (map, api) => { for (const r of [...map.values()]) { if (SET.has(r.loftId)) { const patch = { loftId: target }; mayAlter(patch); await api.save({ ...r, ...patch }); moved++; } } };
-  for (const b of [...state.birds.values()]) { if (SET.has(b.loftId)) { await resave(b.id, { loftId: target }); moved++; } }
+  // B1 (RULED 2026-11-24): `moved` counts real birds only. A placeholder parent that is still here — a bird of the
+  // fancier's names it — is re-filed with the rest, and not counted.
+  for (const b of [...state.birds.values()]) { if (SET.has(b.loftId)) { await resave(b.id, { loftId: target }); if (!isPlaceholder(b)) moved++; } }
   await refile(state.pairs, Pairs); await refile(state.raceResults, Races); await refile(state.healthEvents, Health);
   emitChange({ type: 'import' });
   // what was removed in all — the presence counts; the sweep only catches what deleteBird's cascade did not reach

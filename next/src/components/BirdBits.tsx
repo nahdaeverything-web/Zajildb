@@ -3,7 +3,7 @@ import s from './shared.module.css';
 
 // Small pieces every screen reuses, ported from js/ui.js one-to-one.
 type Ring = { raw?: string; type?: string; year?: string | number | null };   // parseRing yields year: null when absent
-type BirdLike = { id: string; name?: string; sex?: string; rings?: Ring[] } | null | undefined;
+type BirdLike = { id: string; name?: string; sex?: string; placeholder?: boolean; rings?: Ring[] } | null | undefined;
 
 /** ui.js primaryRing: the FCI ring if there is one, else the first. */
 export function primaryRing(b: BirdLike): string {
@@ -11,14 +11,40 @@ export function primaryRing(b: BirdLike): string {
   const fci = b.rings.find((r) => r.type === 'FCI');
   return (fci || b.rings[0]).raw || '';
 }
-/** ui.js birdLabelText: ring · name, or the first 8 chars of the id. */
+/**
+ * B2 (RULED 2026-11-24): THE ONE NAME A PLACEHOLDER PARENT IS PRINTED UNDER. A placeholder (src/family.js) is the record
+ * the app makes for a parent nobody knows; the name stored on it was written in whatever language the app was in that
+ * day, and is never shown. What is shown comes from the flag and the language of the screen, here and nowhere else:
+ *   · `box`  — a box of the pedigree tree, the profile's mini pedigree or the certificate: «غير معروف» / "Unknown";
+ *   · `text` — everywhere else a bird's name is printed: «أب غير معروف» / «أم غير معروفة» by its sex
+ *              ("Unknown sire" / "Unknown dam"), and «غير معروف» for one whose sex is not recorded.
+ */
+export function placeholderName(b: BirdLike, where: 'box' | 'text' = 'text'): string {
+  if (where === 'box' || !b) return t('common.unknown');
+  return b.sex === 'cock' ? t('bird.unknownSire') : b.sex === 'hen' ? t('bird.unknownDam') : t('common.unknown');
+}
+/** A bird's name where a screen prints one: its name, else its ring, else the first 8 chars of its id — a placeholder parent by placeholderName(). */
+export function birdName(b: NonNullable<BirdLike>): string {
+  if (b.placeholder === true) return placeholderName(b);
+  return b.name || primaryRing(b) || b.id.slice(0, 8);
+}
+/** B2: a validation problem's parameters, with a placeholder parent it names (`otherId`) printed by placeholderName() — never the stored name the engine read. */
+export function problemParams(params: Record<string, unknown> | undefined, getBird: (id: string) => BirdLike): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...(params || {}) };
+  const other = typeof out.otherId === 'string' ? getBird(out.otherId) : null;
+  if (other && other.placeholder === true) out.otherName = placeholderName(other);
+  return out;
+}
+/** ui.js birdLabelText: ring · name, or the first 8 chars of the id. A placeholder parent: placeholderName(). */
 export function birdLabelText(b: BirdLike): string {
   if (!b) return t('common.unknown');
+  if (b.placeholder === true) return placeholderName(b);
   return [primaryRing(b), b.name].filter(Boolean).join(' · ') || b.id.slice(0, 8);
 }
-/** ui.js birdLabelHTML: ring (mono, ltr) · name (bdi). */
+/** ui.js birdLabelHTML: ring (mono, ltr) · name (bdi). A placeholder parent: placeholderName(). */
 export function BirdLabel({ bird }: { bird: BirdLike }) {
   if (!bird) return <span className={s.muted}>{t('common.unknown')}</span>;
+  if (bird.placeholder === true) return <bdi>{placeholderName(bird)}</bdi>;
   const ring = primaryRing(bird);
   if (!ring && !bird.name) return <span className={s.muted}>{bird.id.slice(0, 8)}</span>;
   return (<>{ring && <span dangerouslySetInnerHTML={{ __html: ringHTML(ring) }} />}{ring && bird.name ? ' · ' : ''}{bird.name && <bdi>{bird.name}</bdi>}</>);

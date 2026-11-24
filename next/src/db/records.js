@@ -110,6 +110,17 @@ export async function saveBird(bird, { allowWarnings = false, force = false } = 
   const verdict = classifySave(bird, getBird, allBirds(), { allowWarnings, force, pairs: state.pairs.values() });
   if (!verdict.ok) throw new ValidationError(verdict.errors, verdict.warnings);
   const previous = state.birds.get(bird.id) || null;
+  // B4 (RULED 2026-11-24): a save that changes or clears a parent may leave a placeholder parent with no child. It goes
+  // in THIS save's transaction (placeholdersLeft, below). A save that drops no placeholder is written as it always was.
+  const dropped = parentsDropped([bird]);
+  if (dropped.length) {
+    const left = await placeholdersLeft(dropped, new Set(), new Map([[bird.id, bird]]));
+    if (left.going.length || left.freed.length) {
+      await writeBirds([bird], left);
+      emitChange({ type: 'bird', id: bird.id });
+      return bird;
+    }
+  }
   stamp(bird);
   await idbPut('birds', bird);
   state.birds.set(bird.id, bird);
@@ -135,16 +146,11 @@ export async function saveBirds(entries) {
     const verdict = classifySave(bird, view.get, view.all, { allowWarnings, pairs: state.pairs.values() });
     if (!verdict.ok) throw new ValidationError(verdict.errors, verdict.warnings);
   }
-  await atomicWrite(['birds'], async (w) => {
-    for (const { bird } of entries) {
-      const previous = state.birds.get(bird.id) || null;
-      stamp(bird);
-      await w.put('birds', bird);
-      w.then(() => state.birds.set(bird.id, bird));
-      await w.log({ origin: 'user', store: 'birds', op: 'put', recordId: bird.id,
-                    record: bird, changed: diffFields(previous, bird) });
-    }
-  });
+  // B4 (RULED 2026-11-24): a placeholder parent this save leaves with no child goes in the same transaction
+  const birds = entries.map((e) => e.bird);
+  const dropped = parentsDropped(birds);
+  const left = dropped.length ? await placeholdersLeft(dropped, new Set(), new Map(birds.map((b) => [b.id, b]))) : NONE_LEFT;
+  await writeBirds(birds, left);
   for (const { bird } of entries) emitChange({ type: 'bird', id: bird.id });
   return entries.map((e) => e.bird);
 }
@@ -195,27 +201,142 @@ async function atomicWrite(stores, fn) {
   return out;
 }
 
+// ── PLACEHOLDER PARENTS LEFT WITH NO CHILD (RULED 2026-11-23, item 6; RULED 2026-11-24, B4 and B5) ──
+// A placeholder parent is the record the app made for a parent nobody knows (src/family.js). Nothing lists one and no
+// picker offers one, so one that no bird names any more can be neither reached nor removed. It therefore goes WITH THE
+// WRITE THAT LEAVES IT CHILDLESS — the deletion of its last child (deleteBird), or a save that changes or clears that
+// child's parent (saveBird, saveBirds; B4) — in that write's own transaction, with its own operation and tombstone.
+// So does a placeholder parent of ITS that is left childless in turn.
+//
+// B5: ONE THAT HOLDS ANYTHING OF ITS OWN IS NEVER DELETED THIS WAY. A photo or a document, a result, a health event, a
+// pair, a note, a colour — any field that is not what it was made with — is something the fancier recorded, and it is
+// not this write's to remove. Its flag is cleared instead, in the same transaction: it stays, as a reference bird the
+// register lists, and whatever it holds stays with it.
+
+/** What newBird() gives a placeholder for the fields that are not empty when it is made. */
+const PLACEHOLDER_MADE_WITH = Object.freeze({ status: REFERENCE_STATUS, external: true, placeholder: true });
+// Not compared. Who it stands for and where and when it was made are not something it holds: `name` and `sex` are the
+// role it was made for (the record does not keep what they were, and a rename through the form already clears the
+// flag); the parent links are followed below instead.
+const PLACEHOLDER_NOT_COMPARED = new Set(['id', 'name', 'sex', 'sireId', 'damId', 'loftId', 'createdAt', 'updatedAt', 'deviceId', 'provenance']);
+const isEmpty = (v) => v == null || v === '' || v === false || (Array.isArray(v) && v.length === 0);
+
+/** B5: does this placeholder hold anything of its own? Reads the media store, so it is asked BEFORE the transaction. */
+async function holdsOwn(p) {
+  for (const key of Object.keys(p)) {
+    if (PLACEHOLDER_NOT_COMPARED.has(key)) continue;
+    if (key in PLACEHOLDER_MADE_WITH ? p[key] !== PLACEHOLDER_MADE_WITH[key] : !isEmpty(p[key])) return true;
+  }
+  // a parent the fancier named for it is something it holds; a parent that is itself a placeholder is not — that one
+  // is followed, and goes or stays by this same rule
+  for (const pid of [p.sireId, p.damId]) {
+    if (pid && !(state.birds.get(pid) && state.birds.get(pid).placeholder === true)) return true;
+  }
+  for (const r of state.raceResults.values()) if (r.birdId === p.id) return true;
+  for (const e of state.healthEvents.values()) if (e.birdId === p.id) return true;
+  for (const pair of state.pairs.values()) {
+    if (pair.sireId === p.id || pair.damId === p.id) return true;
+    for (const round of pair.rounds || []) for (const egg of round.eggs || []) if (egg.chickId === p.id) return true;
+  }
+  return (await idbGetAll('media', 'birdId', p.id)).length > 0;
+}
+
+const NONE_LEFT = Object.freeze({ going: Object.freeze([]), freed: Object.freeze([]) });
+
+/** B4: the placeholder parents these birds named as stored and, as they are about to be saved, name no longer. */
+function parentsDropped(birds) {
+  const out = [];
+  for (const bird of birds) {
+    const was = state.birds.get(bird.id);
+    if (!was) continue;
+    for (const pid of [was.sireId, was.damId]) {
+      if (!pid || pid === bird.sireId || pid === bird.damId) continue;
+      const parent = state.birds.get(pid);
+      if (parent && parent.placeholder === true) out.push(pid);
+    }
+  }
+  return out;
+}
+
+/**
+ * Which placeholder parents does a write leave with no child?
+ *
+ * @param candidates  the parent ids the write stops naming
+ * @param gone        ids the write deletes — every placeholder that goes is ADDED to it
+ * @param next        id → the record as the write leaves it (a save); empty for a deletion
+ * @returns {{ going: object[], freed: object[] }} `going` are deleted, in order; `freed` hold something of their own
+ *          (B5) and lose the flag instead. Each is the record as stored now.
+ */
+async function placeholdersLeft(candidates, gone, next) {
+  const going = [], freed = [], settled = new Set();
+  const named = (pid) => {
+    for (const c of state.birds.values()) {
+      if (gone.has(c.id)) continue;
+      const now = next.get(c.id) || c;
+      if (now.sireId === pid || now.damId === pid) return true;
+    }
+    for (const c of next.values()) if (!state.birds.has(c.id) && (c.sireId === pid || c.damId === pid)) return true;
+    return false;
+  };
+  const queue = [...candidates];
+  while (queue.length) {
+    const pid = queue.shift();
+    const parent = pid ? state.birds.get(pid) : null;
+    if (!parent || parent.placeholder !== true || gone.has(pid) || settled.has(pid) || next.has(pid)) continue;
+    if (named(pid)) continue;                        // it still has a child: asked again if that child goes too
+    settled.add(pid);
+    if (await holdsOwn(parent)) { freed.push(parent); continue; }
+    gone.add(pid); going.push(parent);
+    queue.push(parent.sireId, parent.damId);         // its own placeholder parents, left childless in turn
+  }
+  return { going, freed };
+}
+
+/** Inside a transaction: delete the placeholders that go, each with its operation and tombstone; clear the flag of those that stay (B5). */
+async function settlePlaceholders(w, left) {
+  for (const p of left.going) {
+    await w.del('birds', p.id);
+    w.then(() => state.birds.delete(p.id));
+    const seq = await w.log({ origin: 'user', store: 'birds', op: 'delete', recordId: p.id, record: p });
+    await w.tomb('birds', p.id, seq);
+  }
+  for (const p of left.freed) {
+    const kept = { ...p };
+    delete kept.placeholder;                         // removed, not set to false: missing means false
+    stamp(kept);
+    await w.put('birds', kept);
+    w.then(() => state.birds.set(kept.id, kept));
+    await w.log({ origin: 'user', store: 'birds', op: 'put', recordId: kept.id, record: kept, changed: diffFields(p, kept) });
+  }
+}
+
+/** Birds, and the placeholder parents their save leaves childless, written with their operations in ONE transaction. */
+async function writeBirds(birds, left = NONE_LEFT) {
+  await atomicWrite(['birds'], async (w) => {
+    for (const bird of birds) {
+      const previous = state.birds.get(bird.id) || null;
+      stamp(bird);
+      await w.put('birds', bird);
+      w.then(() => state.birds.set(bird.id, bird));
+      await w.log({ origin: 'user', store: 'birds', op: 'put', recordId: bird.id,
+                    record: bird, changed: diffFields(previous, bird) });
+    }
+    await settlePlaceholders(w, left);
+  });
+}
+
 export async function deleteBird(id) {
   const bird = state.birds.get(id);
   // RULED 2026-11-23: A PLACEHOLDER PARENT LEFT WITH NO OTHER CHILD GOES WITH THE BIRD — in this same transaction, with
-  // its own operation and tombstone. Nothing lists a placeholder and nothing would point to it, so left behind it is a
-  // record nobody can reach or remove. `going` is the bird and then each such parent, a placeholder's own placeholder
-  // parents included; everything below treats the set as one deletion, and the snapshot carries them for the undo.
-  const going = [id];
-  const gone = new Set(going);
-  for (let i = 0; i < going.length; i++) {
-    const b = state.birds.get(going[i]);
-    for (const pid of b ? [b.sireId, b.damId] : []) {
-      const parent = pid ? state.birds.get(pid) : null;
-      if (!parent || parent.placeholder !== true || gone.has(pid)) continue;
-      let hasOtherChild = false;
-      for (const c of state.birds.values()) {
-        if (!gone.has(c.id) && (c.sireId === pid || c.damId === pid)) { hasOtherChild = true; break; }
-      }
-      if (!hasOtherChild) { gone.add(pid); going.push(pid); }
-    }
-  }
-  const placeholders = going.slice(1).map((pid) => state.birds.get(pid));
+  // its own operation and tombstone (placeholdersLeft, above). `going` is the bird and then each such parent, a
+  // placeholder's own placeholder parents included; everything below treats the set as one deletion, and the snapshot
+  // carries them for the undo. B5 (RULED 2026-11-24): one that holds anything of its own is not in `going` — it is in
+  // `left.freed`, loses the flag in this transaction and stays; the snapshot carries it as it was, so the undo puts the
+  // flag back.
+  const gone = new Set([id]);
+  const left = bird ? await placeholdersLeft([bird.sireId, bird.damId], gone, new Map()) : NONE_LEFT;
+  const placeholders = left.going;
+  const going = [id, ...placeholders.map((p) => p.id)];
   const media = [];
   for (const gid of going) media.push(...await idbGetAll('media', 'birdId', gid));
   const affectedOriginals = [];   // offspring whose parent link is cleared
@@ -290,22 +411,20 @@ export async function deleteBird(id) {
       await w.tomb('media', m.id, seq);   // A1: the cascade deletes media directly
     }
     await w.unstore(media);
-    for (const gid of going) {                       // the bird, then each placeholder parent that goes with it
-      const rec = state.birds.get(gid);
-      await w.del('birds', gid);
-      w.then(() => state.birds.delete(gid));
-      const birdSeq = await w.log({ origin: 'user', store: 'birds', op: 'delete', recordId: gid, record: rec });
-      await w.tomb('birds', gid, birdSeq);
-    }
+    await w.del('birds', id);                        // the bird…
+    w.then(() => state.birds.delete(id));
+    const birdSeq = await w.log({ origin: 'user', store: 'birds', op: 'delete', recordId: id, record: bird });
+    await w.tomb('birds', id, birdSeq);
+    await settlePlaceholders(w, left);               // …then each placeholder parent that goes with it, or is freed (B5)
   });
   emitChange({ type: 'bird', id });
-  return { bird, media, affectedOriginals, removedRaces, removedHealth, removedPairs, affectedPairs, placeholders };
+  return { bird, media, affectedOriginals, removedRaces, removedHealth, removedPairs, affectedPairs, placeholders, unflagged: left.freed };
 }
 
 /** Undo a deleteBird: puts back the bird AND everything the cascade removed. */
 export async function restoreBird(snapshot) {
   const { bird, media, affectedOriginals, removedRaces, removedHealth,
-          removedPairs, affectedPairs, placeholders } = snapshot || {};
+          removedPairs, affectedPairs, placeholders, unflagged } = snapshot || {};
   if (!bird) return;
   // an undo restores exactly what was there; it is not a new edit to re-judge
   await atomicWrite(['birds', 'pairs', 'raceResults', 'healthEvents', 'media'], async (w) => {   // the whole undo
@@ -316,6 +435,7 @@ export async function restoreBird(snapshot) {
       await w.untomb(store, rec.id);
     };
     for (const ph of placeholders || []) await back('birds', 'birds', ph);   // the placeholder parents that went with it (2026-11-23), before the bird that names them
+    for (const ph of unflagged || []) await back('birds', 'birds', ph);      // B5: the ones that stayed and lost the flag are put back as they were, flag and all
     await back('birds', 'birds', bird);
     for (const orig of affectedOriginals || []) await back('birds', 'birds', orig);
     for (const r of removedRaces || []) await back('raceResults', 'raceResults', r);

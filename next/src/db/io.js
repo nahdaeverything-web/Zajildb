@@ -197,8 +197,11 @@ function droppedByReplace(payload) {
  */
 export function replacePreview(payload) {
   const dropped = droppedByReplace(payload || {});
-  const birds = dropped.filter(([s]) => s === 'birds').length;
-  const returning = ((payload && payload.birds) || []).filter((b) => b && !state.birds.has(b.id));
+  // B7 (RULED 2026-11-24): THE BIRDS A QUESTION COUNTS ARE REAL BIRDS. A placeholder parent (src/family.js) the replace
+  // drops is a record that goes, so it is among the "other records" and in the total — never among the birds; and one
+  // the payload brings back is not a bird that "comes back", so it is neither counted nor named.
+  const birds = dropped.filter(([s, rec]) => s === 'birds' && rec.placeholder !== true).length;
+  const returning = ((payload && payload.birds) || []).filter((b) => b && b.placeholder !== true && !state.birds.has(b.id));
   return { removedBirds: birds, removedOthers: dropped.length - birds, removed: dropped.length,
            returning: returning.map((b) => ({ id: b.id, name: b.name || '', ring: ((b.rings || [])[0] || {}).raw || '' })) };
 }
@@ -229,7 +232,9 @@ export async function replaceMediaLoss(payload) {
  */
 export async function importAll(payload, mode = 'merge') {
   if (!payload || payload.format !== 'zajil-export') throw new Error('bad-format');
-  const counts = { birds: 0, pairs: 0, raceResults: 0, healthEvents: 0, lofts: 0, media: 0, skipped: 0, removed: 0, mediaRejected: 0 };
+  // `placeholders` (B7, RULED 2026-11-24): how many of `birds` are placeholder parents — records the import wrote, and
+  // not birds a fancier counts. What a toast calls birds is `birds - placeholders`.
+  const counts = { birds: 0, pairs: 0, raceResults: 0, healthEvents: 0, lofts: 0, media: 0, skipped: 0, removed: 0, mediaRejected: 0, placeholders: 0 };
 
   // ── decode and validate EVERYTHING before touching the database ──
   // A replace-import used to clear all six stores and only then decode the
@@ -352,6 +357,7 @@ export async function importAll(payload, mode = 'merge') {
     // restoreBird already follow — a winning record clears its tombstone (RF-15)
     if (mode === 'replace') await clearTombstone(storeName, rec.id);
     counts[storeName]++;
+    if (storeName === 'birds' && rec.placeholder === true) counts.placeholders++;
   };
   for (const l of payload.lofts || []) await put('lofts', 'lofts', l);
   for (const b of payload.birds || []) await put('birds', 'birds', b);

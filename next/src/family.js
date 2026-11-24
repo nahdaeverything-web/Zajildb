@@ -13,7 +13,7 @@
 // they were made. The duplicate-ring search and the integrity check still see them: they are records.
 import { allBirds, getBird, state, uuid } from './db/storage.js';
 import { newBird } from './db/records.js';
-import { ancestorDepths } from './engine/pedigree.js';
+import { ancestorDepths, pedigreeGrid } from './engine/pedigree.js';
 import { clutchMates as matesIn } from './engine/clutch.js';
 
 /** Is this bird a placeholder parent? Missing means false. */
@@ -21,6 +21,39 @@ export const isPlaceholder = (bird) => !!bird && bird.placeholder === true;
 
 /** Every bird a fancier would call a bird: the register without its placeholder parents. */
 export const listedBirds = () => allBirds().filter((b) => !isPlaceholder(b));
+
+/**
+ * B7 (RULED 2026-11-24): how many BIRDS an import's counts stand for — the bird records it wrote without the
+ * placeholder parents among them (importAll counts those apart, in `placeholders`). What a toast calls birds.
+ */
+export const birdsImported = (counts) => Math.max(0, ((counts && counts.birds) || 0) - ((counts && counts.placeholders) || 0));
+
+/**
+ * B3 (RULED 2026-11-24): A PLACEHOLDER PARENT IS A RECORD, NOT A KNOWN ANCESTOR. What a screen says a fancier knows of
+ * a bird's pedigree — «{n} سلف من 30», «أجيال مكتملة», «اكتمال الشجرة» — is counted here, over `generations` of
+ * ancestors, without them. An ancestor recorded BEHIND a placeholder still counts: the fancier knows that bird.
+ *
+ * The engine's own counts are not changed, and neither is the coefficient of inbreeding or AVK, which read placeholder
+ * parents as what they are for — the same unknown bird in two places. With no placeholder in the pedigree, `filled`,
+ * `total` and `completeness` are exactly ancestorLoss()'s (engine/coi.js).
+ *
+ * @returns {{ filled: number, total: number, completeness: number, complete: number }} `complete` is how many
+ *          generations, from the parents up, have a known bird in every slot.
+ */
+export function knownAncestors(birdId, generations = 4) {
+  const grid = pedigreeGrid(getBird, birdId, generations);
+  let filled = 0, total = 0, complete = 0, unbroken = true;
+  for (let g = 1; g < grid.length; g++) {
+    let every = true;
+    for (const slot of grid[g]) {
+      total++;
+      if (slot && !isPlaceholder(slot.bird)) filled++;
+      if (!slot || !slot.bird || isPlaceholder(slot.bird)) every = false;
+    }
+    if (unbroken && every) complete = g; else unbroken = false;
+  }
+  return { filled, total, completeness: total ? (filled / total) * 100 : 0, complete };
+}
 
 // ───────────────────────────── clutches and siblings ─────────────────────────────
 

@@ -6,7 +6,7 @@ import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds, useMediaForBird } from '@/src/db/react';
 import { t, fmtDate, statusLabel } from '@/src/i18n.ext.js';
 import { parseRing, RING_TYPES } from '@/src/engine/rings.js';
-import { Loading, PhotoViewer, toast, confirmDialog, choiceDialog, downscaleImage, storedName, primaryRing, birdLabelText, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
+import { Loading, PhotoViewer, toast, confirmDialog, choiceDialog, downscaleImage, storedName, primaryRing, birdLabelText, birdName, problemParams, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
 import s from './form.module.css';
 
 // Add / edit bird — design/approved/add-edit-bird-v2.html, behaviour from
@@ -31,14 +31,14 @@ type Picker = { role: Role; mode: 'pick' | 'create'; q: string } | null;
 type Pending = { kind: 'photo' | 'document'; subtype: string; file: File };
 // THE SIBLING LINK (RULED 2026-11-23, src/family.js): what the fancier chose, held until the form is saved
 type Choice = { sire: boolean; dam: boolean; clutch: boolean };
-type Link = Choice & { xId: string; from: 'menu' | 'form' };
+type Link = Choice & { xId: string; from: 'menu' | 'form'; name: string };   // `name`: what the other bird was called when it was chosen — it may be gone by the save (B6)
 type SibPanel = { q: string; xId: string | null; which: 'both' | 'sire' | 'dam'; clutch: boolean; err?: string };
 type Plan = { reject: string | null; conflicts: unknown[]; bird: Bird; x: Bird | null; placeholders: Bird[]; warnings: Problem[] };
 type Verdict = { errors: Problem[]; warnings: Problem[] };
 const getBird = (id: string) => db.getBird(id) as Bird | undefined;
 const REFERENCE_STATUS = db.REFERENCE_STATUS as string;
-/** A bird named in a question or a notice: a placeholder parent reads «غير معروف», never its stored name. */
-const nameOf = (b: Bird | null | undefined) => (b && !db.isPlaceholder(b) ? birdLabelText(b) : t('common.unknown'));
+/** A bird named in a question or a notice. A placeholder parent reads «أب غير معروف» / «أم غير معروفة», never its stored name (B2: placeholderName, through birdLabelText). */
+const nameOf = (b: Bird | null | undefined) => birdLabelText(b);
 
 /**
  * What a REFERENCE bird's status may be — RULED 2026-10-03.
@@ -83,9 +83,9 @@ const effectiveStatus = (external: boolean, status?: string) => (external
 
 /** bird-form.js:162 — an engine problem rendered in words. */
 function problemText(p: Problem): string {
-  const params: Record<string, unknown> = { ...(p.params || {}) };
+  const params: Record<string, unknown> = problemParams(p.params, getBird);   // B2: a placeholder parent it names, by placeholderName()
   if (typeof params.role === 'string') params.role = t('bird.' + params.role);
-  if (Array.isArray(params.path)) params.path = (params.path as string[]).map((id) => { const b = getBird(id); return b ? (b.name || (b.rings && b.rings[0] && b.rings[0].raw) || id.slice(0, 6)) : id.slice(0, 6); }).join(' ← ');
+  if (Array.isArray(params.path)) params.path = (params.path as string[]).map((id) => { const b = getBird(id); return b ? (db.isPlaceholder(b) ? birdName(b) : (b.name || (b.rings && b.rings[0] && b.rings[0].raw) || id.slice(0, 6))) : id.slice(0, 6); }).join(' ← ');
   if (params.otherId && !params.otherName) { const ob = getBird(params.otherId as string); params.otherName = ob ? (ob.name || primaryRing(ob) || '') : ''; }
   if (p.key === 'sib.warn.hatchDiffers') { params.mine = fmtDate(params.mine as string); params.theirs = fmtDate(params.theirs as string); }
   return t(p.key, params);
@@ -148,7 +148,7 @@ const Slot = ({ role, b, picker, setPicker, all, pool, pickerRef, err, onPick, o
       {b ? (
         <div className={s.prow} data-testid={`parent-${role}`}>
           <Dot sex={b.sex} />
-          <span className={s.mid}><span className={s.role}>{t('bird.' + role)}</span><span className={s.nm} data-testid={`parent-${role}-name`}><bdi>{b.name || primaryRing(b) || b.id.slice(0, 8)}</bdi></span><Plate b={b} /></span>
+          <span className={s.mid}><span className={s.role}>{t('bird.' + role)}</span><span className={s.nm} data-testid={`parent-${role}-name`}><bdi>{birdName(b)}</bdi></span><Plate b={b} /></span>
           <button type="button" className={s.act} onClick={() => setPicker({ role, mode: 'pick', q: '' })} data-testid={`parent-${role}-change`}>{t('act.change')}</button>
           <button type="button" className={s.act} onClick={() => onClear(role)} data-testid={`parent-${role}-clear`}>{t('bird.clearParent')}</button>
         </div>
@@ -296,7 +296,7 @@ export default function BirdForm() {
     // The source is an external system and `seeded` makes this run exactly once per mount,
     // so this is a one-time synchronisation rather than the cascade the rule is about.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDraft(d); setRings(d.rings && d.rings.length ? d.rings.map((r) => ({ ...r })) : [{}]); if (!existing && siblingOfId && getBird(siblingOfId) && !db.isPlaceholder(getBird(siblingOfId))) setLink({ xId: siblingOfId, sire: true, dam: true, clutch: false, from: 'menu' });
+    setDraft(d); setRings(d.rings && d.rings.length ? d.rings.map((r) => ({ ...r })) : [{}]); if (!existing && siblingOfId && getBird(siblingOfId) && !db.isPlaceholder(getBird(siblingOfId))) setLink({ xId: siblingOfId, sire: true, dam: true, clutch: false, from: 'menu', name: nameOf(getBird(siblingOfId)) });
   }, [booted, editId, params, router, siblingOfId]);
 
   // the picker closes on an outside click (ui.js:352) — abandoning a search never touches the committed parent
@@ -307,6 +307,10 @@ export default function BirdForm() {
   }, [picker]);
 
   const linkX = link ? (getBird(link.xId) || null) : null;
+  // B6 (RULED 2026-11-24): the bird a held link names may be deleted — here or on another device — before the form is
+  // saved. The link is then not dropped: the notice says so, and the save stops, naming the bird, and writes nothing.
+  const linkGone = !!link && (!linkX || db.isPlaceholder(linkX));
+  const tellGone = () => confirmDialog({ title: t('val.cannotSave'), list: { kind: 'errs', items: [{ field: t('tab.pedigree'), text: t('sib.gone', { name: link ? link.name : '' }) }] }, cancelLabel: t('val.backToForm'), confirmLabel: null, confirmKind: 'primary' });
   const statuses = useMemo(() => (booted ? (db.loftStatuses() as string[]) : []), [booted]);
 
   /** bird-form.js:140 collect — the record as it would be saved. */
@@ -337,7 +341,7 @@ export default function BirdForm() {
     const w = warnings.find((p) => p.key === 'val.dupRing');
     if (!w) return null;
     const other = w.params && getBird((w.params as { otherId?: string }).otherId || '');
-    return other ? { id: other.id, name: other.name || primaryRing(other) || other.id.slice(0, 8) } : null;
+    return other ? { id: other.id, name: birdName(other) } : null;
   }, [draft, rings, birds]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!booted || !draft) return <section className={s.screen}><Loading /></section>;
@@ -354,6 +358,7 @@ export default function BirdForm() {
       if (notes.trim()) bird.notes = [...(bird.notes || []), { id: db.uuid(), at: db.nowISO(), text: notes.trim() }];
       // THE SIBLING LINK (RULED 2026-11-23): the placeholders it makes, the other bird and this one are written in ONE
       // transaction (saveBirds) — all of it or none. The other bird's own older warnings are not this save's to judge.
+      if (plan && link && !getBird(link.xId)) { await tellGone(); return; }   // B6: gone while a question was open — nothing is written
       if (plan) await db.saveBirds([...plan.placeholders.map((b) => ({ bird: b })), ...(plan.x ? [{ bird: plan.x, allowWarnings: true }] : []), { bird, allowWarnings: !!opts.allowWarnings }]);
       else await db.saveBird(bird, opts);
       // downscaled on the way in — see src/components/media.ts for the measured reason
@@ -410,14 +415,13 @@ export default function BirdForm() {
     let plan: Plan | null = null;
     if (link) {
       const x = getBird(link.xId);
-      if (x && !db.isPlaceholder(x)) {
-        const r = await resolveLink(bird, x, link);
-        if (r.error) { await confirmDialog({ title: t('val.cannotSave'), list: { kind: 'errs', items: [{ field: t('tab.pedigree'), text: r.error }] }, cancelLabel: t('val.backToForm'), confirmLabel: null, confirmKind: 'primary' }); return; }
-        if (!r.bird) return;                                  // the question was declined: back to the form, nothing written
-        plan = db.planSiblingLink(r.bird, x, link, { sire: t('bird.unknownSire'), dam: t('bird.unknownDam') }) as Plan;
-        if (plan.reject || plan.conflicts.length) return;     // settled above; a plan that is not clean is never written
-        bird = plan.bird;
-      }
+      if (!x || db.isPlaceholder(x)) { await tellGone(); return; }   // B6: the other bird no longer exists — stop, say so, write nothing
+      const r = await resolveLink(bird, x, link);
+      if (r.error) { await confirmDialog({ title: t('val.cannotSave'), list: { kind: 'errs', items: [{ field: t('tab.pedigree'), text: r.error }] }, cancelLabel: t('val.backToForm'), confirmLabel: null, confirmKind: 'primary' }); return; }
+      if (!r.bird) return;                                  // the question was declined: back to the form, nothing written
+      plan = db.planSiblingLink(r.bird, x, link, { sire: t('bird.unknownSire'), dam: t('bird.unknownDam') }) as Plan;
+      if (plan.reject || plan.conflicts.length) return;     // settled above; a plan that is not clean is never written
+      bird = plan.bird;
     }
     const set = plan ? [...plan.placeholders, ...(plan.x ? [plan.x] : []), bird] : [bird];
     const verdicts = (plan ? db.checkBirds(set) : [db.checkBird(bird)]) as Verdict[];
@@ -467,7 +471,7 @@ export default function BirdForm() {
     if (choice.clutch && !next.hatchDate && x.hatchDate) next.hatchDate = x.hatchDate;
     return { bird: next };
   }
-  /** «ربط» in the panel: settle, show X's parents in the slots, and hold the choice for the save. Nothing is written. */
+  /** «تأكيد» in the panel: settle, show X's parents in the slots, and hold the choice for the save. Nothing is written. */
   async function applySib() {
     if (!sib || !sib.xId || !draft) return;
     const x = getBird(sib.xId); if (!x) return;
@@ -475,7 +479,7 @@ export default function BirdForm() {
     const r = await resolveLink(draft, x, choice);
     if (r.error) { setSib({ ...sib, err: r.error }); return; }
     if (!r.bird) return;                                      // declined: the panel stays open, the form is as it was
-    setDraft(r.bird); setLink({ xId: x.id, ...choice, from: 'form' }); setSib(null); setErrs({});
+    setDraft(r.bird); setLink({ xId: x.id, ...choice, from: 'form', name: nameOf(x) }); setSib(null); setErrs({});
   }
   const cancel = () => { if (window.history.length > 1) router.back(); else router.push('/birds'); };
   // Enter must never save a half-entered bird — advance focus instead (bird-form.js:249)
@@ -501,7 +505,12 @@ export default function BirdForm() {
   const linkKind = link ? (link.clutch ? 'clutch' : link.sire && link.dam ? 'both' : link.sire ? 'sire' : 'dam') : '';
   // the menu's intent in the one case its own sentence describes — both parents unknown on both birds — keeps that sentence
   const asMenu = !!link && link.from === 'menu' && linkKind === 'both' && makes === 2;
-  const notice = link && linkX ? (
+  const notice = link && linkGone ? (
+    <div className={s.warnbox} data-testid="sibling-notice" data-link="gone">
+      <div className={s.t}>{t('sib.notice.title', { name: link.name })}</div><p>{t('sib.gone', { name: link.name })}</p>
+      <button type="button" onClick={() => setLink(null)} data-testid="sib-remove">{t('sib.remove')}</button>
+    </div>
+  ) : link && linkX ? (
     <div className={s.warnbox} data-testid="sibling-notice" data-link={linkKind}>
       {asMenu ? <div className={s.t}>{t('bird.siblingOfNotice', { name: linkX.name || primaryRing(linkX) || '' })}</div>
         : <><div className={s.t}>{t('sib.notice.title', { name: nameOf(linkX) })}</div><p>{t('sib.notice.' + linkKind)}{makes > 0 ? ' ' + t('sib.notice.unknown') : ''}</p></>}
@@ -620,7 +629,7 @@ export default function BirdForm() {
           {/* THE SIBLING LINK (RULED 2026-11-23). The panel is drawn in the parent slot's own grammar; its placement here, under
               the two slots, and the checkbox row are PROPOSED — the design chat owns both. */}
           {link && link.from === 'form' && notice}
-          <button type="button" className={s.linkbtn} onClick={() => setSib(sib ? null : { q: '', xId: link ? link.xId : null, which: link && !link.dam ? 'sire' : link && !link.sire ? 'dam' : 'both', clutch: !!link && link.clutch })} aria-expanded={!!sib} data-testid="sib-open">{t('sib.action')}</button>
+          <button type="button" className={s.linkbtn} onClick={() => setSib(sib ? null : { q: '', xId: link && !linkGone ? link.xId : null, which: link && !link.dam ? 'sire' : link && !link.sire ? 'dam' : 'both', clutch: !!link && link.clutch })} aria-expanded={!!sib} data-testid="sib-open">{t('sib.action')}</button>
           {sib && (
             <div className={s.sib} data-testid="sib-panel">
               {sibX ? (

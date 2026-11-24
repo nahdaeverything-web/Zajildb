@@ -6,7 +6,7 @@ import { useZajilStore, selectBirds } from '@/src/db/react';
 import { t, fmtDate, fmtNum } from '@/src/i18n.ext.js';
 import { findDuplicateRings } from '@/src/engine/rings.js';
 import { todayISO } from '@/src/dates.js';
-import { toast, confirmDialog, downloadBlob, primaryRing, saveSetting, asset } from '@/src/components';
+import { toast, confirmDialog, downloadBlob, primaryRing, birdName, problemParams, saveSetting, asset } from '@/src/components';
 import { Icon, type IconName } from './icons';
 import s from './tools.module.css';
 
@@ -211,7 +211,7 @@ export function DuplicatesDetail() {
     return { n: kids + pairs + races + health, kinds: kinds.join('، ') };
   };
   async function del(b: Bird) {
-    const ok = await confirmDialog({ title: t('confirm.deleteBird.title'), who: { label: b.name || primaryRing(b) }, cancelLabel: t('act.cancel'), confirmLabel: t('act.delete'), confirmKind: 'danger' });
+    const ok = await confirmDialog({ title: t('confirm.deleteBird.title'), who: { label: birdName(b) }, cancelLabel: t('act.cancel'), confirmLabel: t('act.delete'), confirmKind: 'danger' });
     if (ok) await destructive(async () => { await db.deleteBird(b.id); }, failedAction(t('act.delete')));
   }
   if (groups.length === 0) return <StatusLine icon="check" testid="dup-clean" title={t('dup.noneShort')} text={t('tools.dup.scanned')} />;
@@ -226,7 +226,7 @@ export function DuplicatesDetail() {
             return (
               <div key={b.id} className={`${s.item} ${s.dupCopy}`} data-testid="dup-copy">
                 <div>
-                  <div className={s.t}><bdi>{b.name || primaryRing(b) || b.id.slice(0, 8)}</bdi></div>
+                  <div className={s.t} data-testid="dup-name"><bdi>{birdName(b)}</bdi></div>
                   <div className={`${s.dupLinks} ${n ? '' : s.none}`} data-testid="dup-links">{n ? t('dup.linkedTo', { n: fmtNum(n), kinds }) : t('dup.noLinks')}</div>
                 </div>
                 <button type="button" className={s.del} onClick={() => del(b)} data-testid="dup-delete">{t('act.delete')}</button>
@@ -299,7 +299,8 @@ export function ImportDetail() {
       }
       const counts = await db.importAll(payload, mode) as { birds: number; pairs: number; raceResults: number; mediaRejected: number };
       // RF-24: media rows the file carried without bytes were rejected — the import says how many
-      toast(t('backup.imported', { birds: fmtNum(counts.birds), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) })
+      // B7 (RULED 2026-11-24): «{birds} طير» is the real birds the import wrote — its placeholder parents are not counted
+      toast(t('backup.imported', { birds: fmtNum(db.birdsImported(counts) as number), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) })
         + (counts.mediaRejected ? ' ' + t('backup.mediaRejected', { n: fmtNum(counts.mediaRejected) }) : ''), { timeout: counts.mediaRejected ? 12000 : 7000, kind: 'info' });
       setFile(null);
     } catch (e) {
@@ -351,7 +352,7 @@ export function RestoreDetail({ snapshots }: { snapshots: Backup[] }) {
     if (!ok) return;
     await destructive(async () => {
       const counts = await db.importAll(b.payload, 'replace') as { birds: number; pairs: number; raceResults: number };
-      toast(t('backup.imported', { birds: fmtNum(counts.birds), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) }), { timeout: 7000, kind: 'info' });
+      toast(t('backup.imported', { birds: fmtNum(db.birdsImported(counts) as number), pairs: fmtNum(counts.pairs), races: fmtNum(counts.raceResults) }), { timeout: 7000, kind: 'info' });
     }, failedAction(t('backup.restoreAuto')));
   }
   // RULED 2026-11-16: the list arrives newest first, and «آخر نسخة تلقائية» is the newest INTERVAL snapshot — a
@@ -385,7 +386,7 @@ export function ExamplesDetail() {
       // asset(), not a relative URL: this screen is at `<base>/tools/` since trailingSlash was ruled (app/birds/view.tsx)
       await destructive(async () => {
         const counts = await db.loadExampleDataset(await (await fetch(asset(file))).json()) as { birds: number };   // RF-16
-        toast(t('bird.exampleLoaded', { n: counts.birds }), { timeout: 7000, kind: 'info' });
+        toast(t('bird.exampleLoaded', { n: db.birdsImported(counts) as number }), { timeout: 7000, kind: 'info' });   // B7: real birds only
       }, failedAction(t('example.title')));
     } finally { setBusy(false); }
   }
@@ -408,7 +409,7 @@ export async function destructive(work: () => Promise<void>, failed: (reason: st
   catch (e) {
     const err = e as { name?: string; message?: string; errors?: Array<{ key: string; params?: Record<string, unknown> }>; warnings?: Array<{ key: string; params?: Record<string, unknown> }> };
     const issue = err?.name === 'ValidationError' ? ((err.errors || [])[0] || (err.warnings || [])[0]) : null;
-    const reason = issue ? t('tools.failed.validation', { what: t(issue.key, issue.params as Record<string, string | number> | undefined) })
+    const reason = issue ? t('tools.failed.validation', { what: t(issue.key, problemParams(issue.params, (id) => db.getBird(id) as never) as Record<string, string | number>) })
                          : t('tools.failed.unknown', { what: err?.message || String(e) });
     toast(failed(reason), { kind: 'error', timeout: 12000 });
     return false;
@@ -453,7 +454,7 @@ export function ExampleRemoveRow() {
     // RF-22 (RULED 2026-11-01): the question NAMES the birds that cause a keep — the fancier's birds with an example
     // parent — up to BECAUSE_SHOWN, then «و{n} غيرها». With no dataset loft left on the device it names no loft.
     const shown = db.BECAUSE_SHOWN as number;
-    const names = p.because.slice(0, shown).map((x) => x.name || x.ring || '—').join('، ')
+    const names = p.because.slice(0, shown).map((x) => { const b = db.getBird(x.id) as Bird | undefined; return b && db.isPlaceholder(b) ? birdName(b) : (x.name || x.ring || '—'); }).join('، ')
       + (p.because.length > shown ? ' ' + t('restore.confirm.more', { n: fmtNum(p.because.length - shown) }) : '');
     const counts = { birds: fmtNum(p.birds), pairs: fmtNum(p.pairs), races: fmtNum(p.races), health: fmtNum(p.health) };
     // RULED 2026-11-17: with a record filed outside the named lofts the question names none — but a dataset loft that is present IS removed, and it says so

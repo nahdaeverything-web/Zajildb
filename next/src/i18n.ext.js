@@ -604,6 +604,7 @@ export const EXT = {
   'sib.conflict.dam':         { ar: 'أم هذا الطير المسجَّلة هي «{mine}»، وأم «{name}» هي «{theirs}». هل تريد استبدال «{mine}» بـ «{theirs}» أمًّا لهذا الطير؟', en: 'This bird’s recorded mother is “{mine}”, and the mother of “{name}” is “{theirs}”. Replace “{mine}” with “{theirs}” as this bird’s mother?' },
   'sib.conflict.replace':     { ar: 'استبدال', en: 'Replace' },
   'sib.reject.lineage':       { ar: 'لا يمكن تسجيل «{name}» أخًا أو أختًا لهذا الطير: أحدهما من أسلاف الآخر.', en: '“{name}” cannot be recorded as this bird’s sibling: one of them is an ancestor of the other.' },
+  'sib.gone':                 { ar: 'لم يعد «{name}» مسجَّلًا، فلا يمكن حفظ هذا الطير أخًا أو أختًا له. ألغِ الربط أو اختر طيرًا آخر.', en: '“{name}” is no longer recorded, so this bird cannot be saved as its sibling. Remove the link or choose another bird.' },
   'sib.warn.clutchSize':      { ar: 'سيصير في هذا البطن {n} طيور، والبطن في العادة بيضتان.', en: 'This clutch would hold {n} birds; a clutch is normally two eggs.' },
   'sib.warn.hatchDiffers':    { ar: 'تاريخ فقس هذا الطير ({mine}) يختلف عن تاريخ فقس «{otherName}» ({theirs})، وهما من البطن نفسه.', en: 'This bird’s hatch date ({mine}) differs from that of “{otherName}” ({theirs}), and they are from the same clutch.' },
   'val.clutchParents':        { ar: 'هذا الطير و«{otherName}» من البطن نفسه، لكن أبويهما المسجَّلين مختلفان.', en: 'This bird and “{otherName}” are from the same clutch, but their recorded parents differ.' },

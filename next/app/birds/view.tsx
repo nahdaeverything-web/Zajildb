@@ -35,7 +35,7 @@ const searchText = (b: Bird) => [b.name, b.strain, b.colour, b.eyeSign, b.breede
 async function loadExample(file: string) {
   const payload = await (await fetch(asset(file))).json();
   const counts = await db.loadExampleDataset(payload);   // RF-16: forgets the removal's tombstones for the file's own shipped ids, then merges
-  toast(t('bird.exampleLoaded', { n: counts.birds }), { timeout: 7000, kind: 'info' });
+  toast(t('bird.exampleLoaded', { n: db.birdsImported(counts) }), { timeout: 7000, kind: 'info' });   // B7: real birds only
 }
 
 // Declared at module scope deliberately, like every other component in the app. These five

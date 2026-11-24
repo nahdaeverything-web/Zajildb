@@ -8,7 +8,7 @@ import { t, fmtDate, fmtNum, fmtPercent, statusLabel } from '@/src/i18n.ext.js';
 import { inbreeding, ancestorLoss } from '@/src/engine/coi.js';
 import { descendantDepths, pedigreeGrid } from '@/src/engine/pedigree.js';
 import { birdEligibility } from '@/src/engine/fci.js';
-import { SyncRow, Loading, MediaPlaceholder, PhotoViewer, COIValue, BirdLabel, primaryRing, birdLabelText, toast, undoToast, confirmDialog, choiceDialog, seasonStart, downloadJSON, initDB } from '@/src/components';
+import { SyncRow, Loading, MediaPlaceholder, PhotoViewer, COIValue, BirdLabel, primaryRing, birdLabelText, birdName, placeholderName, toast, undoToast, confirmDialog, choiceDialog, seasonStart, downloadJSON, initDB } from '@/src/components';
 import sh from '@/src/components/shared.module.css';
 import s from './bird.module.css';
 
@@ -57,18 +57,18 @@ const Row = ({ k, v, data, tid }: { k: string; v: ReactNode; data?: boolean; tid
 );
 const ParentRow = ({ k, b, tid }: { k: string; b: Bird | null | undefined; tid: string }) => (
   <div className={s.row} data-testid={`row-${tid}`}><span className={s.k}>{k}</span>
-    {b ? <Link className={`${s.v} ${s.link}`} href={`/bird?id=${b.id}`}><bdi>{b.name || primaryRing(b) || b.id.slice(0, 8)}</bdi><Chev /></Link> : <span className={s.v}>—</span>}
+    {b ? <Link className={`${s.v} ${s.link}`} href={`/bird?id=${b.id}`}><bdi>{birdName(b)}</bdi><Chev /></Link> : <span className={s.v}>—</span>}
   </div>
 );
 const Node = ({ slot, size, role }: { slot: Slot; size: 'n1' | 'n2' | 'n3'; role?: string }) => {
   const b = slot?.bird;
   if (!b) return <span className={`${s.node} ${s[size]}`} data-testid="mini-node">{role && <span className={s.role}>{role}</span>}<span className={`${s.nm} ${sh.muted}`}>{t('common.unknown')}</span></span>;
   // RULED 2026-11-23: a placeholder parent reads «غير معروف» in the language of the screen, never its stored name, and opens its edit form
-  if (size !== 'n1' && db.isPlaceholder(b)) return <Link className={`${s.node} ${s[size]}`} href={`/bird/edit?id=${b.id}`} data-testid="mini-node" data-placeholder="1">{role && <span className={s.role}>{role}</span>}<span className={`${s.nm} ${sh.muted}`}>{t('common.unknown')}</span></Link>;
+  if (size !== 'n1' && db.isPlaceholder(b)) return <Link className={`${s.node} ${s[size]}`} href={`/bird/edit?id=${b.id}`} data-testid="mini-node" data-placeholder="1">{role && <span className={s.role}>{role}</span>}<span className={`${s.nm} ${sh.muted}`}>{placeholderName(b, 'box')}</span></Link>;
   const r = primaryRing(b);
   return (
     <Link className={`${s.node} ${s[size]}`} href={`/bird?id=${b.id}`} data-testid="mini-node">
-      {role && <span className={s.role}>{role}</span>}<span className={s.nm}><bdi>{b.name || r || b.id.slice(0, 8)}</bdi></span>
+      {role && <span className={s.role}>{role}</span>}<span className={s.nm}><bdi>{birdName(b)}</bdi></span>
       {size === 'n1' ? (r && <span className={`${s.plate} ${s.sm}`}><span className={s.season}>{seasonYY(b)}</span><span className={s.num}>{r}</span></span>) : <span className={s.rg}>{r}</span>}
     </Link>
   );
@@ -125,10 +125,12 @@ export default function BirdView() {
   if (!booted || !bird) return <section className={s.screen}><Loading /></section>;
 
   const ring = primaryRing(bird); const yy = seasonYY(bird);
-  const title = bird.name || ring || id.slice(0, 8);
+  const title = birdName(bird);   // B2: a placeholder parent's own profile reads «أب غير معروف» / «أم غير معروفة»
   const depth = +((st.settings as Record<string, unknown>).coiDepth || 10);
   const coi = (inbreeding(getBird, id, depth) as { coi: number }).coi;
-  const avk = ancestorLoss(getBird, id, 5) as { avk: number; completeness: number };
+  const avk = ancestorLoss(getBird, id, 5) as { avk: number };
+  // B3 (RULED 2026-11-24): «اكتمال الشجرة» counts known ancestors — a placeholder parent is a record, not one (src/family.js). AVK is not changed.
+  const completeness = (db.knownAncestors(id, 5) as { completeness: number }).completeness;
   const sire = bird.sireId ? getBird(bird.sireId) : null; const dam = bird.damId ? getBird(bird.damId) : null;
   const loft = bird.loftId ? (st.lofts.get(bird.loftId) as { name?: string } | undefined) : null;
   const results = ([...st.raceResults.values()] as Race[]).filter((r) => r.birdId === id).sort(byDateDesc);
@@ -262,7 +264,7 @@ export default function BirdView() {
   const lastVac = events.filter((e) => e.eventType === 'vaccination' && e.date)[0];
   const evKind = (e: HealthEvent) => (e.eventType === 'treatment' || e.eventType === 'illness') ? s.treat : e.eventType === 'check' ? s.note : '';
 
-  const coiPieces = t('profile.coiLine', { n: fmtNum(depth), c: fmtPercent(avk.completeness / 100, 0) }).split('{pct}');
+  const coiPieces = t('profile.coiLine', { n: fmtNum(depth), c: fmtPercent(completeness / 100, 0) }).split('{pct}');
 
   return (
     <section className={s.screen} onKeyDown={(e) => { if (e.key === 'Escape') setMenu(false); }}>
@@ -384,7 +386,7 @@ export default function BirdView() {
 
         <section className={s.panel} id="p-ped" role="tabpanel" aria-labelledby="t-ped" hidden={tab !== 'ped'} data-testid="panel-ped">
           <p className={s.pnote} data-testid="coi-line">{coiPieces[0]}<strong><COIValue coi={coi} mono={false} /></strong>{coiPieces[1]}</p>
-          <p className={s.pnote}>{t('ped.avk')}: <strong>{fmtPercent(avk.avk / 100, 1)}</strong></p>
+          <p className={s.pnote} data-testid="avk-line">{t('ped.avk')}: <strong>{fmtPercent(avk.avk / 100, 1)}</strong></p>
           <div className={s.card}>
             <div className={s.mini}>
               <div className={s.gen}><Node slot={gens[0][0]} size="n1" /></div>
