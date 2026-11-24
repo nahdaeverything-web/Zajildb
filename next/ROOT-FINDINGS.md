@@ -5157,3 +5157,47 @@ suite each, 300 s limits, every one red at the check that names it, none with a 
 | M-d1-counted | the toast counts one file per bird deleted, not the files that went | 4 |
 
 Measurement: `~/zajil-work/siblings/c5/measure_photos.py` (`sib-c5-measure-photos.log`).
+
+## 2026-11-24 — deploy record: placeholder parents, sibling of / same clutch (`gh-pages d062d38`)
+
+**Stage 3 closed first.** Samir's stage-3 acceptance PASSED on his real devices (relayed 2026-11-24): the viewer on the
+phone and on the PC, the background download with the PC offline, and the pair offer — all four passed.
+
+**Ruled before the deploy.** With the measurement order of 2026-11-24: commit 5 (`478b89d`) accepted, including all six
+proposals and both new strings; `feat/siblings-clutch` itself is never pushed. With the deploy order: the
+compatibility measurement (below) accepted; the rollback target `4acbf2a` stands. The sections above that read «BUILT,
+NOT DEPLOYED» for commits 1–5 are deployed by this record; their text is left as written.
+
+Live: `gh-pages d062d38`, built from `feat/react-port 478b89d`. `feat/react-port` was fast-forwarded from `a27f778` to
+the local branch `feat/siblings-clutch` (`bf223ab` placeholder parents; `eb04d96` sibling of / same clutch; `c7a8c82`
+the rulings B1–B8; `904bcce` C1–C3; `478b89d` D1) and pushed; the branch `feat/siblings-clutch` was not.
+**Rollback target: `4acbf2a`** (photo stage 3; then `6ca309e`). Rollback is
+`git -C ~/zajil-work/deploy/ghp-siblings-clutch-2026-11-24 push -f origin 4acbf2a:gh-pages`.
+Mirror `main` = `7597ea7` (`git subtree split --prefix=next 478b89d`, run from `~/zajil`, fast-forward from `c7cfe95`).
+After the clean live verification `origin/feat/photo-stage-3` (`591622c`) and `origin/feat/photo-stage-1` (`eb776d0`)
+were deleted; both commits are contained in `feat/react-port`.
+
+| step | result | log (`~/zajil-gate-logs/`) |
+|---|---|---|
+| gate-60 on `478b89d` | 2802 passed, 0 failed across 46 steps | `gate-60.out` |
+| remote heads before | `feat/react-port a27f778`, `gh-pages 4acbf2a`, mirror `main c7cfe95` | `deploy14-00-before.log` |
+| stage for `/zajilv2/`, inject, verify, scan | 159 files, CLEAN | `deploy14-01`, `deploy14-02` |
+| rehearsal on the local Pages stand-in | 44 passed, 0 failed, no WARNING | `deploy14-04` |
+| live bytes | 158 files by sha256, 0 differ (new sw.js after 31 s) | `deploy14-05` |
+| live verification | 44 passed, 0 failed, no WARNING, NET armed — nothing reached the real project; service worker active 2.8 s after the first page settled | `deploy14-06` |
+| remote heads after | `gh-pages d062d38`, mirror `main 7597ea7` | `deploy14-07` |
+
+**What a rollback to `4acbf2a` meets — measured before this deploy** (`~/zajil-work/compat/measure_compat.py`, log
+`compat-measure.log`; the old build from `591622c` against records written by `478b89d`, two devices of one account on
+the stubbed server). This set adds stored shape: `placeholder: true` on a placeholder parent, `clutchId` on a sibling,
+and `kept` inside a device's own tombstone (never sent). The old build PRESERVES `placeholder` and `clutchId` on a
+pull, on a form save and on export — it writes the whole record; `sireId` and `damId` stay intact. A placeholder's
+deletion reaches it as an ordinary delete row and it writes an ordinary tombstone. Both devices converge on identical
+bird records; 0 page errors, 0 sync anomalies, integrity empty. What differs on the old build is what it shows and what
+it does not do: it lists and counts placeholders as reference birds and draws them as known ancestors; it has none of
+B4, item 6 or C1, so a save or deletion there that leaves a placeholder childless leaves it, and it never puts one
+back; a name typed on a placeholder there keeps the flag (read from code, not measured). Not measured: merge-import, an
+old-build import of a file the new build exported, undo on the old build, automatic-sync timing.
+
+Still to correct with the next code change: the comment above `PHOTO_DOWNLOAD_TIMEOUT_MS` in `src/db/photos.js` says
+PROPOSED (approved 2026-11-20).
