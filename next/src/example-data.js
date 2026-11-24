@@ -86,6 +86,10 @@ export const BECAUSE_SHOWN = 5;
  * C2 (RULED 2026-11-24): `ownGoes` IS THOSE RECORDS, COUNTED — every result, health event and pair that is not a
  * dataset record and names a teaching bird this removal deletes, WHEREVER it is filed. The question states them in a
  * sentence of their own; the counts beside «سيُحذف» stay the datasets' own records.
+ *
+ * D1 (RULED 2026-11-24): `media` IS THE FANCIER'S OWN FILES THAT GO — every photo and document attached to a teaching
+ * bird this removal deletes. The shipped datasets carry no media, so each one is a file he added; deleteBird() deletes
+ * them with the bird, and nothing brings them back. The question states the count and says so.
  */
 export async function examplePresence() {
   const IDS = await exampleIds();
@@ -177,10 +181,12 @@ export async function removeExampleData() {
   // C2 (RULED 2026-11-24): what deleteBird() took with each teaching bird that was NOT a dataset record — the fancier's
   // own pairs, results and health events for it. Counted from what was actually removed, for the toast to state.
   const ownGone = { pairs: 0, races: 0, health: 0, total: 0 };
+  let mediaGone = 0;
   const notDataset = (list, store) => (list || []).filter((r) => !IDS[store].has(r.id)).length;
   for (const b of [...state.birds.values()]) {
     if (IDS.birds.has(b.id) && !p.keep.has(b.id)) {
       const gone = await deleteBird(b.id); birds++;
+      mediaGone += (gone.media || []).length;      // D1: the photos and documents that went with it, as deleteBird reports them
       ownGone.pairs += notDataset(gone.removedPairs, 'pairs'); ownGone.races += notDataset(gone.removedRaces, 'raceResults'); ownGone.health += notDataset(gone.removedHealth, 'healthEvents');
     }
   }
@@ -199,7 +205,7 @@ export async function removeExampleData() {
   await refile(state.pairs, Pairs); await refile(state.raceResults, Races); await refile(state.healthEvents, Health);
   emitChange({ type: 'import' });
   // what was removed in all — the presence counts; the sweep only catches what deleteBird's cascade did not reach
-  return { lofts: p.ids.length, birds, pairs: p.pairs, races: p.races, health: p.health, swept: { pairs, races, health }, kept: p.kept, moved, target, ownGone };
+  return { lofts: p.ids.length, birds, pairs: p.pairs, races: p.races, health: p.health, swept: { pairs, races, health }, kept: p.kept, moved, target, ownGone, mediaGone };
 }
 
 /** The stores a dataset file carries records for. */

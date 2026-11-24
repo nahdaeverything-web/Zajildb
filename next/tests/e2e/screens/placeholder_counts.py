@@ -9,6 +9,8 @@
       toast count real birds only.
   C2  (RULED 2026-11-24, later) the removal's question and its result toast also state the fancier's own results,
       health events and pairs that are deleted with teaching birds, with their real counts, only when there are any.
+  D1  (RULED 2026-11-24, later still) …and the photos and documents he attached to teaching birds: the question
+      states how many go and that they cannot be recovered, the toast how many went, only when there are any.
 
 Each scenario is its own device (its own browser context). Fixture names are invented; nothing is configured, so
 nothing leaves the page — the two loader scenarios answer the dataset file themselves, from the build's own copy.
@@ -159,6 +161,43 @@ try:
         check('[C2 · wherever it is filed] …and the result says «… وحُذف معها ما كنتَ سجّلتَه أنت عليها: 0 زوجًا و1 نتيجة و0 سجلًا صحيًا.» — the record is gone',
               told7.endswith('وحُذف معها ما كنتَ سجّلتَه أنت عليها: 0 زوجًا و1 نتيجة و0 سجلًا صحيًا.') and left7 is False, (told7, left7))
         c7.close()
+
+        # ══ D1 (RULED 2026-11-24) — THE FANCIER'S PHOTOS AND DOCUMENTS ON TEACHING BIRDS ══
+        # The shipped datasets carry no media, so every file on a teaching bird is one the fancier added. deleteBird()
+        # deletes them with the bird and the removal offers no undo: the question states how many go and that they cannot
+        # be brought back, and the result states how many went — only when there are any.
+        MEDIA_Q = 'عدد الصور والوثائق التي ستُحذف مع الطيور التجريبية: 3. لا يمكن استرجاعها بعد الحذف.'
+        MEDIA_T = 'عدد الصور والوثائق التي حُذفت مع الطيور التجريبية: 3.'
+        check('[D1 · none · M-d1-zero fails here] the device above with no file on a teaching bird: neither its question nor its result said anything of photos or documents',
+              'الصور والوثائق' not in asked2 and 'الصور والوثائق' not in told2 and bool(asked2) and bool(told2), (asked2, told2))
+        c8, d8 = device(); run(d8, LOAD)
+        s8 = run(d8, """async (db) => { const IDS = await db.exampleIds();
+            const child = new Set(); for (const x of db.allBirds()) { child.add(x.sireId); child.add(x.damId); }
+            const teaching = db.allBirds().filter(x => IDS.birds.has(x.id)).sort((x, y) => x.id.localeCompare(y.id));
+            const leaf = teaching.filter(x => !child.has(x.id));                                       // no bird descends from them: the removal deletes them
+            const founder = teaching.find(x => x.sex === 'cock' && !x.sireId && !x.damId);             // the fancier's bird will descend from him: the removal KEEPS him
+            const mine = await db.saveBird(db.newBird({ name: 'طيرتي', sex: 'hen', sireId: founder.id }), { allowWarnings: true });
+            const png = () => new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], { type: 'image/png' });
+            const pdf = () => new Blob(['%PDF-1.4 %%EOF'], { type: 'application/pdf' });
+            const goes = [(await db.addMedia(leaf[0].id, 'photo', 'body', 'a.png', png())).id, (await db.addMedia(leaf[0].id, 'photo', 'eye', 'b.png', png())).id,
+                          (await db.addMedia(leaf[1].id, 'document', 'papers', 'c.pdf', pdf())).id];   // two photos and a document, on two teaching birds that go
+            const kept = (await db.addMedia(founder.id, 'photo', 'body', 'k.png', png())).id;           // on the teaching bird that stays as a reference
+            const own = (await db.addMedia(mine.id, 'photo', 'body', 'm.png', png())).id;               // on the fancier's own bird
+            const pr = await db.examplePresence();
+            return { goes, kept, own, rows: (await db.idbGetAll('media')).length, media: pr.media, keptBirds: pr.kept, birds: pr.birds, ownGoes: pr.ownGoes.total }; }""")
+        check('[D1 · the count · M-d1-kept fails here] five files on the device — two photos and a document on teaching birds the removal deletes, one photo on a teaching bird it keeps as a reference, one on the fancier\'s own bird: the removal counts the THREE that go',
+              s8['rows'] == 5 and s8['media'] == 3 and s8['keptBirds'] == 1 and s8['birds'] == 37 and s8['ownGoes'] == 0, s8)
+        asked8 = removal_question(d8); ty8 = faces(d8)
+        check('[D1 · the question · M-d1-question fails here] the question says so, and that they cannot be brought back: «عدد الصور والوثائق التي ستُحذف مع الطيور التجريبية: 3. لا يمكن استرجاعها بعد الحذف.» — beside «سيُحذف 37 طيرًا», in a face that has Arabic',
+              MEDIA_Q in asked8 and 'سيُحذف 37 طيرًا' in asked8 and not ty8, (asked8, ty8[:2]))
+        click(d8, '[data-testid=dialog-confirm]'); told8 = toast_with(d8, 'أُزيلت', 60000); ty8t = faces(d8)
+        check('[D1 · the toast · M-d1-toast and M-d1-counted fail here] …and the result states the three that went: «أُزيلت البيانات التجريبية: 37 طيرًا … بقي 1 طيرًا كمراجع في النسب. عدد الصور والوثائق التي حُذفت مع الطيور التجريبية: 3.»',
+              told8.startswith('أُزيلت البيانات التجريبية: 37 طيرًا') and 'بقي 1 طيرًا كمراجع في النسب.' in told8 and told8.endswith(' ' + MEDIA_T) and 'ما كنتَ سجّلتَه' not in told8 and not ty8t, (told8, ty8t[:2]))
+        left8 = run(d8, """async (db, s) => { const here = new Set((await db.idbGetAll('media')).map(m => m.id)); const tomb = async (id) => !!(await db.idbGet('tombstones', 'media:' + id));
+            return { goes: s.goes.filter(id => here.has(id)).length, tombstoned: (await Promise.all(s.goes.map(tomb))).filter(Boolean).length, kept: here.has(s.kept), own: here.has(s.own), rows: here.size }; }""", s8)
+        check('[D1] …and that is what happened: the three files are gone, each with its tombstone; the photo on the kept reference and the photo on the fancier\'s own bird are still on the device',
+              left8 == {'goes': 0, 'tombstoned': 3, 'kept': True, 'own': True, 'rows': 2}, left8)
+        c8.close()
 
         # ══ B7 — the source: three birds a fancier counts, two placeholder parents ══
         c3, d3 = device()

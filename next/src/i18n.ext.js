@@ -507,10 +507,12 @@ export const EXT = {
   'example.remove.bodyNoLoft': { ar: 'سيُحذف {birds} طيرًا و{pairs} زوجًا و{races} نتيجة و{health} سجلًا صحيًا من البيانات التجريبية. لا يُمسّ أي طير من طيورك.', en: '{birds} birds, {pairs} pairs, {races} results and {health} health records of the sample data will be deleted. None of your own birds is touched.' },
   'example.remove.own':       { ar: 'لديك {m} من سجلاتك داخل اللوفت التجريبي؛ لا تُحذف، بل تُنقل إلى لوفتك.', en: '{m} records of your own are filed in the sample loft; they are not deleted but moved to your loft.' },
   'example.remove.ownGoes':   { ar: 'يُحذف مع الطيور التجريبية ما سجّلتَه أنت عليها: {pairs} زوجًا و{races} نتيجة و{health} سجلًا صحيًا.', en: 'What you recorded yourself on sample birds is deleted with them: {pairs} pairs, {races} results and {health} health records.' },
+  'example.remove.media':     { ar: 'عدد الصور والوثائق التي ستُحذف مع الطيور التجريبية: {n}. لا يمكن استرجاعها بعد الحذف.', en: 'Photos and documents that will be deleted with the sample birds: {n}. They cannot be recovered once deleted.' },
   'example.remove.go':        { ar: 'إزالة', en: 'Remove' },
   'example.remove.done':      { ar: 'أُزيلت البيانات التجريبية: {birds} طيرًا و{pairs} زوجًا و{races} نتيجة و{health} سجلًا صحيًا.', en: 'Sample data removed: {birds} birds, {pairs} pairs, {races} results, {health} health records.' },
   'example.remove.doneKept':  { ar: ' بقي {k} طيرًا كمراجع في النسب.', en: ' {k} kept as pedigree references.' },
   'example.remove.doneOwn':   { ar: ' وحُذف معها ما كنتَ سجّلتَه أنت عليها: {pairs} زوجًا و{races} نتيجة و{health} سجلًا صحيًا.', en: ' What you had recorded on them yourself was deleted with them: {pairs} pairs, {races} results, {health} health records.' },
+  'example.remove.doneMedia': { ar: ' عدد الصور والوثائق التي حُذفت مع الطيور التجريبية: {n}.', en: ' Photos and documents deleted with the sample birds: {n}.' },
   // THE INVARIANT (RULED 2026-10-30): a destructive action that changed nothing says so, and why
   'example.remove.failed':    { ar: 'لم تُزل البيانات التجريبية — لم يتغيّر شيء. السبب: {reason}', en: 'The sample data was not removed — nothing changed. Reason: {reason}' },
   'tools.failed.validation':  { ar: 'سجلّ لم يجتز التحقق ({what})', en: 'a record failed validation ({what})' },

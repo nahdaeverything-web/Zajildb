@@ -463,6 +463,9 @@ export function ExampleRemoveRow() {
       // C2 (RULED 2026-11-24): the fancier's own pairs, results and health events for teaching birds go with them — said,
       // with their counts, only when there are any. Its place in the question, before the records that are moved, is PROPOSED.
       + (p.ownGoes.total ? ' ' + t('example.remove.ownGoes', { pairs: fmtNum(p.ownGoes.pairs), races: fmtNum(p.ownGoes.races), health: fmtNum(p.ownGoes.health) }) : '')
+      // D1 (RULED 2026-11-24): the photos and documents the fancier attached to teaching birds go with them and cannot be
+      // brought back — said, with the count, only when there are any. Beside the other sentence about what of his goes.
+      + (p.media ? ' ' + t('example.remove.media', { n: fmtNum(p.media) }) : '')
       + (p.own ? ' ' + t('example.remove.own', { m: fmtNum(p.own) }) : '')
       + ((await db.unsentChanges()) as number > 0 ? ' ' + t('confirm.unsent') : '');
     const ok = await confirmDialog({ title: t('example.remove.title'), body, cancelLabel: t('act.cancel'), confirmLabel: t('example.remove.go'), confirmKind: 'danger' });
@@ -470,9 +473,10 @@ export function ExampleRemoveRow() {
     setBusy(true);
     try {
       await destructive(async () => {
-        const r = await db.removeExampleData() as { birds: number; pairs: number; races: number; health: number; kept: number; ownGone: { pairs: number; races: number; health: number; total: number } } | null;
+        const r = await db.removeExampleData() as { birds: number; pairs: number; races: number; health: number; kept: number; ownGone: { pairs: number; races: number; health: number; total: number }; mediaGone: number } | null;
         if (r) toast(t('example.remove.done', { birds: fmtNum(r.birds), pairs: fmtNum(r.pairs), races: fmtNum(r.races), health: fmtNum(r.health) }) + (r.kept ? t('example.remove.doneKept', { k: fmtNum(r.kept) }) : '')
-          + (r.ownGone.total ? t('example.remove.doneOwn', { pairs: fmtNum(r.ownGone.pairs), races: fmtNum(r.ownGone.races), health: fmtNum(r.ownGone.health) }) : ''), { timeout: r.ownGone.total ? 12000 : 9000, kind: 'success' });
+          + (r.ownGone.total ? t('example.remove.doneOwn', { pairs: fmtNum(r.ownGone.pairs), races: fmtNum(r.ownGone.races), health: fmtNum(r.ownGone.health) }) : '')
+          + (r.mediaGone ? t('example.remove.doneMedia', { n: fmtNum(r.mediaGone) }) : ''), { timeout: r.ownGone.total || r.mediaGone ? 12000 : 9000, kind: 'success' });
       }, (reason) => t('example.remove.failed', { reason }));
     } finally { setBusy(false); }
   }

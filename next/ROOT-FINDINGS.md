@@ -5093,3 +5093,67 @@ echo). The cause of the first: the coordinator runs a cycle of its own when a de
 the suite was two. The suite now switches the coordinator's own triggers off (the harness's test-only switch) and has
 a check for the echo; M-c1-x was narrowed and M-c1-echo added. All seven C1 mutants were run again on the suite as
 committed, and those are the results above. The C2 and C3 mutants ran once.
+
+## 2026-11-24 (later still) — the removal and the fancier's photos: D1, D2 (BUILT, NOT DEPLOYED; branch `feat/siblings-clutch`, commit 5)
+
+**Rulings on the report of commit 4.** Accepted, with every listed proposal. The «خارجي» case stays as it is.
+
+**D1 — the removal says what photos and documents go** (`src/example-data.js`, `app/tools/parts.tsx`). The shipped
+datasets carry no media, so every file on a teaching bird is one the fancier attached. `examplePresence()` already
+counted them (`media`: the files on teaching birds this removal deletes — not those on a teaching bird kept as a
+reference, not those on the fancier's own birds); nothing read it. Now the question states the count and that the
+files cannot be recovered, and the result toast states how many went — `removeExampleData()` returns `mediaGone`,
+counted from what each `deleteBird()` reports it removed. Both only when the count is above zero.
+
+**D2 — reported, nothing changed.**
+
+- **The files on the server** [read from code: `src/db/records.js` `unstore`, `src/db/photos.js` `run`/`removeOne`;
+  measured on the stub, on real time]. The removal deletes each teaching bird through `deleteBird()`, which deletes
+  the media rows in the same transaction, tombstones them, and — for a row marked stored — queues the object's id on
+  THAT device (`photoRemovals`, a device setting, never synced). The deletions sync as any other: the other device
+  drops its row and its bytes on the tombstone. The object itself is removed by the removing device's first photo
+  pass that starts 60 s or more after the deletion (`PHOTO_REMOVE_GRACE_MS`); a pass starts after each record cycle
+  that succeeded. Measured: no DELETE at 0.5 s nor at 30 s, the object still in the bucket; one DELETE and the object
+  gone on the first cycle after 60 s. Until that device syncs again the object stays in the bucket, reachable by
+  nothing: no media row names it on any device. A file that was never uploaded has no object and queues nothing.
+- **Undo** [read from code; measured]. There is none for this removal. Its toast carries no «تراجع» (measured: no
+  action control on it); `removeExampleData()` returns counts, not the snapshots `restoreBird()` needs; no snapshot is
+  taken before it, and the interval snapshots carry no media. Loading the teaching data again brings the 38 birds
+  back and not the files (measured: the bird back, 0 media rows). The 60 s grace exists for the «تراجع» of a single
+  deletion; here nothing can use it. So «لا يمكن استرجاعها بعد الحذف» is true of the app. The one way back is outside
+  it: a full export file with media that the fancier made before the removal [read from code, `importAll`; not measured].
+
+**Chosen without a ruling — PROPOSED:**
+
+1. **A new string for the question, not the replace-import one.** `confirm.replace.photos` says «مع هذه الطيور». In
+   the replace question it follows the birds that are deleted. In the removal's question it would follow «لا يُمسّ
+   أي طير من طيورك», where «هذه الطيور» reads as the fancier's own. The new string differs in that one phrase:
+   «مع الطيور التجريبية». To reuse the old one instead is a one-line change.
+2. **A new string for the toast**, in the same words, past tense, the count only.
+3. **Where the sentences sit:** in the question after the sentence about the fancier's own records that go and before
+   «لديك … تُنقل إلى لوفتك»; in the toast, last.
+4. **The toast stays 12 s instead of 9** when it carries the sentence, as with C2's.
+5. **One count for photos and documents together**, as the replace-import question has it.
+
+**New strings — two, PROPOSED, through the typography scan:**
+
+| key | Arabic | English |
+|---|---|---|
+| `example.remove.media` | «عدد الصور والوثائق التي ستُحذف مع الطيور التجريبية: {n}. لا يمكن استرجاعها بعد الحذف.» | Photos and documents that will be deleted with the sample birds: {n}. They cannot be recovered once deleted. |
+| `example.remove.doneMedia` | « عدد الصور والوثائق التي حُذفت مع الطيور التجريبية: {n}.» | Photos and documents deleted with the sample birds: {n}. |
+
+No existing string was changed.
+
+**Proof.** `tests/e2e/screens/placeholder_counts.py` 22 → 27 (D1: none; the count, with a file on a kept reference
+and one on the fancier's own bird; the question; the toast; what is left). Five mutants, one harness build and one
+suite each, 300 s limits, every one red at the check that names it, none with a traceback (`sib-c5-mutants.log`):
+
+| mutant | what it does | red at |
+|---|---|---|
+| M-d1-question | the question does not carry the sentence | 1 |
+| M-d1-toast | the toast does not carry the sentence | 1 |
+| M-d1-zero | the question carries the sentence when the count is zero | 1 |
+| M-d1-kept | files on a teaching bird that is kept are counted too | 2 |
+| M-d1-counted | the toast counts one file per bird deleted, not the files that went | 4 |
+
+Measurement: `~/zajil-work/siblings/c5/measure_photos.py` (`sib-c5-measure-photos.log`).
