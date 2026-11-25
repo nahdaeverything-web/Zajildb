@@ -5386,3 +5386,38 @@ this commit's tree: `pm2-measure-g1.log`, screenshots `~/zajil-shots/photos-mana
   G1 was ordered for the certificate only.
 - At 390 px the reason is set in the slot's text column beside a 107 px button: the father's line runs to seven short
   lines (61 × 127 px). Layout belongs to the design chat.
+
+## 2026-11-25 — deploy record: managing a bird's photos (E1–E8), a placeholder parent takes no photo on the certificate (G1, G2) (`gh-pages 2c201b9`)
+
+**Ruled before the deploy (2026-11-25).** `b9acbf6` accepted, with every placement proposal, every listed choice, the
+three fixes, and the eight strings as drafts; the certificate's placeholder case: option (b), built as G1 with G2
+(section above). Deploy ordered on the condition that Part 1's gate is green and its mutants red — both held. The two
+sections above that read «BUILT, NOT DEPLOYED» are deployed by this record; their text is left as written.
+
+Live: `gh-pages 2c201b9`, built from `feat/react-port 15dc53f`. `feat/react-port` was fast-forwarded from `088bd72`
+to the local branch `feat/photos-manage` (`b9acbf6` E1–E8; `15dc53f` G1, G2) and pushed; `feat/photos-manage` was not.
+**Rollback target: `d062d38`** (placeholder parents, sibling of / same clutch; then `4acbf2a`). Rollback is
+`git -C ~/zajil-work/deploy/ghp-photos-manage-2026-11-25 push -f origin d062d38:gh-pages`.
+Mirror `main` = `151344d` (`git subtree split --prefix=next 15dc53f`, fast-forward from `7597ea7`).
+
+| step | result | log (`~/zajil-gate-logs/`) |
+|---|---|---|
+| gate-63 on `15dc53f`'s tree | 2866 passed, 0 failed across 47 steps | `gate-63-g1-g2.out` |
+| G1, G2 mutants | M-g1-open, M-g1-keep, M-g1-look, M-g2-stale — each RED at its named check | `pm-g-mutants.log` |
+| remote heads before | `feat/react-port 088bd72`, `gh-pages d062d38`, mirror `main 7597ea7` | `deploy15-00-before.log` |
+| the rollback target against the new build's records (below) | preserves `mainPhotoId` on pull and on a form save | `pm2-measure.log` |
+| stage for `/zajilv2/`, inject, verify, scan | 159 files, CLEAN | `deploy15-01`, `deploy15-02` |
+| rehearsal on the local Pages stand-in | 44 passed, 0 failed, no WARNING | `deploy15-04` |
+| live bytes | 158 files by sha256, 0 differ (new sw.js after 31 s) | `deploy15-05` |
+| live verification | 44 passed, 0 failed, no WARNING, NET armed — nothing reached the real project; service worker active 2.7 s after the first page settled | `deploy15-06` |
+| remote heads after | `gh-pages 2c201b9`, mirror `main 151344d` | `deploy15-07` |
+
+**What a rollback to `d062d38` meets — measured before any push** (`~/zajil-work/photos-manage/measure2.py step2`,
+log `pm2-measure.log`; the harness build of `478b89d` in `~/zajil-work/compat/new`, 138 source files identical to the
+commit by blob hash, against records written by the harness build of `15dc53f`'s tree; two devices of one account on
+the stubbed server, THE NET armed, 0 escapes). On PULL the old build holds `mainPhotoId` and the bird record is
+byte-for-byte the new build's. On a FORM SAVE there (colour only) the server row and the new device keep
+`mainPhotoId`; no key is lost. What differs: it draws its gallery by id and knows no main photo, and deleting the
+main photo there leaves the field naming a photo that is gone — the new build then draws the earliest remaining
+photo as the main one, and since G2 a placeholder is not kept by such a field. 0 page or console errors on either
+device; integrity empty; 0 sync anomalies.
