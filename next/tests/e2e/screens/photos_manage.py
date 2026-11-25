@@ -15,6 +15,9 @@ drew were chance, and the certificate's «تغيير» added a photo without cha
   E4  the order everywhere — gallery, strip, viewer: the main photo first, then by addedAt ascending. Never by id.
   E5  the certificate's three boxes draw that bird's main photo; «تغيير» stores the photo and makes it the main one.
   E7  the profile's ✕ keeps its look inside a target of at least 44 px; so are the new controls.
+  G1  (RULED 2026-11-25) a placeholder parent's slot on the certificate takes no file: its button is disabled and the
+      slot says why and the way out; a placeholder that already holds a photo keeps it and its box draws it.
+  G2  (RULED 2026-11-25) B5: a `mainPhotoId` naming a photo no longer stored is not something a placeholder holds.
   and the field travels between two devices of one account (a stub backend, THE NET armed beneath it).
 
 A phone's screen (390 px) with touch; the sizes are read at 1280 px too. Every file is made here: PNGs told apart by
@@ -332,6 +335,60 @@ try:
         check('[E5 · M-e5-parent fails here] the same on the father\'s box: the photo is stored on the FATHER\'s record and becomes HIS main photo — 310 → 330 — and the bird\'s own box stays',
               snew is not None and sb['main'] == snew and c2['sire'] == [330, 330] and c2['bird'] == [530, 530] and run(pg, BIRD, fam['kid'])['main'] == new, (sb, c2))
         check('[E5] …and the list the certificate\'s bird shows elsewhere follows: its gallery order starts with the new main photo', names(rows)[0] == 'w530.png' and names(rows)[1:] == ['w510.png', 'w520.png'], names(rows))
+
+        # ══ G1 — A PLACEHOLDER PARENT'S SLOT TAKES NO PHOTO (RULED 2026-11-25, option b of E5) ══
+        print('G1 — on the certificate, a placeholder parent\'s slot accepts no file, says why, and keeps a photo it already holds')
+        REASON = 'لإضافة صورة، أعطِ هذا الطائر اسمًا أو رقم حلقة أولًا'
+        unk = run(pg, """async (db) => { const c = document.createElement('canvas'); c.width = 450; c.height = 40; c.getContext('2d').fillRect(0, 0, 450, 40); const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+            const sire = (await db.saveBird(db.newBird({ name: 'أب غير معروف', sex: 'cock', placeholder: true }), { allowWarnings: true })).id;
+            const dam = (await db.saveBird(db.newBird({ name: 'أم غير معروفة', sex: 'hen', placeholder: true }), { allowWarnings: true })).id;
+            const old = (await db.addMedia(dam, 'photo', 'body', 'w450.png', blob, { main: true })).id;   // a photo given before this rule
+            const kid = (await db.saveBird(db.newBird({ name: 'طير بأبوين مجهولين', sex: 'hen', sireId: sire, damId: dam }), { allowWarnings: true })).id; return { kid, sire, dam, old }; }""")
+        pg.goto(ROOT + 'cert/?id=' + unk['kid'], wait_until='load'); waits(pg, '[data-testid=sec-photos]'); pg.wait_for_timeout(500)
+        for who in ('sire', 'dam'): press(pg.locator(f'[data-testid=sw-{who}]'))
+        SLOT = """(w) => { const b = document.querySelector(`[data-testid=pick-${w}]`), d = document.querySelector(`[data-testid=d-${w}]`), t = document.querySelector(`[data-testid=thumb-${w}] img`), s = document.querySelector(`[data-testid=sheet-photo-${w}] img`);
+            return { disabled: b ? b.disabled : null, button: b ? b.innerText.trim() : null, says: d ? d.innerText.trim() : null, describedBy: b && b.getAttribute('aria-describedby') ? (document.getElementById(b.getAttribute('aria-describedby')) || {}).innerText : null,
+                     thumb: t ? t.naturalWidth : null, sheet: s ? s.naturalWidth : null }; }"""
+        settle(pg, "() => { const s = document.querySelector('[data-testid=sheet-photo-dam] img'); return s && s.naturalWidth > 0; }", timeout=5000)
+        g_s, g_d, g_b = pg.evaluate(SLOT, 'sire'), pg.evaluate(SLOT, 'dam'), pg.evaluate(SLOT, 'bird')
+        check('[G1 · M-g1-open fails here] a placeholder father\'s slot: its button is disabled and the slot says why, with the way out — «' + REASON + '» — read out with the button',
+              g_s['disabled'] is True and g_s['says'] == REASON and g_s['describedBy'] == REASON, g_s)
+        check('[G1] …the same on a placeholder mother\'s slot, while the bird\'s own slot, an ordinary bird, still takes a photo',
+              g_d['disabled'] is True and g_d['says'] == REASON and g_b['disabled'] is False and g_b['says'] != REASON, (g_d, g_b))
+        LOOK = """(w) => { const b = document.querySelector(`[data-testid=pick-${w}]`), probe = document.createElement('span'); probe.style.background = 'var(--line)'; probe.style.color = 'var(--ink-2)'; b.parentElement.appendChild(probe);
+            const want = [getComputedStyle(probe).backgroundColor, getComputedStyle(probe).color]; probe.style.background = 'var(--brand-tint)'; const tint = getComputedStyle(probe).backgroundColor; probe.remove();
+            const cs = getComputedStyle(b); return { bg: cs.backgroundColor, ink: cs.color, want, tint, rowOn: !b.closest('[data-testid^=row-]').className.includes('off') }; }"""
+        lk = pg.evaluate(LOOK, 'sire')
+        check('[G1 · M-g1-look fails here] …and, in a row that is on, it looks unavailable: the ruled disabled pattern (--line fill, --ink-2 ink), not the brand tint of an enabled button',
+              lk['rowOn'] and [lk['bg'], lk['ink']] == lk['want'] and lk['bg'] != lk['tint'], lk)
+        chooser = False
+        try:
+            with pg.expect_file_chooser(timeout=1500): pg.locator('[data-testid=pick-sire]').evaluate('e => e.click()')
+            chooser = True
+        except Exception: pass
+        n_s = len(run(pg, ROWS, unk['sire'])); rec_s = run(pg, BIRD, unk['sire'])
+        check('[G1] …pressing it opens no file chooser, and the placeholder father holds no file and no main photo', chooser is False and n_s == 0 and rec_s['has'] is False, (chooser, n_s, rec_s))
+        check('[G1 · M-g1-keep fails here] a placeholder that already holds a photo keeps it and its box still draws it: 450, in the panel and on the sheet',
+              g_d['thumb'] == 450 and g_d['sheet'] == 450 and len(run(pg, ROWS, unk['dam'])) == 1 and run(pg, BIRD, unk['dam'])['main'] == unk['old'], g_d)
+
+        # ══ G2 — A mainPhotoId NAMING A PHOTO NO LONGER STORED IS NOT SOMETHING A PLACEHOLDER HOLDS (B5) ══
+        print('G2 — B5 does not count a main-photo field that names a photo no longer stored')
+        g2 = run(pg, """async (db) => { const c = document.createElement('canvas'); c.width = 24; c.height = 24; const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+            const fam = async (tag) => { const ph = await db.saveBird(db.newBird({ name: 'أب غير معروف', sex: 'cock', placeholder: true }), { allowWarnings: true });
+                const kid = (await db.saveBird(db.newBird({ name: 'فرخ ' + tag, sex: 'hen', sireId: ph.id }), { allowWarnings: true })).id; return { ph: ph.id, kid }; };
+            const stale = await fam('أ'), held = await fam('ب');
+            // the shape the old build (4acbf2a) leaves: it deleted the photo and kept the field naming it — saved here as that record
+            await db.saveBird({ ...db.getBird(stale.ph), mainPhotoId: 'a-photo-no-longer-stored' }, { allowWarnings: true });
+            await db.addMedia(held.ph, 'photo', 'body', 'kept.png', blob, { main: true });
+            const before = { stale: db.getBird(stale.ph).mainPhotoId, held: db.getBird(held.ph).mainPhotoId };
+            await db.deleteBird(stale.kid); await db.deleteBird(held.kid);
+            const tombs = new Set((await db.idbGetAll('tombstones')).map(t => t.key || t.id));
+            const look = (id) => { const b = db.getBird(id); return { here: !!b, placeholder: b ? b.placeholder === true : null, main: b ? b.mainPhotoId || null : null }; };
+            return { before, stale: { ...look(stale.ph), tomb: tombs.has('birds:' + stale.ph) }, held: { ...look(held.ph), tomb: tombs.has('birds:' + held.ph) } }; }""")
+        check('[G2 · M-g2-stale fails here] a placeholder father whose main-photo field names a photo no longer stored goes with his last child, tombstoned — the field is not something he holds',
+              g2['before']['stale'] == 'a-photo-no-longer-stored' and g2['stale'] == {'here': False, 'placeholder': None, 'main': None, 'tomb': True}, g2)
+        check('[G2] …while one whose main photo IS stored holds it: he stays, his flag cleared, the field kept (B5 as it was)',
+              g2['held']['here'] is True and g2['held']['placeholder'] is False and g2['held']['main'] == g2['before']['held'] and g2['held']['tomb'] is False, g2)
 
         # ══ E7 — TARGETS OF AT LEAST 44 PX ══
         print('E7 — the ✕ keeps its look inside a 44 px target; the new controls are at least 44 px too')

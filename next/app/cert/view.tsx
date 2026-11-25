@@ -228,7 +228,8 @@ function Panel(p: ScreenProps & { slots: SlotMap; urls: Record<string, string> }
   async function pickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; e.target.value = '';
     const target = slots[picking].bird;
-    if (!file || !target) return;
+    // G1 (RULED 2026-11-25): a placeholder parent takes no photo here — the button is disabled and the slot says why
+    if (!file || !target || db.isPlaceholder(target)) return;
     // E5 (RULED 2026-11-24): the photo is stored AND made that bird's main photo, in one transaction — so the box
     // always changes to it. Until then «تغيير» only added a photo, and the box kept drawing whichever had the lowest id.
     await storePicked(target.id, { kind: 'photo', subtype: 'body', file }, { main: true });
@@ -288,6 +289,10 @@ function Panel(p: ScreenProps & { slots: SlotMap; urls: Record<string, string> }
               const away = !!slot.media && !slot.media.hasBlob;
               const on = photos[who];
               const url = slot.media && slot.media.hasBlob ? urls[slot.media.id] : '';
+              // G1 (RULED 2026-11-25): a PLACEHOLDER parent's slot accepts no file. Having a photo of the parent means
+              // knowing the bird: the way out is to give it a name or a ring first, which makes it an ordinary bird. A
+              // placeholder that already holds a photo (made before this rule) keeps it, and its box still draws it.
+              const ph = !!slot.bird && db.isPlaceholder(slot.bird);
               return (
                 <div key={who} className={`${s.row} ${on ? '' : s.off} ${away ? s['away-row'] : ''}`} data-testid={`row-${who}`}>
                   <button type="button" className={`${s.sw} ${on ? s.on : ''}`} aria-pressed={on}
@@ -298,11 +303,11 @@ function Panel(p: ScreenProps & { slots: SlotMap; urls: Record<string, string> }
                   </div>
                   <div className={s.tx}>
                     <div className={s.t}>{slot.label} · <bdi data-testid={`who-${who}`}>{!slot.bird ? t('common.unknown') : db.isPlaceholder(slot.bird) ? placeholderName(slot.bird, who === 'bird' ? 'text' : 'box') : birdLabelText(slot.bird)}</bdi></div>
-                    <div className={s.d} data-testid={`d-${who}`}>
-                      {away ? <>{AWAY_ICON}{t('cert.photoAway')}</> : slot.media ? t('cert.fromBird') : t('cert.noPhoto')}
+                    <div className={s.d} data-testid={`d-${who}`} id={`d-${who}`}>
+                      {ph ? t('cert.placeholderPhoto') : away ? <>{AWAY_ICON}{t('cert.photoAway')}</> : slot.media ? t('cert.fromBird') : t('cert.noPhoto')}
                     </div>
                   </div>
-                  <button type="button" className={s.pick} disabled={!slot.bird}
+                  <button type="button" className={s.pick} disabled={!slot.bird || ph} aria-describedby={ph ? `d-${who}` : undefined}
                     onClick={() => { setPicking(who); fileIn.current?.click(); }} data-testid={`pick-${who}`}>
                     {away ? t('cert.pickHere') : slot.media ? t('act.change') : t('cert.pickPhoto')}
                   </button>

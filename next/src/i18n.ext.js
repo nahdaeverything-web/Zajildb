@@ -199,6 +199,8 @@ export const EXT = {
   'cert.pickPhoto':           { ar: 'اختيار صورة', en: 'Choose a photo' },
   'cert.pickHere':            { ar: 'اختيار هنا', en: 'Choose one here' },
   'cert.photoAway':           { ar: 'الصورة على جهاز آخر', en: 'Photo is on another device' },
+  // G1 (RULED 2026-11-25): a placeholder parent's slot takes no photo, and says why and the way out. PROPOSED wording.
+  'cert.placeholderPhoto':    { ar: 'لإضافة صورة، أعطِ هذا الطائر اسمًا أو رقم حلقة أولًا', en: 'To add a photo, give this bird a name or a ring number first' },
   'cert.preview':             { ar: 'المعاينة', en: 'Preview' },
   'cert.size.a4':             { ar: '297×210 مم', en: '297×210 mm' },
   'cert.size.story':          { ar: '9:16 · 1080×1920', en: '9:16 · 1080×1920' },

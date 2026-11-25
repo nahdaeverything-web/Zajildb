@@ -226,6 +226,10 @@ const isEmpty = (v) => v == null || v === '' || v === false || (Array.isArray(v)
 async function holdsOwn(p) {
   for (const key of Object.keys(p)) {
     if (PLACEHOLDER_NOT_COMPARED.has(key)) continue;
+    // G2 (RULED 2026-11-25): `mainPhotoId` names a photo; it is held only while that photo is stored for this record.
+    // A build without the field (4acbf2a) deletes a photo and leaves the field naming it — a photo no longer stored
+    // is not something the placeholder holds. One that is stored is held through the media check below as well.
+    if (key === 'mainPhotoId') { const m = p[key] ? await idbGet('media', p[key]) : null; if (m && m.birdId === p.id) return true; continue; }
     if (key in PLACEHOLDER_MADE_WITH ? p[key] !== PLACEHOLDER_MADE_WITH[key] : !isEmpty(p[key])) return true;
   }
   // a parent the fancier named for it is something it holds; a parent that is itself a placeholder is not — that one

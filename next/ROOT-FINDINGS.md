@@ -5345,3 +5345,44 @@ takes the earliest photo left as the main one (E3's own rule for a field that na
 field stays, naming nothing, until a new build sets another main photo. One consequence, read from code and NOT
 measured: on a PLACEHOLDER parent, that stale field is something B5 counts as held (`holdsOwn` compares every field
 not in its fixed list), so such a placeholder would be freed instead of deleted when its last child goes.
+
+## 2026-11-25 — a placeholder parent takes no photo on the certificate (G1), and B5 reads `mainPhotoId` as stored (G2) (BUILT; branch `feat/photos-manage`, commit 2)
+
+RULED 2026-11-25 on the report above: `b9acbf6` accepted, with every placement proposal, every listed choice, the three
+fixes, and the eight strings AS DRAFTS (they stay in `guards/strings.pending.json` / marked PROPOSED until worded). The
+placeholder case on the certificate: option (b) — refuse.
+
+**G1 — `app/cert/view.tsx`.** A slot whose bird is a placeholder parent accepts no file: its button is `disabled`, with
+`aria-describedby` on the slot's line, which says why and the way out — `cert.placeholderPhoto` (below). `pickPhoto`
+refuses a placeholder as well, so nothing reaches `storePicked` even if the button were pressed some other way. A
+placeholder that already holds a photo (given before this rule) keeps it: its thumbnail, its switch and its box on the
+sheet are as before. The line under the slot's name says the reason instead of «من ملف الطائر» in that case too.
+The disabled button takes the ruled disabled pattern (`.pick:disabled`, the one `.row.off .pick` already used:
+`--line` fill, `--ink-2` ink) — measured before it: a disabled button in a row that is ON kept the brand tint of an
+enabled one. A new visual is not invented here; the pattern is the ruled one.
+
+**G2 — `src/db/records.js`, `holdsOwn()`.** `mainPhotoId` is held only while it names a photo stored in this
+device's media store for that record. A field naming a photo no longer stored — the shape the rollback build
+`4acbf2a` leaves when it deletes the main photo (measured in E8 above) — no longer keeps a placeholder: it goes with
+its last child, tombstoned (item 6), as one that holds nothing. One whose main photo is stored is still freed (B5 as
+it was; the media check finds it anyway).
+
+**New string — PROPOSED, Arabic and English, through the typography scan of the suite:**
+
+| key | Arabic | English |
+|---|---|---|
+| `cert.placeholderPhoto` | لإضافة صورة، أعطِ هذا الطائر اسمًا أو رقم حلقة أولًا | To add a photo, give this bird a name or a ring number first |
+
+**Proof.** `tests/e2e/screens/photos_manage.py`, 57 → 64 checks. Mutants (one harness build and one suite run each,
+300 s limits, `~/zajil-work/photos-manage/mutants-g.sh`, log `pm-g-mutants.log`): M-g1-open (the button left enabled),
+M-g1-keep (a placeholder's photo not drawn), M-g1-look (the disabled pattern removed), M-g2-stale (the field counted
+as held, as before) — each RED at its named check, no traceback. Measured at 390 and 1280 px on the harness build of
+this commit's tree: `pm2-measure-g1.log`, screenshots `~/zajil-shots/photos-manage/{390,1280}-04-placeholder-slots.png`.
+
+**Found, NOT ruled — reported, nothing changed:**
+- The same placeholder takes a photo through its own EDIT FORM (the pedigree's «غير معروف» opens it): a photo picked
+  with the name and ring left empty is saved, no question asked, and the record stays a placeholder holding a photo
+  (measured, `pm2-measure-g1.log`). Its PROFILE (reachable by URL, and after that save) offers «إضافة صورة» enabled.
+  G1 was ordered for the certificate only.
+- At 390 px the reason is set in the slot's text column beside a 107 px button: the father's line runs to seven short
+  lines (61 × 127 px). Layout belongs to the design chat.

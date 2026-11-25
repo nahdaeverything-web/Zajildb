@@ -97,6 +97,9 @@
    * an off row still dims, because that is the row saying it is off, not a control saying
    * it is unavailable. */
   .row.off .pick{ pointer-events:none; background:var(--line); color:var(--ink-2); }
+  /* G1 (RULED 2026-11-25): a placeholder parent's button is disabled in a row that is ON — the same ruled pattern, so it
+   * does not look pressable (measured: without this it kept the brand tint of an enabled button). */
+  .pick:disabled{ pointer-events:none; cursor:default; background:var(--line); color:var(--ink-2); }
   .away-row .d{ color:var(--ink-2); display:flex; gap:6px; align-items:center; }
   .away-row .d svg{ width:14px; height:14px; stroke:var(--ink-3); stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
   .fields{ display:flex; flex-direction:column; }
