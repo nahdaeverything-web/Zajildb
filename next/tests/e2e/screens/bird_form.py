@@ -269,7 +269,9 @@ try:
         check('[photo] after saving, the profile shows the photo without being reopened', pg.locator('[data-testid=media-photo] img').count() == 1 and snap(pg, "async () => (await window.__zajilDb.idbGetAll('media')).filter(m => m.blob).length") == 1)
 
         # ── the edit form shows the bird's photos, and every picked photo shows before saving (PHOTO SYNC stage 1, RULED 2026-11-18) ──
-        STRIP = "() => [...document.querySelectorAll('[data-testid=photo-strip] > span')].map(x => { const i = x.querySelector('img'); const r = x.getBoundingClientRect(); return { kind: x.dataset.testid, name: x.title, w: Math.round(r.width), h: Math.round(r.height), natural: i ? [i.naturalWidth, i.naturalHeight] : null }; })"
+        # 2026-11-24 (E1): a thumbnail now sits in a tile with its own control under it, so the THUMBNAILS are read by their
+        # own test ids, in document order — the 56 px, the kinds, the names and the decoded sizes asserted below are unchanged
+        STRIP = "() => [...document.querySelectorAll('[data-testid=photo-strip] [data-testid=strip-saved], [data-testid=photo-strip] [data-testid=strip-pending]')].map(x => { const i = x.querySelector('img'); const r = x.getBoundingClientRect(); return { kind: x.dataset.testid, name: x.title, w: Math.round(r.width), h: Math.round(r.height), natural: i ? [i.naturalWidth, i.naturalHeight] : null }; })"
         pid = pg.url.split('id=')[1].split('&')[0]
         pg.goto(f'{ROOT}bird/edit/?id={pid}', wait_until='load'); pg.wait_for_selector('[data-testid=bird-form]')
         try: pg.wait_for_function("() => { const i = document.querySelector('[data-testid=strip-saved] img'); return i && i.naturalWidth > 0; }", timeout=6000)

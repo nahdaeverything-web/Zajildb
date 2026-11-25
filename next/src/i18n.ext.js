@@ -129,7 +129,8 @@ export const EXT = {
   // the hatch label (bird.hatchDate), the status words (status.*) and the duplicate-ring warning
   // (shared-states' warn.dupRing.*); the spec's variants are on strings.ruled.json (ruling 14).
   'form.sec.basics':          { ar: 'الأساسيات', en: 'Basics' },
-  'form.photo.hint':          { ar: 'تُحفظ الصورة على هذا الجهاز.', en: 'The photo is kept on this device.' },
+  // E6 (RULED 2026-11-24): the spec's «تُحفظ الصورة على هذا الجهاز.» stopped being the whole truth with photo sync, stage 1. PROPOSED wording.
+  'form.photo.hint':          { ar: 'تُحفظ الصورة على هذا الجهاز، وتُرفع إلى حسابك عند المزامنة.', en: 'The photo is kept on this device and uploaded to your account when it syncs.' },
   'form.name.placeholder':    { ar: 'مثال: رعد', en: 'e.g. Thunder' },
   'form.colour.placeholder':  { ar: 'مثال: أزرق مخطط', en: 'e.g. blue bar' },
   'form.parent.none':         { ar: 'لم تُحدَّد', en: 'Not set' },
@@ -187,7 +188,8 @@ export const EXT = {
   'cert.format.story':        { ar: 'صورة للهاتف', en: 'Phone image' },
   'cert.contentLang':         { ar: 'لغة المحتوى', en: 'Content language' },
   'cert.contentLangHint':     { ar: 'مستقلة عن لغة التطبيق', en: 'Independent of the app language' },
-  'cert.photosHint':          { ar: 'تبقى الملفات على جهازك', en: 'Files stay on your device' },
+  // E6 (RULED 2026-11-24): the spec's «تبقى الملفات على جهازك» is not true since photo sync, stage 1. PROPOSED wording.
+  'cert.photosHint':          { ar: 'تُحفظ على جهازك وتُرفع إلى حسابك عند المزامنة', en: 'Kept on your device and uploaded to your account when it syncs' },
   'cert.loftData':            { ar: 'بيانات اللوفت', en: 'Loft details' },
   'cert.loftDataHint':        { ar: 'من إعدادات اللوفت · تُعدَّل قبل الطباعة', en: 'From the loft settings · editable before printing' },
   'cert.showLoft':            { ar: 'إظهار بيانات اللوفت على الشهادة', en: 'Show the loft details on the certificate' },
@@ -613,6 +615,14 @@ export const EXT = {
   'sib.warn.hatchDiffers':    { ar: 'تاريخ فقس هذا الطير ({mine}) يختلف عن تاريخ فقس «{otherName}» ({theirs})، وهما من البطن نفسه.', en: 'This bird’s hatch date ({mine}) differs from that of “{otherName}” ({theirs}), and they are from the same clutch.' },
   'val.clutchParents':        { ar: 'هذا الطير و«{otherName}» من البطن نفسه، لكن أبويهما المسجَّلين مختلفان.', en: 'This bird and “{otherName}” are from the same clutch, but their recorded parents differ.' },
   'profile.siblings.title':   { ar: 'الإخوة', en: 'Siblings' },
+  // ── PHOTOS: DELETE AND UN-PICK IN THE FORM, ADD ON THE PROFILE, THE MAIN PHOTO (RULED 2026-11-24, E1–E5) — all PROPOSED wording ──
+  // «الرئيسية» and «الصورة الرئيسية» are the approved profile spec's own words (bird-profile-v1.html:82, :250).
+  'media.main.mark':          { ar: 'الرئيسية', en: 'Main' },
+  'media.main.is':            { ar: 'الصورة الرئيسية', en: 'Main photo' },
+  'media.main.set':           { ar: 'جعلها الصورة الرئيسية', en: 'Make this the main photo' },
+  'media.main.done':          { ar: 'صارت هذه الصورة الرئيسية', en: 'This is now the main photo' },
+  'media.add.failed':         { ar: 'تعذّر حفظ {n} من {total}: {names}', en: 'Could not save {n} of {total}: {names}' },
+  'media.unpick':             { ar: 'إزالة', en: 'Remove' },
 
 };
 

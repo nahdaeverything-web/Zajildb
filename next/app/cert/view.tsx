@@ -7,7 +7,7 @@ import { t, fmtDate, fmtNum, fmtPercent, getLang, configure } from '@/src/i18n.e
 import { pedigreeGrid } from '@/src/engine/pedigree.js';
 import { todayISO } from '@/src/dates.js';
 import { inbreeding } from '@/src/engine/coi.js';
-import { Loading, toast, downloadJSON, downscaleImage, storedName, primaryRing, birdLabelText, placeholderName, initDB } from '@/src/components';
+import { Loading, toast, downloadJSON, downscaleImage, storedName, storePicked, primaryRing, birdLabelText, placeholderName, initDB } from '@/src/components';
 import s from './cert.module.css';
 
 // Certificate — design/approved/certificate-v1.html, wiring from js/views/cert.js.
@@ -32,7 +32,7 @@ import s from './cert.module.css';
 // sheet to a file is the one that can give it a URL.
 
 type Bird = {
-  id: string; name?: string; sex?: string; hatchDate?: string; colour?: string; strain?: string;
+  id: string; mainPhotoId?: string; name?: string; sex?: string; hatchDate?: string; colour?: string; strain?: string;
   sireId?: string | null; damId?: string | null; createdAt?: string; rings?: Array<{ raw?: string; year?: string | number }>;
 };
 type Slot = { id: string; bird: Bird | null } | null;
@@ -139,11 +139,13 @@ function CertScreen(p: ScreenProps) {
   const mBird = useMediaForBird(bird.id) as Media[];
   const mSire = useMediaForBird(bird.sireId || null) as Media[];
   const mDam = useMediaForBird(bird.damId || null) as Media[];
-  const firstPhoto = (rows: Media[]) => rows.find((m) => m.kind === 'photo') || null;
+  // E5 (RULED 2026-11-24): each box draws THAT BIRD'S MAIN PHOTO — the one its `mainPhotoId` names, else its earliest
+  // (the layer's rule, mainPhotoOf). It used to be "the first photo" of a list that came back in the order of a random id.
+  const mainPhoto = (rows: Media[], of: Bird | null | undefined) => (of ? (db.mainPhotoOf(rows, of.mainPhotoId) as Media | null) : null);
   const slots = {
-    bird: { bird, media: firstPhoto(mBird), label: t('ped.gen.subject') },
-    sire: { bird: sire, media: firstPhoto(mSire), label: t('bird.sire') },
-    dam: { bird: dam, media: firstPhoto(mDam), label: t('bird.dam') },
+    bird: { bird, media: mainPhoto(mBird, bird), label: t('ped.gen.subject') },
+    sire: { bird: sire, media: mainPhoto(mSire, sire), label: t('bird.sire') },
+    dam: { bird: dam, media: mainPhoto(mDam, dam), label: t('bird.dam') },
   };
 
   // object URLs for whatever bytes this device actually holds
@@ -151,7 +153,7 @@ function CertScreen(p: ScreenProps) {
   const logoId = loft?.logoMediaId || '';
   useEffect(() => {
     let live = true; const made: string[] = [];
-    const wanted = [firstPhoto(mBird), firstPhoto(mSire), firstPhoto(mDam)]
+    const wanted = [mainPhoto(mBird, bird), mainPhoto(mSire, sire), mainPhoto(mDam, dam)]
       .filter((m): m is Media => !!m && !!m.hasBlob).map((m) => m.id);
     if (logoId) wanted.push(logoId);
     Promise.all(wanted.map(async (mid) => {
@@ -227,8 +229,9 @@ function Panel(p: ScreenProps & { slots: SlotMap; urls: Record<string, string> }
     const file = e.target.files?.[0]; e.target.value = '';
     const target = slots[picking].bird;
     if (!file || !target) return;
-    const out = await downscaleImage(file);
-    await db.addMedia(target.id, 'photo', 'body', storedName(file, out), out);
+    // E5 (RULED 2026-11-24): the photo is stored AND made that bird's main photo, in one transaction — so the box
+    // always changes to it. Until then «تغيير» only added a photo, and the box kept drawing whichever had the lowest id.
+    await storePicked(target.id, { kind: 'photo', subtype: 'body', file }, { main: true });
     p.setPhotos({ ...photos, [picking]: true });
   }
   async function pickLogo(e: React.ChangeEvent<HTMLInputElement>) {

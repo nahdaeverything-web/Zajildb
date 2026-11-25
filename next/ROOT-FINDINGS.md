@@ -5190,7 +5190,8 @@ were deleted; both commits are contained in `feat/react-port`.
 **What a rollback to `4acbf2a` meets — measured before this deploy** (`~/zajil-work/compat/measure_compat.py`, log
 `compat-measure.log`; the old build from `591622c` against records written by `478b89d`, two devices of one account on
 the stubbed server). This set adds stored shape: `placeholder: true` on a placeholder parent, `clutchId` on a sibling,
-and `kept` inside a device's own tombstone (never sent). The old build PRESERVES `placeholder` and `clutchId` on a
+and `kept` inside a device's own tombstone (never sent by sync — the tombstones store is not synced; but an export file
+carries every tombstone, `kept` included: corrected 2026-11-24, see the photos section below). The old build PRESERVES `placeholder` and `clutchId` on a
 pull, on a form save and on export — it writes the whole record; `sireId` and `damId` stay intact. A placeholder's
 deletion reaches it as an ordinary delete row and it writes an ordinary tombstone. Both devices converge on identical
 bird records; 0 page errors, 0 sync anomalies, integrity empty. What differs on the old build is what it shows and what
@@ -5201,3 +5202,146 @@ old-build import of a file the new build exported, undo on the old build, automa
 
 Still to correct with the next code change: the comment above `PHOTO_DOWNLOAD_TIMEOUT_MS` in `src/db/photos.js` says
 PROPOSED (approved 2026-11-20).
+
+## 2026-11-24 (night) — managing a bird's photos: E1–E8 (BUILT, NOT DEPLOYED; branch `feat/photos-manage`)
+
+**What was measured before the rulings** (read-only report P1–P5, same day, `photos-q-measure.log`): a photo could be
+deleted in one place, the profile's ✕, a 28 × 28 px target; a picked file could not be un-picked; the profile could not
+add a file; a bird's files came back in the order of the media store's key, a random id, so the gallery, the strip and
+"the first photo" the certificate drew were chance; the certificate's «تغيير» added a photo and the box changed only
+when the new id happened to sort first (it did at one width of two in the logged run).
+
+**Rulings E1–E8 (Samir, 2026-11-24), as built.**
+
+- **E1, the edit form's strip** (`app/bird/form.tsx`). Each file is a tile: its 56 px thumbnail, which still opens the
+  viewer, and under it a control of its own. For a SAVED file the control deletes — the profile's question
+  («تأكيد الحذف؟»), the profile's «تراجع» — at once, not with the form's save. For a PICKED file it un-picks, with no
+  question, and nothing is written.
+- **E2, the profile adds files** (`app/bird/view.tsx`). «إضافة صورة» and «إضافة وثيقة» under the gallery, each taking
+  several files. Every screen now stores a picked file through ONE function, `storePicked()` in
+  `src/components/media.ts` (the conversion, 1600 px, the stored name), so the profile cannot drift from the form.
+  Each file is stored at once; one that fails does not stop the others, and a notice names the ones that failed.
+- **E3, the main photo** (`src/db/records.js`). `mainPhotoId` on the bird, OPTIONAL and absent until chosen.
+  `mainPhotoOf(rows, mainPhotoId)`: the photo the field names, else the earliest photo by `addedAt`, never a document.
+  `setMainPhoto(birdId, mediaId)` writes the bird record in one transaction with one operation and refuses a document,
+  another bird's file, and a file the device does not hold. `deleteMedia()` clears the field — the key is removed —
+  in the transaction that deletes the photo; `restoreMedia()` puts the field back with the photo. On the profile the
+  control is under each photo.
+- **E4, the order** (`mediaForBird()`, the one place every screen reads a bird's files from): the main photo first,
+  then by `addedAt` ascending, documents among the photos. Never by id.
+- **E5, the certificate** (`app/cert/view.tsx`): each of the three boxes draws that bird's main photo. «تغيير» /
+  «اختيار صورة» calls `addMedia(…, { main: true })`: the photo and the field are written in one transaction, so the box
+  always changes.
+- **E6, two strings** that said files stay on the device: reworded (PROPOSED), table below. The spec's two sentences
+  are recorded in `guards/strings.pending.json`, so the string guard reports them ⚠ until the wording is ruled.
+- **E7, targets.** The profile's ✕ keeps its look and place — the 28 px disc, 6 px in from the tile's top and end
+  edges — inside a 44 × 44 px button. The new controls are at least 44 px both ways.
+- **E8, the old build**: measured, below.
+
+**What had to be found out on the way** (measured, each fixed in this commit):
+
+- *The mirror is not filled when a screen first asks.* The edit form asks for the bird's files as it mounts, before
+  the layer has read the birds into memory; `mediaForBird()` then saw no bird, hence no `mainPhotoId`, and the strip
+  came back without the main photo first (the suite's first run failed there). It reads the bird from the store when
+  the mirror does not have it.
+- *One write, two announcements, two reads.* A write that touches the photo and the bird announces both; the hook
+  (`src/db/react.ts`) read the list twice, made every thumbnail's object URL twice and revoked the first while it was
+  loading — «Failed to load resource» in the console on the certificate. The hook now asks once per write. It re-reads
+  on a bird change ONLY when `mainPhotoId` changed, so an unrelated edit does not rebuild the thumbnails.
+- *The form's own deletion looked like another device's.* Deleting the main photo writes the bird record; the form
+  holds a copy taken earlier, and its save would have asked «تغيّر هذا السجل على جهاز آخر» (RF-19) about the form's own
+  write. Where the form's copy was current before its own write, it is current after it (`own()`), and the save takes
+  `mainPhotoId` from the record AS STORED, never from the copy — which would otherwise put a deleted photo's id back.
+- *Files picked together shared a millisecond often enough.* `addedAt` is what the order rests on, so `addMedia()`
+  never gives two files of one device the same one.
+- *The ✕'s 44 px target met the «لم يُرفع» badge.* On a 96 px tile the badge takes 52 px of the top from the other
+  corner (measured: badge 79–131, target 39–83). The target reaches 6 px past the tile's edge into the gallery's 10 px
+  gap instead; the disc did not move.
+
+**PROPOSED — placement, icons and wording are the design chat's** (STANDING 2026-11-20):
+
+1. The strip's control sits UNDER its thumbnail, a 56 × 44 px target drawing the profile's ✕ disc. A 56 px thumbnail
+   has no room for a 44 px target beside the one that opens it.
+2. The profile's main-photo control sits UNDER each photo, the tile's width and 44 px high: the approved spec's
+   «الرئيسية» pill (`bird-profile-v1.html:82`) as a choice — filled (ink, white text) on the main photo, outlined on
+   the others. NOT on the photo's face, where the spec draws it: «a tap anywhere on the photo — its centre, three
+   corners — opens the viewer» is an ordered check (2026-11-20), the «لم يُرفع» badge holds that corner, and the pill
+   (about 60 px) does not fit beside the ✕ on a 96 px tile.
+3. «إضافة صورة» / «إضافة وثيقة» as two outlined buttons under the gallery, 44 px high.
+4. The six new strings and the two reworded ones.
+
+**Chosen without a ruling — each is a proposal:**
+
+- A deletion from the form's strip happens at once, like the profile's, not with the form's save.
+- Pressing the control under the photo that is already the main one does nothing; there is no control to un-choose.
+- «صارت هذه الصورة الرئيسية» is said when a main photo is chosen; «تم الحفظ» when files are added on the profile.
+- Files added on the profile are stored as the form stores them: a photo as `body`, a document as `other`.
+- An undo that comes after another photo was made the main one restores the photo and leaves the later choice.
+- A main photo whose bytes are not on this device is still the main photo (the certificate draws its «away» state).
+- Two files stamped in the same millisecond ON TWO DEVICES are ordered by id — nothing else tells them apart. A file
+  with no `addedAt` (none is written without one) sorts first.
+- The field is ABSENT when nothing is chosen, never `null`: a placeholder parent whose photo was deleted again then
+  holds nothing of its own (B5).
+- The strip shows no mark on the main photo; it shows it first.
+- `src/db/photos.js`: the download timeout's comment said PROPOSED; it says APPROVED 2026-11-20 now, as recorded with
+  two deploys.
+
+**To be ruled, not decided here — a PLACEHOLDER parent's box on the certificate** (measured, `pm-measure.log`). The
+father's slot of a bird whose father is a placeholder is enabled: «اختيار صورة» stores the photo ON THE PLACEHOLDER
+RECORD and, since this commit, names it in that record's `mainPhotoId`. The flag stays while a bird still names the
+placeholder, so it stays out of the register, and the certificate draws the photo over «غير معروف». When its last
+child stops naming it, B5 applies: it holds something of its own, so it is not deleted — its flag is cleared and it
+appears in the register as a reference bird named «أب غير معروف», with the photo. All of that was already so before
+this commit except the field. The choices: leave it; refuse a photo for a placeholder parent on the certificate;
+or clear the flag at once when a photo is given (the fancier has said something about the bird).
+
+**Strings — six new, two reworded, all PROPOSED, all through the typography scan where they are drawn:**
+
+| key | Arabic | English | |
+|---|---|---|---|
+| `media.main.mark` | «الرئيسية» | Main | the pill under a photo (the spec's word) |
+| `media.main.is` | «الصورة الرئيسية» | Main photo | its label on the main photo (the spec's aria-label) |
+| `media.main.set` | «جعلها الصورة الرئيسية» | Make this the main photo | its label on the others |
+| `media.main.done` | «صارت هذه الصورة الرئيسية» | This is now the main photo | notice |
+| `media.add.failed` | «تعذّر حفظ {n} من {total}: {names}» | Could not save {n} of {total}: {names} | notice |
+| `media.unpick` | «إزالة» | Remove | label of the un-pick control |
+| `form.photo.hint` (was «تُحفظ الصورة على هذا الجهاز.») | «تُحفظ الصورة على هذا الجهاز، وتُرفع إلى حسابك عند المزامنة.» | The photo is kept on this device and uploaded to your account when it syncs. | E6 |
+| `cert.photosHint` (was «تبقى الملفات على جهازك») | «تُحفظ على جهازك وتُرفع إلى حسابك عند المزامنة» | Kept on your device and uploaded to your account when it syncs | E6 |
+
+**Existing checks changed, deliberately, and none relaxed.** `screens/bird_form.py` (the strip's 56 px, kinds, names
+and decoded sizes) and `screens/photo_sync.py` (56 × 56 and the 8 px spacing) read the strip's THUMBNAILS by their own
+test ids instead of the strip's direct children, which are tiles now; the numbers asserted are the same. Nothing else
+in an existing suite changed but a comment.
+
+**Correction to the deploy record above.** It said the tombstone's `kept` field is «never sent». Sync never sends it:
+the tombstones store is not synced (`src/db/sync.js`), and a placeholder's deletion travels as an ordinary delete row.
+But an EXPORT file carries every tombstone this device holds, `kept` included (`src/db/io.js:95`, `:147`). Read from
+code; the import side of such a file on the old build is the case listed as not measured.
+
+**Proof.** New suite `tests/e2e/screens/photos_manage.py` (57 checks; 390 px with touch, the sizes again at 1280 px;
+two devices of one account on a stub for the sync of `mainPhotoId`; THE NET armed). Thirty-two mutants, one harness
+build and one suite run each, 300 s limits, every one red at the check that carries its name, none with a traceback
+(`~/zajil-work/photos-manage/mutants.sh`, `m/`; log `pm-mutants.log`):
+
+| ruling | mutants (red checks) |
+|---|---|
+| E1 | M-e1-nodelete (9), M-e1-thumbdeletes (2), M-e1-noconfirm (16), M-e1-noundo (13), M-e1-nounpick (7), M-e1-unpickwrong (2), M-e1-own (1), M-e1-stale (1) |
+| E2 | M-e2-single (6), M-e2-noadd (7), M-e2-raw (3), M-e2-silent (1) |
+| E3 | M-e3-nocontrol (17), M-e3-earliest (3), M-e3-noset (17), M-e3-doc (9), M-e3-noclear (5), M-e3-twotx (3), M-e3-noundo (1), M-e3-fallback (1), M-e3-undoover (1, a proposal) |
+| E4 | M-e4-byid (11), M-e4-viewer (1), M-e4-strip (3) |
+| E5 | M-e5-notmain (3), M-e5-nomain (3), M-e5-parent (1) |
+| E7 | M-e7-small (4), M-e7-look (2), M-e7-newsmall (2), M-e7-stripsmall (2) |
+| sync | M-sync-drop (2) |
+
+Measurement at both widths, the two-device round trip and E8: `~/zajil-work/photos-manage/measure.py`
+(`pm-measure.log`), on the harness build of this commit's own tree (`git archive`, outside the repository).
+
+**E8 — the old build (`591622c`, live as `4acbf2a` until 2026-11-24) against `mainPhotoId` written by the new build,
+measured.** It PRESERVES the field on a pull (the bird record on the old device byte for byte the new device's) and on
+a save through its form (colour only: the field unchanged on the server and on the new device, no key lost) — it
+writes the whole record, as for `placeholder` and `clutchId`. What it does not do: it draws its gallery by id and knows
+no main photo, and when it deletes the main photo it leaves the field naming a photo that is gone. The new build then
+takes the earliest photo left as the main one (E3's own rule for a field that names nothing), so nothing breaks; the
+field stays, naming nothing, until a new build sets another main photo. One consequence, read from code and NOT
+measured: on a PLACEHOLDER parent, that stale field is something B5 counts as held (`holdsOwn` compares every field
+not in its fixed list), so such a placeholder would be freed instead of deleted when its last child goes.

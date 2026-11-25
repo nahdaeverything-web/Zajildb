@@ -71,6 +71,12 @@ export function useMediaForBird(birdId: string | null) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!birdId) { setMedia([]); return; }
     let live = true;
+    // THE ORDER (RULED 2026-11-24, E4) is the layer's: mediaForBird() returns the main photo first, then by `addedAt`.
+    // It rests on the bird's `mainPhotoId`, so the list is read again when THAT changes — set on the profile, set by the
+    // certificate's «تغيير», cleared with the photo it named, or pulled from another device — and only then: a re-read
+    // makes every thumbnail's object URL anew, which an unrelated edit of the bird must not do.
+    const mainNow = () => ((db.getBird(birdId) as { mainPhotoId?: string } | undefined)?.mainPhotoId || null);
+    let main = mainNow();
     const load = () => db.mediaForBird(birdId).then((rows: Array<Record<string, unknown>>) => {
       // `hasBlob` says whether the bytes are on this device (SYNC-DESIGN §7: metadata syncs, blobs do not) — the profile
       // gallery decides placeholder vs photo from it, then fetches the blob itself (idbGet) only for the rows it renders
@@ -79,7 +85,16 @@ export function useMediaForBird(birdId: string | null) {
     load();
     // STAGE 3 (2026-11-20, measured): a PULLED media row arrives as a `sync` event with no bird id. Re-read on it too, or
     // an open profile keeps showing what was there before the pull until it is opened again.
-    const off = db.onChange((ev: ChangeEvent) => { if (ev && ((ev.type === 'media' && ev.birdId === birdId) || (ev.type === 'sync' && ev.store === 'media'))) load(); });
+    // ONE read for one write. A write that touches both the photo and the bird — the certificate's «تغيير», the deletion
+    // of the main photo — announces both, one after the other; two reads would make every thumbnail's object URL twice
+    // and revoke the first while it was still loading (measured: «Failed to load resource» on the certificate).
+    let asked = false;
+    const ask = () => { if (asked) return; asked = true; Promise.resolve().then(() => { asked = false; if (live) { main = mainNow(); load(); } }); };
+    const off = db.onChange((ev: ChangeEvent) => {
+      if (!ev) return;
+      if ((ev.type === 'media' && ev.birdId === birdId) || (ev.type === 'sync' && ev.store === 'media')) ask();
+      else if (((ev.type === 'bird' && ev.id === birdId) || (ev.type === 'sync' && ev.store === 'birds')) && mainNow() !== main) ask();
+    });
     return () => { live = false; off(); };
   }, [birdId]);
   return media;

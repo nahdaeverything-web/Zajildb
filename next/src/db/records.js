@@ -549,14 +549,83 @@ export const Lofts = makeGeneric('lofts', 'lofts', 'loft');
 
 // ---------------------------------------------------------------------- media
 
-export async function addMedia(birdId, kind, subtype, name, blob) {
-  const m = { id: uuid(), birdId, kind, subtype, name, blob, addedAt: nowISO() };
+// ── THE MAIN PHOTO, AND THE ORDER OF A BIRD'S FILES (RULED 2026-11-24, E3–E5) ── PORT-ONLY
+// A bird's files used to come back in the order of the store's key — a random id — so "the first photo" (the
+// certificate's) was chance, and so was the order of the gallery and the strip (measured 2026-11-24). Now:
+//   · `mainPhotoId` on the bird, OPTIONAL, names its main photo. Absent means not chosen.
+//   · THE MAIN PHOTO is the photo that field names; when it names none this device holds a record for — never set, or
+//     the photo is gone — it is the EARLIEST photo by `addedAt`. A document is never the main photo.
+//   · THE ORDER, everywhere: the main photo first, then every file by `addedAt` ascending. Never by id — an id decides
+//     only between two files stamped in the same millisecond on two devices, which nothing else can tell apart.
+//   · Deleting the main photo clears the field in the transaction that deletes it; undoing that deletion puts both back.
+const byAdded = (a, b) => (a.addedAt || '').localeCompare(b.addedAt || '') || String(a.id).localeCompare(String(b.id));
+/** The main photo among one bird's files: the one `mainPhotoId` names, else the earliest photo, else null. */
+export function mainPhotoOf(rows, mainPhotoId) {
+  const photos = (rows || []).filter((m) => m && m.kind === 'photo');
+  return photos.find((m) => m.id === mainPhotoId) || [...photos].sort(byAdded)[0] || null;
+}
+/** One bird's files in the order every screen shows them: the main photo first, then by `addedAt` ascending. */
+export function orderMedia(rows, mainPhotoId) {
+  const main = mainPhotoOf(rows, mainPhotoId);
+  return [...(rows || [])].sort((a, b) => (main && a.id === main.id ? -1 : main && b.id === main.id ? 1 : 0) || byAdded(a, b));
+}
+// `addedAt` is what the order rests on, so no two files stored by this device carry the same one: files picked together
+// are stored within the same millisecond often enough, and their order would then fall back to their ids.
+let lastAddedAt = '';
+function nextAddedAt() {
+  let at = nowISO();
+  if (at <= lastAddedAt) at = new Date(new Date(lastAddedAt).getTime() + 1).toISOString();
+  lastAddedAt = at;
+  return at;
+}
+/** Deleted main photos, media id → bird id, so that the undo of that deletion (restoreMedia) puts the field back. */
+const clearedMain = new Map();
+
+/**
+ * @param {{ main?: boolean }} [opts] `main` (E5): the new photo becomes the bird's main photo, IN THE SAME TRANSACTION
+ *   that stores it — the certificate's «تغيير». Ignored for a document, and for an owner that is not a bird (a loft's logo).
+ */
+export async function addMedia(birdId, kind, subtype, name, blob, opts = {}) {
+  const m = { id: uuid(), birdId, kind, subtype, name, blob, addedAt: nextAddedAt() };
+  const owner = opts.main === true && kind === 'photo' ? state.birds.get(birdId) : null;
+  if (owner) {
+    const next = stamp({ ...owner, mainPhotoId: m.id });
+    await atomicWrite(['media', 'birds'], async (w) => {
+      await w.put('media', m);
+      await w.log({ origin: 'user', store: 'media', op: 'put', recordId: m.id, record: m,
+                    changed: ['id', 'birdId', 'kind', 'subtype', 'name', 'addedAt'] });
+      await w.put('birds', next);
+      w.then(() => state.birds.set(next.id, next));
+      await w.log({ origin: 'user', store: 'birds', op: 'put', recordId: next.id, record: next, changed: diffFields(owner, next) });
+    });
+    emitChange({ type: 'bird', id: next.id });
+    emitChange({ type: 'media', id: m.id, birdId });
+    return m;
+  }
   await idbPut('media', m);
   // metadata only — a Blob never enters the op log
   await logOp({ origin: 'user', store: 'media', op: 'put', recordId: m.id, record: m,
                 changed: ['id', 'birdId', 'kind', 'subtype', 'name', 'addedAt'] });
   emitChange({ type: 'media', id: m.id, birdId });
   return m;
+}
+/**
+ * E3: make one of a bird's photos its main photo. Refused (false, nothing written) for a file that is not a photo, not
+ * this bird's, or not held here. One transaction, one operation: the bird record with the field, as any other edit.
+ */
+export async function setMainPhoto(birdId, mediaId) {
+  const bird = state.birds.get(birdId);
+  const m = mediaId ? await idbGet('media', mediaId) : null;
+  if (!bird || !m || m.birdId !== birdId || m.kind !== 'photo') return false;
+  if (bird.mainPhotoId === mediaId) return true;
+  const next = stamp({ ...bird, mainPhotoId: mediaId });
+  await atomicWrite(['birds'], async (w) => {
+    await w.put('birds', next);
+    w.then(() => state.birds.set(next.id, next));
+    await w.log({ origin: 'user', store: 'birds', op: 'put', recordId: next.id, record: next, changed: diffFields(bird, next) });
+  });
+  emitChange({ type: 'bird', id: birdId });
+  return true;
 }
 /**
  * THE PHOTO INVARIANT (RULED 2026-11-16): a media record that holds bytes is never replaced by one that does not.
@@ -569,27 +638,55 @@ export async function withHeldBytes(m) {
   const have = await idbGet('media', m.id);
   return have && have.blob ? { ...m, blob: have.blob } : m;
 }
-export function mediaForBird(birdId) { return idbGetAll('media', 'birdId', birdId); }
+/** One bird's files (or one loft's), in THE ORDER (E4): the main photo first, then by `addedAt` ascending. */
+export async function mediaForBird(birdId) {
+  // a screen asks for a bird's files as it mounts, which can be BEFORE the layer has filled its mirror (measured: the edit
+  // form's strip came back without the main photo first on a fresh load) — so the record is read from the store then
+  const owner = state.birds.get(birdId) || (birdId ? await idbGet('birds', birdId) : null);
+  return orderMedia(await idbGetAll('media', 'birdId', birdId), owner ? owner.mainPhotoId : null);
+}
 /** Put a media record back after a delete (undo). Emits, so views refresh. */
 export async function restoreMedia(m) {
   if (!m) return null;
-  await atomicWrite(['media'], async (w) => {             // RF-27
+  // E3: the undo of a main photo's deletion puts the field back with the photo — unless the bird has been given
+  // another main photo since, which is the fancier's later word and stays
+  const owner = clearedMain.get(m.id) === m.birdId ? state.birds.get(m.birdId) : null;
+  const back = owner && !owner.mainPhotoId ? stamp({ ...owner, mainPhotoId: m.id }) : null;
+  await atomicWrite(back ? ['media', 'birds'] : ['media'], async (w) => {             // RF-27
     await w.put('media', m);
     await w.log({ origin: 'restore', store: 'media', op: 'put', recordId: m.id, record: m });
     await w.untomb('media', m.id);
+    if (back) {
+      await w.put('birds', back);
+      w.then(() => state.birds.set(back.id, back));
+      await w.log({ origin: 'restore', store: 'birds', op: 'put', recordId: back.id, record: back, changed: diffFields(owner, back) });
+    }
   });
+  clearedMain.delete(m.id);
+  if (back) emitChange({ type: 'bird', id: back.id });
   emitChange({ type: 'media', id: m.id, birdId: m.birdId });
   return m;
 }
 
 export async function deleteMedia(id) {
   const m = await idbGet('media', id);
-  await atomicWrite(['media'], async (w) => {             // RF-27
+  // E3: a bird whose main photo this is loses the field in the same transaction — removed, not emptied: absent means
+  // not chosen, and the main photo is then the earliest one left (mainPhotoOf)
+  const owner = m ? state.birds.get(m.birdId) : null;
+  let cleared = null;
+  if (owner && owner.mainPhotoId === id) { cleared = { ...owner }; delete cleared.mainPhotoId; stamp(cleared); }
+  await atomicWrite(cleared ? ['media', 'birds'] : ['media'], async (w) => {             // RF-27
     await w.del('media', id);
     const seq = await w.log({ origin: 'user', store: 'media', op: 'delete', recordId: id, record: m });
     await w.tomb('media', id, seq);
     await w.unstore([m]);
+    if (cleared) {
+      await w.put('birds', cleared);
+      w.then(() => state.birds.set(cleared.id, cleared));
+      await w.log({ origin: 'user', store: 'birds', op: 'put', recordId: cleared.id, record: cleared, changed: diffFields(owner, cleared) });
+    }
   });
+  if (cleared) { clearedMain.set(id, cleared.id); emitChange({ type: 'bird', id: cleared.id }); }
   emitChange({ type: 'media', id, birdId: m && m.birdId });
   return m;
 }

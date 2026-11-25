@@ -149,7 +149,7 @@ try:
 
         # ── A TAP ON THE PHOTO NEVER DELETES ──
         n0 = run(pg, COUNT, bird); results = []
-        tile = pg.locator('[data-testid=media-tile]', has=pg.locator('[data-testid=media-open]')).nth(0)   # a PHOTO's tile: the order follows the ids
+        tile = pg.locator('[data-testid=media-tile]', has=pg.locator('[data-testid=media-open]')).nth(0)   # a PHOTO's tile: the first in the layer's order (the main photo, then by the time each was added)
         def steady_boxes():
             # read the tile and its delete button where they ARE: scrolled to the middle, and the page done moving — a
             # banner that appears late above the gallery moves everything down after a first reading (seen under a gate)

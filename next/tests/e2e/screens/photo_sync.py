@@ -405,7 +405,9 @@ try:
               got and len(strip) == 3 and [x for x in strip if x] == [{'text': 'لم يُرفع', 'reason': 'size'}], strip)
         check('[typography] the strip mark is drawn in a face that has Arabic', got and not ty, ty[:3])
         sgeo = ds.evaluate("""() => { const box = (e) => { const b = e.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom, w: Math.round(b.width), h: Math.round(b.height) }; };
-            const items = [...document.querySelectorAll('[data-testid=photo-strip] > *')].map(box).sort((a, b) => a.l - b.l);
+            // 2026-11-24 (E1): the strip's children are tiles now (a thumbnail and the control under it); the THUMBNAILS are
+            // what keeps 56 × 56 and the 8 px spacing, so they are what is measured — the numbers asserted are unchanged
+            const items = [...document.querySelectorAll('[data-testid=photo-strip] [data-testid=strip-saved], [data-testid=photo-strip] [data-testid=strip-pending]')].map(box).sort((a, b) => a.l - b.l);
             const r = document.querySelector('[data-testid=strip-refused]'); const th = r && r.closest('[data-testid=strip-saved]');
             return { sizes: items.map(i => [i.w, i.h]), gaps: items.slice(1).map((i, k) => Math.round(i.l - items[k].r)), badge: r && box(r), thumb: th && box(th) }; }""")
         inside = bool(sgeo['badge']) and sgeo['badge']['l'] >= sgeo['thumb']['l'] and sgeo['badge']['r'] <= sgeo['thumb']['r'] and sgeo['badge']['t'] >= sgeo['thumb']['t'] and sgeo['badge']['b'] <= sgeo['thumb']['b']

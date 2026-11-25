@@ -1,3 +1,5 @@
+import * as db from '@/src/db.js';
+
 /**
  * Downscale a picked image before it is stored.
  *
@@ -85,4 +87,17 @@ export async function downscaleImage(file: File): Promise<Blob | File> {
   } finally {
     bmp.close();
   }
+}
+
+/** A file as it is picked, before it is stored. */
+export type Picked = { kind: 'photo' | 'document'; subtype: string; file: File };
+
+/**
+ * ONE PATH FOR A PICKED FILE (RULED 2026-11-24, E2): the bird form, the profile's photos card and the certificate all
+ * store a file through here — converted and reduced by downscaleImage(), named by storedName(), then written by the
+ * layer. `main` makes the new photo the bird's main photo in the transaction that stores it (the certificate's «تغيير»).
+ */
+export async function storePicked(ownerId: string, m: Picked, opts: { main?: boolean } = {}): Promise<{ id: string }> {
+  const out = await downscaleImage(m.file);
+  return db.addMedia(ownerId, m.kind, m.subtype, storedName(m.file, out), out, opts) as Promise<{ id: string }>;
 }

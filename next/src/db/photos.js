@@ -57,7 +57,7 @@ let full = false;            // the last upload was refused because storage is f
  */
 /**
  * RULED 2026-11-20: A STUCK DOWNLOAD MUST NOT HOLD THE QUEUE. One download is given this long; then it is abandoned —
- * that file fails and waits out its own backoff, and the next file goes. PROPOSED: 60 s — a 1600 px photo (0.3–0.5 MB)
+ * that file fails and waits out its own backoff, and the next file goes. 60 s (APPROVED 2026-11-20) — a 1600 px photo (0.3–0.5 MB)
  * comes down in seconds on a slow phone line, and a 5 MiB document needs about 40 s at 1 Mbit/s.
  */
 export const PHOTO_DOWNLOAD_TIMEOUT_MS = 60 * 1000;

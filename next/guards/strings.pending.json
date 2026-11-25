@@ -1,1 +1,8 @@
-{}
+{
+  "add-edit-bird-v2.html": {
+    "تُحفظ الصورة على هذا الجهاز.": "E6 (RULED 2026-11-24): the spec's sentence stopped being the whole truth with photo sync, stage 1 — a photo is also uploaded to the account. form.photo.hint carries PROPOSED wording («تُحفظ الصورة على هذا الجهاز، وتُرفع إلى حسابك عند المزامنة.»); awaiting the design chat's wording."
+  },
+  "certificate-v1.html": {
+    "تبقى الملفات على جهازك": "E6 (RULED 2026-11-24): not true since photo sync, stage 1. cert.photosHint carries PROPOSED wording («تُحفظ على جهازك وتُرفع إلى حسابك عند المزامنة»); awaiting the design chat's wording."
+  }
+}

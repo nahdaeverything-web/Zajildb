@@ -154,6 +154,12 @@
 .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
 .thumb svg{ width:22px; height:22px; stroke:var(--ink-3); stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
 .thumb.fresh{ border:2px solid var(--brand); }
+/* E1 (RULED 2026-11-24): a file's thumbnail and, under it, its own control — delete (saved) or un-pick (picked). The
+   thumbnail keeps its 56 px and the strip its 8 px spacing (RULED 2026-11-20). The control is a 56 × 44 px target (E7: at
+   least 44) drawing the profile's ✕: a 28 px disc. PROPOSED placement and look — the design chat's. */
+.tile{ display:inline-flex; flex-direction:column; align-items:center; width:56px; }
+.tdel{ width:56px; height:44px; padding:0; border:0; background:transparent; cursor:pointer; display:grid; place-items:center; }
+.tdel span{ width:28px; height:28px; border-radius:999px; background:var(--surface); color:var(--danger); font-weight:900; font-size:13px; display:grid; place-items:center; box-shadow:inset 0 0 0 1px var(--line); }
 /* photo sync stage 2 (RULED 2026-11-20): a refused file carries the profile's badge ON its thumbnail, in the top corner */
 .refused{ position:absolute; top:3px; inset-inline-start:3px; padding:1px 5px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); font-family:inherit; font-size:9.5px; font-weight:800; line-height:1.4; white-space:nowrap; cursor:pointer; box-shadow:inset 0 0 0 1px var(--line); }
 .filelist{ font-family:var(--f-mono); font-size:12px; color:var(--ink-2); direction:ltr; text-align:right; margin-top:6px; }

@@ -12,7 +12,7 @@ export { BirdLabel, SexChip, COIValue, Plate, primaryRing, birdLabelText, birdNa
 export { seasonStart, seasonLabel } from './season';
 export { downloadJSON, downloadBlob } from './download';
 export { asset } from './asset';
-export { downscaleImage, storedName, MAX_EDGE } from './media';
+export { downscaleImage, storedName, storePicked, MAX_EDGE, type Picked } from './media';
 export { pickerModel, candidates, exactMatch, createFromQuery } from './picker';
 export { Tpl } from './Tpl';
 export { applySettings, saveSetting } from './settings';

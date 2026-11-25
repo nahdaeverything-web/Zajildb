@@ -215,7 +215,23 @@
 /* photo sync stage 2 (RULED 2026-11-20): a file that will not be uploaded carries a small badge in its tile's top corner —
    the delete button holds the other top corner and the file name the foot, so it covers neither. The full sentence is on a tap. */
 .refused{ position:absolute; top:6px; inset-inline-start:6px; padding:2px 6px; border:0; border-radius:999px; background:var(--surface); color:var(--ink); font-family:inherit; font-size:10px; font-weight:800; line-height:1.4; white-space:nowrap; cursor:pointer; box-shadow:inset 0 0 0 1px var(--line); }
-.del{ position:absolute; top:6px; inset-inline-end:6px; width:28px; height:28px; border:none; border-radius:999px; background:var(--surface); color:var(--danger); font-weight:900; font-size:13px; cursor:pointer; display:grid; place-items:center; box-shadow:inset 0 0 0 1px var(--line); }
+.del{ position:absolute; top:-2px; inset-inline-end:-6px; width:44px; height:44px; padding:0; padding-inline-end:12px; border:none; background:transparent; cursor:pointer; display:grid; align-items:center; justify-items:end; }
+/* E7 (RULED 2026-11-24): the ✕ keeps its look and its place — a 28 px disc 6 px in from the tile's top corner — and is
+   drawn inside a 44 × 44 px target, so a thumb finds it. The disc is this span; the button is the target. The target
+   reaches 6 px past the tile's edge into the gallery's 10 px gap rather than further over the photo: on a 96 px tile the
+   «لم يُرفع» badge takes 52 px of the top from the other corner (measured), and the two targets must not meet. */
+.del span{ width:28px; height:28px; border-radius:999px; background:var(--surface); color:var(--danger); font-weight:900; font-size:13px; display:grid; place-items:center; box-shadow:inset 0 0 0 1px var(--line); }
+/* E3 (RULED 2026-11-24): UNDER a photo, the choice of the bird's main photo — the approved spec's «الرئيسية» pill
+   (.ph.cover::after: 11px/800, ink on white text) filled on the main photo and outlined on the others, in a target as wide
+   as the tile and 44 px high. PROPOSED placement and look — the design chat's. */
+.phcell{ min-width:0; }
+.mainbtn{ display:grid; place-items:center; width:100%; height:44px; padding:0; border:none; background:transparent; cursor:pointer; }
+.mainbtn span{ font-size:11px; font-weight:800; line-height:1.5; border-radius:999px; padding:3px 9px; background:var(--surface); color:var(--ink-2); box-shadow:inset 0 0 0 1px var(--line); white-space:nowrap; }
+.mainbtn.on span{ background:var(--ink); color:#fff; box-shadow:none; }
+/* E2 (RULED 2026-11-24): add a photo or a document from the profile. PROPOSED placement and look — the design chat's. */
+.addrow{ display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+.addbtn{ flex:1 1 0; min-height:44px; padding:0 12px; border:2px solid var(--line); border-radius:var(--r-btn); background:transparent; color:var(--ink); font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; }
+.addbtn:disabled{ opacity:.5; cursor:default; }
 /* ruling 10 (4A acceptance): vanilla's add-note inside the spec's notes card */
 .noteform{ display:flex; flex-direction:column; gap:10px; margin-top:14px; }
 .noteform textarea{ width:100%; border:2px solid var(--line); border-radius:var(--r-btn); padding:12px 14px; font-family:var(--f); font-size:15px; resize:vertical; background:var(--page); color:var(--ink); }

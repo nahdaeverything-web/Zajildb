@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import * as db from '@/src/db.js';
@@ -8,7 +8,7 @@ import { t, fmtDate, fmtNum, fmtPercent, statusLabel } from '@/src/i18n.ext.js';
 import { inbreeding, ancestorLoss } from '@/src/engine/coi.js';
 import { descendantDepths, pedigreeGrid } from '@/src/engine/pedigree.js';
 import { birdEligibility } from '@/src/engine/fci.js';
-import { SyncRow, Loading, MediaPlaceholder, PhotoViewer, COIValue, BirdLabel, primaryRing, birdLabelText, birdName, placeholderName, toast, undoToast, confirmDialog, choiceDialog, seasonStart, downloadJSON, initDB } from '@/src/components';
+import { SyncRow, Loading, MediaPlaceholder, PhotoViewer, storePicked, type Picked, COIValue, BirdLabel, primaryRing, birdLabelText, birdName, placeholderName, toast, undoToast, confirmDialog, choiceDialog, seasonStart, downloadJSON, initDB } from '@/src/components';
 import sh from '@/src/components/shared.module.css';
 import s from './bird.module.css';
 
@@ -23,11 +23,11 @@ import s from './bird.module.css';
 // the interim is named in the commit and the 4A report.
 type Ring = { raw?: string; type?: string; year?: number | string };
 type Note = { id?: string; at?: string; text?: string };
-type Bird = { id: string; name?: string; sex?: string; status?: string; hatchDate?: string; colour?: string; strain?: string; eyeSign?: string; breeder?: string; owner?: string; acquiredFrom?: string; acquiredDate?: string; createdAt?: string; external?: boolean; loftId?: string; sireId?: string | null; damId?: string | null; rings?: Ring[]; notes?: Note[] };
+type Bird = { id: string; mainPhotoId?: string; name?: string; sex?: string; status?: string; hatchDate?: string; colour?: string; strain?: string; eyeSign?: string; breeder?: string; owner?: string; acquiredFrom?: string; acquiredDate?: string; createdAt?: string; external?: boolean; loftId?: string; sireId?: string | null; damId?: string | null; rings?: Ring[]; notes?: Note[] };
 type Race = { id: string; birdId: string; date?: string; raceName?: string; raceType?: string; releasePoint?: { name?: string } | null; distanceKm?: number; velocity?: number; position?: number | null; birdsEntered?: number };
 type HealthEvent = { id: string; birdId?: string | null; loftId?: string; wholeLoft?: boolean; eventType: string; date?: string; medication?: string; notes?: string };
 type Pair = { id: string; sireId?: string; damId?: string };
-type Media = { id: string; kind?: string; subtype?: string; name?: string; hasBlob?: boolean; stored?: { at?: string } | null };
+type Media = { id: string; kind?: string; subtype?: string; name?: string; addedAt?: string; hasBlob?: boolean; stored?: { at?: string } | null };
 type Slot = { id: string; bird: Bird | undefined } | null;
 type Tab = 'over' | 'ped' | 'race' | 'hlth';
 const TABS: Array<[Tab, string]> = [['over', 'tab.overview'], ['ped', 'tab.pedigree'], ['race', 'nav.races'], ['hlth', 'nav.health']];
@@ -119,6 +119,11 @@ export default function BirdView() {
   // notice's own words and for as long as the notice (12 s). The title stays for a pointer that can hover.
   const refusedWhy = (m: Media) => t('media.refused.' + (refused[m.id] === 'type' ? 'type' : 'size'), { name: m.name || '' });
   const photos = media.filter((m) => m.kind === 'photo');
+  // THE MAIN PHOTO (RULED 2026-11-24, E3): the photo the bird's `mainPhotoId` names, else the earliest one (the layer's
+  // rule, mainPhotoOf). `media` already comes in THE ORDER (E4): the main photo first, then by the time each was added.
+  const mainId = ((db.mainPhotoOf(media, bird ? bird.mainPhotoId : undefined) as Media | null) || { id: '' }).id;
+  const photoIn = useRef<HTMLInputElement>(null); const docIn = useRef<HTMLInputElement>(null);
+  const [adding, setAdding] = useState(false);
   const whereOf = (m: Media) => (m.stored ? (fetchFailed[m.id] ? 'failed' : 'fetching') : db.isSignedIn() ? 'pending' : 'elsewhere') as 'elsewhere' | 'pending' | 'fetching' | 'failed';
   useEffect(() => { if (booted && !bird) router.replace('/birds'); }, [booted, bird, router]);   // bird-detail.js:21
 
@@ -211,6 +216,27 @@ export default function BirdView() {
       // the ordinary state after a sync. Raised in the 4D report; a share that cannot be made
       // must say so rather than doing nothing.
     }).catch(() => toast(t('err.exportFailed'), { kind: 'error' }));
+  }
+  // E2 (RULED 2026-11-24): photos and documents are added HERE too, several at once, through the form's own path
+  // (storePicked: the same conversion, the same 1600 px), each stored at once. A file that fails does not stop the
+  // others, and the fancier is told which ones failed — never a silent partial result.
+  async function addFiles(kind: 'photo' | 'document', files: File[]) {
+    if (!bird || !files.length || adding) return;
+    setAdding(true);
+    const failed: string[] = [];
+    try {
+      for (const file of files) {
+        const m: Picked = { kind, subtype: kind === 'photo' ? 'body' : 'other', file };
+        try { await storePicked(bird.id, m); } catch { failed.push(file.name); }
+      }
+    } finally { setAdding(false); }
+    if (failed.length) toast(t('media.add.failed', { n: fmtNum(failed.length), total: fmtNum(files.length), names: failed.join('، ') }), { kind: 'error', timeout: 12000 });
+    else toast(t('toast.saved'), { kind: 'success' });
+  }
+  // E3: the control under a photo makes it the bird's main photo. A document has none.
+  async function makeMain(m: Media) {
+    if (!bird || m.id === bird.mainPhotoId) return;
+    if (await db.setMainPhoto(bird.id, m.id)) toast(t('media.main.done'), { kind: 'success' });
   }
   // bird-detail.js:233 — per-photo delete with undo (ruling 8: a capability the spec's silence does not remove)
   async function delMedia(m: Media) {
@@ -329,7 +355,9 @@ export default function BirdView() {
               {media.length === 0 ? <p className={sh.muted}>{t('common.none')}</p> : (
                 <div className={s.gal} data-testid="gallery">
                   {media.map((m) => (
-                    <div key={m.id} className={s.phwrap} data-testid="media-tile">
+                    // a file's cell: its tile (the photo, its ✕, its badge — unchanged), and under a photo the main-photo choice
+                    <div key={m.id} className={s.phcell} data-testid="media-cell">
+                    <div className={s.phwrap} data-testid="media-tile">
                       {m.kind === 'photo' ? (
                         // a tap anywhere on the photo opens it full screen; the delete button is a sibling in its own corner,
                         // so a tap on the photo cannot reach it (ORDERED 2026-11-20)
@@ -344,11 +372,27 @@ export default function BirdView() {
                         // a document opens in the browser's own viewer (ORDERED 2026-11-20), not as a download
                         : <a className={`${s.ph} ${s.img}`} href={urls[m.id]} target="_blank" rel="noopener" data-testid="media-file">📄<span>{m.name || 'document'}</span></a>}
                       {refused[m.id] && <button type="button" className={s.refused} onClick={() => toast(refusedWhy(m), { timeout: 12000 })} data-testid="media-refused" data-reason={refused[m.id]} title={refusedWhy(m)}>{t('media.refusedMark')}</button>}
-                      <button type="button" className={s.del} aria-label={t('act.delete')} onClick={() => delMedia(m)} data-testid="media-delete">✕</button>
+                      {/* E7 (RULED 2026-11-24): the ✕ keeps its look — the 28 px disc in the corner — inside a 44 px target */}
+                      <button type="button" className={s.del} aria-label={t('act.delete')} onClick={() => delMedia(m)} data-testid="media-delete"><span aria-hidden="true">✕</span></button>
+                    </div>
+                      {/* E3: UNDER a photo, never on its face — a tap anywhere on the photo still opens it (ORDERED 2026-11-20).
+                          PROPOSED, the design chat's to place and word: the approved spec's «الرئيسية» pill as a choice,
+                          filled on the main photo, outlined on the others. */}
+                      {m.kind === 'photo' && (
+                        <button type="button" className={`${s.mainbtn} ${m.id === mainId ? s.on : ''}`} aria-pressed={m.id === mainId} aria-label={t(m.id === mainId ? 'media.main.is' : 'media.main.set')}
+                          onClick={() => makeMain(m)} data-testid="media-main" data-main={m.id === mainId ? '1' : '0'}><span>{t('media.main.mark')}</span></button>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
+              {/* E2: add a photo or a document from the profile — several files at once. PROPOSED placement and look. */}
+              <div className={s.addrow} data-testid="media-add">
+                <button type="button" className={s.addbtn} disabled={adding} onClick={() => photoIn.current?.click()} data-testid="media-add-photo">{t('bird.addPhoto')}</button>
+                <button type="button" className={s.addbtn} disabled={adding} onClick={() => docIn.current?.click()} data-testid="media-add-doc">{t('bird.addDocument')}</button>
+                <input ref={photoIn} type="file" accept="image/*" multiple hidden onChange={(e) => { const fs = [...(e.target.files || [])]; e.target.value = ''; addFiles('photo', fs); }} data-testid="media-add-photo-input" />
+                <input ref={docIn} type="file" accept="image/*,.pdf" multiple hidden onChange={(e) => { const fs = [...(e.target.files || [])]; e.target.value = ''; addFiles('document', fs); }} data-testid="media-add-doc-input" />
+              </div>
               {viewing !== null && viewing >= 0 && photos.length > 0 && (
                 <PhotoViewer items={photos.map((p) => ({ key: p.id, id: p.id, name: p.name }))} start={viewing} onClose={() => setViewing(null)} />
               )}

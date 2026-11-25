@@ -6,7 +6,7 @@ import * as db from '@/src/db.js';
 import { useZajilStore, selectBirds, useMediaForBird } from '@/src/db/react';
 import { t, fmtDate, statusLabel } from '@/src/i18n.ext.js';
 import { parseRing, RING_TYPES } from '@/src/engine/rings.js';
-import { Loading, PhotoViewer, toast, confirmDialog, choiceDialog, downscaleImage, storedName, primaryRing, birdLabelText, birdName, placeholderName, problemParams, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
+import { Loading, PhotoViewer, toast, undoToast, confirmDialog, choiceDialog, storePicked, primaryRing, birdLabelText, birdName, placeholderName, problemParams, seasonLabel, SexChip, pickerModel, createFromQuery, initDB } from '@/src/components';
 import s from './form.module.css';
 
 // Add / edit bird — design/approved/add-edit-bird-v2.html, behaviour from
@@ -24,7 +24,7 @@ import s from './form.module.css';
 // dialog; the duplicate ring shows live in the spec's warnbox.
 type Ring = { raw?: string; type?: string; year?: number | string | null; country?: string };
 type Note = { id?: string; at?: string; text?: string };
-type Bird = { id: string; name?: string; sex?: string; status?: string; hatchDate?: string; colour?: string; strain?: string; eyeSign?: string; breeder?: string; owner?: string; acquiredFrom?: string; acquiredDate?: string; external?: boolean; placeholder?: boolean; clutchId?: string; sireId?: string | null; damId?: string | null; rings?: Ring[]; notes?: Note[] };
+type Bird = { id: string; mainPhotoId?: string; name?: string; sex?: string; status?: string; hatchDate?: string; colour?: string; strain?: string; eyeSign?: string; breeder?: string; owner?: string; acquiredFrom?: string; acquiredDate?: string; external?: boolean; placeholder?: boolean; clutchId?: string; sireId?: string | null; damId?: string | null; rings?: Ring[]; notes?: Note[] };
 type Problem = { key: string; params?: Record<string, unknown> };
 type Role = 'sire' | 'dam';
 type Picker = { role: Role; mode: 'pick' | 'create'; q: string } | null;
@@ -243,7 +243,8 @@ export default function BirdForm() {
 
   // PHOTO SYNC, STAGE 1 (RULED 2026-11-18, from the same phone): the EDIT form shows the photos the bird already has,
   // and EVERY picked file shows before saving — not only the last. A strip of small tiles under the photo block: the
-  // saved ones first, then the picked ones. Read-only here; a photo is deleted from the profile, as before.
+  // saved ones first (in the layer's order: the main photo, then by the time each was added — E4), then the picked ones.
+  // Since 2026-11-24 (E1) a saved file can be deleted here and a picked one un-picked: the strip's two controls, below.
   const saved = useMediaForBird(editId || null) as Array<{ id: string; kind?: string; name?: string; hasBlob?: boolean }>;
   // PHOTO SYNC STAGE 2 (RULED 2026-11-20): a file storage refused carries the profile's badge ON its 56 px thumbnail, and a
   // TAP on it says the full sentence (no hover on a phone). The thumbnail keeps its size and the strip its spacing.
@@ -319,6 +320,30 @@ export default function BirdForm() {
   const tellGone = () => confirmDialog({ title: t('val.cannotSave'), list: { kind: 'errs', items: [{ field: t('tab.pedigree'), text: t('sib.gone', { name: link ? link.name : '' }) }] }, cancelLabel: t('val.backToForm'), confirmLabel: null, confirmKind: 'primary' });
   const statuses = useMemo(() => (booted ? (db.loftStatuses() as string[]) : []), [booted]);
 
+  // ── THE STRIP'S TWO CONTROLS (RULED 2026-11-24, E1) ──
+  // A SAVED file is deleted here exactly as on the profile: the same question, the same «تراجع». It is deleted AT ONCE,
+  // not with the form's save — a photo is a record of its own, and the profile's ✕ does not wait for anything either.
+  // A PICKED file has not been stored: its control only un-picks it, with no question, and nothing is written.
+  // Each control is its own target under the thumbnail; the thumbnail itself still opens the viewer.
+  //
+  // Deleting the bird's MAIN photo writes the bird record (the field is cleared with it, and put back by the undo). That
+  // write is this form's own, so it must not come back at the save as «تغيّر على جهاز آخر» (RF-19): where the form's copy
+  // was current before the write, it is still current after it.
+  async function own<T>(write: () => Promise<T>): Promise<T> {
+    const at = () => (editId ? ((db.getBird(editId) as { updatedAt?: string } | undefined)?.updatedAt || null) : null);
+    const current = at() === loadedAt.current;
+    const out = await write();
+    if (current) loadedAt.current = at();
+    return out;
+  }
+  async function delSaved(m: { id: string }) {
+    const ok = await confirmDialog({ title: t('confirm.deleteGeneric'), cancelLabel: t('act.cancel'), confirmLabel: t('act.delete'), confirmKind: 'danger' });
+    if (!ok) return;
+    const snap = await own(() => db.deleteMedia(m.id));
+    undoToast(t('toast.deleted'), t('act.undo'), async () => { if (!snap) return; await own(() => db.restoreMedia(snap)); toast(t('toast.undone'), { kind: 'success' }); });
+  }
+  const unpick = (i: number) => { setViewing(null); setPending(pending.filter((_, k) => k !== i)); };
+
   /** bird-form.js:140 collect — the record as it would be saved. */
   const collect = (d: Bird = draft!): Bird => {
     const rs = rings.map((r) => { const parsed = parseRing(r.raw || '', r.type || 'national') as Ring; parsed.type = (r.type || 'national') === 'national' && parsed.type === 'FCI' ? 'FCI' : (r.type || 'national'); return parsed; }).filter((r) => r.raw);
@@ -339,6 +364,11 @@ export default function BirdForm() {
       if (rs.length > 0 || out.name !== '' || !out.external) delete out.placeholder;
       else { const stored = getBird(d.id); out.name = (stored && stored.name) || ''; }
     }
+    // THE MAIN PHOTO (RULED 2026-11-24, E3) is not a field of this form. It is set on the profile and by the certificate,
+    // and cleared by the deletion of the photo it names — this form's own ✕ included — while the form holds a copy taken
+    // earlier. So the record is saved with the field AS IT IS STORED NOW, never as the copy has it.
+    const cur = getBird(d.id) as Bird | undefined;
+    if (cur && cur.mainPhotoId) out.mainPhotoId = cur.mainPhotoId; else delete out.mainPhotoId;
     return out;
   };
   // live duplicate-ring warning (spec's warnbox): the engine's own rule, re-run as the rings change
@@ -368,8 +398,8 @@ export default function BirdForm() {
       if (plan && link && !getBird(link.xId)) { await tellGone(); return; }   // B6: gone while a question was open — nothing is written
       if (plan) await db.saveBirds([...plan.placeholders.map((b) => ({ bird: b })), ...(plan.x ? [{ bird: plan.x, allowWarnings: true }] : []), { bird, allowWarnings: !!opts.allowWarnings }]);
       else await db.saveBird(bird, opts);
-      // downscaled on the way in — see src/components/media.ts for the measured reason
-      for (const m of pending) { const out = await downscaleImage(m.file); await db.addMedia(bird.id, m.kind, m.subtype, storedName(m.file, out), out); }
+      // downscaled on the way in — see src/components/media.ts for the measured reason; the one path every screen stores through
+      for (const m of pending) await storePicked(bird.id, m);
       const offer = pairToOffer(bird, before);
       if (offer) {
         const make = await confirmDialog({ title: t('pairOffer.title'), body: t('pairOffer.body', { sire: birdLabelText(offer.sire), dam: birdLabelText(offer.dam) }),
@@ -557,17 +587,27 @@ export default function BirdForm() {
             </div>
             {(saved.length > 0 || pending.length > 0) && (
               <div className={s.strip} data-testid="photo-strip">
+                {/* E1 (RULED 2026-11-24): each file is a thumbnail that opens it, and UNDER it, as a target of its own, the
+                    control that deletes a saved file or un-picks a picked one. PROPOSED, the design chat's to place: the
+                    control under the thumbnail (a 56 px thumbnail has no room for a 44 px target beside the one that opens
+                    it), and its look, which is the profile's ✕. */}
                 {saved.map((m) => (
-                  <span key={m.id} className={s.thumb} title={m.name} data-testid="strip-saved" data-has={m.hasBlob ? '1' : '0'} role="button" tabIndex={0} onClick={() => openThumb(m.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openThumb(m.id); } }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {m.kind === 'photo' && savedUrls[m.id] ? <img src={savedUrls[m.id]} alt="" /> : m.hasBlob ? '📄' : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4 4 0 0 1 0 9H7z" /></svg>}
-                    {refused[m.id] && <button type="button" className={s.refused} onClick={(e) => { e.stopPropagation(); toast(refusedWhy(m), { timeout: 12000 }); }} data-testid="strip-refused" data-reason={refused[m.id]} title={refusedWhy(m)}>{t('media.refusedMark')}</button>}
+                  <span key={m.id} className={s.tile} data-testid="strip-tile">
+                    <span className={s.thumb} title={m.name} data-testid="strip-saved" data-has={m.hasBlob ? '1' : '0'} role="button" tabIndex={0} onClick={() => openThumb(m.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openThumb(m.id); } }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {m.kind === 'photo' && savedUrls[m.id] ? <img src={savedUrls[m.id]} alt="" /> : m.hasBlob ? '📄' : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4 4 0 0 1 0 9H7z" /></svg>}
+                      {refused[m.id] && <button type="button" className={s.refused} onClick={(e) => { e.stopPropagation(); toast(refusedWhy(m), { timeout: 12000 }); }} data-testid="strip-refused" data-reason={refused[m.id]} title={refusedWhy(m)}>{t('media.refusedMark')}</button>}
+                    </span>
+                    <button type="button" className={s.tdel} aria-label={`${t('act.delete')} — ${m.name || ''}`} onClick={() => delSaved(m)} data-testid="strip-delete"><span aria-hidden="true">✕</span></button>
                   </span>
                 ))}
                 {pending.map((m, i) => (
-                  <span key={`p${i}`} className={`${s.thumb} ${s.fresh}`} title={m.file.name} data-testid="strip-pending" role="button" tabIndex={0} onClick={() => openThumb(`p${i}`)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openThumb(`p${i}`); } }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {thumbs[i] ? <img src={thumbs[i]} alt="" /> : '📄'}
+                  <span key={`p${i}`} className={s.tile} data-testid="strip-tile">
+                    <span className={`${s.thumb} ${s.fresh}`} title={m.file.name} data-testid="strip-pending" role="button" tabIndex={0} onClick={() => openThumb(`p${i}`)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openThumb(`p${i}`); } }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {thumbs[i] ? <img src={thumbs[i]} alt="" /> : '📄'}
+                    </span>
+                    <button type="button" className={s.tdel} aria-label={`${t('media.unpick')} — ${m.file.name}`} onClick={() => unpick(i)} data-testid="strip-unpick"><span aria-hidden="true">✕</span></button>
                   </span>
                 ))}
               </div>
