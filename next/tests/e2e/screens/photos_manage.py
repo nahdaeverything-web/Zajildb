@@ -18,6 +18,7 @@ drew were chance, and the certificate's «تغيير» added a photo without cha
   G1  (RULED 2026-11-25) a placeholder parent's slot on the certificate takes no file: its button is disabled and the
       slot says why and the way out; a placeholder that already holds a photo keeps it and its box draws it.
   G2  (RULED 2026-11-25) B5: a `mainPhotoId` naming a photo no longer stored is not something a placeholder holds.
+  H0  (RULED 2026-11-27) nor does a placeholder take a photo or a document through its own edit form or its profile.
   and the field travels between two devices of one account (a stub backend, THE NET armed beneath it).
 
 A phone's screen (390 px) with touch; the sizes are read at 1280 px too. Every file is made here: PNGs told apart by
@@ -370,6 +371,33 @@ try:
         check('[G1] …pressing it opens no file chooser, and the placeholder father holds no file and no main photo', chooser is False and n_s == 0 and rec_s['has'] is False, (chooser, n_s, rec_s))
         check('[G1 · M-g1-keep fails here] a placeholder that already holds a photo keeps it and its box still draws it: 450, in the panel and on the sheet',
               g_d['thumb'] == 450 and g_d['sheet'] == 450 and len(run(pg, ROWS, unk['dam'])) == 1 and run(pg, BIRD, unk['dam'])['main'] == unk['old'], g_d)
+
+        # ══ H0 — NOR THROUGH ITS OWN EDIT FORM OR ITS PROFILE (RULED 2026-11-27) ══
+        print('H0 — a placeholder takes no photo or document through its own edit form or its profile either')
+        pg.goto(ROOT + 'bird/edit/?id=' + unk['sire'], wait_until='load'); waits(pg, '[data-testid=bird-form]'); pg.wait_for_timeout(400)
+        FORM = """() => { const b = document.querySelector('[data-testid=photo-btn]'), d = document.querySelector('[data-testid=doc-btn]'), w = document.querySelector('[data-testid=photo-why]');
+            return { photo: b ? b.disabled : null, doc: d ? d.getAttribute('aria-disabled') : null, says: w ? w.innerText.trim() : null, describedBy: b && b.getAttribute('aria-describedby') ? (document.getElementById(b.getAttribute('aria-describedby')) || {}).innerText : null }; }"""
+        f0 = pg.evaluate(FORM); opened = False
+        try:
+            with pg.expect_file_chooser(timeout=1500): pg.locator('[data-testid=doc-btn]').evaluate('e => e.click()')
+            opened = True
+        except Exception: pass
+        check('[H0 · M-h0-form fails here] the placeholder father\'s own EDIT FORM: the photo picker is disabled, «إضافة وثيقة» is disabled and opens no chooser, and the form says why — the certificate\'s sentence',
+              f0['photo'] is True and f0['doc'] == 'true' and f0['says'] == REASON and f0['describedBy'] == REASON and not opened, (f0, opened))
+        try: pg.fill('[data-testid=f-name]', 'نسر الوادي', timeout=4000); pg.wait_for_timeout(200)
+        except Exception: pass
+        f1 = pg.evaluate(FORM)
+        check('[H0] …a name typed (the save would make him an ordinary bird, C3) opens both pickers at once, and the sentence gives way to the usual hint',
+              f1['photo'] is False and f1['doc'] in (None, 'false') and f1['says'] is None, f1)
+        pg.goto(ROOT + 'bird/?id=' + unk['sire'], wait_until='load'); waits(pg, '[data-testid=media-add]'); pg.wait_for_timeout(400)
+        PROF = """() => { const q = (k) => document.querySelector(`[data-testid=${k}]`); const w = q('media-add-why');
+            return { photo: q('media-add-photo') ? q('media-add-photo').disabled : null, doc: q('media-add-doc') ? q('media-add-doc').disabled : null, says: w ? w.innerText.trim() : null,
+                     describedBy: q('media-add-photo') && q('media-add-photo').getAttribute('aria-describedby') ? (document.getElementById(q('media-add-photo').getAttribute('aria-describedby')) || {}).innerText : null }; }"""
+        p0 = pg.evaluate(PROF)
+        pick(pg, '[data-testid=media-add-photo-input]', [P('h0-w460.png', 460)]); pg.wait_for_timeout(900)
+        n_h0 = len(run(pg, ROWS, unk['sire']))
+        check('[H0 · M-h0-profile fails here] his PROFILE: «إضافة صورة» and «إضافة وثيقة» are disabled, the sentence says why, and a file handed to the hidden input is not stored',
+              p0['photo'] is True and p0['doc'] is True and p0['says'] == REASON and p0['describedBy'] == REASON and n_h0 == 0, (p0, n_h0))
 
         # ══ G2 — A mainPhotoId NAMING A PHOTO NO LONGER STORED IS NOT SOMETHING A PLACEHOLDER HOLDS (B5) ══
         print('G2 — B5 does not count a main-photo field that names a photo no longer stored')

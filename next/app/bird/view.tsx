@@ -131,6 +131,7 @@ export default function BirdView() {
 
   const ring = primaryRing(bird); const yy = seasonYY(bird);
   const title = birdName(bird);   // B2: a placeholder parent's own profile reads «أب غير معروف» / «أم غير معروفة»
+  const ph = db.isPlaceholder(bird);   // H0: and takes no photo or document
   const depth = +((st.settings as Record<string, unknown>).coiDepth || 10);
   const coi = (inbreeding(getBird, id, depth) as { coi: number }).coi;
   const avk = ancestorLoss(getBird, id, 5) as { avk: number };
@@ -221,7 +222,7 @@ export default function BirdView() {
   // (storePicked: the same conversion, the same 1600 px), each stored at once. A file that fails does not stop the
   // others, and the fancier is told which ones failed — never a silent partial result.
   async function addFiles(kind: 'photo' | 'document', files: File[]) {
-    if (!bird || !files.length || adding) return;
+    if (!bird || !files.length || adding || db.isPlaceholder(bird)) return;   // H0: a placeholder takes no file here
     setAdding(true);
     const failed: string[] = [];
     try {
@@ -387,12 +388,15 @@ export default function BirdView() {
                 </div>
               )}
               {/* E2: add a photo or a document from the profile — several files at once. PROPOSED placement and look. */}
+              {/* H0 (RULED 2026-11-27): a placeholder parent takes no photo or document here either — the two buttons are
+                  disabled and the certificate's own sentence says why and the way out. PROPOSED placement: under the row. */}
               <div className={s.addrow} data-testid="media-add">
-                <button type="button" className={s.addbtn} disabled={adding} onClick={() => photoIn.current?.click()} data-testid="media-add-photo">{t('bird.addPhoto')}</button>
-                <button type="button" className={s.addbtn} disabled={adding} onClick={() => docIn.current?.click()} data-testid="media-add-doc">{t('bird.addDocument')}</button>
+                <button type="button" className={s.addbtn} disabled={adding || ph} aria-describedby={ph ? 'media-add-why' : undefined} onClick={() => photoIn.current?.click()} data-testid="media-add-photo">{t('bird.addPhoto')}</button>
+                <button type="button" className={s.addbtn} disabled={adding || ph} aria-describedby={ph ? 'media-add-why' : undefined} onClick={() => docIn.current?.click()} data-testid="media-add-doc">{t('bird.addDocument')}</button>
                 <input ref={photoIn} type="file" accept="image/*" multiple hidden onChange={(e) => { const fs = [...(e.target.files || [])]; e.target.value = ''; addFiles('photo', fs); }} data-testid="media-add-photo-input" />
                 <input ref={docIn} type="file" accept="image/*,.pdf" multiple hidden onChange={(e) => { const fs = [...(e.target.files || [])]; e.target.value = ''; addFiles('document', fs); }} data-testid="media-add-doc-input" />
               </div>
+              {ph && <p className={s.addwhy} id="media-add-why" data-testid="media-add-why">{t('cert.placeholderPhoto')}</p>}
               {viewing !== null && viewing >= 0 && photos.length > 0 && (
                 <PhotoViewer items={photos.map((p) => ({ key: p.id, id: p.id, name: p.name }))} start={viewing} onClose={() => setViewing(null)} />
               )}

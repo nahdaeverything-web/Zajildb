@@ -386,6 +386,10 @@ export default function BirdForm() {
   const loft = db.currentLoft() as { name?: string } | null;
   const sire = draft.sireId ? getBird(draft.sireId) : null; const dam = draft.damId ? getBird(draft.damId) : null;
   const ringYear = rings.map((r) => (parseRing(r.raw || '', r.type || 'national') as Ring).year).find(Boolean);
+  // H0 (RULED 2026-11-27): a placeholder parent takes no photo or document through its own form either. The rule is
+  // the save's own (collect, C3): while the record would still be saved as a placeholder — no name typed, no ring — the
+  // two pickers are disabled and the certificate's sentence says why; a name or a ring typed here opens them at once.
+  const noFiles = !!collect().placeholder;
 
   // ── save (bird-form.js:178-246) ──
   async function doSave(bird: Bird, andNew: boolean, opts: { allowWarnings?: boolean } = {}, plan: Plan | null = null) {
@@ -399,7 +403,10 @@ export default function BirdForm() {
       if (plan) await db.saveBirds([...plan.placeholders.map((b) => ({ bird: b })), ...(plan.x ? [{ bird: plan.x, allowWarnings: true }] : []), { bird, allowWarnings: !!opts.allowWarnings }]);
       else await db.saveBird(bird, opts);
       // downscaled on the way in — see src/components/media.ts for the measured reason; the one path every screen stores through
-      for (const m of pending) await storePicked(bird.id, m);
+      // H0: a record saved as a placeholder stores no file — reachable only by picking files and then clearing the name
+      // and ring again; the fancier is told, never left with files silently dropped
+      if (bird.placeholder && pending.length) toast(t('cert.placeholderPhoto'), { kind: 'error', timeout: 9000 });
+      else for (const m of pending) await storePicked(bird.id, m);
       const offer = pairToOffer(bird, before);
       if (offer) {
         const make = await confirmDialog({ title: t('pairOffer.title'), body: t('pairOffer.body', { sire: birdLabelText(offer.sire), dam: birdLabelText(offer.dam) }),
@@ -573,13 +580,13 @@ export default function BirdForm() {
           <div className={s.seclbl}>{t('form.sec.basics')}</div>
           <div className={s.card}>
             <div className={s.photo}>
-              <button type="button" aria-label={t('bird.addPhoto')} onClick={() => photoIn.current?.click()} data-testid="photo-btn">{preview
+              <button type="button" aria-label={t('bird.addPhoto')} disabled={noFiles} aria-describedby={noFiles ? 'photo-why' : undefined} onClick={() => photoIn.current?.click()} data-testid="photo-btn">{preview
                 /* eslint-disable-next-line @next/next/no-img-element */
                 ? <img src={preview} alt="" data-testid="photo-preview" />
                 : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>}</button>
-              <div><div className={s.t}>{t('bird.addPhoto')}</div><p>{t('form.photo.hint')}</p>
+              <div><div className={s.t}>{t('bird.addPhoto')}</div>{noFiles ? <p id="photo-why" data-testid="photo-why">{t('cert.placeholderPhoto')}</p> : <p>{t('form.photo.hint')}</p>}
                 {/* not a <button>: the spec's .photo button rule is the 92px photo tile */}
-                <span role="button" tabIndex={0} className={s.linkbtn} onClick={() => docIn.current?.click()} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); docIn.current?.click(); } }} data-testid="doc-btn">{t('bird.addDocument')}</span>
+                <span role="button" tabIndex={noFiles ? -1 : 0} aria-disabled={noFiles || undefined} aria-describedby={noFiles ? 'photo-why' : undefined} className={s.linkbtn} onClick={() => { if (!noFiles) docIn.current?.click(); }} onKeyDown={(e) => { if (!noFiles && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); docIn.current?.click(); } }} data-testid="doc-btn">{t('bird.addDocument')}</span>
                 {pending.length > 0 && <div className={s.filelist} data-testid="pending-media">{pending.map((m) => m.file.name).join(' · ')}</div>}
                 <input ref={photoIn} type="file" accept="image/*" multiple hidden onChange={(e) => { const fs = [...(e.target.files || [])]; setPending([...pending, ...fs.map((f) => ({ kind: 'photo' as const, subtype: 'body', file: f }))]); e.target.value = ''; }} />
                 <input ref={docIn} type="file" accept="image/*,.pdf" multiple hidden onChange={(e) => { const fs = [...(e.target.files || [])]; setPending([...pending, ...fs.map((f) => ({ kind: 'document' as const, subtype: 'other', file: f }))]); e.target.value = ''; }} />

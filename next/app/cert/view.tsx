@@ -178,6 +178,7 @@ function CertScreen(p: ScreenProps) {
       <style data-testid="pagesize">{format === 'a4'
         ? '@page{ size:A4 landscape; margin:0; }'
         : '@page{ size:108mm 192mm; margin:0; }'}</style>
+      <style data-testid="print-isolation">{PRINT_ISOLATION}</style>
       <span hidden data-testid="state-probe" data-format={format} data-depth={depth} data-lang={lang}
         data-brand={brand ? 'on' : 'off'} data-photos={`${photos.bird ? 1 : 0}${photos.sire ? 1 : 0}${photos.dam ? 1 : 0}`} />
     </section>
@@ -457,10 +458,115 @@ function Zoom(p: ScreenProps & { grid: Slot[][]; slots: SlotMap; urls: Record<st
 }
 
 // ───────────────────────────────────────────────────────── the sheet
+/**
+ * H3 (RULED 2026-11-27): what a box of the certificate prints for a bird — the title is its name when it has one,
+ * otherwise its ring (otherwise the first 8 characters of its id, as birdLabelText); `ring` is the ring line, and it is
+ * there only when the title is a name. A placeholder parent is printed by placeholderName() and never reaches this.
+ */
+function boxTitle(b: Bird): { title: string; ring: string } {
+  const ring = primaryRing(b); const name = (b.name || '').trim();
+  return name ? { title: name, ring } : { title: ring || b.id.slice(0, 8), ring: '' };
+}
+/**
+ * H1 (RULED 2026-11-27): the sheet is the only thing on the printed page, at the page's origin. Measured before: the
+ * shell's own layout reached the print — at a page width of 1123 px (A4 landscape) the ≥1100 px rule gives <main> the
+ * rail's margin and its children a 960 px cap, so the 297 mm sheet started where the rail ends and its far side ran off
+ * the page (fault a), and the sheet's bottom edge fell onto a second page (fault b). Global, because <main> and <body>
+ * are not this module's; and in this <style> element, which exists only while the certificate is on screen.
+ */
+const PRINT_ISOLATION = '@media print{ html, body{ margin:0 !important; padding:0 !important; background:#fff !important; }'
+  + ' main:has([data-testid=cert-screen]){ margin:0 !important; padding:0 !important; max-width:none !important; min-height:0 !important; border:none !important; }'
+  + ' main:has([data-testid=cert-screen]) > *{ max-width:none !important; margin:0 !important; } }';
+
+/**
+ * H2 (RULED 2026-11-27): NO TEXT OVER OTHER TEXT, whatever the names. The sheet has a fixed size (297 × 210 mm, or
+ * 405 × 720 px) and so a fixed room for each box; a long name, at five generations, needs more than its box has, and the
+ * box grew over its neighbours (measured). So, after every layout: a box whose text does not fit has that text set
+ * smaller, step by step, down to FIT_FLOOR of its size; past that the text is cut with «…» rather than drawn over the
+ * next box. The subject's title the same, against the column it stands in. A name that fits is untouched. Layout only:
+ * the sizes are those of the sheet itself, so the screen, the zoom and the printed page get the same result (H4).
+ */
+const FIT_FLOOR = 0.6;
+/** the VISIBLE lines of text in `el`: each line box cut by every ancestor that hides its overflow (a designed «…») */
+const rectsOf = (el: Element) => {
+  const clips: DOMRect[] = [];
+  for (let a: Element | null = el; a && !(a as HTMLElement).dataset?.testid?.startsWith('sheet'); a = a.parentElement) {
+    const cs = getComputedStyle(a); if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') clips.push(a.getBoundingClientRect());
+  }
+  const r = document.createRange(); r.selectNodeContents(el);
+  return [...r.getClientRects()].map((x) => clips.reduce((y, c) => new DOMRect(Math.max(y.left, c.left), Math.max(y.top, c.top), Math.min(y.right, c.right) - Math.max(y.left, c.left), Math.min(y.bottom, c.bottom) - Math.max(y.top, c.top)), x))
+    .filter((x) => x.width > 0.5 && x.height > 0.5);
+};
+/** every line of text in `el` lies inside `box` (vertically with the 3 px a font's glyph box can stand past its line box) */
+const textInside = (el: Element, box: DOMRect) => rectsOf(el).every((r) => r.left >= box.left - 0.5 && r.right <= box.right + 0.5 && r.top >= box.top - 3 && r.bottom <= box.bottom + 3);
+const meets = (a: Element[], b: Element[]) => a.some((x) => rectsOf(x).some((r) => b.some((y) => rectsOf(y).some((q) => Math.min(r.right, q.right) - Math.max(r.left, q.left) > 1 && Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top) > 1))));
+function fitSheet(sheet: HTMLElement | null) {
+  if (!sheet) return;
+  sheet.querySelectorAll<HTMLElement>('[data-fit]').forEach((e) => { e.style.fontSize = ''; e.style.zoom = ''; e.removeAttribute('data-fit'); });
+  sheet.querySelectorAll<HTMLElement>('[data-clip]').forEach((e) => e.removeAttribute('data-clip'));
+  // each text's size as designed is read once; every step is a share of THAT size, never of a size already made smaller
+  const base = new Map<HTMLElement, number>();
+  const shrink = (texts: HTMLElement[], fits: () => boolean, floor = FIT_FLOOR) => {
+    if (fits() || !texts.length) return true;
+    texts.forEach((e) => { if (!base.has(e)) base.set(e, parseFloat(getComputedStyle(e).fontSize)); });
+    const now = texts.map((e) => parseFloat(getComputedStyle(e).fontSize));
+    for (let k = 0.92; k >= floor - 1e-9; k -= 0.04) {
+      texts.forEach((e, i) => { e.style.fontSize = `${Math.min(now[i], base.get(e)! * k).toFixed(2)}px`; e.setAttribute('data-fit', ''); });
+      if (fits()) return true;
+    }
+    return false;
+  };
+  const q = (root: Element, k: string) => [...root.querySelectorAll<HTMLElement>(`.${k}`)];
+  // FIRST, because it changes the room every box below has: the verification line, set on one line in 9:16, and the
+  // issue line under it, which the 9:16 design cut with «…» (the date it carries was the part cut) — each wraps onto a
+  // second line rather than run out of the frame or lose its date
+  for (const v of [...q(sheet, s.vrow), ...q(sheet, s.issued)]) if (v.scrollWidth > v.clientWidth + 0.5 || !textInside(v, sheet.getBoundingClientRect())) v.setAttribute('data-clip', '');
+  // the subject's title: the subject stays inside the tree's height (A4), its row inside the sheet's width (9:16)
+  const subject = sheet.querySelector<HTMLElement>('[data-testid=subject]');
+  const gens = subject && subject.parentElement && subject.parentElement.parentElement;
+  if (subject && gens) shrink(q(subject, s.big), () => subject.offsetHeight <= gens.clientHeight + 0.5 && textInside(subject, subject.getBoundingClientRect()), 0.4);
+  const subj = sheet.querySelector<HTMLElement>(`.${s.subj}`);
+  if (subj) shrink(q(subj, s.big), () => textInside(subj, subj.getBoundingClientRect()) && textInside(subj, sheet.getBoundingClientRect()), 0.4);
+  // every box of the tree: inside its slot (A4), its text inside the box, the name and the ring apart
+  const nodes = [...sheet.querySelectorAll<HTMLElement>('[data-testid=sheet-node]')].filter((n) => n.getClientRects().length > 0);   // not a hidden generation
+  for (const node of nodes) {
+    const slot = node.parentElement && node.parentElement.classList.contains(s.slot) ? node.parentElement : null;
+    // the slot's whole height: a box may take the 2 px the slot keeps above and below it (boxes then touch, they do not
+    // overlap) before its text is made any smaller — at five generations the designed box is ~1 px taller than its slot
+    const room = slot ? slot.clientHeight : Infinity;
+    const nm = q(node, s.nm), rg = q(node, s.rg);
+    const fits = () => node.offsetHeight <= room + 0.5 && textInside(node, node.getBoundingClientRect()) && !meets(nm, rg);
+    if (!shrink([...nm, ...rg, ...q(node, s['away-cap'])], fits)) node.setAttribute('data-clip', '');
+  }
+  // 9:16: the generation bands together stay inside their section — a long name wraps and pushes the bands below off the frame
+  const bands = sheet.querySelector<HTMLElement>(`.${s.bands}`);
+  if (bands) {
+    const inBands = nodes.filter((n) => bands.contains(n));
+    const fits = () => bands.scrollHeight <= bands.clientHeight + 0.5 && inBands.every((n) => textInside(n, n.getBoundingClientRect()));
+    if (!shrink(inBands.flatMap((n) => [...q(n, s.nm), ...q(n, s.rg)]), fits)) inBands.forEach((n) => n.setAttribute('data-clip', ''));
+    // last: the bands, as one, drawn smaller (CSS zoom: text, boxes and gaps alike) until they stand inside the frame
+    for (let z = 0.96; z >= 0.6 - 1e-9 && !fits(); z -= 0.04) { bands.style.zoom = z.toFixed(2); bands.setAttribute('data-fit', ''); }
+  }
+}
+
 function Sheet(p: ScreenProps & { grid: Slot[][]; slots: SlotMap; urls: Record<string, string> }) {
   const { bird, loft, format, depth, lang, photos, brand, grid, slots, urls } = p;
   const settings = p.st.settings as Record<string, unknown>;
   void settings;
+  const sheetRef = useRef<HTMLDivElement>(null);
+  // after every render — a box's room changes with the depth, the format, the language, the photos and the data. In the
+  // frame's own callback, before it is painted, not inside the commit: a store change renders synchronously in the
+  // caller's task, and fitting inside that task made the certificate suite's driver lose the evaluation that caused the
+  // change («Execution context was destroyed», with no navigation — measured; not with the fit in a frame callback).
+  // And once more just before a print, and once the fonts have loaded.
+  useLayoutEffect(() => {
+    let live = true;
+    const fit = () => { if (live) fitSheet(sheetRef.current); };
+    const frame = requestAnimationFrame(fit);
+    if (typeof document !== 'undefined' && document.fonts) document.fonts.ready.then(fit);
+    addEventListener('beforeprint', fit);
+    return () => { live = false; cancelAnimationFrame(frame); removeEventListener('beforeprint', fit); };
+  });
   return withLang(lang, () => {
     const seen = new Map<string, number>();
     for (let g = 1; g <= depth - 1; g++) for (const x of grid[g]) if (x) seen.set(x.id, (seen.get(x.id) || 0) + 1);
@@ -497,7 +603,10 @@ function Sheet(p: ScreenProps & { grid: Slot[][]; slots: SlotMap; urls: Record<s
       // RULED 2026-11-23: a PLACEHOLDER parent prints «غير معروف» in the certificate's language — never its stored name. The
       // common-ancestor dot and a parent's photo box are drawn as for any other bird.
       const ph = db.isPlaceholder(b);
-      const nm = <span className={s.nm}>{ph ? placeholderName(b, 'box') : <bdi>{birdLabelText(b)}</bdi>}</span>;
+      // H3 (RULED 2026-11-27): a ring is printed ONCE per box — the title is the name when there is one, otherwise the
+      // ring; the ring line is printed only under a name (boxTitle). It was «ring · name» over the ring again.
+      const ti = boxTitle(b);
+      const nm = <span className={s.nm}>{ph ? placeholderName(b, 'box') : <bdi>{ti.title}</bdi>}</span>;
       const name = common(b.id) ? <span className={s.ci}><i className={s.dot} />{nm}</span> : nm;
       if (g === 2) {
         const who = i === 0 ? 'sire' : 'dam';
@@ -506,14 +615,14 @@ function Sheet(p: ScreenProps & { grid: Slot[][]; slots: SlotMap; urls: Record<s
         return (
           <div key={`${g}-${i}`} className={cx(s.node, s.n2, box && s['has-photo'], ph && !box && s.unknown)} data-testid="sheet-node" data-recorded={ph ? 'no' : 'yes'} data-placeholder={ph ? '1' : undefined}>
             {box}
-            <div className={s.tx}>{name}<span className={s.rg}>{ph ? '' : primaryRing(b)}</span>
+            <div className={s.tx}>{name}{!ph && ti.ring && <span className={s.rg}>{ti.ring}</span>}
               {box && away && <span className={s['away-cap']}>{t('cert.photoAway')}</span>}</div>
           </div>
         );
       }
       return (
         <div key={`${g}-${i}`} className={cx(s.node, s[`n${g}`], ph && s.unknown)} data-testid="sheet-node" data-recorded={ph ? 'no' : 'yes'} data-placeholder={ph ? '1' : undefined}>
-          {name}<span className={s.rg}>{ph ? '' : primaryRing(b)}</span>
+          {name}{!ph && ti.ring && <span className={s.rg}>{ti.ring}</span>}
         </div>
       );
     };
@@ -526,11 +635,13 @@ function Sheet(p: ScreenProps & { grid: Slot[][]; slots: SlotMap; urls: Record<s
         <div><div className={s.k}>{t('bird.strain')}</div><div className={s.v}>{bird.strain || '—'}</div></div>
       </div>
     );
+    const subj = boxTitle(bird);
     const plate = (() => {
-      const ring = primaryRing(bird);
+      const ring = subj.ring;
+      if (!ring) return null;                      // H3: no name — the ring IS the title, and is not printed again
       // the ring's year is whatever the record holds — sample data carries it as a number
       const yr = String((bird.rings || []).find((r) => r.raw === ring)?.year ?? '');
-      return <span className={s.plate}>{yr && <span className={s.yr}>{yr.slice(-2)}</span>}<span className={s.no}>{ring || '—'}</span></span>;
+      return <span className={s.plate} data-testid="plate">{yr && <span className={s.yr}>{yr.slice(-2)}</span>}<span className={s.no}>{ring}</span></span>;
     })();
 
     const head = (
@@ -587,14 +698,14 @@ function Sheet(p: ScreenProps & { grid: Slot[][]; slots: SlotMap; urls: Record<s
     const cls = `${s.sheet} ${format === 'a4' ? s.a4 : s.story} ${s[`d${depth}`]} ${lang === 'en' ? s.en : ''} ${brand ? '' : s.nobrand}`;
     if (format === 'a4') {
       return (
-        <div className={cls} data-testid="sheet" data-format="a4" data-depth={depth} lang={lang} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+        <div ref={sheetRef} className={cls} data-testid="sheet" data-format="a4" data-depth={depth} lang={lang} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
           {head}
           <section className={s.tree}>
             <div className={s.ruler}>{[1, 2, 3, 4, 5].map((g) => <div key={g} className={cx(s[`r${g}`])}>{t(GEN_LABEL[g])}</div>)}</div>
             <div className={s.gens}>
               <div className={cx(s.gen, s.g1)}>
                 <div className={cx(s.node, s.n1)} data-testid="subject">
-                  {photoBox('bird')}<div className={s.big}><bdi>{birdLabelText(bird)}</bdi></div>{plate}{facts}
+                  {photoBox('bird')}<div className={s.big} data-testid="subject-title"><bdi>{subj.title}</bdi></div>{plate}{facts}
                 </div>
               </div>
               {[2, 3, 4, 5].map((g) => (
@@ -614,10 +725,10 @@ function Sheet(p: ScreenProps & { grid: Slot[][]; slots: SlotMap; urls: Record<s
       );
     }
     return (
-      <div className={cls} data-testid="sheet" data-format="story" data-depth={depth} lang={lang} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+      <div ref={sheetRef} className={cls} data-testid="sheet" data-format="story" data-depth={depth} lang={lang} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
         {head}
         <section className={s.subj}>{photoBox('bird')}
-          <div><div className={s.big}><bdi>{birdLabelText(bird)}</bdi></div>{plate}</div></section>
+          <div><div className={s.big} data-testid="subject-title"><bdi>{subj.title}</bdi></div>{plate}</div></section>
         {facts}
         <section className={s.bands}>
           {[2, 3, 4, 5].map((g) => (

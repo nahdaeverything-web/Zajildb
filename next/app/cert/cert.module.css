@@ -308,9 +308,22 @@
   .story .qr .cap{ font-size:7.5px; text-align:start; }
   .story.nobrand .brandrow{ justify-content:flex-end; }
 
+  /* H2 (RULED 2026-11-27): a formatted date wraps inside its own cell instead of running out of it over the next box
+     (measured: the longest date the app prints, both calendars, ran out of the subject's box over the father's) */
+  .facts .v.mono, .story .facts .v.mono{ white-space:normal; }
+  .story .head .meta .v{ white-space:normal; }
+  .loft > div{ min-width:0; }
+  /* …and past the smallest size fitSheet() allows, a box's text is cut with «…» rather than drawn over the next box */
+  .vrow[data-clip], .issued[data-clip]{ white-space:normal !important; overflow:visible !important; }
+  .node[data-clip]{ overflow:hidden; }
+  .node[data-clip] .nm, .node[data-clip] .rg{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; display:block; min-width:0; }
+  .node[data-clip] .rg{ flex:none; }
   @media print{
     .panel, .cap, .zoom, .zoom-btn{ display:none !important; }
-    .screen{ display:block; } .preview{ padding:0; display:block; }
+    /* H1 (RULED 2026-11-27): nothing of the screen around the sheet takes room on paper — the view's own 100vh, the
+       phone's padding, ground and border (a 108 mm story page is a phone-width page to the media queries) */
+    .screen{ display:block; min-height:0; background:none; } .preview{ padding:0; display:block; background:none; border:none; }
+    .stage > .sheet{ outline:none; }
     .stage{ width:auto !important; height:auto !important; }
     .stage > .sheet{ position:static; transform:none !important; }
     /* the spec's universal print-colour rule, scoped: a certificate printed without its

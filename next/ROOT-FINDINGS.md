@@ -5421,3 +5421,76 @@ byte-for-byte the new build's. On a FORM SAVE there (colour only) the server row
 main photo there leaves the field naming a photo that is gone — the new build then draws the earliest remaining
 photo as the main one, and since G2 a placeholder is not kept by such a field. 0 page or console errors on either
 device; integrity empty; 0 sync anomalies.
+
+## 2026-11-27 — the certificate on paper: H0–H5 (BUILT, NOT DEPLOYED; branch `feat/cert-print`)
+
+RULED 2026-11-27 on the report above: the deploy accepted (rollback `d062d38`); G1/G2 and all four listed choices
+accepted; `cert.placeholderPhoto` is a draft; the seven-line wrap at 390 px goes to the design chat.
+
+**H0 — finding 1 closed.** A placeholder parent takes no photo or document through its own edit form or its profile
+either: the form's photo tile and «إضافة وثيقة», and the profile's «إضافة صورة» / «إضافة وثيقة», are disabled and
+described by the certificate's own sentence (`cert.placeholderPhoto`, reused — no new string). In the form the rule is
+the save's own (`collect()`, C3): the pickers open the moment a name or a ring is typed, because the save will then make
+it an ordinary bird. `addFiles()` and the form's save refuse too (a file picked and then the name cleared again is not
+stored, and the fancier is told).
+
+**Step 1 — Samir's PDF of 24 Nov, measured before any change** (`~/zajil-work/cert-print/measure_print.py`, Chromium's
+own print path: `page.pdf` with the page's @page rule, and print media emulated at the page's width; 3 birds × 3 depths
+× 2 languages × A4 and 9:16 × a 1280 and a 390 px screen = 72 prints; table `cp-before-table.md`, files
+`~/zajil-shots/cert-print/before/`). Reproduced: **(a)** every A4 print, the far side cut at the page edge — 10–22 boxes
+outside the page; **(b)** every print, A4 and 9:16, two pages (the second holds only the sheet's lower edge);
+**(d)** every box with a ring, twice (60 of 72; the twelve not counted are the 9:16 subject, which the measurement does
+not read — a gap of the measurement, covered by the suite's H3/H5 checks). **(c) NOT reproduced**: the hatch date never
+lay over the sex field in Chromium on Linux — the facts grid gives the date's column the width it needs (the sex column
+shrinks to 54 px) and the date ran out of the subject's box on the far side instead, over the parents' column at five
+generations (3 overlaps measured). Nothing was done for (c) as such; H2 covers what was measured.
+
+**The cause of (a) and (b) — measured.** The shell's layout reached the print. A4 landscape is 1123 CSS px wide, so the
+≥1100 px rule of `app/layout.module.css` applies on paper: `<main>` gets the rail's margin and its children a 960 px cap.
+The 297 mm sheet started where the rail ends and ran off the page; the sheet's bottom edge fell onto a second page.
+H1: a second `<style>` element, mounted only with the certificate, resets `html`, `body`, `main:has([data-testid=cert-screen])`
+and its children for print; the module's print block drops the view's 100vh, the phone's padding, ground and border, and
+the preview's hairline outline.
+
+**H2 — no text over other text.** The sheet has a fixed size, so a fixed room per box; long names at five generations,
+and the longest date the app prints, need more (measured). `fitSheet()` (app/cert/view.tsx), after every render in the
+frame's own callback, before a print and once the fonts are in: a box whose text does not fit its slot (A4) or its cell
+(9:16) has that text set smaller, in steps of 4 %, down to 60 % of its designed size (the subject's title to 40 %); past
+that it is cut with «…». In 9:16 the generation bands, as one, are then drawn smaller (CSS zoom, down to 0.6) until they
+stand inside the frame. The 9:16 verification and issue lines wrap instead of running out of the frame or being cut
+(the issue line was cut with «…» by design and lost its date). Formatted dates wrap inside their cell. A box may use its
+slot's 2 px above and below before its text is touched (at five generations the designed box is ~1 px taller than its
+slot). Measured after: on A4 nothing is cut; the only prints with boxes cut are the 9:16 at 4 and 5 generations with
+long names in all 30 ancestors (14 and 30 boxes).
+
+**H3 — a ring once per box.** `boxTitle()`: the title is the name when there is one, otherwise the ring (otherwise the
+id's first 8 characters); the ring line only under a name. The subject: title by the same rule, the plate only under a
+name. (The panel's crumb — screen only, never printed — still shows «ring · name» and the ring.)
+
+**H4** holds by construction and is measured: every box of the printed page lands in the same place (within 0.5 px)
+from a 390 px and a 1280 px screen.
+
+**After** (`cp-after-table.md`, `~/zajil-shots/cert-print/after/`): 72 of 72 prints one page of the right size, every box
+inside the page (A4 nearest 8.0 mm, 9:16 4.8 mm), no text outside the page, over other text or out of its box, no ring
+twice.
+
+**Proof.** New suite `tests/e2e/screens/cert_print.py` (12 checks); `photos_manage.py` +3 (H0). Mutants, each RED at its
+named check (`~/zajil-work/cert-print/mutants.sh`, `mutants2.sh`; logs `cp-mutants.log`, `cp-mutants2.log`): M-h0-form,
+M-h0-profile, M-h1-iso, M-h2-fit, M-h2-date, M-h3-twice, M-h4-width, M-h5-story.
+
+**Found, NOT changed (the order excludes dates and styling):** in the English sheet a formatted date sits in a cell set
+`direction:rtl` (`.v.mono`), so the day moves to the end: «Nov 2026 27 (Jumada II 17, 1448 AH)» in the head and the
+facts (seen in the 9:16 and A4 PNGs).
+
+**Step 3 — a real PDF and image file from inside the app: PROPOSED, not built.** Sizes measured from the packages
+(npm, gzip -9 of the browser bundle): modern-screenshot 4.7.0 13.9 KB, html-to-image 1.11.13 6.7 KB, jsPDF 4.2.1
+109 KB, pdf-lib 1.17.1 207 KB, harfbuzzjs 1.6.4 179 KB (wasm) + 7 KB. App JS today: 321 KB gzip across 31 chunks;
+Alexandria (variable woff2) 74.6 KB. Recommended: render the sheet the browser already lays out to a canvas
+(modern-screenshot or html-to-image), save the 9:16 as a PNG of 1080 × 1920, and wrap the A4 canvas as a JPEG in a
+one-page PDF written by a ~60-line writer of our own — no PDF library; both loaded only on the certificate screen and
+precached for offline. Arabic is shaped by the browser itself, as on screen (the lowest risk). Costs and risks (not
+measured): the PDF is an image — no selectable text, ~0.5–2 MB at 200–300 dpi; the capture goes through an SVG
+foreignObject, which Safari draws unreliably on the first pass (fonts/images missing; the known workaround is a second
+capture); iOS canvas limits (A4 at 300 dpi is 8.7 Mpx, under the ~16.7 Mpx limit). A vector PDF (jsPDF, or pdf-lib +
+harfbuzzjs) means drawing the sheet a second time in PDF commands, embedding static TTF fonts, and shaping Arabic and
+the mixed ring/name lines ourselves — 110–390 KB gzip more and the highest risk for Arabic.
