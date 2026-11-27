@@ -5494,3 +5494,21 @@ foreignObject, which Safari draws unreliably on the first pass (fonts/images mis
 capture); iOS canvas limits (A4 at 300 dpi is 8.7 Mpx, under the ~16.7 Mpx limit). A vector PDF (jsPDF, or pdf-lib +
 harfbuzzjs) means drawing the sheet a second time in PDF commands, embedding static TTF fonts, and shaping Arabic and
 the mixed ring/name lines ourselves — 110–390 KB gzip more and the highest risk for Arabic.
+
+### 2026-11-27 (later) — H6, H7 (commit 2 on `feat/cert-print`)
+
+RULED on the report above: `7061f49` accepted with every listed proposal (the fit floor, the 9:16 zoom to 0.6, the
+wrapping «صدرت من…» line); reusing `cert.placeholderPhoto` for H0 accepted; Step 3's recommended route accepted as the
+direction, NOT to be built now.
+
+**H6 — English dates in reading order.** The formatted-date cells (`.v.mono`, `.d.mono`, and the facts' `.v.mono` on
+A4 and 9:16) were `direction:rtl` in every sheet; they now take the sheet's own direction (`inherit`) — rtl in the
+Arabic sheet and panel, as before; ltr in the English sheet. Measured (cert_print.py): «26 Sept 2012 (Dhuʻl-Qiʻdah 10,
+1433 AH)», the longest English date the app prints with both calendars, and «27 Nov 2026 (Jumada II 17, 1448 AH)» read
+left to right on every English print; every Arabic date still reads right to left. Mutant M-h6-order.
+
+**H7 — «اجعلها الرئيسية» / "Make main".** `media.main.set` is shortened to that and is now also the visible text of
+the control under a photo that is not the main one; the main photo keeps «الرئيسية». The control's size (tile width ×
+44 px), target and aria wiring are unchanged — its aria-label reads the shortened string. Measured: as one line the
+Arabic pill is 111 px and the phone's tile 96 px, so the pill now wraps inside its control (two lines at 390 px, one
+at 1280 px) — PROPOSED, the design chat's. Mutant M-h7-label.

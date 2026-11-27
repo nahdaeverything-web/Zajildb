@@ -13,6 +13,7 @@ its ring twice. The cause of the first two: the shell's layout reached the print
       printed only under a name.
   H4  the same print from a 390 px phone screen: the print does not depend on the screen width.
   H5  the 9:16 image: one page of 108 × 192 mm, inside the frame, no overlap, the ring once.
+  H6  (RULED 2026-11-27) every printed date reads in the order of the sheet's language — an English date left to right.
 
 Each print is made twice over: page.pdf with the page's own @page rule (the page count and size are read from the PDF),
 and the same page with print media emulated at the page's own width (every box and every line of visible text is read
@@ -97,6 +98,16 @@ DOM = """(page) => { const S = document.querySelector('[data-testid=sheet]'); if
   return { boxes: boxes.map(b => ({ ...b, edge: +edge(b.r).toFixed(2) })), textOut, overlaps, spill, nodes: [...S.querySelectorAll('[data-testid=sheet-node]')].filter(vis).map(node),
            subject: { title: (S.querySelector('[data-testid=subject-title]') || {}).innerText || '', plate: plate ? plate.innerText.replace(/\\s+/g, ' ').trim() : null,
                       rings: subj ? ([...subj.childNodes].filter(c => !(c.dataset && c.dataset.testid === 'facts')).map(c => c.textContent).join(' ').match(RING) || []).length : 0 },
+           // H6: each printed date's words in reading order for the sheet's language — left to right in English, right to
+           // left in Arabic, line by line (a date that wraps continues on the next line)
+           dates: [...S.querySelectorAll('[data-testid=issued], [data-testid=facts] > div:nth-child(2) > :last-child')].map(el => {
+             const want = S.getAttribute('dir') === 'rtl' ? 'rtl' : 'ltr'; const toks = [];
+             const tw2 = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+             for (let n = tw2.nextNode(); n; n = tw2.nextNode()) { const re = /\S+/g; let m; while ((m = re.exec(n.textContent))) { const r = document.createRange(); r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length); const b = r.getBoundingClientRect(); if (b.width > 0) toks.push(b); } }
+             let ok = toks.length > 2;
+             for (let i = 1; i < toks.length; i++) { const a = toks[i - 1], b = toks[i];
+               if (Math.abs(a.top - b.top) < a.height * 0.5) { if (want === 'ltr' ? b.left < a.right - 1 : b.right > a.left + 1) ok = false; } else if (b.top < a.top) ok = false; }
+             return { t: el.innerText.replace(/\s+/g, ' ').trim(), dir: getComputedStyle(el).direction, want, ok }; }),
            // the hatch date: its text inside its own cell, and that cell inside the box that holds the facts (the subject's box
            // on A4, the sheet's padded frame on 9:16) — a cell that grows to hold an unbroken date pushes out of that box
            hatchIn: (() => { const c = S.querySelectorAll('[data-testid=facts] > div')[1]; if (!c) return null; const b = R(c); const rg = document.createRange(); rg.selectNodeContents(c.lastElementChild);
@@ -119,7 +130,7 @@ def printed(pg, fmt, W, H):
     pg.set_viewport_size({'width': round(PW), 'height': round(PH)}); pg.emulate_media(media='print'); pg.evaluate('window.scrollTo(0, 0)'); pg.wait_for_timeout(200)
     d = pg.evaluate(DOM, [PW, PH])
     pg.emulate_media(media='null'); pg.set_viewport_size({'width': W, 'height': H}); pg.wait_for_timeout(120)
-    return {'pages': len(r.pages), 'size': (float(mb.width), float(mb.height)), **(d or {'boxes': [], 'textOut': ['NO SHEET'], 'overlaps': [], 'spill': [], 'nodes': [], 'subject': {}, 'hatchIn': None})}
+    return {'pages': len(r.pages), 'size': (float(mb.width), float(mb.height)), **(d or {'boxes': [], 'textOut': ['NO SHEET'], 'overlaps': [], 'spill': [], 'nodes': [], 'subject': {}, 'hatchIn': None, 'dates': []})}
 
 srv, HARNESS = serve(); ROOT = HARNESS.replace('test-harness/', '')
 try:
@@ -158,6 +169,15 @@ try:
         check('[H2 · M-h2-date fails here] the longest hatch date the app prints (both calendars) stays inside its own cell, beside the sex, and that cell inside the bird\'s box — every depth, both languages',
               all(r['hatchIn'] is True for r in res.values()), {f'{k[0]} d{k[1]} {k[2]}': r['hatchIn'] for k, r in res.items() if r['hatchIn'] is not True})
 
+        # ══ H6 ══
+        print('H6 — every printed date reads in the order of the sheet\'s language (the longest English date in both calendars included)')
+        for k, r in res.items():
+            if k[2] == 'en': print(f"    a4 {k[0]} d{k[1]} en: " + ' · '.join(f"«{d['t']}» {d['dir']} {'in order' if d['ok'] else 'OUT OF ORDER'}" for d in r['dates']))
+        check('[H6 · M-h6-order fails here] on the English A4 sheet the issue date and the hatch date read left to right — «26 Sept 2012 (Dhuʻl-Qiʻdah 10, 1433 AH)», the longest the app prints, among them — and on the Arabic sheet right to left, as before',
+              all(r['dates'] and all(d['ok'] and d['dir'] == d['want'] for d in r['dates']) for r in res.values())
+              and any(d['t'].startswith(dates['en']['s'][:12]) for r in res.values() for d in r['dates']),
+              {f'{k[0]} d{k[1]} {k[2]}': [d for d in r['dates'] if not (d['ok'] and d['dir'] == d['want'])] for k, r in res.items() if not all(d['ok'] and d['dir'] == d['want'] for d in r['dates'])})
+
         # ══ H3 ══
         print('H3 — a ring is printed once per box: the name as the title when there is one, otherwise the ring')
         L5 = res[('long', 5, 'ar')]; N5 = res[('noname', 5, 'ar')]
@@ -186,6 +206,9 @@ try:
         check('[H5] …and the ring once there too: an unnamed bird\'s boxes carry the ring as the title and no ring line',
               all(n['rings'] <= 1 for r in sres.values() for n in r['nodes']) and all(n['ring'] is None for n in SN['nodes'] if n['title'] != 'غير معروف') and SN['subject'].get('plate') is None,
               [n for n in SN['nodes'] if n['rings'] > 1 or n['ring'] is not None][:3])
+
+        check('[H6] …and the same on the 9:16 sheet, in both languages', all(r['dates'] and all(d['ok'] and d['dir'] == d['want'] for d in r['dates']) for r in sres.values()),
+              {f'{k[0]} d{k[1]} {k[2]}': r['dates'] for k, r in sres.items() if not all(d['ok'] and d['dir'] == d['want'] for d in r['dates'])})
 
         # ══ H4 — the same prints from a phone's screen ══
         print('H4 — printed from a 390 px phone screen: the same pages, the same boxes in the same places')

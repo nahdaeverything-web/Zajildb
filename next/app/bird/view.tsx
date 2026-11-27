@@ -381,7 +381,7 @@ export default function BirdView() {
                           filled on the main photo, outlined on the others. */}
                       {m.kind === 'photo' && (
                         <button type="button" className={`${s.mainbtn} ${m.id === mainId ? s.on : ''}`} aria-pressed={m.id === mainId} aria-label={t(m.id === mainId ? 'media.main.is' : 'media.main.set')}
-                          onClick={() => makeMain(m)} data-testid="media-main" data-main={m.id === mainId ? '1' : '0'}><span>{t('media.main.mark')}</span></button>
+                          onClick={() => makeMain(m)} data-testid="media-main" data-main={m.id === mainId ? '1' : '0'}><span>{t(m.id === mainId ? 'media.main.mark' : 'media.main.set')}</span></button>
                       )}
                     </div>
                   ))}

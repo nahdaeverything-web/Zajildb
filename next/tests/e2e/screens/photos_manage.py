@@ -19,6 +19,7 @@ drew were chance, and the certificate's «تغيير» added a photo without cha
       slot says why and the way out; a placeholder that already holds a photo keeps it and its box draws it.
   G2  (RULED 2026-11-25) B5: a `mainPhotoId` naming a photo no longer stored is not something a placeholder holds.
   H0  (RULED 2026-11-27) nor does a placeholder take a photo or a document through its own edit form or its profile.
+  H7  (RULED 2026-11-27) the control under a photo that is not the main one reads «اجعلها الرئيسية».
   and the field travels between two devices of one account (a stub backend, THE NET armed beneath it).
 
 A phone's screen (390 px) with touch; the sizes are read at 1280 px too. Every file is made here: PNGs told apart by
@@ -433,6 +434,14 @@ try:
             sizes = {k: pg.evaluate(BOX, f'[data-testid={k}]') for k in ('media-main', 'media-add-photo', 'media-add-doc')}
             check(f'[E7 · M-e7-newsmall fails here] at {W} px the profile\'s new controls are at least 44 × 44 px: the main-photo control under each photo, «إضافة صورة», «إضافة وثيقة»',
                   len(sizes['media-main']) == 7 and all(len(v) >= 1 and all(w >= 44 and h >= 44 for w, h in v) for v in sizes.values()), sizes)
+            # H7 (RULED 2026-11-27): the control under a photo that is not the main one says what it does
+            LBL = """() => [...document.querySelectorAll('[data-testid=media-main]')].map(b => { const sp = b.querySelector('span'), B = b.getBoundingClientRect(), S = sp.getBoundingClientRect();
+                return { main: b.dataset.main, text: sp.innerText.trim(), aria: b.getAttribute('aria-label'), box: [Math.round(B.width), Math.round(B.height)],
+                         inside: S.left >= B.left - 0.5 && S.right <= B.right + 0.5 && S.top >= B.top - 0.5 && S.bottom <= B.bottom + 0.5 }; })"""
+            lb = pg.evaluate(LBL); on = [x for x in lb if x['main'] == '1']; off = [x for x in lb if x['main'] == '0']
+            check(f'[H7 · M-h7-label fails here] at {W} px the control under a photo that is NOT the main one reads «اجعلها الرئيسية» (its aria-label the same), under the main photo «الرئيسية» (aria-label «الصورة الرئيسية») — each pill inside its control',
+                  len(on) == 1 and len(off) == 6 and on[0]['text'] == 'الرئيسية' and on[0]['aria'] == 'الصورة الرئيسية'
+                  and all(x['text'] == 'اجعلها الرئيسية' and x['aria'] == 'اجعلها الرئيسية' for x in off) and all(x['inside'] and x['box'][1] == 44 for x in lb), lb[:3])
             pg.goto(EDIT, wait_until='load'); waits(pg, '[data-testid=photo-strip]'); pick(pg, '[data-testid=bird-form] input[type=file] >> nth=0', [P('q-w240.png', 240)])
             settle(pg, "() => document.querySelectorAll('[data-testid=strip-pending]').length === 1")
             sizes = {k: pg.evaluate(BOX, f'[data-testid={k}]') for k in ('strip-delete', 'strip-unpick')}; thumbs = pg.evaluate(BOX, '[data-testid=strip-saved], [data-testid=strip-pending]')

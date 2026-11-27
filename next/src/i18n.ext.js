@@ -621,7 +621,7 @@ export const EXT = {
   // «الرئيسية» and «الصورة الرئيسية» are the approved profile spec's own words (bird-profile-v1.html:82, :250).
   'media.main.mark':          { ar: 'الرئيسية', en: 'Main' },
   'media.main.is':            { ar: 'الصورة الرئيسية', en: 'Main photo' },
-  'media.main.set':           { ar: 'جعلها الصورة الرئيسية', en: 'Make this the main photo' },
+  'media.main.set':           { ar: 'اجعلها الرئيسية', en: 'Make main' },   // H7 (RULED 2026-11-27): shortened — now also the control's own text
   'media.main.done':          { ar: 'صارت هذه الصورة الرئيسية', en: 'This is now the main photo' },
   'media.add.failed':         { ar: 'تعذّر حفظ {n} من {total}: {names}', en: 'Could not save {n} of {total}: {names}' },
   'media.unpick':             { ar: 'إزالة', en: 'Remove' },

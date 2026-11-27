@@ -228,6 +228,9 @@
 .mainbtn{ display:grid; place-items:center; width:100%; height:44px; padding:0; border:none; background:transparent; cursor:pointer; }
 .mainbtn span{ font-size:11px; font-weight:800; line-height:1.5; border-radius:999px; padding:3px 9px; background:var(--surface); color:var(--ink-2); box-shadow:inset 0 0 0 1px var(--line); white-space:nowrap; }
 .mainbtn.on span{ background:var(--ink); color:#fff; box-shadow:none; }
+/* H7 (RULED 2026-11-27): «اجعلها الرئيسية» is 111 px as one line and the phone's tile is 96 (measured) — the pill wraps
+   inside the 44 px control rather than run past it; at desktop width it stays on one line. PROPOSED, the design chat's. */
+.mainbtn span{ max-width:100%; white-space:normal; text-align:center; }
 /* E2 (RULED 2026-11-24): add a photo or a document from the profile. PROPOSED placement and look — the design chat's. */
 .addrow{ display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
 .addbtn{ flex:1 1 0; min-height:44px; padding:0 12px; border:2px solid var(--line); border-radius:var(--r-btn); background:transparent; color:var(--ink); font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; }

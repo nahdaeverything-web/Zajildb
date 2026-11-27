@@ -22,7 +22,9 @@
   .mono{ font-family:var(--f-mono); direction:ltr; unicode-bidi:isolate; font-weight:600; white-space:nowrap; }
   /* …except where .mono is put on a FORMATTED DATE. «18 أيلول 2026 (7 ربيع الآخر 1448 هـ)»
      is Arabic text with numerals in it, and Plex Mono cannot draw a single letter of it. */
-  .v.mono, .d.mono{ font-family:var(--f); direction:rtl; }
+  /* H6 (RULED 2026-11-27): the direction of the sheet, not a fixed rtl — set rtl, an English date printed its day last
+     («Nov 2026 27 (Jumada II 17, 1448 AH)», measured). In the Arabic sheet and the Arabic panel this is rtl, as it was. */
+  .v.mono, .d.mono{ font-family:var(--f); direction:inherit; }
 
   /* ═══════════ LAYOUT: options panel (start side) + preview ═══════════ */
   .screen{ display:flex; min-height:100vh; align-items:flex-start; }
@@ -188,7 +190,7 @@
   .facts .v{ font-size:14.5px; font-weight:800; margin-top:2px; }
   /* these two carry FORMATTED DATES, so they must not take .mono's face, direction or
      negative tracking — Arabic is connected script and is never letter-spaced */
-  .facts .v.mono{ font-size:12.5px; letter-spacing:normal; font-family:var(--f); direction:rtl; }
+  .facts .v.mono{ font-size:12.5px; letter-spacing:normal; font-family:var(--f); direction:inherit; }
 
   .plate{ display:inline-flex; align-items:stretch; direction:ltr; border-radius:10px; overflow:hidden; background:var(--ink); }
   /* RULED 2026-09-19. This was `color:#fff` — white on the --gold fill, 11px/600, which
@@ -258,7 +260,7 @@
   .story .subj .plate{ margin-top:7px; align-self:flex-start; }
   .story .plate .yr{ font-size:9px; padding:0 6px; } .story .plate .no{ font-size:11.5px; padding:5px 9px; letter-spacing:.6px; }
   .story .facts{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:8px 0 0; border-top:1px solid var(--line); }
-  .story .facts .k{ font-size:8.5px; } .story .facts .v{ font-size:11.5px; margin-top:0; } .story .facts .v.mono{ font-size:10px; letter-spacing:normal; font-family:var(--f); direction:rtl; }
+  .story .facts .k{ font-size:8.5px; } .story .facts .v{ font-size:11.5px; margin-top:0; } .story .facts .v.mono{ font-size:10px; letter-spacing:normal; font-family:var(--f); direction:inherit; }
   .story .bands{ flex:1; min-height:0; display:flex; flex-direction:column; gap:7px; }
   .story .band{ display:flex; flex-direction:column; flex:0 0 auto; }
   .story .b5, .story.d4 .b4, .story.d3 .b3{ flex:1; min-height:0; }
