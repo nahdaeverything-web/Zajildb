@@ -5512,3 +5512,30 @@ the control under a photo that is not the main one; the main photo keeps «ال�
 44 px), target and aria wiring are unchanged — its aria-label reads the shortened string. Measured: as one line the
 Arabic pill is 111 px and the phone's tile 96 px, so the pill now wraps inside its control (two lines at 390 px, one
 at 1280 px) — PROPOSED, the design chat's. Mutant M-h7-label.
+
+## 2026-11-27 — deploy record: the certificate on paper, H0–H7 (`gh-pages 59a889e`)
+
+**Ruled before the deploy (2026-11-27).** `7061f49` accepted with every listed proposal; H6 and H7 ordered as commit 2
+with the deploy, on the condition that Part 1's gate is green and both mutants red — both held. The two sections above
+that read «BUILT, NOT DEPLOYED» are deployed by this record; their text is left as written.
+
+Live: `gh-pages 59a889e`, built from `feat/react-port e3432c8`. `feat/react-port` was fast-forwarded from `f586e1d` to
+the local branch `feat/cert-print` (`7061f49` H0–H5; `e3432c8` H6, H7) and pushed; `feat/cert-print` was not.
+**Rollback target: `2c201b9`** (managing a bird's photos; then `d062d38`). Rollback is
+`git -C ~/zajil-work/deploy/ghp-cert-print-2026-11-27 push -f origin 2c201b9:gh-pages`.
+Mirror `main` = `6b6043c` (`git subtree split --prefix=next e3432c8`, fast-forward from `151344d`).
+
+| step | result | log (`~/zajil-gate-logs/`) |
+|---|---|---|
+| gate-66 on `e3432c8`'s tree | 2885 passed, 0 failed across 48 steps | `gate-66-h6-h7.out` |
+| H6, H7 mutants | M-h6-order, M-h7-label — each RED at its named check | `cp-mutants3.log` |
+| the print table on the final tree | 72 of 72 prints all ✓ | `cp-after2-table.md` |
+| remote heads before | `feat/react-port f586e1d`, `gh-pages 2c201b9`, mirror `main 151344d` | `deploy16-00-before.log` |
+| no stored field added | the data layer is untouched since `15dc53f`; the same actions on both builds store identical key sets in every store | `cp-shapes.log` |
+| stage for `/zajilv2/`, inject, verify, scan | 159 files, CLEAN | `deploy16-01`, `deploy16-02` |
+| rehearsal on the local Pages stand-in | 44 passed, 0 failed, no WARNING | `deploy16-04` |
+| live bytes | 158 files by sha256, 0 differ (new sw.js after 31 s) | `deploy16-05` |
+| live verification | 44 passed, 0 failed, no WARNING, NET armed — nothing reached the real project; service worker active 2.6 s after the first page settled | `deploy16-06` |
+| remote heads after | `gh-pages 59a889e`, mirror `main 6b6043c` | `deploy16-07` |
+
+No compatibility measurement against the rollback build was needed: this set adds no stored field (measured above).
